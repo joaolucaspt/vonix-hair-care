@@ -99,12 +99,12 @@ const BANNERS = [
   "kit-desmaia", "kit-whey-protein", "kit-matizador-shampoo-e-mascara",
 ] as const;
 const NEEDS = [
-  ["Hidratação", "Mais maciez e brilho", "cat-hidratacao-B3HDbjAo", "Hidratação"],
-  ["Reconstrução", "Fios mais fortes", "cat-reconstrucao--AvyZZnd", "Reconstrução"],
-  ["Controle de Frizz", "Cabelos mais alinhados", "cat-frizz-DkfsGSS5", "Controle de Frizz"],
-  ["Cachos", "Definição e movimento", "cat-cachos-BaMWSeI5", "Definição de Cachos"],
-  ["Com Química", "Cuidado e hidratação", "cat-loiros-DMned0Ju", "Cabelos com Química"],
-  ["Nutrição", "Fios nutridos e macios", "cat-nutricao-DPiiOsHs", "Nutrição"],
+  ["Hidratação", "Mais maciez e brilho", "hidratacao", "Hidratação"],
+  ["Reconstrução", "Fios mais fortes", "reconstrucao", "Reconstrução"],
+  ["Controle de Frizz", "Cabelos mais alinhados", "frizz", "Controle de Frizz"],
+  ["Cachos", "Definição e movimento", "cachos", "Definição de Cachos"],
+  ["Com Química", "Cuidado e hidratação", "quimica", "Cabelos com Química"],
+  ["Nutrição", "Fios nutridos e macios", "nutricao", "Nutrição"],
 ] as const;
 
 function Title({ a, b, to }: { a: string; b: string; to?: Record<string, string> }) {
@@ -167,7 +167,7 @@ function Home() {
         <div className="mt-6 grid grid-cols-3 gap-x-3 gap-y-5 md:grid-cols-6">
           {NEEDS.map(([t, s, img, q]) => (
             <Link key={t} to="/loja" search={{ uso: "pessoal", necessidades: q }} className="group">
-              <img src={`${SRC}/assets/${img}.webp`} alt={t} width={130} height={130} loading="lazy" className="mx-auto aspect-square w-full max-w-[84px] rounded-full object-cover transition-transform group-hover:scale-105 md:max-w-[120px]" />
+              <img src={`/images/categorias/${img}.jpg`} alt={t} width={130} height={130} loading="lazy" className="mx-auto aspect-square w-full max-w-[84px] rounded-full object-cover transition-transform group-hover:scale-105 md:max-w-[120px]" />
               <div className="mt-2 text-body font-medium">{t}</div>
               <div className="text-small leading-tight text-muted-foreground">{s}</div>
             </Link>

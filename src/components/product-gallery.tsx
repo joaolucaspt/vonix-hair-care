@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { GalleryCard } from "@/lib/gallery-cards";
+type GalleryCard = { id: string; title: string; lines: string[] };
 
 const ZOOM = 2.4;
 
@@ -31,7 +31,7 @@ export function ProductGallery({ images, name, cards = [] }: { images: string[];
   const photo = images[0]!;
   const slides: ({ kind: "img"; src: string; detail?: boolean } | { kind: "card"; card: GalleryCard })[] = [
     ...images.map((src) => ({ kind: "img" as const, src })),
-    { kind: "img", src: photo, detail: true },
+    ...(cards.length ? [{ kind: "img" as const, src: photo, detail: true }] : []),
     ...cards.map((card) => ({ kind: "card" as const, card })),
   ];
   const [i, setI] = useState(0);

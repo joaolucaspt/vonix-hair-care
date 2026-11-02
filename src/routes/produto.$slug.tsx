@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { Heart, Minus, Plus, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { buildCards } from "@/lib/gallery-cards";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews } from "@/components/reviews";
@@ -171,7 +170,7 @@ function ProductPage() {
           <Link to="/">Início</Link> / <Link to="/loja" search={{ categoria: p.category }}>{p.categoryLabel}</Link> / {p.name}
         </nav>
         <div className="grid gap-10 lg:grid-cols-2">
-          <ProductGallery key={p.slug} images={p.images} name={p.name} cards={buildCards(p)} />
+          <ProductGallery key={p.slug} images={p.images} name={p.name} />
           <div className="min-w-0">
             {off > 0 && <span className="rounded-full bg-foreground px-3 py-1 text-small text-background">{off}% OFF</span>}
             <h1 className="mt-3 font-display text-h1">{p.name}</h1>
