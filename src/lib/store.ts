@@ -24,7 +24,7 @@ export const PIX_DISCOUNT = 0.05;
 export const WHATSAPP =
   "https://wa.me/5531990086296?text=Ol%C3%A1%2C+vim+do+site+e+preciso+de+ajuda.";
 
-export const SITE_URL = "https://vonixhaircosmeticos.com.br";
+export const SITE_URL = "https://vonixhair.com";
 export const INSTAGRAM ="https://www.instagram.com/vonixhairoficial";
 export const FACEBOOK = "https://www.facebook.com/vonixhairoficial";
 

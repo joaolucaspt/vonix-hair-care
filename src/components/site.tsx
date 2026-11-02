@@ -26,7 +26,6 @@ import {
   type Product,
 } from "@/lib/store";
 
-export const SRC = "https://vonixhaircosmeticos.com.br";
 export const LOGO = logoUrl;
 
 /** Logo painted in the brand's metallic gold (uses the logo's shape as a mask); for dark backgrounds. */

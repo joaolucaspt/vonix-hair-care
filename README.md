@@ -1,6 +1,6 @@
 # Vonix Hair Care
 
-Imported website: https://vonixhaircosmeticos.com.br
+Website: https://vonixhair.com
 
 This project was built with [Lovable](https://lovable.dev).
 
