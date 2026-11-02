@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 type GalleryCard = { id: string; title: string; lines: string[] };
 
 const ZOOM = 2.4;
+/** Faixa (em %) junto às bordas da foto em que a lupa fica desligada. */
+const EDGE = 18;
 
 /**
  * Product gallery with a magnifier: on desktop the image zooms under the mouse pointer;
@@ -61,7 +63,11 @@ export function ProductGallery({ images, name, cards = [] }: { images: string[];
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== "mouse") return;
     const r = e.currentTarget.getBoundingClientRect();
-    setPos({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    // Só amplia com a seta no miolo da foto; nas bordas a imagem volta ao tamanho normal.
+    if (x < EDGE || x > 100 - EDGE || y < EDGE || y > 100 - EDGE) return setPos(null);
+    setPos({ x, y });
   };
 
   return (
