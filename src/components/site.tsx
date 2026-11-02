@@ -26,7 +26,6 @@ import {
   type Product,
 } from "@/lib/store";
 
-export const SRC = "https://vonixhaircosmeticos.com.br";
 export const LOGO = logoUrl;
 
 /** Logo painted in the brand's metallic gold (uses the logo's shape as a mask); for dark backgrounds. */
@@ -58,7 +57,6 @@ const MARQUEE = [
   "FRETE GRÁTIS ACIMA DE R$ 150 EM PRODUTOS, ANTES DOS DESCONTOS",
   "PARCELAMENTO EM ATÉ 6X SEM JUROS",
   "5% NO PIX EM ITENS SEM OUTRA OFERTA",
-  "ESQUENTA BLACK FRIDAY",
 ];
 
 const NAV = [
@@ -460,7 +458,7 @@ export function ProductCard({ p }: { p: Product }) {
           <Heart className={`h-4 w-4 ${fav.has(p.slug) ? "fill-foreground" : ""}`} />
         </button>
         <Link to="/produto/$slug" params={{ slug: p.slug }}>
-          <img src={p.images[0]} alt={`Vonix Hair ${p.name}`} loading="lazy" className="aspect-[6/5] w-full object-contain transition-transform duration-500 group-hover:scale-105 md:aspect-square" />
+          <img src={p.images[0]} alt={`Vonix Hair ${p.name}`} loading="lazy" className="aspect-square w-full scale-110 object-contain transition-transform duration-500 group-hover:scale-[1.18]" />
         </Link>
       </div>
       <div className="mt-2 flex min-h-[22px] flex-wrap items-center gap-1">

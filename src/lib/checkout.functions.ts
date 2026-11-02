@@ -90,6 +90,7 @@ const paySchema = z.object({
 export const createPayment = createServerFn({ method: "POST" })
   .inputValidator(paySchema)
   .handler(async ({ data }) => {
+    if (!env("APPMAX_CLIENT_ID") || !env("APPMAX_CLIENT_SECRET")) return { ok: false as const, message: "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora." };
     try {
       const lines = buildLines(data.items);
       const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find((o) => o.id === data.serviceId);

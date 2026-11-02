@@ -60,7 +60,7 @@ export async function sendPaidOrder(order: AppmaxOrder) {
   await bling("POST", "/pedidos/vendas", {
     numeroLoja: String(o.id),
     ...(env("BLING_LOJA_ID") ? { loja: { id: Number(env("BLING_LOJA_ID")) } } : {}),
-    observacoes: "Origem: site Vonix Hair (vonixhaircosmeticos.com.br) | Pedido Appmax " + o.id,
+    observacoes: "Origem: site Vonix Hair (vonixhair.com) | Pedido Appmax " + o.id,
     data: new Date().toISOString().slice(0, 10),
     contato: { nome: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(), tipoPessoa: "F", numeroDocumento: c.document_number, email: c.email, celular: c.phone },
     itens: o.products.map((p) => ({ codigo: p.sku, descricao: p.name, unidade: "UN", quantidade: p.quantity, valor: p.unit_value })),

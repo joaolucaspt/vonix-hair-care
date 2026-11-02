@@ -17,4 +17,4 @@ Disallow: /checkout
 Disallow: /conta
 Disallow: /auth
 
-Sitemap: https://vonixhaircosmeticos.com.br/sitemap.xml
+Sitemap: https://vonixhair.com/sitemap.xml

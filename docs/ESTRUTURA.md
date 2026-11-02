@@ -1,7 +1,7 @@
 # Vonix Hair: estrutura do site novo e regras de negócio
 
 Repositório: `lucassilva1175/vonix-hair-care` (branch `feat/clarity-analytics`, pull request 1, ainda sem merge).
-Site publicado hoje: o antigo (`vonixhaircosmeticos.com.br`). **Não fazer merge antes de ligar pagamento e frete.**
+Site publicado: `vonixhair.com` (o `vonixhaircosmeticos.com.br` redireciona para ele). O checkout fica travado até a Appmax liberar as chaves.
 
 ## Como rodar a prévia
 `npm install` e `npm run dev -- --port 5173`. Os testes: `npx vitest run` (38 testes).

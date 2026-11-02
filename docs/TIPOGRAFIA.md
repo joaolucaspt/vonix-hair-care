@@ -1,4 +1,4 @@
-﻿# Regra de tipografia (somente 2 formatos)
+# Regra de tipografia (somente 2 formatos)
 
 Todo o site usa **apenas duas fontes**. Nenhuma outra pode ser adicionada.
 
@@ -9,6 +9,6 @@ Todo o site usa **apenas duas fontes**. Nenhuma outra pode ser adicionada.
 
 Tamanhos: use só as classes `text-h1`, `text-h2`, `text-name`, `text-price`, `text-body` e `text-small` (definidas em `src/styles.css`).
 
-Imagens (banners, fotos de produto, categorias) **não levam texto desenhado**: o texto fica no código, em uma das duas fontes.
+Imagens (fotos de produto e categorias) **não levam texto desenhado**: o texto fica no código, em uma das duas fontes. Única exceção: a arte dos banners da home (`public/images/banners/*-home.webp`), enviada pela dona da loja, que traz o título dentro da imagem; preço e desconto continuam em HTML.
 
 O teste `src/test/typography.test.ts` falha se alguém usar outra família (`font-mono`, `Georgia`, `Arial` etc.) ou carregar outra fonte no Google Fonts.
