@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { env } from "@/lib/env.server";
 
 /**
@@ -28,7 +28,12 @@ export const Route = createFileRoute("/api/public/bling/callback")({
             headers: { Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded", Accept: "1.0" },
             body: new URLSearchParams({ grant_type: "authorization_code", code }),
           });
-          if (!res.ok) return page("Bling", "<h1>O Bling recusou o código</h1><p>Ele vale poucos minutos e só uma vez. Autorize o app de novo.</p>", 400);
+          if (!res.ok) {
+            // Mostra só o tipo do erro (nunca chaves) para saber se o problema é o secret ou o código.
+            const e = (await res.json().catch(() => ({}))) as { error?: { type?: string }; error_description?: string };
+            const tipo = String(e.error?.type ?? e.error_description ?? res.status).replace(/[^\w .:-]/g, "").slice(0, 60);
+            return page("Bling", `<h1>O Bling recusou o código</h1><p>Motivo: <b>${tipo}</b> (HTTP ${res.status}).</p><p>Ele vale poucos minutos e só uma vez. Autorize o app de novo.</p>`, 400);
+          }
           const j = (await res.json()) as { refresh_token?: string };
           if (!j.refresh_token) return page("Bling", "<h1>Sem token na resposta</h1>", 502);
           return page(
