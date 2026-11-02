@@ -230,7 +230,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </div>
       <header className="sticky top-0 z-40 border-b border-border bg-background">
         <div className="container-site flex items-center gap-4 py-2 lg:items-start lg:py-2">
-          <button className="-m-2 p-2 lg:hidden" aria-label="Abrir menu" onClick={() => setOpen(true)}>
+          <button className="-m-2 p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
           <Link to="/" className="shrink-0">
@@ -276,20 +276,36 @@ export function Shell({ children }: { children: ReactNode }) {
       {open && (
         <div className="fixed inset-0 z-50 bg-foreground/50" onClick={() => setOpen(false)}>
           <aside
-            className="h-full w-72 bg-background p-6"
+            aria-label="Menu rápido"
+            className="h-full w-80 max-w-[85vw] overflow-y-auto bg-background p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="mb-6">
-              <X className="h-6 w-6" />
-            </button>
-            <nav className="flex flex-col gap-4 text-body uppercase">
+            <div className="mb-6 flex items-center justify-between">
+              <span className="font-display text-h2">Menu</span>
+              <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="-m-2 p-2">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <h3 className="mb-3 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Categorias</h3>
+            <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
               {NAV.map((n) => (
                 <Link key={n.label} to="/loja" search={n.search} onClick={() => setOpen(false)}>
                   {n.label}
                 </Link>
               ))}
-              <Link to="/favoritos" onClick={() => setOpen(false)}>Favoritos</Link>
+            </nav>
+            <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Por necessidade</h3>
+            <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
+              {["Hidratação", "Reconstrução", "Controle de Frizz", "Definição de Cachos", "Cabelos com Química", "Nutrição"].map((n) => (
+                <Link key={n} to="/loja" search={{ necessidades: n }} onClick={() => setOpen(false)}>
+                  {n}
+                </Link>
+              ))}
+            </nav>
+            <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Minha conta</h3>
+            <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
               <Link to="/conta" onClick={() => setOpen(false)}>Entrar / Meus pedidos</Link>
+              <Link to="/favoritos" onClick={() => setOpen(false)}>Favoritos</Link>
               <Link to="/carrinho" onClick={() => setOpen(false)}>Carrinho</Link>
             </nav>
           </aside>
