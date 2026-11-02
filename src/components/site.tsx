@@ -228,7 +228,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </div>
       <header className="sticky top-0 z-40 border-b border-border bg-background">
-        <div className="container-site flex items-center gap-4 py-3">
+        <div className="container-site flex items-center gap-4 py-2 lg:items-start lg:py-2">
           <button className="-m-2 p-2 lg:hidden" aria-label="Abrir menu" onClick={() => setOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
@@ -312,14 +312,14 @@ export function Shell({ children }: { children: ReactNode }) {
 
 function Footer() {
   return (
-    <footer className="mt-20 bg-marquee text-marquee-foreground">
+    <footer className="mt-10 bg-marquee text-marquee-foreground">
       <div className="container-site grid gap-6 border-b border-marquee-foreground/15 py-6 text-center text-body sm:grid-cols-4">
         <span>Entrega para todo o Brasil</span>
         <span>Compra 100% segura</span>
         <span>Até 6x sem juros no cartão</span>
         <span>Frete grátis acima de R$ 150 em produtos</span>
       </div>
-      <div className="container-site grid gap-10 py-12 text-body sm:grid-cols-4">
+      <div className="container-site grid gap-8 py-8 text-body sm:grid-cols-4">
         <div>
           <div className="mb-4"><GoldLogo className="h-14" /></div>
           <p className="opacity-80">
