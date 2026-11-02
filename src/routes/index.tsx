@@ -43,7 +43,7 @@ function Banner({ slug, priority }: { slug: string; priority: boolean }) {
       params={{ slug }}
       onMouseMove={(e) => { const b = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--ry", `${((e.clientX - b.left) / b.width - 0.5) * 18}deg`); e.currentTarget.style.setProperty("--rx", `${-((e.clientY - b.top) / b.height - 0.5) * 12}deg`); }}
       onMouseLeave={(e) => { e.currentTarget.style.removeProperty("--ry"); e.currentTarget.style.removeProperty("--rx"); }}
-      className="relative flex aspect-[2/3] flex-col overflow-hidden text-foreground md:aspect-[1850/700] md:flex-row-reverse md:items-center"
+      className="relative flex aspect-[5/8] flex-col overflow-hidden text-foreground md:aspect-[1850/700] md:flex-row-reverse md:items-center"
       style={{ background: `linear-gradient(125deg, ${t.from} 0%, ${t.to} 100%)` }}
     >
       <Branch color={t.accent} className="-left-3 top-[-4%] h-[46%] -rotate-[28deg] opacity-30 md:-left-4 md:top-[-12%] md:h-[78%] md:rotate-[22deg]" />
@@ -59,14 +59,11 @@ function Banner({ slug, priority }: { slug: string; priority: boolean }) {
       <div className="relative min-h-0 flex-1 self-stretch [perspective:900px] md:w-[52%] md:flex-none">
         <div aria-hidden className="absolute left-1/2 top-1/2 aspect-square h-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/55 blur-2xl" />
         <div aria-hidden className="absolute bottom-[7%] left-1/2 banner-shadow h-[6%] w-[62%] -translate-x-1/2 rounded-[50%] bg-black/25 blur-xl md:bottom-[10%]" />
-        <img src={`/images/banners/${slug}.png`} alt={`Vonix Hair ${p.name}`} width={300} height={300} fetchPriority={priority ? "high" : "auto"} className="banner-3d absolute inset-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)] object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,0.28)] md:inset-3" />
+        <img src={`/images/banners/${slug}.png`} alt={`Vonix Hair ${p.name}`} width={300} height={300} fetchPriority={priority ? "high" : "auto"} className="banner-3d absolute inset-0 h-full w-full scale-[1.18] md:inset-3 md:h-[calc(100%-1.5rem)] md:w-[calc(100%-1.5rem)] md:scale-100 object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,0.28)] md:inset-3" />
       </div>
 
       <div className="relative px-12 pb-10 text-center md:w-[48%] md:px-12 md:pb-0 md:text-left">
-        <span className="inline-block rounded-full px-4 py-1 text-small font-semibold uppercase tracking-[0.2em] text-white" style={{ background: t.accent }}>
-          Esquenta Black Friday
-        </span>
-        <div className="mt-3 font-display leading-[1.05]" style={{ fontSize: "clamp(1.5rem, 3.6vw, 3.4rem)" }}>{p.name}</div>
+        <div className="font-display leading-[1.05]" style={{ fontSize: "clamp(1.5rem, 3.6vw, 3.4rem)" }}>{p.name}</div>
         <p className="mt-2 hidden max-w-md text-body md:block" style={{ color: t.accent }}>{p.short}</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 md:mt-4 md:justify-start">
           {off > 0 && <span className="rounded bg-foreground px-3 py-1 text-small font-semibold tracking-[0.15em] text-background">{off}% OFF</span>}
@@ -193,8 +190,8 @@ function Home() {
           <div aria-hidden className="h-72 w-full" style={{ background: "radial-gradient(90% 120% at 15% 10%, oklch(0.66 0.13 82) 0%, oklch(0.4 0.08 70) 45%, oklch(0.2 0.02 60) 100%)" }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/40 text-center text-background">
             <span className="text-body tracking-[0.3em]">ATÉ {MAX_DISCOUNT}% OFF</span>
-            <h3 className="font-display text-h1">Esquenta Black Friday</h3>
-            <p className="mt-2 text-body">Aproveite os preços de Black Friday nos seus favoritos da Vonix Hair.</p>
+            <h3 className="font-display text-h1">Ofertas Vonix Hair</h3>
+            <p className="mt-2 text-body">Aproveite os preços especiais nos seus favoritos da Vonix Hair.</p>
             <Link to="/loja" className="mt-5 rounded-full bg-background px-6 py-2.5 text-body text-foreground">Ver ofertas</Link>
           </div>
         </div>
