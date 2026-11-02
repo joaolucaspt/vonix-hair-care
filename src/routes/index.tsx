@@ -5,80 +5,36 @@ import { ReviewCard, reviews } from "@/components/reviews";
 import { Benefits, Grid, Shell } from "@/components/site";
 import { BEST_SELLERS, MAX_DISCOUNT, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
 
-/** Cores de cada arte: vêm das embalagens do combo. */
-const THEME: Record<string, { from: string; to: string; accent: string }> = {
-  "kit-banana-e-mel": { from: "oklch(0.98 0.035 92)", to: "oklch(0.84 0.13 78)", accent: "oklch(0.5 0.11 65)" },
-  "kit-cachos": { from: "oklch(0.98 0.06 108)", to: "oklch(0.88 0.17 104)", accent: "oklch(0.36 0.06 105)" },
-  "kit-coco-nutri": { from: "oklch(0.97 0.06 130)", to: "oklch(0.8 0.16 136)", accent: "oklch(0.34 0.08 140)" },
-  "kit-cronograma-capilar": { from: "oklch(0.96 0.03 250)", to: "oklch(0.78 0.1 280)", accent: "oklch(0.34 0.1 275)" },
-  "kit-desmaia": { from: "oklch(0.96 0.04 20)", to: "oklch(0.76 0.16 25)", accent: "oklch(0.4 0.16 25)" },
-  "kit-whey-protein": { from: "oklch(0.96 0.012 40)", to: "oklch(0.7 0.14 30)", accent: "oklch(0.32 0.1 28)" },
-  "kit-matizador-shampoo-e-mascara": { from: "oklch(0.97 0.03 290)", to: "oklch(0.78 0.11 295)", accent: "oklch(0.38 0.13 295)" },
-};
-
-const LEAVES = [[0.9, -1, 38], [0.78, 1, 40], [0.64, -1, 44], [0.5, 1, 46], [0.36, -1, 48], [0.22, 1, 50], [0.1, -1, 52]] as const;
-
-/** Galho de folhas desenhado em SVG; a cor vem do tema de cada banner. */
-function Branch({ color, className }: { color: string; className: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 200 320" className={`pointer-events-none absolute ${className}`} fill={color}>
-      <path d="M100 318 C96 220 108 120 100 12" stroke={color} strokeWidth="3" fill="none" strokeLinecap="round" />
-      {LEAVES.map(([k, side, r], n) => {
-        const y = 318 - k * 300;
-        return <ellipse key={n} cx={100 + side * 26} cy={y} rx="30" ry="11" transform={`rotate(${side * -r} ${100} ${y})`} opacity={0.55 + (n % 3) * 0.15} />;
-      })}
-      <ellipse cx="100" cy="10" rx="9" ry="22" />
-    </svg>
-  );
-}
+/**
+ * Banner da home: a arte (título, produtos e fundo) é a imagem enviada pela loja;
+ * a oferta (desconto, preço antigo e preço novo) vem do catálogo e fica por cima, em HTML.
+ */
 function Banner({ slug, priority }: { slug: string; priority: boolean }) {
   const p = getProduct(slug)!;
   const v = p.variants[0]!;
   const off = discountPct(p.compareBase, v.price);
-  const t = THEME[slug]!;
   const saving = p.compareBase ? p.compareBase - v.price : 0;
   return (
-    <Link
-      to="/produto/$slug"
-      params={{ slug }}
-      onMouseMove={(e) => { const b = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--ry", `${((e.clientX - b.left) / b.width - 0.5) * 18}deg`); e.currentTarget.style.setProperty("--rx", `${-((e.clientY - b.top) / b.height - 0.5) * 12}deg`); }}
-      onMouseLeave={(e) => { e.currentTarget.style.removeProperty("--ry"); e.currentTarget.style.removeProperty("--rx"); }}
-      className="relative flex aspect-[2/3] flex-col overflow-hidden text-foreground md:aspect-[1850/700] md:flex-row-reverse md:items-center"
-      style={{ background: `linear-gradient(125deg, ${t.from} 0%, ${t.to} 100%)` }}
-    >
-      <Branch color={t.accent} className="-left-3 top-[-4%] h-[46%] -rotate-[28deg] opacity-30 md:-left-4 md:top-[-12%] md:h-[78%] md:rotate-[22deg]" />
-      <Branch color={t.accent} className="-right-4 bottom-[18%] h-[38%] rotate-[24deg] opacity-25 md:bottom-[-6%] md:right-[-1%] md:h-[72%] md:-rotate-[18deg]" />
-      <Branch color="white" className="bottom-[24%] left-[2%] h-[30%] rotate-[-18deg] opacity-60 blur-[1px] md:bottom-[-14%] md:left-[40%] md:h-[52%] md:rotate-[12deg]" />
-      <div aria-hidden className="pointer-events-none absolute -right-[10%] -top-[30%] aspect-square w-[70%] rounded-full border border-white/50 md:-right-[4%] md:-top-[45%] md:w-[48%]" />
-      <div aria-hidden className="pointer-events-none absolute -right-[2%] -top-[18%] aspect-square w-[52%] rounded-full border border-white/40 md:right-[4%] md:-top-[32%] md:w-[36%]" />
-      <div aria-hidden className="pointer-events-none absolute -left-[20%] bottom-[-35%] aspect-square w-[60%] rounded-full bg-white/20 blur-2xl md:left-[-6%] md:w-[34%]" />
-      <div aria-hidden className="pointer-events-none absolute left-[12%] top-[14%] h-1.5 w-1.5 rounded-full bg-white/90 shadow-[0_0_12px_4px_rgba(255,255,255,0.7)]" />
-      <div aria-hidden className="pointer-events-none absolute right-[14%] top-[38%] h-1 w-1 rounded-full bg-white/90 shadow-[0_0_10px_3px_rgba(255,255,255,0.7)]" />
-      <div aria-hidden className="pointer-events-none absolute bottom-[30%] left-[46%] hidden h-1.5 w-1.5 rounded-full bg-white/90 shadow-[0_0_12px_4px_rgba(255,255,255,0.7)] md:block" />
-
-      <div className="relative min-h-0 flex-1 self-stretch [perspective:900px] md:w-[52%] md:flex-none">
-        <div aria-hidden className="absolute left-1/2 top-1/2 aspect-square h-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/55 blur-2xl" />
-        <div aria-hidden className="absolute bottom-[7%] left-1/2 banner-shadow h-[6%] w-[62%] -translate-x-1/2 rounded-[50%] bg-black/25 blur-xl md:bottom-[10%]" />
-        <img src={`/images/banners/${slug}.png`} alt={`Vonix Hair ${p.name}`} width={300} height={300} fetchPriority={priority ? "high" : "auto"} className="banner-3d absolute inset-2 h-[calc(100%-1rem)] w-[calc(100%-1rem)] object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,0.28)] md:inset-3" />
-      </div>
-
-      <div className="relative px-12 pb-10 text-center md:w-[48%] md:px-12 md:pb-0 md:text-left">
-        <div className="font-display leading-[1.05]" style={{ fontSize: "clamp(1.5rem, 3.6vw, 3.4rem)" }}>{p.name}</div>
-        <p className="mt-2 hidden max-w-md text-body md:block" style={{ color: t.accent }}>{p.short}</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 md:mt-4 md:justify-start">
+    <Link to="/produto/$slug" params={{ slug }} className="group relative block overflow-hidden bg-[oklch(0.98_0.012_88)] text-foreground">
+      <img
+        src={`/images/banners/${slug}-home.webp`}
+        alt={`Vonix Hair ${p.name}`}
+        width={1942}
+        height={809}
+        fetchPriority={priority ? "high" : "auto"}
+        className="block h-auto w-full"
+      />
+      <div className="px-4 pb-12 pt-3 text-center md:absolute md:bottom-[3.5%] md:left-[5.2%] md:p-0 md:text-left">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 md:justify-start">
           {off > 0 && <span className="rounded bg-foreground px-3 py-1 text-small font-semibold tracking-[0.15em] text-background">{off}% OFF</span>}
           {p.compareBase && <span className="text-body line-through opacity-60">{brl(p.compareBase)}</span>}
+          <span className="font-display font-semibold leading-none" style={{ fontSize: "clamp(1.5rem, 2.4vw, 2.4rem)" }}>Por {brl(v.price)}</span>
         </div>
-        <div className="mt-1 font-display font-semibold leading-none" style={{ fontSize: "clamp(1.9rem, 3.2vw, 3rem)" }}>Por {brl(v.price)}</div>
-        {saving > 0 && <div className="mt-1 text-small font-semibold" style={{ color: t.accent }}>Você economiza {brl(saving)}</div>}
-        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground px-7 py-3 text-small font-semibold uppercase tracking-[0.15em] text-background shadow-lg">
-          Aproveitar oferta <ArrowRight className="h-4 w-4" />
-        </span>
+        {saving > 0 && <div className="mt-1 text-small font-semibold">Você economiza {brl(saving)}</div>}
       </div>
     </Link>
   );
 }
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -132,10 +88,10 @@ function Home() {
       <section className="container-site pt-5">
         <div className="relative overflow-hidden rounded-2xl">
           <Banner slug={BANNERS[i]!} priority={i === 0} />
-          <button aria-label="Anterior" onClick={() => setI((i + 6) % 7)} className="absolute left-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background">
+          <button aria-label="Anterior" onClick={() => setI((i + 6) % 7)} className="absolute left-3 top-[16%] grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background md:left-4 md:top-1/2">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button aria-label="Próximo" onClick={() => setI((i + 1) % 7)} className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background">
+          <button aria-label="Próximo" onClick={() => setI((i + 1) % 7)} className="absolute right-3 top-[16%] grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background md:right-4 md:top-1/2">
             <ChevronRight className="h-4 w-4" />
           </button>
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3">
