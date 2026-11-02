@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewCard, reviews } from "@/components/reviews";
-import { Benefits, Grid, Shell, SRC } from "@/components/site";
+import { Benefits, Grid, Shell } from "@/components/site";
 import { BEST_SELLERS, MAX_DISCOUNT, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
 
 /** Cores de cada arte: vêm das embalagens do combo. */
@@ -190,7 +190,7 @@ function Home() {
 
       <section className="container-site mt-20">
         <div className="relative overflow-hidden rounded-2xl">
-          <img src={`${SRC}/assets/banner-cupom-bg-Bs3RLSaf.jpg`} alt="" className="h-72 w-full object-cover" />
+          <div aria-hidden className="h-72 w-full" style={{ background: "radial-gradient(90% 120% at 15% 10%, oklch(0.66 0.13 82) 0%, oklch(0.4 0.08 70) 45%, oklch(0.2 0.02 60) 100%)" }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/40 text-center text-background">
             <span className="text-body tracking-[0.3em]">ATÉ {MAX_DISCOUNT}% OFF</span>
             <h3 className="font-display text-h1">Esquenta Black Friday</h3>

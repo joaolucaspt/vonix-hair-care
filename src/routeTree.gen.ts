@@ -22,6 +22,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
 import { Route as ApiPublicAppmaxWebhookRouteImport } from './routes/api.public.appmax-webhook'
+import { Route as ApiPublicBlingCallbackRouteImport } from './routes/api.public.bling.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -88,6 +89,11 @@ const ApiPublicAppmaxWebhookRoute = ApiPublicAppmaxWebhookRouteImport.update({
   path: '/api/public/appmax-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBlingCallbackRoute = ApiPublicBlingCallbackRouteImport.update({
+  id: '/api/public/bling/callback',
+  path: '/api/public/bling/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
+  '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
+  '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
+  '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/public/appmax-webhook'
+    | '/api/public/bling/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/public/appmax-webhook'
+    | '/api/public/bling/callback'
   id:
     | '__root__'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/public/appmax-webhook'
+    | '/api/public/bling/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
   ApiPublicAppmaxWebhookRoute: typeof ApiPublicAppmaxWebhookRoute
+  ApiPublicBlingCallbackRoute: typeof ApiPublicBlingCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAppmaxWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/bling/callback': {
+      id: '/api/public/bling/callback'
+      path: '/api/public/bling/callback'
+      fullPath: '/api/public/bling/callback'
+      preLoaderRoute: typeof ApiPublicBlingCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -309,6 +329,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
   ApiPublicAppmaxWebhookRoute: ApiPublicAppmaxWebhookRoute,
+  ApiPublicBlingCallbackRoute: ApiPublicBlingCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
