@@ -120,16 +120,16 @@ export function Benefits() {
     { Icon: ShieldCheck, title: "Compra segura", text: "seus dados protegidos" },
   ];
   return (
-    <section aria-label="Vantagens" className="container-site mt-6">
-      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Vantagens" className="container-site mt-4">
+      <ul className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {items.map(({ Icon, title, text }) => (
-          <li key={title} className="flex items-center gap-3 rounded-xl border border-border bg-muted px-3 py-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-action text-action-foreground">
-              <Icon className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
+          <li key={title} className="flex items-center gap-2 rounded-lg border border-border bg-muted px-2.5 py-1.5">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-action text-action-foreground">
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden="true" />
             </span>
             <span className="min-w-0 leading-tight">
-              <b className="block text-body">{title}</b>
-              <span className="block text-small text-muted-foreground">{text}</span>
+              <b className="block text-small font-semibold">{title}</b>
+              <span className="block text-small leading-tight text-muted-foreground max-sm:hidden">{text}</span>
             </span>
           </li>
         ))}
