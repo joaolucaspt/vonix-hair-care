@@ -1,0 +1,34 @@
+[
+  {
+    "slug": "botox-vonix",
+    "author": "Fernanda Assis",
+    "rating": 5,
+    "comment": "Adoreeeeeiii",
+    "date": "2026-09-09",
+    "media": { "type": "video", "src": "/depoimentos/depoimento-3.mp4", "poster": "/depoimentos/depoimento-3-poster.jpg" }
+  },
+  {
+    "slug": "botox-vonix",
+    "author": "Ayla Muniz",
+    "rating": 5,
+    "comment": "Já peguei logo o combo kkkkkkk minhas cliente amou",
+    "date": "2026-08-17",
+    "media": { "type": "video", "src": "/depoimentos/depoimento-2.mp4", "poster": "/depoimentos/depoimento-2-poster.jpg" }
+  },
+  {
+    "slug": "botox-vonix",
+    "author": "Mariana Andrade",
+    "rating": 5,
+    "comment": "Produto maravilhoso ❤️ eu amei trabalhar com ele",
+    "date": "2026-07-02",
+    "media": { "type": "video", "src": "/depoimentos/depoimento-1.mp4", "poster": "/depoimentos/depoimento-1-poster.jpg" }
+  },
+  {
+    "slug": "botox-vonix",
+    "author": "Ana Paula",
+    "rating": 5,
+    "comment": "Olha esse alisamentoooo hahaha, ameeei 🥹💓",
+    "date": "2026-06-27",
+    "media": { "type": "image", "src": "/depoimentos/depoimento-4.jpg" }
+  }
+]

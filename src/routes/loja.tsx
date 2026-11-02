@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Grid, Shell } from "@/components/site";
-import { BEST_SELLERS, NEEDS, products, TYPES, USAGE, resolveAudience, useAudience, professionalRelevance } from "@/lib/store";
+import { BEST_SELLERS, NEEDS, products, TYPES, forAudience, resolveAudience, useAudience } from "@/lib/store";
 
 type S = { q?: string | undefined; secao?: string | undefined; tiposProduto?: string | undefined; necessidades?: string | undefined; uso?: string | undefined; categoria?: string | undefined; ordem?: string | undefined };
 
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/loja")({
   head: () => ({
     meta: [
       { title: "Loja — Vonix Hair" },
-      { name: "description", content: "Todos os produtos Vonix Hair: progressivas, botox, máscaras, shampoos e kits." },
+      { name: "description", content: "Todos os produtos Vonix Hair: progressivas, botox, máscaras, shampoos e combos." },
       { property: "og:title", content: "Loja — Vonix Hair" },
       { property: "og:description", content: "Todos os produtos Vonix Hair em até 6x sem juros." },
       { property: "og:type", content: "website" },
@@ -34,8 +34,6 @@ function Loja() {
   const set = (patch: Partial<S>) => nav({ search: (old: S) => ({ ...old, ...patch }) });
   let list = products.filter((p) => {
     if (s.secao === "mais-vendidos" && !BEST_SELLERS.includes(p.slug)) return false;
-    const usageFilter = uso ? USAGE[uso] : undefined;
-    if (usageFilter && !usageFilter(p)) return false;
     if (s.categoria && p.category !== s.categoria) return false;
     if (s.tiposProduto && TYPES[s.tiposProduto] && !TYPES[s.tiposProduto]!(p)) return false;
     if (s.necessidades && NEEDS[s.necessidades] && !NEEDS[s.necessidades]!.test(p.name + " " + p.description)) return false;
@@ -48,12 +46,16 @@ function Loja() {
   if (s.ordem === "menor") list = [...list].sort((a, b) => a.variants[0].price - b.variants[0].price);
   if (s.ordem === "maior") list = [...list].sort((a, b) => b.variants[0].price - a.variants[0].price);
   if (s.ordem === "az") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  if (uso === "salao" && !["menor", "maior", "az"].includes(s.ordem ?? "")) list = professionalRelevance(list);
-  const sel = "h-10 rounded-full border border-border bg-background px-4 text-sm";
+  if (!["menor", "maior", "az"].includes(s.ordem ?? "")) list = forAudience(list, uso);
+  const browsing = !s.q && !s.categoria && !s.tiposProduto && !s.necessidades && !s.secao && !s.ordem;
+  const rows = Array.from(
+    list.reduce((m, p) => m.set(p.categoryLabel, [...(m.get(p.categoryLabel) ?? []), p]), new Map<string, typeof list>()),
+  );
+  const sel = "h-10 rounded-full border border-border bg-background px-4 text-body";
   return (
     <Shell>
       <div className="container-site py-10">
-        <h1 className="font-display text-4xl sm:text-5xl">{s.q ? `Busca: “${s.q}”` : s.secao ? "Mais Vendidos" : uso === "casa" ? "Para Mim — Cuidados em Casa" : uso === "salao" ? "Para Cabeleireiras — Produtos para Salão" : s.tiposProduto ?? s.necessidades ?? "Todos os Produtos"}</h1>
+        <h1 className="font-display text-h1">{s.q ? `Busca: “${s.q}”` : s.secao ? "Mais Vendidos" : uso === "casa" ? "Para Mim — Cuidados em Casa" : uso === "salao" ? "Para Cabeleireiras — Produtos para Salão" : s.tiposProduto ?? s.necessidades ?? "Todos os Produtos"}</h1>
         <div className="my-6 flex flex-wrap items-center gap-3">
           <input defaultValue={s.q} key={s.q} placeholder="Buscar..." aria-label="Buscar na loja" className={sel} onKeyDown={(e) => e.key === "Enter" && set({ q: e.currentTarget.value || undefined })} />
           <select aria-label="Categoria" className={sel} value={s.categoria ?? ""} onChange={(e) => set({ categoria: e.target.value || undefined })}>
@@ -74,10 +76,27 @@ function Loja() {
             <option value="maior">Maior preço</option>
             <option value="az">A–Z</option>
           </select>
-          <Link to="/loja" className="text-sm underline">Limpar filtros</Link>
-          <span className="ml-auto text-sm text-muted-foreground">{list.length} produtos</span>
+          <Link to="/loja" className="text-body underline">Limpar filtros</Link>
+          <span className="ml-auto text-body text-muted-foreground">{list.length} produtos</span>
         </div>
-        {list.length ? <Grid items={list} /> : <p className="py-20 text-center text-muted-foreground">Nenhum produto encontrado.</p>}
+        {!list.length ? (
+          <p className="py-20 text-center text-muted-foreground">Nenhum produto encontrado.</p>
+        ) : browsing ? (
+          // Same system in both areas: one swipeable row per category; scroll down to move between categories.
+          <div className="space-y-10">
+            {rows.map(([label, items]) => (
+              <section key={label} aria-label={label}>
+                <div className="mb-3 flex items-end justify-between">
+                  <h2 className="text-h2">{label}</h2>
+                  <span className="text-body text-muted-foreground">{items.length} {items.length === 1 ? "produto" : "produtos"}</span>
+                </div>
+                <Grid carousel items={items} />
+              </section>
+            ))}
+          </div>
+        ) : (
+          <Grid items={list} />
+        )}
       </div>
     </Shell>
   );

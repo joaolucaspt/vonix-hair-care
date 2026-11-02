@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getProduct, isProOnly, products, professionalFamilyRank, professionalRelevance, USAGE } from "@/lib/store";
 
 describe("relevância para cabeleireiras", () => {
-  const available = products.filter((p) => USAGE.salao?.(p));
+  const available = products.filter((p) => USAGE["salao"]?.(p));
   const ordered = professionalRelevance(available);
   it("todas as progressivas vêm primeiro, na ordem do catálogo", () => {
     expect(ordered.slice(0, 4).map((p) => p.slug)).toEqual([

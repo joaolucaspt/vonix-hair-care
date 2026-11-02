@@ -11,4 +11,5 @@
 
 - Catalog lives in src/data/products.json (prices already final); all price/installment/shipping rules are derived in src/lib/store.ts so they stay consistent everywhere.
 - Store listings resolve the persisted audience independently of internal link search parameters; professional card presentation reuses lineTotals through cardPricing so catalog bases and cart offers remain unchanged.
+- Typography rule (docs/TIPOGRAFIA.md): only two formats site-wide — Playfair Display for titles and Inter for everything else; images carry no drawn text; src/test/typography.test.ts fails on any other font family.
 - Header audience choices share the existing audience store; professional relevance sorts filtered results stably by catalog slug/category without changing offer eligibility, so manual sorting and commercial rules stay independent.

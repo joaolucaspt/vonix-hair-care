@@ -13,22 +13,27 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
+
+// IDs lidos do site publicado; confirmar o ID do Clarity em Configurações > Visão geral do projeto.
+const GA_ID = "G-JW91EQ32F3";
+const CLARITY_ID = "yrgl15vqw9";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+        <h1 className="text-h1 font-semibold text-foreground">404</h1>
+        <h2 className="mt-4 text-price font-semibold text-foreground">Página não encontrada</h2>
+        <p className="mt-2 text-body text-muted-foreground">
+          A página que você procura não existe ou mudou de endereço.
         </p>
         <div className="mt-6">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Ir para o início
           </Link>
         </div>
       </div>
@@ -46,11 +51,11 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+        <h1 className="text-price font-semibold tracking-tight text-foreground">
+          Não foi possível carregar a página
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+        <p className="mt-2 text-body text-muted-foreground">
+          Algo deu errado do nosso lado. Tente atualizar ou volte para o início.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -58,15 +63,15 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Tentar de novo
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-body font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Ir para o início
           </a>
         </div>
       </div>
@@ -84,6 +89,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Vonix Hair" },
       { property: "og:description", content: "Cosméticos capilares profissionais Vonix Hair." },
       { property: "og:type", content: "website" },
+      { property: "og:locale", content: "pt_BR" },
+      { property: "og:site_name", content: "Vonix Hair" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -92,8 +99,39 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Manrope:wght@400;500;600;700&display=swap" },
-      { rel: "icon", href: "https://vonixhaircosmeticos.com.br/favicon-light.png", type: "image/png" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;500;600&display=swap" },
+      { rel: "icon", href: "/favicon.ico" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "Vonix Hair",
+              url: SITE_URL,
+              logo: `${SITE_URL}/vonix-pedidos-512.png`,
+              sameAs: [INSTAGRAM, FACEBOOK],
+              contactPoint: { "@type": "ContactPoint", telephone: "+55-31-99008-6296", contactType: "customer service", areaServed: "BR", availableLanguage: "pt-BR" },
+            },
+            {
+              "@type": "WebSite",
+              name: "Vonix Hair",
+              url: SITE_URL,
+              potentialAction: { "@type": "SearchAction", target: `${SITE_URL}/loja?q={search_term_string}`, "query-input": "required name=search_term_string" },
+            },
+          ],
+        }),
+      },
+      { src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, async: true },
+      {
+        children: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`,
+      },
+      {
+        children: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY_ID}");`,
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -104,7 +142,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>

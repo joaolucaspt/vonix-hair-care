@@ -24,6 +24,10 @@ export const PIX_DISCOUNT = 0.05;
 export const WHATSAPP =
   "https://wa.me/5531990086296?text=Ol%C3%A1%2C+vim+do+site+e+preciso+de+ajuda.";
 
+export const SITE_URL = "https://vonixhaircosmeticos.com.br";
+export const INSTAGRAM ="https://www.instagram.com/vonixhairoficial";
+export const FACEBOOK = "https://www.facebook.com/vonixhairoficial";
+
 export const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -55,7 +59,20 @@ export const maskCep = (v: string) => {
 export const missingForFreeShipping = (subtotal: number) =>
   hasFreeShipping(subtotal) ? 0 : Math.max(0, cents(FREE_SHIPPING_ABOVE + 0.01 - subtotal) / 100);
 
-export const discountPct = (compare: number | null, price: number) =>
+/** What the customer gets in the item: kit piece count (from "O QUE VEM NO KIT") and/or the size(s). */
+export function contentLabel(p: Product, short = false) {
+  const sizes = [...new Set(p.variants.map((v) => v.label.replace(/^[^\d]*/, "").replace(/\s+/g, "").trim()).filter(Boolean))];
+  const sizeText = sizes.join(" · ");
+  if (p.category === "kits") {
+    const block = p.description.match(/\*\*O QUE VEM NO (?:KIT|COMBO)\*\*\s*([\s\S]*?)\n---/)?.[1];
+    const n = block ? block.split("\n").filter((l) => l.trim().startsWith("**")).length : 0;
+    if (n) return `${short ? "" : "Combo com "}${n} produtos${sizeText ? ` · ${sizeText}` : ""}`;
+    return sizeText ? `Combo · ${sizeText}` : "Combo";
+  }
+  return sizeText;
+}
+
+export const discountPct =(compare: number | null, price: number) =>
   compare && compare > price ? Math.round((1 - price / compare) * 100) : 0;
 
 /* ---------- professional classification (explicit metadata) ---------- */
@@ -75,12 +92,12 @@ export const PRO_ONLY = new Set([
 ]);
 export const isProOnly = (slug: string) => PRO_ONLY.has(slug);
 
-/* ---------- line offers: 5% complement, pro kits 2un/12% and 3un/20% ---------- */
+/* ---------- line offers: 5% cart complement, salon promotions 2un/12% and 3un/15% ---------- */
 export type Offer = "comp5" | "kit2" | "kit3";
 export const OFFER_LABEL: Record<Offer, string> = {
   comp5: "5% OFF neste item",
-  kit2: "Kit 2 unidades · 12% OFF",
-  kit3: "Kit 3 unidades · 20% OFF",
+  kit2: "Combo 2 unidades · 12% OFF",
+  kit3: "Combo 3 unidades · 15% OFF",
 };
 
 /** Line totals in cents-safe math. qty = units for comp5/normal, kits for kit2/kit3. */
@@ -91,7 +108,7 @@ export function lineTotals(price: number, qty: number, offer?: Offer) {
     return { gross: (u * 2 * qty) / 100, net: (kit * qty) / 100, units: 2 * qty };
   }
   if (offer === "kit3") {
-    const kit = Math.round((u * 3 * 80) / 100);
+    const kit = Math.round((u * 3 * 85) / 100);
     return { gross: (u * 3 * qty) / 100, net: (kit * qty) / 100, units: 3 * qty };
   }
   if (offer === "comp5") {
@@ -104,15 +121,17 @@ export function lineTotals(price: number, qty: number, offer?: Offer) {
 /* ---------- persistent cart & favorites ---------- */
 export type CartItem = { slug: string; variant: string; qty: number; offer?: Offer };
 
-function createStore<T>(key: string, initial: T) {
+/** "session" storage forgets the choice when the visit ends, so the visitor chooses again next time. */
+function createStore<T>(key: string, initial: T, kind: "local" | "session" = "local") {
   let state = initial;
   let loaded = false;
   const subs = new Set<() => void>();
+  const storage = () => (kind === "session" ? sessionStorage : localStorage);
   const load = () => {
     if (loaded || typeof window === "undefined") return;
     loaded = true;
     try {
-      const s = localStorage.getItem(key);
+      const s = storage().getItem(key);
       if (s) state = JSON.parse(s);
     } catch {
       /* ignore */
@@ -127,7 +146,7 @@ function createStore<T>(key: string, initial: T) {
     set: (fn: (s: T) => T) => {
       load();
       state = fn(state);
-      localStorage.setItem(key, JSON.stringify(state));
+      storage().setItem(key, JSON.stringify(state));
       subs.forEach((f) => f());
     },
     sub: (f: () => void) => {
@@ -139,6 +158,9 @@ function createStore<T>(key: string, initial: T) {
 
 const cartStore = createStore<CartItem[]>("vonix-cart", []);
 const favStore = createStore<string[]>("vonix-favs", []);
+
+/** False while the page is server-rendered/hydrating, so pages that depend on localStorage don't flash an empty state. */
+export const useHydrated = () => useSyncExternalStore(() => () => undefined, () => true, () => false);
 
 export function useCart() {
   const items = useSyncExternalStore(cartStore.sub, cartStore.get, cartStore.server);
@@ -205,10 +227,10 @@ export const NEEDS: Record<string, RegExp> = {
 export const TYPES: Record<string, (p: Product) => boolean> = {
   Progressiva: (p) => /progressiva/i.test(p.name),
   "Máscara": (p) => /máscara/i.test(p.name),
-  Kits: (p) => p.category === "kits",
+  Combos: (p) => p.category === "kits",
   Finalizadores: (p) => p.category === "finalizadores",
 };
-export const BEST_SELLERS = ["kit-cafe-verde", "kit-banana-e-mel", "kit-cronograma-capilar", "kit-whey-protein"];
+export const BEST_SELLERS = ["kit-cafe-verde", "kit-banana-e-mel", "kit-cronograma-capilar", "kit-whey-protein", "kit-cauterizacao", "kit-cachos"];
 
 export const MAX_DISCOUNT = Math.max(...products.map((p) => discountPct(p.compareBase, p.variants[0].price)));
 
@@ -246,27 +268,60 @@ export type Audience = "casa" | "salao" | null;
 export const resolveAudience = (saved: Audience, uso?: string): Audience =>
   saved ?? (uso === "casa" || uso === "salao" ? uso : null);
 
-/** Display only: reuse the single-unit line offer without modifying the catalog. */
+/**
+ * Salon area promotions (buy 2 = 12% off, buy 3 = 15% off) apply to every product sold there,
+ * ready-made kits included. No extra 5% on single units.
+ */
+export const hasProPromo = (_p: Product) => true;
+
+/** Display only: price is always the catalog price; salon promotions are chosen on the product page. */
 export function cardPricing(p: Product, audience: Audience) {
-  const professional = audience === "salao" && isProOnly(p.slug);
-  const price = lineTotals(p.variants[0].price, 1, professional ? "comp5" : undefined).net;
-  return { professional, price, pix: professional ? null : pixPrice(price), parcels: installments(price) };
+  const price = p.variants[0].price;
+  return { professional: audience === "salao" && hasProPromo(p), price, pix: pixPrice(price), parcels: installments(price) };
 }
-const audienceStore = createStore<Audience>("vonix-audience", null);
+const audienceStore = createStore<Audience>("vonix-audience", null, "session");
+
+/** Chemical-service products (progressivas, botox, selagem): they go last in the home area. */
+const isChemicalLine = (p: Product) => isProOnly(p.slug) || p.category === "quimica" || p.slug.startsWith("selagem");
+
+/**
+ * Both areas list every product; only the order changes (stable within each group):
+ * - casa: home products first, the rest next, progressivas/botox at the end;
+ * - salão: professional products first (by professional relevance), home products at the bottom.
+ */
+export const forAudience = (items: Product[], audience: Audience) => {
+  if (audience === "casa") {
+    const rank = (p: Product) => (USAGE["casa"]?.(p) ? 0 : isChemicalLine(p) ? 2 : 1);
+    return [...items].sort((a, b) => rank(a) - rank(b));
+  }
+  if (audience === "salao") {
+    const pro = professionalRelevance(items.filter((p) => USAGE["salao"]?.(p)));
+    return [...pro, ...items.filter((p) => !USAGE["salao"]?.(p))];
+  }
+  return items;
+};
 export function useAudience() {
   const audience = useSyncExternalStore(audienceStore.sub, audienceStore.get, audienceStore.server);
   return { audience, set: (a: Audience) => audienceStore.set(() => a) };
 }
 
 /** Usage filters based only on indications confirmed in the catalog descriptions. */
+/** Home / salon indications, fixed explicitly so editing a product's copy never changes where it is listed. */
+const CASA_TEXT = new Set([
+  "progressiva-fio-de-luz", "mascara-reparacao-nutri-repair", "kit-banana-e-mel", "kit-cronograma-capilar", "kit-whey-protein", "kit-desmaia",
+  "mascara-hidratacao-lanolina-karite", "mascara-efeito-teia-tomba-cabelo", "mascara-efeito-teia-coco-nutri", "mascara-efeito-teia-anabolizante",
+  "kit-coco-nutri", "mousse-flash", "mascara-efeito-teia-desmaia-cabelo", "kit-matizador-shampoo-e-mascara", "shampoo-hidratante-dep-toc",
+  "kit-cachos", "reparador-de-pontas", "serum-argan",
+]);
+const SALAO_TEXT = new Set([
+  "progressiva-fio-de-luz", "botox-vonix", "mascara-reparacao-nutri-repair", "plex-vonix", "kit-cauterizacao", "mascara-hidratacao-lanolina-karite",
+  "botox-line-matizador", "mascara-efeito-teia-tomba-cabelo", "mascara-efeito-teia-coco-nutri", "mascara-efeito-teia-anabolizante", "botox-vonix-matizador",
+  "mascara-whey-protein", "mousse-flash", "progressiva-diamond", "shampoo-diamond-anti-residuo", "mascara-efeito-teia-desmaia-cabelo",
+  "kit-matizador-shampoo-e-mascara", "progressiva-lift-em-gel", "progressiva-vonix-special-matizadora", "kit-cachos", "defrizante", "serum-argan",
+]);
 export const USAGE: Record<string, (p: Product) => boolean> = {
-  casa: (p) =>
-    !isProOnly(p.slug) &&
-    (p.category === "kits" ||
-      p.category === "finalizadores" ||
-      /casa|doméstic|dia a dia|diário/i.test(p.name + " " + p.description)),
-  salao: (p) =>
-    isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || /profissional|salão/i.test(p.name + " " + p.description),
+  casa: (p) => !isProOnly(p.slug) && (p.category === "kits" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
+  salao: (p) => isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || SALAO_TEXT.has(p.slug),
 };
 
 /** Professional relevance only; stable families based on catalog identifiers, never kit text. */

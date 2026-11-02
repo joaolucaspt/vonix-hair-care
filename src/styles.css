@@ -133,8 +133,8 @@
 }
 
 @theme inline {
-  --font-sans: "Manrope", system-ui, sans-serif;
-  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading);
   --color-marquee: var(--marquee);
   --color-marquee-foreground: var(--marquee-foreground);
   --color-action: var(--action);
@@ -147,19 +147,64 @@
 }
 
 :root {
-  /* Paleta preto e branco: fundo branco, texto e botões pretos */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.18 0 0);
+  /* Tipografia: Playfair Display nos títulos (500/700), Inter em todo o resto (400/500/600) */
+  --font-heading: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --fs-h1: 2rem;
+  --fs-h2: 1.5rem;
+  --fs-name: 1.125rem;
+  --fs-price: 1.25rem;
+  --fs-body: 1rem;
+  --fs-small: 0.8125rem;
+  --lh-heading: 1.2;
+  --lh-text: 1.5;
+}
+@media (min-width: 768px) {
+  :root {
+    --fs-h1: 2.75rem;
+    --fs-h2: 2rem;
+  }
+}
+
+@utility text-h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-heading);
+}
+@utility text-h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-heading);
+}
+@utility text-name {
+  font-size: var(--fs-name);
+  line-height: 1.3;
+}
+@utility text-price {
+  font-size: var(--fs-price);
+  line-height: 1.3;
+}
+@utility text-body {
+  font-size: var(--fs-body);
+  line-height: var(--lh-text);
+}
+@utility text-small {
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+:root {
+  /* Paleta Vonix: creme quente, preto quente e dourado da marca nos botões de compra */
+  --background: oklch(0.995 0.004 85);
+  --foreground: oklch(0.2 0.012 60);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --border: oklch(0.9 0 0);
-  --marquee: oklch(0.18 0 0);
-  --marquee-foreground: oklch(1 0 0);
-  --action: oklch(0.18 0 0);
-  --action-foreground: oklch(1 0 0);
-  --card-image: oklch(0.96 0 0);
+  --card-foreground: oklch(0.2 0.012 60);
+  --muted: oklch(0.965 0.014 85);
+  --muted-foreground: oklch(0.45 0.02 70);
+  --border: oklch(0.9 0.02 85);
+  --marquee: oklch(0.2 0.02 60);
+  --marquee-foreground: oklch(0.96 0.03 85);
+  --action: oklch(0.8 0.13 85);
+  --action-foreground: oklch(0.2 0.012 60);
+  --card-image: oklch(0.965 0.016 85);
   --whatsapp: oklch(0.72 0.19 150);
   --whatsapp-foreground: oklch(1 0 0);
   --star: oklch(0.72 0.14 80);
@@ -189,7 +234,34 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
+    font-size: var(--fs-body);
+    line-height: var(--lh-text);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+  }
+  h1 {
+    font-size: var(--fs-h1);
+    line-height: var(--lh-heading);
+  }
+  h2 {
+    font-size: var(--fs-h2);
+    line-height: var(--lh-heading);
+  }
+  b,
+  strong,
+  th {
+    font-weight: 600;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
   }
   .font-display em {
     font-style: italic;
@@ -206,5 +278,42 @@
 @media (max-width: 767px) {
   .banner-mask {
     font-size: 2.6cqw;
+  }
+}
+
+.banner-3d {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.25s ease-out;
+  animation: banner-float 5s ease-in-out infinite;
+}
+.banner-shadow {
+  animation: banner-shadow 5s ease-in-out infinite;
+}
+@keyframes banner-float {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: -1.5deg;
+  }
+  50% {
+    translate: 0 -2.5%;
+    rotate: 1.5deg;
+  }
+}
+@keyframes banner-shadow {
+  0%,
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+  50% {
+    scale: 0.85;
+    opacity: 0.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner-3d,
+  .banner-shadow {
+    animation: none;
   }
 }

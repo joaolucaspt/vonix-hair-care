@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
-import { OFFER_LABEL, brl, complementsFor, pixPrice, useCart } from "@/lib/store";
+import { OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
 import { ShippingBar, Summary } from "@/components/cart-summary";
 
 export const Route = createFileRoute("/carrinho")({
@@ -23,8 +23,8 @@ function Suggestions() {
   if (!items.length) return null;
   return (
     <section className="mt-8" aria-label="Complete seu tratamento">
-      <h2 className="font-display text-3xl">Complete seu tratamento</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <h2 className="font-display text-h2">Complete seu tratamento</h2>
+      <p className="mt-1 text-body text-muted-foreground">
         Escolha o cuidado que falta na sua rotina e aproveite a condição deste item.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -32,22 +32,22 @@ function Suggestions() {
           const v = p.variants[0];
           const offer = pixPrice(v.price);
           return (
-            <div key={p.slug} className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-3 text-sm">
+            <div key={p.slug} className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-3 text-body">
               <Link to="/produto/$slug" params={{ slug: p.slug }} className="block">
                 <img src={p.images[0]} alt="" className="h-24 w-full rounded-lg bg-card-image object-contain" />
               </Link>
               <Link to="/produto/$slug" params={{ slug: p.slug }} className="mt-2 font-medium hover:underline">
                 {p.name}
               </Link>
-              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.short}</p>
+              <p className="mt-0.5 line-clamp-2 text-small text-muted-foreground">{p.short}</p>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-xs text-muted-foreground line-through">{brl(v.price)}</span>
+                <span className="text-small text-muted-foreground line-through">{brl(v.price)}</span>
                 <b>{brl(offer)}</b>
               </div>
-              <div className="text-xs text-muted-foreground">Economia de {brl(v.price - offer)} neste item</div>
+              <div className="text-small text-muted-foreground">Economia de {brl(v.price - offer)} neste item</div>
               <button
                 onClick={() => c.add(p.slug, v.label, 1, "comp5")}
-                className="mt-3 rounded-full border border-action px-4 py-2 text-xs font-medium text-action"
+                className="mt-3 rounded-full border border-action px-4 py-2 text-small font-medium text-action"
               >
                 Adicionar
               </button>
@@ -61,11 +61,14 @@ function Suggestions() {
 
 function Cart() {
   const c = useCart();
+  const hydrated = useHydrated();
   return (
     <Shell>
       <div className="container-site py-10 pb-28 lg:pb-10">
-        <h1 className="mb-8 font-display text-5xl">Carrinho</h1>
-        {c.lines.length === 0 ? (
+        <h1 className="mb-8 font-display text-h1">Carrinho</h1>
+        {!hydrated ? (
+          <div className="min-h-[40vh]" aria-busy="true" />
+        ) : c.lines.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-muted-foreground">Seu carrinho está vazio.</p>
             <Link to="/loja" className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground">Ver produtos</Link>
@@ -79,9 +82,9 @@ function Cart() {
                     <img src={l.product.images[0]} alt="" className="h-24 w-24 shrink-0 rounded-lg bg-card-image object-contain" />
                     <div className="min-w-0 flex-1">
                       <Link to="/produto/$slug" params={{ slug: l.slug }} className="font-medium">{l.product.name}</Link>
-                      <div className="text-xs text-muted-foreground">{l.variant} · {brl(l.price)}</div>
+                      <div className="text-small text-muted-foreground">{l.variant} · {brl(l.price)}</div>
                       {l.offer && (
-                        <div className="mt-1 inline-block rounded-full bg-foreground px-2.5 py-0.5 text-[11px] font-medium text-background">
+                        <div className="mt-1 inline-block rounded-full bg-foreground px-2.5 py-0.5 text-small font-medium text-background">
                           {OFFER_LABEL[l.offer]}{(l.offer === "kit2" || l.offer === "kit3") ? ` · ${l.units} un. no total` : ""}
                         </div>
                       )}
@@ -93,7 +96,7 @@ function Cart() {
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      {l.offer && <div className="text-xs text-muted-foreground line-through">{brl(l.gross)}</div>}
+                      {l.offer && <div className="text-small text-muted-foreground line-through">{brl(l.gross)}</div>}
                       <div className="font-semibold">{brl(l.net)}</div>
                     </div>
                   </li>
@@ -105,7 +108,7 @@ function Cart() {
               <ShippingBar subtotal={c.subtotal} />
               <Summary lines={c.lines} />
               <Link to="/checkout" className="hidden rounded-full bg-action py-3.5 text-center font-medium text-action-foreground lg:block">Finalizar minha compra</Link>
-              <Link to="/loja" className="block text-center text-sm underline">Continuar comprando</Link>
+              <Link to="/loja" className="block text-center text-body underline">Continuar comprando</Link>
             </aside>
           </div>
         )}
