@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, Truck, User, X } from "lucide-react";
+import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { ArrowLeft, ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, Truck, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -65,7 +65,6 @@ const NAV = [
   { label: "Progressiva", search: { tiposProduto: "Progressiva" } },
   { label: "Máscara", search: { tiposProduto: "Máscara" } },
   { label: "Combos", search: { tiposProduto: "Combos" } },
-  { label: "Kera+", search: { q: "kera" } },
   { label: "Cachos", search: { q: "cachos" } },
 ];
 
@@ -218,6 +217,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const { count } = useCart();
   const [open, setOpen] = useState(false);
   const path = useLocation().pathname;
+  const router = useRouter();
   const hideWhatsApp = path === "/carrinho" || path === "/checkout";
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
@@ -230,7 +230,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </div>
       <header className="sticky top-0 z-40 border-b border-border bg-background">
         <div className="container-site flex items-center gap-4 py-2 lg:items-start lg:py-2">
-          <button className="-m-2 p-2 lg:hidden" aria-label="Abrir menu" onClick={() => setOpen(true)}>
+          <button className="-m-2 p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
           <Link to="/" className="shrink-0">
@@ -276,23 +276,46 @@ export function Shell({ children }: { children: ReactNode }) {
       {open && (
         <div className="fixed inset-0 z-50 bg-foreground/50" onClick={() => setOpen(false)}>
           <aside
-            className="h-full w-72 bg-background p-6"
+            aria-label="Menu rápido"
+            className="h-full w-80 max-w-[85vw] overflow-y-auto bg-background p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="mb-6">
-              <X className="h-6 w-6" />
-            </button>
-            <nav className="flex flex-col gap-4 text-body uppercase">
+            <div className="mb-6 flex items-center justify-between">
+              <span className="font-display text-h2">Menu</span>
+              <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="-m-2 p-2">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <h3 className="mb-3 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Categorias</h3>
+            <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
               {NAV.map((n) => (
                 <Link key={n.label} to="/loja" search={n.search} onClick={() => setOpen(false)}>
                   {n.label}
                 </Link>
               ))}
-              <Link to="/favoritos" onClick={() => setOpen(false)}>Favoritos</Link>
+            </nav>
+            <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Por necessidade</h3>
+            <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
+              {["Hidratação", "Reconstrução", "Controle de Frizz", "Definição de Cachos", "Cabelos com Química", "Nutrição"].map((n) => (
+                <Link key={n} to="/loja" search={{ necessidades: n }} onClick={() => setOpen(false)}>
+                  {n}
+                </Link>
+              ))}
+            </nav>
+            <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Minha conta</h3>
+            <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
               <Link to="/conta" onClick={() => setOpen(false)}>Entrar / Meus pedidos</Link>
+              <Link to="/favoritos" onClick={() => setOpen(false)}>Favoritos</Link>
               <Link to="/carrinho" onClick={() => setOpen(false)}>Carrinho</Link>
             </nav>
           </aside>
+        </div>
+      )}
+      {path !== "/" && (
+        <div className="container-site pt-3">
+          <button type="button" onClick={() => router.history.back()} aria-label="Voltar" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-small transition-colors hover:bg-muted">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
+          </button>
         </div>
       )}
       <main>{children}</main>
