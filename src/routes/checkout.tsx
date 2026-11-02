@@ -111,14 +111,14 @@ function Checkout() {
   const [paid, setPaid] = useState(false);
   const [copied, setCopied] = useState(false);
   const [cardDone, setCardDone] = useState<{ orderId: number; paid: boolean } | null>(null);
-  const [cfg, setCfg] = useState<{ externalId: string; sandbox: boolean } | null>(null);
+  const [cfg, setCfg] = useState<{ externalId: string; sandbox: boolean; pixEnabled?: boolean } | null>(null);
   const ip = useRef("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((old) => ({ ...old, [k]: e.target.value }));
 
   useEffect(() => {
     const saved = getSavedCep();
     if (saved) setF((old) => (old.cep ? old : { ...old, cep: saved }));
-    getPaymentConfig().then(setCfg).catch(() => setCfg({ externalId: "", sandbox: true }));
+    getPaymentConfig().then(setCfg).catch(() => setCfg({ externalId: "", sandbox: true, pixEnabled: false }));
     // A coupon won on the prize wheel is applied automatically.
     const prize = getPrize();
     if (prize) {
@@ -438,7 +438,12 @@ function Checkout() {
           </fieldset>
 
           {error && <p role="alert" className="rounded-lg border border-destructive p-3 text-body text-destructive">{error}</p>}
-          <button disabled={busy || !chosen} className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60">
+          {cfg && !cfg.pixEnabled && (
+            <p role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
+              Estamos ativando os pagamentos desta loja. Em breve você poderá finalizar por aqui. Para comprar agora, <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">fale com a gente no WhatsApp</a>.
+            </p>
+          )}
+          <button disabled={busy || !chosen || (!!cfg && !cfg.pixEnabled)} className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60">
             {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${brl(total)} no cartão`}
           </button>
           <div className="flex justify-center"><SecuritySeal /></div>
