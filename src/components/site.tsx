@@ -184,14 +184,15 @@ function AudienceChoice() {
   };
   if (audience)
     return (
-      <section aria-label="Área escolhida" className="flex w-full min-w-0 items-center justify-between gap-2 rounded-lg bg-foreground px-3 py-2 text-background">
-        <span className="min-w-0 text-small font-semibold sm:text-body">
-          {audience === "salao" ? "Área para cabeleireiras" : "Para mim · cuidados em casa"}
+      <section aria-label="Área escolhida" className="mx-auto flex w-fit max-w-full min-w-0 items-center gap-3 rounded-full border border-foreground/25 bg-transparent px-5 py-1.5 text-foreground">
+        <span className="flex min-w-0 items-center gap-2 text-small font-medium uppercase tracking-[0.12em]">
+          {audience === "salao" ? <Scissors className="h-4 w-4 shrink-0" aria-hidden="true" /> : <House className="h-4 w-4 shrink-0" aria-hidden="true" />}
+          <span className="truncate">{audience === "salao" ? "Área para cabeleireiras" : "Para mim · cuidados em casa"}</span>
         </span>
-        <Button type="button" variant="outline" className="h-7 shrink-0 border-background bg-transparent px-3 text-small text-background hover:bg-background hover:text-foreground"
+        <button type="button" className="shrink-0 text-small underline underline-offset-4 hover:no-underline"
           onClick={() => { set(null); nav({ to: "/" }); }}>
-          Trocar área
-        </Button>
+          Trocar
+        </button>
       </section>
     );
   return (
@@ -240,13 +241,6 @@ export function Shell({ children }: { children: ReactNode }) {
             <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
             <SearchBox />
             <AudienceChoice />
-            <nav className="flex flex-wrap justify-center whitespace-nowrap gap-x-5 gap-y-1 text-small uppercase">
-              {NAV.map((n) => (
-                <Link key={n.label} to="/loja" search={n.search} className="shrink-0 hover:underline">
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
           </div>
           <div className="ml-auto flex items-center gap-4 text-body">
             <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
@@ -269,6 +263,15 @@ export function Shell({ children }: { children: ReactNode }) {
           <SearchBox />
           <AudienceChoice />
         </div>
+        <nav aria-label="Categorias" className="hidden border-t border-border lg:block">
+          <div className="container-site flex justify-center gap-x-10 py-3 text-small font-medium uppercase tracking-[0.18em]">
+            {NAV.map((n) => (
+              <Link key={n.label} to="/loja" search={n.search} className="shrink-0 whitespace-nowrap border-b border-transparent pb-0.5 transition-colors hover:border-foreground">
+                {n.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
       </header>
       {open && (
         <div className="fixed inset-0 z-50 bg-foreground/50" onClick={() => setOpen(false)}>
