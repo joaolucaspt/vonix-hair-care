@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, Truck, User, X } from "lucide-react";
+import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { ArrowLeft, ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, Truck, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -65,7 +65,6 @@ const NAV = [
   { label: "Progressiva", search: { tiposProduto: "Progressiva" } },
   { label: "Máscara", search: { tiposProduto: "Máscara" } },
   { label: "Combos", search: { tiposProduto: "Combos" } },
-  { label: "Kera+", search: { q: "kera" } },
   { label: "Cachos", search: { q: "cachos" } },
 ];
 
@@ -218,6 +217,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const { count } = useCart();
   const [open, setOpen] = useState(false);
   const path = useLocation().pathname;
+  const router = useRouter();
   const hideWhatsApp = path === "/carrinho" || path === "/checkout";
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
@@ -293,6 +293,13 @@ export function Shell({ children }: { children: ReactNode }) {
               <Link to="/carrinho" onClick={() => setOpen(false)}>Carrinho</Link>
             </nav>
           </aside>
+        </div>
+      )}
+      {path !== "/" && (
+        <div className="container-site pt-3">
+          <button type="button" onClick={() => router.history.back()} aria-label="Voltar" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-small transition-colors hover:bg-muted">
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
+          </button>
         </div>
       )}
       <main>{children}</main>
