@@ -280,9 +280,11 @@ export function Shell({ children }: { children: ReactNode }) {
             className="h-full w-80 max-w-[85vw] overflow-y-auto bg-background p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-6 flex items-center justify-between">
-              <span className="font-display text-h2">Menu</span>
-              <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="-m-2 p-2">
+            <div className="mb-6 flex items-center gap-3">
+              <Link to="/conta" onClick={() => setOpen(false)} className="flex flex-1 items-center justify-center gap-2 rounded-md border border-foreground px-3 py-2.5 text-center text-small font-semibold uppercase tracking-[0.12em] transition-colors hover:bg-foreground hover:text-background">
+                <User className="h-4 w-4 shrink-0" aria-hidden="true" /> Entrar / Meus pedidos
+              </Link>
+              <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="-m-2 shrink-0 p-2">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -302,9 +304,8 @@ export function Shell({ children }: { children: ReactNode }) {
                 </Link>
               ))}
             </nav>
-            <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Minha conta</h3>
+            <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">Atalhos</h3>
             <nav className="flex flex-col text-body [&_a]:border-b [&_a]:border-border [&_a]:py-3">
-              <Link to="/conta" onClick={() => setOpen(false)}>Entrar / Meus pedidos</Link>
               <Link to="/favoritos" onClick={() => setOpen(false)}>Favoritos</Link>
               <Link to="/carrinho" onClick={() => setOpen(false)}>Carrinho</Link>
             </nav>
