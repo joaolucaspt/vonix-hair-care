@@ -15,7 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
 
-// IDs lidos do site publicado; confirmar o ID do Clarity em Configurações > Visão geral do projeto.
+// IDs lidos do site publicado; confirmar o ID do Clarity em ConfiguraÃ§Ãµes > VisÃ£o geral do projeto.
 const GA_ID = "G-JW91EQ32F3";
 const CLARITY_ID = "yrgl15vqw9";
 
@@ -24,16 +24,16 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-h1 font-semibold text-foreground">404</h1>
-        <h2 className="mt-4 text-price font-semibold text-foreground">Página não encontrada</h2>
+        <h2 className="mt-4 text-price font-semibold text-foreground">PÃ¡gina nÃ£o encontrada</h2>
         <p className="mt-2 text-body text-muted-foreground">
-          A página que você procura não existe ou mudou de endereço.
+          A pÃ¡gina que vocÃª procura nÃ£o existe ou mudou de endereÃ§o.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Ir para o início
+            Ir para o inÃ­cio
           </Link>
         </div>
       </div>
@@ -52,10 +52,10 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-price font-semibold tracking-tight text-foreground">
-          Não foi possível carregar a página
+          NÃ£o foi possÃ­vel carregar a pÃ¡gina
         </h1>
         <p className="mt-2 text-body text-muted-foreground">
-          Algo deu errado do nosso lado. Tente atualizar ou volte para o início.
+          Algo deu errado do nosso lado. Tente atualizar ou volte para o inÃ­cio.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -71,7 +71,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-body font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Ir para o início
+            Ir para o inÃ­cio
           </a>
         </div>
       </div>
@@ -85,9 +85,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Vonix Hair" },
-      { name: "description", content: "Cosméticos capilares profissionais Vonix Hair." },
+      { name: "description", content: "CosmÃ©ticos capilares profissionais Vonix Hair." },
       { property: "og:title", content: "Vonix Hair" },
-      { property: "og:description", content: "Cosméticos capilares profissionais Vonix Hair." },
+      { property: "og:description", content: "CosmÃ©ticos capilares profissionais Vonix Hair." },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pt_BR" },
       { property: "og:site_name", content: "Vonix Hair" },
@@ -100,10 +100,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;500;600&display=swap" },
-      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png?v=2" },
-      { rel: "icon", type: "image/png", sizes: "48x48", href: "/favicon-48.png?v=2" },
-      { rel: "shortcut icon", href: "/favicon.ico?v=2" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=2" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png?v=3" },
+      { rel: "icon", type: "image/png", sizes: "48x48", href: "/favicon-48.png?v=3" },
+      { rel: "shortcut icon", href: "/favicon.ico?v=3" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=3" },
     ],
     scripts: [
       {
