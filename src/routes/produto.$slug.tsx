@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews } from "@/components/reviews";
+import { ShareButton } from "@/components/share-button";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
 import { quoteShipping } from "@/lib/checkout.functions";
@@ -175,6 +176,7 @@ function ProductPage() {
             {off > 0 && <span className="rounded-full bg-foreground px-3 py-1 text-small text-background">{off}% OFF</span>}
             <h1 className="mt-3 font-display text-h1">{p.name}</h1>
             <Stars slug={p.slug} />
+            <div className="mt-3"><ShareButton compact url={`${SITE_URL}/produto/${p.slug}`} title={`${p.name} — Vonix Hair`} text={`Olha esse produto da Vonix Hair: ${p.name}.`} label="Compartilhar" /></div>
             {p.short && <p className="mt-3 text-muted-foreground">{p.short}</p>}
             {(
               <div className="mt-6">

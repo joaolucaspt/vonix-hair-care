@@ -7,6 +7,7 @@ import logoUrl from "@/assets/vonix-logo.webp";
 import { PrizeWheel } from "@/components/prize-wheel";
 import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
+import { useVisitorSummary } from "@/lib/review-summary";
 import { PaymentLogos } from "@/components/payment-logos";
 import { SignupCoupon } from "@/components/signup-coupon";
 import { toItem, track } from "@/lib/analytics";
@@ -445,7 +446,10 @@ export function PriceBlock({ price, compare, big, offer = false }: { price: numb
 export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
   const list = reviewsFor(slug);
   const sold = soldFor(slug);
-  const avg = list.length ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0;
+  // Clientes (reviews.json) + avaliações de visitantes já aprovadas (banco): as duas contam para a nota.
+  const vis = useVisitorSummary()[slug];
+  const count = list.length + (vis?.[0] ?? 0);
+  const avg = count ? (list.reduce((s, r) => s + r.rating, 0) + (vis?.[1] ?? 0)) / count : 0;
   const label = avg.toFixed(1).replace(".", ",");
   const size = big ? "h-3 w-3" : "h-3.5 w-3.5";
   const five = (filled: boolean) => (
@@ -456,7 +460,7 @@ export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
     </span>
   );
   return (
-    <div className="flex items-center gap-2 text-small" role="img" aria-label={list.length ? `Nota ${label} de 5` : "Ainda sem avaliações"}>
+    <div className="flex items-center gap-2 text-small" role="img" aria-label={count ? `Nota ${label} de 5` : "Ainda sem avaliações"}>
       <span className="relative inline-block text-[#d4a22f]" aria-hidden="true">
         {five(false)}
         {avg > 0 && (
@@ -465,7 +469,7 @@ export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
           </span>
         )}
       </span>
-      {list.length > 0 && <b className="text-body">{label}</b>}
+      {count > 0 && <b className="text-body">{label}</b>}
       {sold > 0 && <span className="text-muted-foreground">· {sold} {sold === 1 ? "vendido" : "vendidos"}</span>}
     </div>
   );
