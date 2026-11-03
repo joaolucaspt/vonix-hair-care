@@ -57,7 +57,7 @@ export function PrizeWheel() {
       /* ignore */
     }
     if (closed) return;
-    const t = setTimeout(() => setOpen(true), 8000);
+    const t = setTimeout(() => setOpen(true), 30000);
     return () => clearTimeout(t);
   }, [hidden]);
 
