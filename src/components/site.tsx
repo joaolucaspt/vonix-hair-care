@@ -8,6 +8,7 @@ import { PrizeWheel } from "@/components/prize-wheel";
 import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
 import { PaymentLogos } from "@/components/payment-logos";
+import { SignupCoupon } from "@/components/signup-coupon";
 import { toItem, track } from "@/lib/analytics";
 import {
   FREE_SHIPPING_ABOVE,
@@ -356,6 +357,9 @@ function Footer() {
         <span>Compra 100% segura</span>
         <span>Até 6x sem juros no cartão</span>
         <span>Frete grátis acima de R$ 150 em produtos</span>
+      </div>
+      <div className="container-site border-b border-marquee-foreground/15 py-6">
+        <div className="mx-auto max-w-xl"><SignupCoupon dark compact /></div>
       </div>
       <div className="container-site grid gap-8 py-8 text-body sm:grid-cols-4">
         <div>

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewCard, reviews } from "@/components/reviews";
+import { SignupCoupon } from "@/components/signup-coupon";
 import { Benefits, Grid, Shell } from "@/components/site";
 import { BEST_SELLERS, MAX_DISCOUNT, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
 
@@ -112,6 +113,10 @@ function Home() {
       <section className="container-site mt-16">
         <Title a="Todos os" b="Combos" to={{ tiposProduto: "Combos" }} />
         <Grid carousel items={forAudience(products.filter((p) => p.category === "kits"), audience)} />
+      </section>
+
+      <section className="container-site mt-16">
+        <SignupCoupon />
       </section>
 
       <section className="container-site mt-20 text-center">
