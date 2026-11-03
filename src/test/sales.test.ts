@@ -12,6 +12,7 @@ describe("vendas reais", () => {
   });
   it("produto sem venda registrada mostra 0, nunca um número estimado", () => {
     expect(soldFor("produto-que-nao-existe")).toBe(0);
-    expect(soldFor("progressiva-fio-de-luz")).toBe(5);
+    expect(soldFor("progressiva-fio-de-luz")).toBe(21);
+    expect(Object.values(SOLD).reduce((s, n) => s + n, 0)).toBe(267);
   });
 });
