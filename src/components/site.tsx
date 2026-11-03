@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, Truck, User, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, ShoppingCart, Truck, User, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -81,13 +81,22 @@ export function WhatsAppIcon({ className = "h-7 w-7" }: { className?: string }) 
   );
 }
 
+/** Símbolo oficial do Pix (losango), na cor da marca. */
+export function PixMark({ className = "h-3.5 w-3.5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" role="img" aria-label="Pix" className={`shrink-0 ${className}`} fill="#32BCAD">
+      <path d="M5.283 18.36a3.505 3.505 0 0 0 2.493-1.032l3.6-3.6a.684.684 0 0 1 .946 0l3.613 3.613a3.504 3.504 0 0 0 2.493 1.032h.71l-4.56 4.56a3.647 3.647 0 0 1-5.156 0L4.85 18.36ZM18.428 5.627a3.505 3.505 0 0 0-2.493 1.032l-3.613 3.614a.67.67 0 0 1-.946 0l-3.6-3.6A3.505 3.505 0 0 0 5.283 5.64h-.434l4.573-4.572a3.646 3.646 0 0 1 5.156 0l4.559 4.559ZM1.068 9.422 3.79 6.699h1.492a2.483 2.483 0 0 1 1.744.722l3.6 3.6a1.73 1.73 0 0 0 2.443 0l3.614-3.613a2.482 2.482 0 0 1 1.744-.723h1.767l2.737 2.737a3.646 3.646 0 0 1 0 5.156l-2.736 2.736h-1.768a2.482 2.482 0 0 1-1.744-.722l-3.613-3.613a1.77 1.77 0 0 0-2.444 0l-3.6 3.6a2.483 2.483 0 0 1-1.744.722H3.791l-2.723-2.723a3.646 3.646 0 0 1 0-5.156" />
+    </svg>
+  );
+}
+
 /** Payment methods the checkout really accepts (Appmax: Pix and credit card). Add boleto/wallets here only once they are built. */
 export function PaymentMethods({ dark = false }: { dark?: boolean }) {
   const pill = `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-small font-semibold ${dark ? "border-marquee-foreground/35 text-marquee-foreground" : "border-border bg-white text-foreground"}`;
   return (
     <ul aria-label="Formas de pagamento" className="flex flex-wrap items-center gap-2">
       <li className={pill}>
-        <span className="rounded bg-[#0a5c34] px-1 py-0.5 text-small font-semibold tracking-wider text-white">PIX</span> Pix · 5% OFF
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#dff1e8] px-2 text-small font-medium text-[#2c6e55]"><PixMark />Pix</span> 5% de desconto
       </li>
       <li className={pill}>
         <CreditCard className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" /> Cartão de crédito · até 6x sem juros
@@ -250,7 +259,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <User className="h-4 w-4" /> <span className="max-[359px]:sr-only">Entrar</span>
             </Link>
             <Link to="/carrinho" aria-label="Carrinho" className="relative -m-2 p-2">
-              <ShoppingBag className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5" />
               {count > 0 && (
                 <span className="absolute -right-0 -top-0 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-1 text-small text-background">
                   {count}
@@ -406,10 +415,10 @@ export function PriceBlock({ price, compare, big, offer = false }: { price: numb
         <span className={big ? "text-h2 font-semibold" : "font-semibold"}>{brl(price)}</span>
       </div>
       {!offer && (
-        <div className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-[#b9e5cd] bg-[#e7f6ee] text-[#0a5c34] ${big ? "px-4 py-3" : "px-2.5 py-1.5"}`}>
-          <span className="rounded bg-[#0a5c34] px-1.5 py-0.5 text-small font-semibold tracking-wider text-white">PIX</span>
-          <b className={big ? "text-h2" : "text-body"}>{brl(pixPrice(price))}</b>
-          <span className={`font-semibold ${big ? "text-body" : "text-small"}`}>5% OFF à vista</span>
+        <div className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-2xl bg-[#eef8f2] text-[#2c6e55] ${big ? "px-4 py-3" : "px-3 py-1.5"}`}>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-small font-medium text-[#2c6e55]"><PixMark />Pix</span>
+          <b className={`font-semibold ${big ? "text-h2" : "text-body"}`}>{brl(pixPrice(price))}</b>
+          <span className={`font-medium ${big ? "text-body" : "text-small"}`}>5% de desconto à vista</span>
         </div>
       )}
       <div className={`flex items-center gap-1.5 font-medium ${big ? "text-body" : "text-small"}`}>
@@ -520,10 +529,10 @@ export function ProductCard({ p }: { p: Product }) {
           <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
         </button>
       </div>
-      <div className="mt-1.5 flex items-center gap-1 whitespace-nowrap rounded-lg border border-[#b9e5cd] bg-[#e7f6ee] px-1.5 py-1 text-[#0a5c34]">
-        <span className="rounded bg-[#0a5c34] px-1 py-0.5 text-small font-semibold tracking-wider text-white">PIX</span>
-        <b className="text-small md:text-body">{brl(pixPrice(pricing.price))}</b>
-        <span className="text-small font-semibold md:text-small">-5%</span>
+      <div className="mt-1.5 flex items-center gap-1 whitespace-nowrap rounded-full bg-[#eef8f2] px-1.5 py-1 text-[#2c6e55] md:gap-1.5 md:px-2">
+        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-small font-medium"><PixMark /><span className="max-md:sr-only">Pix</span></span>
+        <b className="text-small font-semibold md:text-body">{brl(pixPrice(pricing.price))}</b>
+        <span className="text-small font-medium max-sm:hidden">-5%</span>
       </div>
       {p.short && <p className="mt-1.5 line-clamp-2 flex-1 text-small leading-snug text-muted-foreground md:line-clamp-3 md:text-small">{p.short}</p>}
     </div>
