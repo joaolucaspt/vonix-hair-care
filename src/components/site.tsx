@@ -7,6 +7,7 @@ import logoUrl from "@/assets/vonix-logo.webp";
 import { PrizeWheel } from "@/components/prize-wheel";
 import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
+import { PaymentLogos } from "@/components/payment-logos";
 import { toItem, track } from "@/lib/analytics";
 import {
   FREE_SHIPPING_ABOVE,
@@ -390,6 +391,10 @@ function Footer() {
         <span className="font-semibold">Formas de pagamento</span>
         <PaymentMethods dark />
         <SecuritySeal dark />
+      </div>
+      <div className="container-site flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-marquee-foreground/15 py-5 text-body">
+        <span className="font-semibold">Meios de pagamento</span>
+        <PaymentLogos />
       </div>
       <div className="container-site flex flex-wrap justify-between gap-3 border-t border-marquee-foreground/15 py-5 text-small opacity-80">
         <span>© 2026 Vonix Hair. Todos os direitos reservados.</span>
