@@ -14,14 +14,15 @@ describe("ambiente e preços dos cards", () => {
     expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 174.9, pix: 166.16, parcels: { count: 6, value: 29.15, first: 29.15 } });
     expect(cardPricing(p, "casa").price).toBe(174.9);
   });
-  it("kits prontos também têm a promoção de levar 2 ou 3 no salão, sem 5% extra", () => {
+  it("kits prontos também têm a promoção de levar 2 ou 3, sem 5% extra, no salão e em casa", () => {
     const p = getProduct("kit-banana-e-mel");
     if (!p) throw new Error("Produto obrigatório ausente");
     expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 154.9, pix: 147.16 });
-    expect(cardPricing(p, "casa").professional).toBe(false);
+    expect(cardPricing(p, "casa")).toMatchObject({ professional: true, price: 154.9, pix: 147.16 });
   });
-  it("todo produto vendido na área de salão tem a promoção", () => {
-    for (const p of products) expect(cardPricing(p, "salao").professional).toBe(true);
+  it("todo produto do site tem a promoção de levar mais de um, em qualquer área", () => {
+    for (const a of ["casa", "salao", null] as const)
+      for (const p of products) expect(cardPricing(p, a).professional).toBe(true);
   });
   it("as duas áreas listam todos os produtos, só muda a ordem", () => {
     for (const a of ["casa", "salao"] as const) {

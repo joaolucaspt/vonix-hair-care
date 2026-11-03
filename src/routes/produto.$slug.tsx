@@ -152,7 +152,7 @@ function ProductPage() {
   const compare = vi === 0 ? p.compareBase : null;
   const off = discountPct(compare, v.price);
   const related = forAudience(products.filter((x) => x.category === p.category && x.slug !== p.slug), audience).slice(0, 4);
-  const proMode = hasProPromo(p) && audience === "salao";
+  const proMode = hasProPromo(p);
   const sel = proMode ? lineTotals(v.price, qty, offer) : null;
   const unitPrice = sel ? sel.net / sel.units : v.price;
   useEffect(() => {
@@ -178,7 +178,7 @@ function ProductPage() {
             {p.short && <p className="mt-3 text-muted-foreground">{p.short}</p>}
             {proMode ? (
               <div className="mt-6">
-                <div className="mb-2 text-body font-medium">Promoção para cabeleireiras — mesmo produto, mesmo tamanho</div>
+                <div className="mb-2 text-body font-medium">{audience === "salao" ? "Promoção para cabeleireiras" : "Compre mais e economize"} — mesmo produto, mesmo tamanho</div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   {PRO_OFFERS.map((o) => {
                     const t = lineTotals(v.price, 1, o.offer);
