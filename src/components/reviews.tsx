@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import raw from "@/data/reviews.json";
 import { ReviewForm } from "@/components/review-form";
+import { listReviews } from "@/lib/reviews.functions";
 import { ShareButton } from "@/components/share-button";
 import { SITE_URL, getProduct } from "@/lib/store";
 
@@ -58,8 +60,20 @@ export function ReviewCard({ r }: { r: Review }) {
 
 /** Seção de avaliações da página do produto: as aprovadas, o compartilhar e o formulário para qualquer visitante avaliar. */
 export function ProductReviews({ slug }: { slug: string }) {
-  const list = reviewsFor(slug);
   const product = getProduct(slug);
+  // Avaliações de visitantes já aprovadas (vêm do banco; vazio se o banco ainda não estiver ligado).
+  const [extra, setExtra] = useState<Review[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    setExtra([]);
+    listReviews({ data: { slug } })
+      .then((r) => vivo && setExtra(r.reviews.map((x) => ({ slug, author: x.author, rating: x.rating, comment: x.comment, date: x.date, origem: "visitante" as const }))))
+      .catch(() => undefined);
+    return () => {
+      vivo = false;
+    };
+  }, [slug]);
+  const list = [...reviewsFor(slug), ...extra];
   const avg = list.length ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0;
   return (
     <section id="avaliacoes" className="mt-16 scroll-mt-32" aria-label="Avaliações">
@@ -82,10 +96,16 @@ export function ProductReviews({ slug }: { slug: string }) {
       </div>
       {list.length > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {list.map((r) => <ReviewCard key={r.author + r.date} r={r} />)}
+          {list.map((r, i) => <ReviewCard key={`${r.author}|${r.date}|${i}`} r={r} />)}
         </div>
       )}
-      {product && <ReviewForm slug={slug} productName={product.name} />}
+      {product && (
+        <ReviewForm
+          slug={slug}
+          productName={product.name}
+          onPublished={(x) => setExtra((e) => [{ slug, author: x.author, rating: x.rating, comment: x.comment, date: x.date, origem: "visitante" as const }, ...e])}
+        />
+      )}
     </section>
   );
 }

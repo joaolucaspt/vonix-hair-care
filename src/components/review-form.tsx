@@ -1,7 +1,8 @@
 import { Check, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics";
-import { submitReview } from "@/lib/reviews.functions";
+import { addToSummary } from "@/lib/review-summary";
+import { submitReview, type PublicReview } from "@/lib/reviews.functions";
 import { ShareButton } from "@/components/share-button";
 import { SITE_URL } from "@/lib/store";
 
@@ -12,13 +13,14 @@ const LABELS = ["", "Ruim", "Regular", "Bom", "Muito bom", "Ótimo"];
  * "Avaliar este produto": qualquer visitante pode avaliar e comentar, comprando ou não.
  * A avaliação vai para aprovação antes de aparecer no site (evita spam e ofensa). Depois de enviar, a pessoa pode compartilhar.
  */
-export function ReviewForm({ slug, productName }: { slug: string; productName: string }) {
+export function ReviewForm({ slug, productName, onPublished }: { slug: string; productName: string; onPublished?: (r: PublicReview) => void }) {
   const [nota, setNota] = useState(0);
   const [nome, setNome] = useState("");
   const [comentario, setComentario] = useState("");
   const [email, setEmail] = useState("");
   const [isca, setIsca] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+  const [publicada, setPublicada] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,9 +42,18 @@ export function ReviewForm({ slug, productName }: { slug: string; productName: s
     setError(null);
     setState("sending");
     try {
-      await submitReview({
+      const res = await submitReview({
         data: { slug, nome: nome.trim(), nota, comentario: comentario.trim(), ...(email.trim() ? { email: email.trim() } : {}), ...(isca ? { empresa: isca } : {}) },
       });
+      if (!res.ok) {
+        setState("idle");
+        return setError(res.motivo);
+      }
+      setPublicada(res.publicada);
+      if (res.publicada && res.review) {
+        onPublished?.(res.review);
+        addToSummary(slug, res.review.rating);
+      }
       try {
         const sent = JSON.parse(localStorage.getItem(SENT_KEY) ?? "[]") as string[];
         localStorage.setItem(SENT_KEY, JSON.stringify([...new Set([...sent, slug])]));
@@ -66,7 +77,9 @@ export function ReviewForm({ slug, productName }: { slug: string; productName: s
         <div className="flex items-center gap-2 font-semibold">
           <Check className="h-5 w-5" aria-hidden="true" /> Avaliação enviada, obrigado!
         </div>
-        <p className="mt-1 text-body">Ela vai aparecer aqui depois que a gente conferir. Enquanto isso, que tal contar para alguém?</p>
+        <p className="mt-1 text-body">
+          {publicada ? "Ela já está aparecendo aqui na página. Que tal contar para alguém?" : "Ela vai aparecer aqui depois que a gente conferir. Enquanto isso, que tal contar para alguém?"}
+        </p>
         <div className="mt-3">
           <ShareButton url={link} title={`${productName} — Vonix Hair`} text={`Olha esse produto da Vonix Hair: ${productName}.`} label="Compartilhar este produto" />
         </div>
@@ -126,7 +139,7 @@ export function ReviewForm({ slug, productName }: { slug: string; productName: s
       <button type="submit" disabled={state === "sending"} className="mt-3 rounded-full bg-action px-7 py-3 font-medium text-action-foreground disabled:opacity-60">
         {state === "sending" ? "Enviando…" : "Enviar avaliação"}
       </button>
-      <p className="mt-2 text-small text-muted-foreground">A avaliação é conferida antes de aparecer, para evitar spam e ofensas.</p>
+      <p className="mt-2 text-small text-muted-foreground">Sua avaliação passa por uma conferência automática contra spam e ofensas; se tudo estiver certo, aparece na hora.</p>
     </form>
   );
 }
