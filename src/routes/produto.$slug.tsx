@@ -240,9 +240,6 @@ function ProductPage() {
                     )}
                   </div>
                 </div>
-                <p className="mt-2 text-small text-muted-foreground">
-                  O desconto por quantidade (2 un. = 12%, 3 ou mais = 15%) vale para qualquer quantidade, também no carrinho, e não soma com o Pix nem com cupom. Frete grátis acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos descontos.
-                </p>
               </div>
             )}
             {p.variants.length > 1 && (
