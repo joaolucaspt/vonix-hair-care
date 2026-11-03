@@ -230,24 +230,24 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </div>
       <header className="sticky top-0 z-40 border-b border-border bg-background">
-        <div className="container-site flex items-center gap-4 py-2 lg:items-start lg:py-2">
-          <button className="-m-2 p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
+        <div className="container-site grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2 lg:flex lg:items-start lg:gap-4 lg:py-2">
+          <button className="-m-2 justify-self-start p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
           <Link to="/" className="shrink-0">
-            <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-11 w-auto" />
+            <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-9 w-auto sm:h-11" />
           </Link>
           <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
             <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
             <SearchBox />
             <AudienceChoice />
           </div>
-          <div className="ml-auto flex items-center gap-4 text-body">
+          <div className="ml-auto flex items-center justify-self-end gap-2.5 text-body sm:gap-4">
             <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
               <Heart className="h-5 w-5" />
             </Link>
-            <Link to="/conta" className="hidden items-center gap-1 sm:flex">
-              <User className="h-4 w-4" /> Entrar
+            <Link to="/conta" aria-label="Entrar" className="flex items-center gap-1 text-small sm:text-body">
+              <User className="h-4 w-4" /> <span className="max-[359px]:sr-only">Entrar</span>
             </Link>
             <Link to="/carrinho" aria-label="Carrinho" className="relative -m-2 p-2">
               <ShoppingBag className="h-5 w-5" />
