@@ -8,7 +8,7 @@ import { ProductReviews } from "@/components/reviews";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
 import { quoteShipping } from "@/lib/checkout.functions";
-import { FREE_SHIPPING_ABOVE, brl, discountPct, getProduct, SITE_URL, forAudience, getSavedCep, hasFreeShipping, lineTotals, maskCep, pixPrice, products, saveCep, useAudience, useCart, useFavorites, volumePct } from "@/lib/store";
+import { FREE_SHIPPING_ABOVE, WHATSAPP, brl, discountPct, getProduct, SITE_URL, forAudience, getSavedCep, hasFreeShipping, lineTotals, maskCep, pixPrice, products, saveCep, useAudience, useCart, useFavorites, volumePct } from "@/lib/store";
 
 export const Route = createFileRoute("/produto/$slug")({
   loader: ({ params }) => {
@@ -276,6 +276,10 @@ function ProductPage() {
             </div>
             <div className="mt-4"><PaymentMethods /></div>
             <div className="mt-3"><SecuritySeal /></div>
+            <ul className="mt-4 space-y-1 text-body text-muted-foreground">
+              <li>Frete grátis em compras acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos descontos</li>
+              <li><a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">Dúvidas? Fale com a gente no WhatsApp</a></li>
+            </ul>
             <ShippingCalc subtotal={total} slug={p.slug} variant={v.label} qty={qty} />
           </div>
         </div>
