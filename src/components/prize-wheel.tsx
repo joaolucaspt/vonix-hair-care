@@ -196,11 +196,6 @@ export function PrizeWheel() {
           </div>
         </div>
       )}
-      {had && !open && prize && (
-        <button type="button" onClick={() => { setPhase("won"); setOpen(true); }} className="fixed bottom-5 left-4 z-40 flex items-center gap-2 rounded-full bg-white px-3 py-2 text-small font-semibold text-[#5a0e4d] shadow-lg ring-1 ring-[#c9992f]">
-          <Gift className="h-4 w-4" aria-hidden="true" /> Cupom {prize.code}
-        </button>
-      )}
     </>
   );
 }
