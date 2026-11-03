@@ -1,11 +1,11 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { Heart, Minus, Plus, Truck } from "lucide-react";
+import { Check, Heart, Minus, Plus, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews } from "@/components/reviews";
-import { Grid, PaymentMethods, PriceBlock, SecuritySeal, Shell, Stars } from "@/components/site";
+import { Grid, PaymentMethods, PixMark, PriceBlock, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
 import { quoteShipping } from "@/lib/checkout.functions";
 import { FREE_SHIPPING_ABOVE, WHATSAPP, brl, discountPct, getProduct, SITE_URL, forAudience, getSavedCep, hasFreeShipping, hasProPromo, lineTotals, maskCep, pixPrice, products, saveCep, useAudience, useCart, useFavorites, type Offer } from "@/lib/store";
@@ -178,36 +178,70 @@ function ProductPage() {
             {p.short && <p className="mt-3 text-muted-foreground">{p.short}</p>}
             {proMode ? (
               <div className="mt-6">
-                <div className="mb-2 text-body font-medium">{audience === "salao" ? "Promoção para cabeleireiras" : "Compre mais e economize"} — mesmo produto, mesmo tamanho</div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {PRO_OFFERS.map((o) => {
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <div className="font-display text-h2 leading-tight">{audience === "salao" ? "Promoção para cabeleireiras" : "Compre mais e economize"}</div>
+                  <div className="text-small text-muted-foreground">mesmo produto, mesmo tamanho</div>
+                </div>
+                <div role="radiogroup" aria-label="Quantidade em promoção" className="grid gap-2.5 sm:grid-cols-3 sm:gap-3">
+                  {PRO_OFFERS.map((o, k) => {
                     const t = lineTotals(v.price, 1, o.offer);
+                    const on = offer === o.offer;
+                    const best = k === PRO_OFFERS.length - 1;
                     return (
                       <button
                         key={o.label}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
                         onClick={() => setOffer(o.offer)}
-                        className={`rounded-xl border p-3 text-left text-body ${offer === o.offer ? "border-foreground bg-foreground text-background" : "border-border"}`}
+                        className={`relative flex items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition-all sm:flex-col sm:items-start sm:gap-1.5 sm:p-4 ${on ? "border-[#c9992f] bg-[#fff8e8] shadow-[0_6px_18px_-8px_rgba(201,153,47,0.6)]" : "border-border bg-white hover:border-[#c9992f]/60"}`}
                       >
-                        <div className="font-medium">{o.label}</div>
-                        <div className="text-small opacity-80">{o.pct ? `${o.pct}% OFF` : "Preço normal"}</div>
-                        <div className="mt-1 font-semibold">{brl(t.net)}</div>
-                        {o.offer && <div className="mt-1 text-small font-semibold text-[#0a5c34] [.bg-foreground_&]:text-[#9be3bb]">Economize {brl(t.gross - t.net)}</div>}
+                        {best && (
+                          <span className="absolute -top-2.5 right-3 rounded-full bg-[#7a5a2e] px-2.5 py-0.5 text-small font-semibold text-white">Melhor preço</span>
+                        )}
+                        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors ${on ? "border-[#c9992f] bg-[#c9992f] text-white" : "border-border bg-white text-transparent"}`} aria-hidden="true">
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                        </span>
+                        <span className="min-w-0 flex-1 sm:w-full">
+                          <span className="block text-body font-semibold leading-tight">{o.label}</span>
+                          <span className="mt-0.5 block text-small text-muted-foreground">{o.pct ? `${o.pct}% de desconto` : "Preço normal"}</span>
+                        </span>
+                        <span className="text-right sm:w-full sm:text-left">
+                          <span className="block text-h2 font-semibold leading-tight">{brl(t.net)}</span>
+                          {o.offer ? (
+                            <span className="mt-1 inline-flex rounded-full bg-[#eef8f2] px-2 py-0.5 text-small font-medium text-[#2c6e55]">Economize {brl(t.gross - t.net)}</span>
+                          ) : (
+                            <span className="mt-1 block text-small text-muted-foreground">{brl(v.price)} cada</span>
+                          )}
+                          {o.offer && <span className="mt-0.5 block text-small text-muted-foreground">{brl(t.net / t.units)} cada</span>}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
-                <p className="mt-2 text-small text-muted-foreground">
-                  O desconto do combo não soma com o desconto de 5% do Pix nem com cupom. O frete grátis acima de {brl(FREE_SHIPPING_ABOVE)} vale pelo valor dos produtos antes dos descontos.
-                </p>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-muted-foreground line-through">{brl(sel!.gross)}</span>
-                  <span className="text-h2 font-semibold">{brl(sel!.net)}</span>
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 rounded-2xl bg-[#faf6ee] px-4 py-3.5">
+                  <div>
+                    <div className="text-small text-muted-foreground">Seu pedido · {sel!.units} {sel!.units === 1 ? "unidade" : "unidades"}</div>
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      {sel!.gross > sel!.net ? (
+                        <span className="text-muted-foreground line-through">{brl(sel!.gross)}</span>
+                      ) : compare && compare > v.price ? (
+                        <span className="text-muted-foreground line-through">{brl(compare * sel!.units)}</span>
+                      ) : null}
+                      <span className="text-h2 font-semibold leading-tight">{brl(sel!.net)}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-start gap-1 sm:items-end">
+                    {offer ? (
+                      <span className="rounded-full bg-[#eef8f2] px-3 py-1 text-body font-semibold text-[#2c6e55]">Você economiza {brl(sel!.gross - sel!.net)}</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef8f2] px-3 py-1 text-body font-medium text-[#2c6e55]"><PixMark className="h-4 w-4" /> {brl(pixPrice(sel!.net))} no Pix</span>
+                    )}
+                  </div>
                 </div>
-                {offer && (
-                  <p className="mt-2 inline-block rounded-lg border border-[#b9e5cd] bg-[#e7f6ee] px-3 py-1.5 text-body font-semibold text-[#0a5c34]">
-                    Você economiza {brl(sel!.gross - sel!.net)} neste pedido
-                  </p>
-                )}
+                <p className="mt-2 text-small text-muted-foreground">
+                  O combo não soma com o Pix nem com cupom. Frete grátis acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos descontos.
+                </p>
               </div>
             ) : (
               <div className="mt-6"><PriceBlock price={v.price} compare={compare} big /></div>
