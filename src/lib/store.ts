@@ -269,15 +269,15 @@ export const resolveAudience = (saved: Audience, uso?: string): Audience =>
   saved ?? (uso === "casa" || uso === "salao" ? uso : null);
 
 /**
- * Salon area promotions (buy 2 = 12% off, buy 3 = 15% off) apply to every product sold there,
- * ready-made kits included. No extra 5% on single units.
+ * "Buy more" promotions (buy 2 = 12% off, buy 3 = 15% off) apply to every product on the whole site
+ * (home and salon areas alike), ready-made kits included. No extra 5% on single units.
  */
 export const hasProPromo = (_p: Product) => true;
 
-/** Display only: price is always the catalog price; salon promotions are chosen on the product page. */
-export function cardPricing(p: Product, audience: Audience) {
+/** Display only: price is always the catalog price; the buy-more promotions are chosen on the product page. */
+export function cardPricing(p: Product, _audience: Audience) {
   const price = p.variants[0].price;
-  return { professional: audience === "salao" && hasProPromo(p), price, pix: pixPrice(price), parcels: installments(price) };
+  return { professional: hasProPromo(p), price, pix: pixPrice(price), parcels: installments(price) };
 }
 const audienceStore = createStore<Audience>("vonix-audience", null, "session");
 
