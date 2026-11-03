@@ -443,7 +443,7 @@ export function PriceBlock({ price, compare, big, offer = false }: { price: numb
  * Real average rating (from src/data/reviews.json): gold stars filled in proportion to the score, plus the number.
  * A product with no reviews yet shows the five empty stars, never an invented score.
  */
-export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
+export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; big?: boolean; hideEmpty?: boolean }) {
   const list = reviewsFor(slug);
   const sold = soldFor(slug);
   // Clientes (reviews.json) + avaliações de visitantes já aprovadas (banco): as duas contam para a nota.
@@ -459,18 +459,22 @@ export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
       ))}
     </span>
   );
+  // Nos cards, produto sem nota não mostra as cinco estrelas vazias (parecem "ninguém gostou"); fica só o número de vendidos.
+  const showStars = count > 0 || !hideEmpty;
   return (
-    <div className="flex items-center gap-2 text-small" role="img" aria-label={count ? `Nota ${label} de 5` : "Ainda sem avaliações"}>
-      <span className="relative inline-block text-[#d4a22f]" aria-hidden="true">
-        {five(false)}
-        {avg > 0 && (
-          <span className="absolute inset-y-0 left-0 overflow-hidden text-[#e9b01f]" style={{ width: `${(avg / 5) * 100}%` }}>
-            {five(true)}
-          </span>
-        )}
-      </span>
+    <div className="flex min-h-[1.25rem] items-center gap-2 text-small" role="img" aria-label={count ? `Nota ${label} de 5` : "Ainda sem avaliações"}>
+      {showStars && (
+        <span className="relative inline-block text-[#d4a22f]" aria-hidden="true">
+          {five(false)}
+          {avg > 0 && (
+            <span className="absolute inset-y-0 left-0 overflow-hidden text-[#e9b01f]" style={{ width: `${(avg / 5) * 100}%` }}>
+              {five(true)}
+            </span>
+          )}
+        </span>
+      )}
       {count > 0 && <b className="text-body">{label}</b>}
-      {sold > 0 && <span className="text-muted-foreground">· {sold} {sold === 1 ? "vendido" : "vendidos"}</span>}
+      {sold > 0 && <span className="text-muted-foreground">{showStars ? "· " : ""}{sold} {sold === 1 ? "vendido" : "vendidos"}</span>}
     </div>
   );
 }
@@ -526,7 +530,7 @@ export function ProductCard({ p }: { p: Product }) {
       <Link to="/produto/$slug" params={{ slug: p.slug }} className="mt-0.5 line-clamp-2 min-h-[2.4rem] text-name font-semibold leading-tight hover:underline md:leading-snug">
         {p.name}
       </Link>
-      <div className="mt-1.5"><Stars slug={p.slug} big /></div>
+      <div className="mt-1.5"><Stars slug={p.slug} big hideEmpty /></div>
       <div className="mt-1.5 flex items-end justify-between gap-1.5">
         <div className="min-w-0 leading-tight">
           {p.compareBase && p.compareBase > pricing.price && <div className="text-small text-muted-foreground line-through">{brl(p.compareBase)}</div>}

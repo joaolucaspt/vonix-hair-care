@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Grid, Shell } from "@/components/site";
-import { BEST_SELLERS, NEEDS, products, TYPES, forAudience, resolveAudience, useAudience } from "@/lib/store";
+import { BEST_SELLERS, NEEDS, SITE_URL, products, TYPES, forAudience, resolveAudience, useAudience } from "@/lib/store";
 
 type S = { q?: string | undefined; secao?: string | undefined; tiposProduto?: string | undefined; necessidades?: string | undefined; uso?: string | undefined; categoria?: string | undefined; ordem?: string | undefined };
 
@@ -19,7 +19,11 @@ export const Route = createFileRoute("/loja")({
       { property: "og:description", content: "Todos os produtos Vonix Hair em até 6x sem juros." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: `${SITE_URL}/loja` },
+      { property: "og:image", content: `${SITE_URL}/og-vonix.jpg` },
+      { name: "twitter:image", content: `${SITE_URL}/og-vonix.jpg` },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/loja` }],
   }),
   component: Loja,
 });
