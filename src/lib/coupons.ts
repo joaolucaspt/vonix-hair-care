@@ -20,7 +20,12 @@ export const COUPONS: Coupon[] = [
   { code: "GIRA6", label: "6% OFF em compras acima de R$ 250", percent: 6, minSubtotal: 250 },
   // Parceria Bela Tiozzo: só digitado à mão (link/criativos dela), nunca na roleta.
   { code: "BT10", label: "10% OFF em qualquer compra", percent: 10 },
+  // Cupom de boas-vindas: quem se cadastra no site ganha, em qualquer compra. Nunca entra na roleta.
+  { code: "BEMVINDA5", label: "5% OFF em qualquer compra (cadastro no site)", percent: 5 },
 ];
+
+/** Código do cupom que o cadastro no site entrega. */
+export const SIGNUP_COUPON = "BEMVINDA5";
 
 /** Prize wheel: every spin wins; arc size = chance, so what you see is what you get (weights sum to 100). */
 export const WHEEL: { code: string; weight: number }[] = [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUPONS, WHEEL, couponCheck, couponFreeShipping, couponPercent, findCoupon } from "@/lib/coupons";
+import { COUPONS, SIGNUP_COUPON, WHEEL, couponCheck, couponFreeShipping, couponPercent, findCoupon } from "@/lib/coupons";
 import { checkoutTotals } from "@/lib/store";
 
 describe("cupons e roleta", () => {
@@ -13,6 +13,19 @@ describe("cupons e roleta", () => {
     expect(couponPercent(findCoupon("bt10"), 20)).toBe(0.1);
     expect(WHEEL.some((w) => w.code === "BT10")).toBe(false);
     expect(findCoupon("")).toBeUndefined();
+  });
+  it("cupom de boas-vindas do cadastro: 5% em qualquer compra, só digitado ou entregue pelo cadastro, nunca na roleta", () => {
+    const c = findCoupon(SIGNUP_COUPON)!;
+    expect(c.code).toBe("BEMVINDA5");
+    expect(c.percent).toBe(5);
+    expect(c.minSubtotal).toBeUndefined();
+    expect(couponPercent(c, 10)).toBe(0.05);
+    expect(couponPercent(c, 1000)).toBe(0.05);
+    expect(WHEEL.some((w) => w.code === SIGNUP_COUPON)).toBe(false);
+    // em 1 unidade (sem oferta), com Pix: cupom 5% e depois Pix 5%
+    const t = checkoutTotals([{ gross: 100, net: 100 }], "pix", 0.05);
+    expect(t.couponDiscount).toBe(5);
+    expect(t.net).toBe(90.25);
   });
   it("valor mínimo é medido antes dos descontos", () => {
     const c = findCoupon("GIRA6")!;
