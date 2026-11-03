@@ -244,19 +244,19 @@ export function Shell({ children }: { children: ReactNode }) {
             <Menu className="h-6 w-6" />
           </button>
           <Link to="/" className="shrink-0">
-            <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-9 w-auto sm:h-11" />
+            <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-8 w-auto sm:h-11" />
           </Link>
           <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
             <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
             <SearchBox />
             <AudienceChoice />
           </div>
-          <div className="ml-auto flex items-center justify-self-end gap-2.5 text-body sm:gap-4">
+          <div className="ml-auto flex items-center justify-self-end gap-2 text-body sm:gap-4">
             <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
               <Heart className="h-5 w-5" />
             </Link>
             <Link to="/conta" aria-label="Entrar" className="flex items-center gap-1 text-small sm:text-body">
-              <User className="h-4 w-4" /> <span className="max-[359px]:sr-only">Entrar</span>
+              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="max-[359px]:hidden">Entrar</span>
             </Link>
             <Link to="/carrinho" aria-label="Carrinho" className="relative -m-2 p-2">
               <ShoppingCart className="h-5 w-5" />
@@ -530,7 +530,7 @@ export function ProductCard({ p }: { p: Product }) {
         </button>
       </div>
       <div className="mt-1.5 flex items-center gap-1 whitespace-nowrap rounded-full bg-[#eef8f2] px-1.5 py-1 text-[#2c6e55] md:gap-1.5 md:px-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-small font-medium"><PixMark /><span className="max-md:sr-only">Pix</span></span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-small font-medium"><PixMark /><span className="max-md:hidden">Pix</span></span>
         <b className="text-small font-semibold md:text-body">{brl(pixPrice(pricing.price))}</b>
         <span className="text-small font-medium max-sm:hidden">-5%</span>
       </div>

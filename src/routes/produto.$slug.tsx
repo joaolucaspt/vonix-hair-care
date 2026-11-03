@@ -207,7 +207,7 @@ function ProductPage() {
                           <span className="mt-0.5 block text-small text-muted-foreground">{o.pct ? `${o.pct}% de desconto` : "Preço normal"}</span>
                         </span>
                         <span className="text-right sm:w-full sm:text-left">
-                          <span className="block text-h2 font-semibold leading-tight">{brl(t.net)}</span>
+                          <span className="money block text-h2 font-semibold leading-tight">{brl(t.net)}</span>
                           {o.offer ? (
                             <span className="mt-1 inline-flex rounded-full bg-[#eef8f2] px-2 py-0.5 text-small font-medium text-[#2c6e55]">Economize {brl(t.gross - t.net)}</span>
                           ) : (
@@ -228,7 +228,7 @@ function ProductPage() {
                       ) : compare && compare > v.price ? (
                         <span className="text-muted-foreground line-through">{brl(compare * sel!.units)}</span>
                       ) : null}
-                      <span className="text-h2 font-semibold leading-tight">{brl(sel!.net)}</span>
+                      <span className="money text-h2 font-semibold leading-tight">{brl(sel!.net)}</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-start gap-1 sm:items-end">
