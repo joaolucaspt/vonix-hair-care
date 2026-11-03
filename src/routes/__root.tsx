@@ -13,9 +13,10 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { META_PIXEL_ID } from "@/lib/analytics";
 import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
 
-// IDs lidos do site publicado; confirmar o ID do Clarity em ConfiguraÃ§Ãµes > VisÃ£o geral do projeto.
+// IDs lidos do site publicado; confirmar o ID do Clarity em Configurações > Visão geral do projeto.
 const GA_ID = "G-JW91EQ32F3";
 const CLARITY_ID = "yrgl15vqw9";
 
@@ -24,16 +25,16 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-h1 font-semibold text-foreground">404</h1>
-        <h2 className="mt-4 text-price font-semibold text-foreground">PÃ¡gina nÃ£o encontrada</h2>
+        <h2 className="mt-4 text-price font-semibold text-foreground">Página não encontrada</h2>
         <p className="mt-2 text-body text-muted-foreground">
-          A pÃ¡gina que vocÃª procura nÃ£o existe ou mudou de endereÃ§o.
+          A página que você procura não existe ou mudou de endereço.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-body font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Ir para o inÃ­cio
+            Ir para o início
           </Link>
         </div>
       </div>
@@ -52,10 +53,10 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-price font-semibold tracking-tight text-foreground">
-          NÃ£o foi possÃ­vel carregar a pÃ¡gina
+          Não foi possível carregar a página
         </h1>
         <p className="mt-2 text-body text-muted-foreground">
-          Algo deu errado do nosso lado. Tente atualizar ou volte para o inÃ­cio.
+          Algo deu errado do nosso lado. Tente atualizar ou volte para o início.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -71,7 +72,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-body font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Ir para o inÃ­cio
+            Ir para o início
           </a>
         </div>
       </div>
@@ -85,9 +86,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Vonix Hair" },
-      { name: "description", content: "CosmÃ©ticos capilares profissionais Vonix Hair." },
+      { name: "description", content: "Cosméticos capilares profissionais Vonix Hair." },
       { property: "og:title", content: "Vonix Hair" },
-      { property: "og:description", content: "CosmÃ©ticos capilares profissionais Vonix Hair." },
+      { property: "og:description", content: "Cosméticos capilares profissionais Vonix Hair." },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pt_BR" },
       { property: "og:site_name", content: "Vonix Hair" },
@@ -135,6 +136,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         children: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY_ID}");`,
       },
+      // Pixel da Meta: só carrega quando META_PIXEL_ID (src/lib/analytics.ts) estiver preenchido.
+      ...(META_PIXEL_ID
+        ? [
+            {
+              children: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${META_PIXEL_ID}');fbq('track','PageView');`,
+            },
+          ]
+        : []),
     ],
   }),
   shellComponent: RootShell,

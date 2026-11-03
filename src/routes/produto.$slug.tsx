@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
-import { ProductReviews } from "@/components/reviews";
+import { ProductReviews, reviewsFor } from "@/components/reviews";
 import { ShareButton } from "@/components/share-button";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
@@ -17,44 +17,59 @@ export const Route = createFileRoute("/produto/$slug")({
     if (!p) throw notFound();
     return p;
   },
-  head: ({ loaderData: p }) => ({
-    meta: p
-      ? [
-          { title: `${p.name} — Vonix Hair` },
-          { name: "description", content: p.short || p.name },
-          { property: "og:title", content: `${p.name} — Vonix Hair` },
-          { property: "og:description", content: p.short || p.name },
-          { property: "og:image", content: p.images[0] },
-          { property: "og:type", content: "product" },
-          { name: "twitter:image", content: p.images[0] },
-        ]
-      : [{ title: "Produto indisponível — Vonix Hair" }, { name: "robots", content: "noindex" }],
-    links: p ? [{ rel: "canonical", href: `${SITE_URL}/produto/${p.slug}` }] : [],
-    scripts: p
-      ? [
-          {
-            type: "application/ld+json",
-            children: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Product",
-              name: p.name,
-              description: p.short || p.name,
-              image: p.images,
-              sku: p.slug,
-              brand: { "@type": "Brand", name: "Vonix Hair" },
-              offers: {
-                "@type": "Offer",
-                url: `${SITE_URL}/produto/${p.slug}`,
-                priceCurrency: "BRL",
-                price: p.variants[0].price.toFixed(2),
-                availability: "https://schema.org/InStock",
-                itemCondition: "https://schema.org/NewCondition",
+  head: ({ loaderData: p }) => {
+    if (!p) return { meta: [{ title: "Produto indisponível — Vonix Hair" }, { name: "robots", content: "noindex" }], links: [], scripts: [] };
+    // Prévia no WhatsApp/Facebook e Google exigem endereço completo da imagem.
+    const images = p.images.map((src) => (src.startsWith("http") ? src : `${SITE_URL}${src}`));
+    const url = `${SITE_URL}/produto/${p.slug}`;
+    const description = `${p.short || p.name} Até 6x sem juros, 5% OFF no Pix e frete grátis acima de R$ ${FREE_SHIPPING_ABOVE.toFixed(0)}. Vonix Hair.`;
+    const rated = reviewsFor(p.slug);
+    return {
+      meta: [
+        { title: `${p.name} — Vonix Hair` },
+        { name: "description", content: description },
+        { property: "og:title", content: `${p.name} — Vonix Hair` },
+        { property: "og:description", content: description },
+        { property: "og:image", content: images[0] },
+        { property: "og:url", content: url },
+        { property: "og:type", content: "product" },
+        { name: "twitter:image", content: images[0] },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: p.name,
+            description: p.short || p.name,
+            image: images,
+            sku: p.slug,
+            brand: { "@type": "Brand", name: "Vonix Hair" },
+            ...(rated.length
+              ? { aggregateRating: { "@type": "AggregateRating", ratingValue: (rated.reduce((s, r) => s + r.rating, 0) / rated.length).toFixed(1), reviewCount: rated.length } }
+              : {}),
+            offers: {
+              "@type": "Offer",
+              url,
+              priceCurrency: "BRL",
+              price: p.variants[0].price.toFixed(2),
+              availability: "https://schema.org/InStock",
+              itemCondition: "https://schema.org/NewCondition",
+              hasMerchantReturnPolicy: {
+                "@type": "MerchantReturnPolicy",
+                applicableCountry: "BR",
+                returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+                merchantReturnDays: 7,
+                returnMethod: "https://schema.org/ReturnByMail",
               },
-            }),
-          },
-        ]
-      : [],
-  }),
+            },
+          }),
+        },
+      ],
+    };
+  },
   component: ProductPage,
 });
 
@@ -281,6 +296,7 @@ function ProductPage() {
             <ShippingCalc subtotal={total} slug={p.slug} variant={v.label} qty={qty} />
             <ul className="mt-4 space-y-1 text-body text-muted-foreground">
               <li>Frete grátis em compras acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos descontos</li>
+              <li><Link to="/$page" params={{ page: "politica-de-trocas-e-devolucoes" }} className="underline">7 dias para desistir da compra, conforme a lei</Link></li>
               <li><a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">Dúvidas? Fale com a gente no WhatsApp</a></li>
             </ul>
           </div>

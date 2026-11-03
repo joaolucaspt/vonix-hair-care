@@ -44,12 +44,25 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+// Impede que o site seja embutido em sites de terceiros (clique escondido) e limita recursos do aparelho; não afeta GTM, Clarity, Pixel nem a Appmax.
+// A prévia do editor da Lovable embute o site, por isso o domínio dela fica liberado (e não se usa X-Frame-Options, que não aceita lista).
+const SECURITY_HEADERS: Record<string, string> = {
+  "Content-Security-Policy": "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app https://*.lovableproject.com",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(self)",
+};
+
+function withSecurityHeaders(response: Response): Response {
+  const out = new Response(response.body, response);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) if (!out.headers.has(k)) out.headers.set(k, v);
+  return out;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

@@ -152,20 +152,20 @@ export function PrizeWheel() {
                   onClick={spin}
                   className="mt-5 w-full rounded-lg bg-[#5a0e4d] py-3 font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-500"
                 >
-                  {phase === "spinning" ? "Girandoâ€¦" : "Girar a roleta"}
+                  {phase === "spinning" ? "Girando…" : "Girar a roleta"}
                 </button>
                 {!accepted && <p className="mt-1.5 text-center text-small text-muted-foreground">Aceite os termos para poder girar.</p>}
                 <label className="mt-3 flex items-start gap-2 text-small text-muted-foreground">
                   <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>
-                    Ao girar, vocÃª aceita os termos da <Link to="/$page" params={{ page: "politica-de-privacidade" }} className="underline" onClick={close}>PolÃ­tica de Privacidade</Link>. NÃ£o pedimos nenhum dado seu para girar. 1 giro por visitante.
+                    Ao girar, você aceita os termos da <Link to="/$page" params={{ page: "politica-de-privacidade" }} className="underline" onClick={close}>Política de Privacidade</Link>. Não pedimos nenhum dado seu para girar. 1 giro por visitante.
                   </span>
                 </label>
               </>
             ) : (
               prize && (
                 <div role="status" className="mt-3 text-center">
-                  <p className="text-body text-muted-foreground">VocÃª ganhou</p>
+                  <p className="text-body text-muted-foreground">Você ganhou</p>
                   <p className="mt-1 text-h1 font-semibold text-[#5a0e4d]">{prize.percent}% OFF</p>
                   <p className="mt-1 text-body">{prize.label}</p>
                   <div className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-lg border-2 border-dashed border-[#c9992f] bg-[#fdf8f4] px-4 py-2">
@@ -175,7 +175,7 @@ export function PrizeWheel() {
                     </button>
                   </div>
                   <p className="mt-3 text-small text-muted-foreground">
-                    Aplicado automaticamente no checkout, por {prizeDays} dias neste aparelho. Vale para itens sem outra oferta; nÃ£o soma com o Leve 2 / Leve 3. Soma com o desconto do Pix.
+                    Aplicado automaticamente no checkout, por {prizeDays} dias neste aparelho. Vale para itens sem outra oferta; não soma com o Leve 2 / Leve 3. Soma com o desconto do Pix.
                   </p>
                   <Link to="/loja" onClick={close} className="mt-4 block rounded-lg bg-[#5a0e4d] py-3 font-semibold text-white">Ver produtos</Link>
                 </div>

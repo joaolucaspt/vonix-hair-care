@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ReviewCard, reviews } from "@/components/reviews";
 import { SignupCoupon } from "@/components/signup-coupon";
 import { Benefits, Grid, Shell } from "@/components/site";
-import { BEST_SELLERS, MAX_DISCOUNT, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
+import { BEST_SELLERS, MAX_DISCOUNT, SITE_URL, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
 
 /**
  * Banner da home: a arte (título, produtos e fundo) é a imagem enviada pela loja;
@@ -43,7 +43,11 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Progressivas, botox, máscaras e combos Vonix Hair. Até 6x sem juros e frete grátis acima de R$ 150,00." },
       { property: "og:title", content: "Vonix Hair — Cosméticos Capilares Profissionais" },
       { property: "og:description", content: "Até 6x sem juros e frete grátis acima de R$ 150,00." },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:image", content: `${SITE_URL}/og-vonix.jpg` },
+      { name: "twitter:image", content: `${SITE_URL}/og-vonix.jpg` },
     ],
+    links: [{ rel: "canonical", href: SITE_URL }],
   }),
   component: Home,
 });
@@ -79,6 +83,11 @@ function Title({ a, b, to }: { a: string; b: string; to?: Record<string, string>
 function Home() {
   const [i, setI] = useState(0);
   const { audience } = useAudience();
+  const bestSellers = forAudience(BEST_SELLERS.map((s) => getProduct(s)!), audience);
+  const combos = forAudience(products.filter((p) => p.category === "kits"), audience);
+  // "Todos os Produtos" não repete o que já apareceu nas duas vitrines de cima.
+  const shown = new Set([...bestSellers, ...combos].map((p) => p.slug));
+  const others = forAudience(products, audience).filter((p) => !shown.has(p.slug)).slice(0, 8);
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % BANNERS.length), 6000);
     return () => clearInterval(t);
@@ -107,12 +116,12 @@ function Home() {
 
       <section className="container-site mt-12">
         <Title a="Mais" b="Desejados" to={{ secao: "mais-vendidos" }} />
-        <Grid carousel items={forAudience(BEST_SELLERS.map((s) => getProduct(s)!), audience)} />
+        <Grid carousel items={bestSellers} />
       </section>
 
       <section className="container-site mt-16">
         <Title a="Todos os" b="Combos" to={{ tiposProduto: "Combos" }} />
-        <Grid carousel items={forAudience(products.filter((p) => p.category === "kits"), audience)} />
+        <Grid carousel items={combos} />
       </section>
 
       <section className="container-site mt-16">
@@ -135,7 +144,7 @@ function Home() {
 
       <section className="container-site mt-20">
         <Title a="Todos os" b="Produtos" to={{}} />
-        <Grid carousel items={forAudience(products, audience).slice(0, 8)} />
+        <Grid carousel items={others} />
       </section>
 
       <section className="container-site mt-20">
