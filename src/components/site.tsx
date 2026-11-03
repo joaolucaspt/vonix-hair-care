@@ -237,7 +237,6 @@ export function Shell({ children }: { children: ReactNode }) {
           <Link to="/" className="shrink-0">
             <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-11 w-auto" />
           </Link>
-          <p className="mx-auto min-w-0 flex-1 text-center text-body italic leading-tight lg:hidden">“Até aqui nos ajudou o Senhor”</p>
           <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
             <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
             <SearchBox />
@@ -261,6 +260,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="container-site space-y-2 pb-3 lg:hidden">
+          <p className="whitespace-nowrap text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
           <SearchBox />
           <AudienceChoice />
         </div>
