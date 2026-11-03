@@ -83,10 +83,14 @@ function Cart() {
                     <div className="min-w-0 flex-1">
                       <Link to="/produto/$slug" params={{ slug: l.slug }} className="font-medium">{l.product.name}</Link>
                       <div className="text-small text-muted-foreground">{l.variant} · {brl(l.price)}</div>
-                      {l.offer && (
+                      {l.offer ? (
                         <div className="mt-1 inline-block rounded-full bg-foreground px-2.5 py-0.5 text-small font-medium text-background">
                           {OFFER_LABEL[l.offer]}{(l.offer === "kit2" || l.offer === "kit3") ? ` · ${l.units} un. no total` : ""}
                         </div>
+                      ) : l.pct > 0 ? (
+                        <div className="mt-1 inline-block rounded-full bg-[#eef8f2] px-2.5 py-0.5 text-small font-medium text-[#2c6e55]">{l.pct}% OFF por levar {l.qty} unidades</div>
+                      ) : (
+                        <div className="mt-1 text-small text-[#2c6e55]">Leve 2 e ganhe 12% OFF · leve 3 ou mais e ganhe 15% OFF</div>
                       )}
                       <div className="mt-2 flex items-center gap-2">
                         <button aria-label="Diminuir" onClick={() => c.setQty(l.slug, l.variant, l.qty - 1, l.offer)} className="rounded-full border border-border p-1.5"><Minus className="h-3 w-3" /></button>
@@ -96,8 +100,8 @@ function Cart() {
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      {l.offer && <div className="text-small text-muted-foreground line-through">{brl(l.gross)}</div>}
-                      <div className="font-semibold">{brl(l.net)}</div>
+                      {l.net < l.gross && <div className="money text-small text-muted-foreground line-through">{brl(l.gross)}</div>}
+                      <div className="money font-semibold">{brl(l.net)}</div>
                     </div>
                   </li>
                 ))}
