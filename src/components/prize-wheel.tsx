@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Check, Copy, Gift, X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WHEEL, findCoupon, getPrize, prizeDays, savePrize, type Coupon } from "@/lib/coupons";
 import { track } from "@/lib/analytics";
@@ -31,7 +31,6 @@ export function PrizeWheel() {
   const [accepted, setAccepted] = useState(false);
   const [deg, setDeg] = useState(0);
   const [prize, setPrize] = useState<Coupon | null>(null);
-  const [had, setHad] = useState(false);
   const [copied, setCopied] = useState(false);
   const target = useRef<Coupon | null>(null);
 
@@ -47,12 +46,11 @@ export function PrizeWheel() {
 
   useEffect(() => {
     const existing = getPrize();
-    setHad(!!existing);
     if (existing) setPrize(existing);
     if (existing || hidden) return;
     let closed = false;
     try {
-      closed = sessionStorage.getItem(SEEN) === "1";
+      closed = localStorage.getItem(SEEN) === "1";
     } catch {
       /* ignore */
     }
@@ -64,7 +62,7 @@ export function PrizeWheel() {
   const close = useCallback(() => {
     setOpen(false);
     try {
-      sessionStorage.setItem(SEEN, "1");
+      localStorage.setItem(SEEN, "1");
     } catch {
       /* ignore */
     }
@@ -100,7 +98,6 @@ export function PrizeWheel() {
     if (phase !== "spinning" || !target.current) return;
     savePrize(target.current.code);
     setPrize(target.current);
-    setHad(true);
     setPhase("won");
   };
 
@@ -112,15 +109,6 @@ export function PrizeWheel() {
   if (hidden) return null;
   return (
     <>
-      {!open && !had && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="fixed bottom-5 left-4 z-40 flex items-center gap-2 rounded-full bg-[#5a0e4d] px-4 py-3 text-body font-semibold text-white shadow-lg"
-        >
-          <Gift className="h-5 w-5" aria-hidden="true" /> Gire e ganhe
-        </button>
-      )}
       {open && (
         <div role="dialog" aria-modal="true" aria-label="Roleta de ofertas" className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4" onClick={close}>
           <div className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -164,20 +152,20 @@ export function PrizeWheel() {
                   onClick={spin}
                   className="mt-5 w-full rounded-lg bg-[#5a0e4d] py-3 font-semibold text-white disabled:bg-neutral-300 disabled:text-neutral-500"
                 >
-                  {phase === "spinning" ? "Girando…" : "Girar a roleta"}
+                  {phase === "spinning" ? "Girandoâ€¦" : "Girar a roleta"}
                 </button>
                 {!accepted && <p className="mt-1.5 text-center text-small text-muted-foreground">Aceite os termos para poder girar.</p>}
                 <label className="mt-3 flex items-start gap-2 text-small text-muted-foreground">
                   <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>
-                    Ao girar, você aceita os termos da <Link to="/$page" params={{ page: "politica-de-privacidade" }} className="underline" onClick={close}>Política de Privacidade</Link>. Não pedimos nenhum dado seu para girar. 1 giro por visitante.
+                    Ao girar, vocÃª aceita os termos da <Link to="/$page" params={{ page: "politica-de-privacidade" }} className="underline" onClick={close}>PolÃ­tica de Privacidade</Link>. NÃ£o pedimos nenhum dado seu para girar. 1 giro por visitante.
                   </span>
                 </label>
               </>
             ) : (
               prize && (
                 <div role="status" className="mt-3 text-center">
-                  <p className="text-body text-muted-foreground">Você ganhou</p>
+                  <p className="text-body text-muted-foreground">VocÃª ganhou</p>
                   <p className="mt-1 text-h1 font-semibold text-[#5a0e4d]">{prize.percent}% OFF</p>
                   <p className="mt-1 text-body">{prize.label}</p>
                   <div className="mx-auto mt-4 flex w-fit items-center gap-2 rounded-lg border-2 border-dashed border-[#c9992f] bg-[#fdf8f4] px-4 py-2">
@@ -187,7 +175,7 @@ export function PrizeWheel() {
                     </button>
                   </div>
                   <p className="mt-3 text-small text-muted-foreground">
-                    Aplicado automaticamente no checkout, por {prizeDays} dias neste aparelho. Vale para itens sem outra oferta; não soma com o Leve 2 / Leve 3. Soma com o desconto do Pix.
+                    Aplicado automaticamente no checkout, por {prizeDays} dias neste aparelho. Vale para itens sem outra oferta; nÃ£o soma com o Leve 2 / Leve 3. Soma com o desconto do Pix.
                   </p>
                   <Link to="/loja" onClick={close} className="mt-4 block rounded-lg bg-[#5a0e4d] py-3 font-semibold text-white">Ver produtos</Link>
                 </div>
