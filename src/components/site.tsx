@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import logoUrl from "@/assets/vonix-logo.webp";
 import { PrizeWheel } from "@/components/prize-wheel";
 import { reviewsFor } from "@/components/reviews";
+import { soldFor } from "@/lib/sales";
 import { toItem, track } from "@/lib/analytics";
 import {
   FREE_SHIPPING_ABOVE,
@@ -425,6 +426,7 @@ export function PriceBlock({ price, compare, big, offer = false }: { price: numb
  */
 export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
   const list = reviewsFor(slug);
+  const sold = soldFor(slug);
   const avg = list.length ? list.reduce((s, r) => s + r.rating, 0) / list.length : 0;
   const label = avg.toFixed(1).replace(".", ",");
   const size = big ? "h-3 w-3" : "h-3.5 w-3.5";
@@ -446,6 +448,7 @@ export function Stars({ slug, big = false }: { slug: string; big?: boolean }) {
         )}
       </span>
       {list.length > 0 && <b className="text-body">{label}</b>}
+      {sold > 0 && <span className="text-muted-foreground">· {sold} {sold === 1 ? "vendido" : "vendidos"}</span>}
     </div>
   );
 }
