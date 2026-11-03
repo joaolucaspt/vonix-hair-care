@@ -276,11 +276,11 @@ function ProductPage() {
             </div>
             <div className="mt-4"><PaymentMethods /></div>
             <div className="mt-3"><SecuritySeal /></div>
+            <ShippingCalc subtotal={total} slug={p.slug} variant={v.label} qty={qty} />
             <ul className="mt-4 space-y-1 text-body text-muted-foreground">
               <li>Frete grátis em compras acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos descontos</li>
               <li><a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">Dúvidas? Fale com a gente no WhatsApp</a></li>
             </ul>
-            <ShippingCalc subtotal={total} slug={p.slug} variant={v.label} qty={qty} />
           </div>
         </div>
         {p.description && <ProductDetails p={p} />}
