@@ -482,6 +482,7 @@ function Checkout() {
                 <span className="min-w-0 break-words">
                   {l.units}× {l.product.name} <span className="text-muted-foreground">({l.variant})</span>
                   {l.offer && <span className="block text-small text-muted-foreground">{OFFER_LABEL[l.offer]}{l.offer !== "comp5" ? ` · ${l.qty} combo(s)` : ""}</span>}
+                  {!l.offer && l.pct > 0 && <span className="block text-small text-muted-foreground">Desconto por quantidade · {l.pct}% OFF</span>}
                 </span>
                 <span className="whitespace-nowrap font-medium">{brl(l.net)}</span>
               </li>

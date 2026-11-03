@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { USAGE, cardPricing, forAudience, resolveAudience, checkoutTotals, complementsFor, getProduct, hasFreeShipping, installments, isProOnly, lineTotals, pixPrice, products } from "@/lib/store";
+import { USAGE, cardPricing, forAudience, resolveAudience, checkoutTotals, complementsFor, getProduct, hasFreeShipping, installments, isProOnly, lineHasOffer, lineTotals, migrateCart, pixPrice, products, volumePct } from "@/lib/store";
 
 describe("ambiente e preços dos cards", () => {
   it("links sem uso ou com uso legado não limpam o ambiente escolhido", () => {
@@ -81,8 +81,60 @@ describe("ofertas por linha (não cumulativas)", () => {
     expect(t.net).toBe(80.66);
     expect(Math.round((t.gross - t.net) * 100) / 100).toBe(4.24);
   });
-  it("linha normal não tem desconto", () => {
-    expect(lineTotals(154.9, 2)).toMatchObject({ net: 309.8, gross: 309.8, units: 2 });
+  it("1 unidade não tem desconto", () => {
+    expect(lineTotals(154.9, 1)).toMatchObject({ net: 154.9, gross: 154.9, units: 1 });
+  });
+});
+
+describe("desconto por quantidade (segue a quantidade, em qualquer lugar)", () => {
+  it("2 unidades = 12% OFF e 3 ou mais = 15% OFF, sem precisar escolher a promoção", () => {
+    expect(volumePct(1)).toBe(0);
+    expect(volumePct(2)).toBe(12);
+    expect(volumePct(3)).toBe(15);
+    expect(volumePct(10)).toBe(15);
+    expect(lineTotals(154.9, 2)).toMatchObject({ gross: 309.8, net: 272.62, units: 2 });
+    expect(lineTotals(154.9, 3)).toMatchObject({ gross: 464.7, net: 395, units: 3 });
+    expect(lineTotals(174.9, 4)).toMatchObject({ gross: 699.6, net: 594.66, units: 4 });
+  });
+  it("dá exatamente o mesmo valor do combo antigo (Leve 2 e Leve 3)", () => {
+    for (const price of [174.9, 154.9, 84.9, 49.9]) {
+      expect(lineTotals(price, 2).net).toBe(lineTotals(price, 1, "kit2").net);
+      expect(lineTotals(price, 3).net).toBe(lineTotals(price, 1, "kit3").net);
+    }
+  });
+  it("a quantidade muda no carrinho: o desconto aparece e some junto, nunca fica preso", () => {
+    const net = (q: number) => lineTotals(164.9, q).net;
+    expect(net(1)).toBe(164.9);
+    expect(net(2)).toBeLessThan(net(1) * 2);
+    expect(net(3)).toBeLessThan(net(2) + net(1));
+    expect(net(2) / 2).toBeGreaterThan(net(3) / 3);
+    expect(net(1)).toBe(164.9);
+  });
+  it("linha com desconto por quantidade não recebe Pix 5% nem cupom por cima", () => {
+    const one = lineTotals(100, 1);
+    const two = lineTotals(100, 2);
+    const t = checkoutTotals([{ gross: one.gross, net: one.net }, { gross: two.gross, net: two.net }], "pix", 0.1);
+    expect(t.hasOffers).toBe(true);
+    expect(t.couponDiscount).toBe(10); // 10% só sobre a linha de 1 unidade
+    expect(t.pixDiscount).toBe(4.5); // 5% só sobre ela, depois do cupom
+    expect(t.offerDiscount).toBe(24); // 12% de 200
+    expect(t.net).toBe(100 - 10 - 4.5 + 176);
+    expect(lineHasOffer({ gross: 100, net: 100 })).toBe(false);
+    expect(lineHasOffer({ gross: 200, net: 176 })).toBe(true);
+  });
+  it("carrinho antigo (combo de 2 ou 3) vira unidades e o desconto é recalculado pelo total", () => {
+    const old = [
+      { slug: "botox-vonix", variant: "1Kg", qty: 1, offer: "kit2" as const },
+      { slug: "botox-vonix", variant: "1Kg", qty: 1 },
+      { slug: "mascara-whey-protein", variant: "1Kg", qty: 2, offer: "kit3" as const },
+      { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const },
+    ];
+    const out = migrateCart(old);
+    expect(out).toEqual([
+      { slug: "botox-vonix", variant: "1Kg", qty: 3 },
+      { slug: "mascara-whey-protein", variant: "1Kg", qty: 6 },
+      { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" },
+    ]);
   });
 });
 

@@ -100,7 +100,13 @@ export const OFFER_LABEL: Record<Offer, string> = {
   kit3: "Combo 3 unidades · 15% OFF",
 };
 
-/** Line totals in cents-safe math. qty = units for comp5/normal, kits for kit2/kit3. */
+/**
+ * Volume discount, every product: 2 units = 12% off, 3 or more = 15% off, on all units of the line.
+ * It follows the QUANTITY, so it applies wherever the quantity changes (product page, cart, checkout, server).
+ */
+export const volumePct = (qty: number) => (qty >= 3 ? 15 : qty === 2 ? 12 : 0);
+
+/** Line totals in cents-safe math. Without an offer the volume discount follows qty; kit2/kit3 (old carts) count kits, comp5 is the 5% cart complement. */
 export function lineTotals(price: number, qty: number, offer?: Offer) {
   const u = cents(price);
   if (offer === "kit2") {
@@ -115,14 +121,34 @@ export function lineTotals(price: number, qty: number, offer?: Offer) {
     const unit = Math.round((u * 95) / 100);
     return { gross: (u * qty) / 100, net: (unit * qty) / 100, units: qty };
   }
-  return { gross: (u * qty) / 100, net: (u * qty) / 100, units: qty };
+  const gross = u * qty;
+  return { gross: gross / 100, net: Math.round((gross * (100 - volumePct(qty))) / 100) / 100, units: qty };
 }
+
+/** A line is "on offer" when it carries a line offer OR the volume discount made it cheaper: then Pix 5% and coupons do not stack. */
+export const lineHasOffer = (l: { net: number; gross: number; offer?: Offer | undefined }) => !!l.offer || l.net < l.gross;
 
 /* ---------- persistent cart & favorites ---------- */
 export type CartItem = { slug: string; variant: string; qty: number; offer?: Offer };
 
+/**
+ * Old carts kept "combos" (kit2/kit3 = N kits). Now the discount follows the quantity, so a combo becomes plain units
+ * (merged with the same product's units) and the volume discount is recalculated from the total.
+ */
+export function migrateCart(items: CartItem[]): CartItem[] {
+  const out: CartItem[] = [];
+  for (const i of items) {
+    const units = i.offer === "kit2" ? i.qty * 2 : i.offer === "kit3" ? i.qty * 3 : i.qty;
+    const offer: Offer | undefined = i.offer === "comp5" ? "comp5" : undefined;
+    const ex = out.find((o) => o.slug === i.slug && o.variant === i.variant && o.offer === offer);
+    if (ex) ex.qty = Math.min(99, ex.qty + units);
+    else out.push({ slug: i.slug, variant: i.variant, qty: Math.min(99, units), ...(offer ? { offer } : {}) });
+  }
+  return out;
+}
+
 /** "session" storage forgets the choice when the visit ends, so the visitor chooses again next time. */
-function createStore<T>(key: string, initial: T, kind: "local" | "session" = "local") {
+function createStore<T>(key: string, initial: T, kind: "local" | "session" = "local", migrate?: (s: T) => T) {
   let state = initial;
   let loaded = false;
   const subs = new Set<() => void>();
@@ -132,7 +158,7 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
     loaded = true;
     try {
       const s = storage().getItem(key);
-      if (s) state = JSON.parse(s);
+      if (s) state = migrate ? migrate(JSON.parse(s)) : JSON.parse(s);
     } catch {
       /* ignore */
     }
@@ -156,7 +182,7 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
   };
 }
 
-const cartStore = createStore<CartItem[]>("vonix-cart", []);
+const cartStore = createStore<CartItem[]>("vonix-cart", [], "local", migrateCart);
 const favStore = createStore<string[]>("vonix-favs", []);
 
 /** False while the page is server-rendered/hydrating, so pages that depend on localStorage don't flash an empty state. */
@@ -170,7 +196,8 @@ export function useCart() {
       const v = p?.variants.find((x) => x.label === i.variant) ?? p?.variants[0];
       if (!p || !v) return null;
       const t = lineTotals(v.price, i.qty, i.offer);
-      return { ...i, product: p, price: v.price, gross: t.gross, net: t.net, units: t.units, total: t.net };
+      const pct = t.gross > 0 ? Math.round((1 - t.net / t.gross) * 100) : 0;
+      return { ...i, product: p, price: v.price, gross: t.gross, net: t.net, units: t.units, total: t.net, pct };
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
   const subtotal = cents(lines.reduce((s, l) => s + l.gross, 0)) / 100;
@@ -187,15 +214,15 @@ export function useCart() {
         const k = key({ slug, variant, offer });
         const ex = s.find((i) => key(i) === k);
         return ex
-          ? s.map((i) => (key(i) === k ? { ...i, qty: i.qty + qty } : i))
-          : [...s, { slug, variant, qty, ...(offer ? { offer } : {}) }];
+          ? s.map((i) => (key(i) === k ? { ...i, qty: Math.min(99, i.qty + qty) } : i))
+          : [...s, { slug, variant, qty: Math.min(99, qty), ...(offer ? { offer } : {}) }];
       }),
     setQty: (slug: string, variant: string, qty: number, offer?: Offer) =>
       cartStore.set((s) => {
         const k = key({ slug, variant, offer });
         return qty <= 0
           ? s.filter((i) => key(i) !== k)
-          : s.map((i) => (key(i) === k ? { ...i, qty } : i));
+          : s.map((i) => (key(i) === k ? { ...i, qty: Math.min(99, qty) } : i));
       }),
     remove: (slug: string, variant: string, offer?: Offer) =>
       cartStore.set((s) => {
@@ -247,7 +274,7 @@ export function checkoutTotals(
 ) {
   const gross = cents(lines.reduce((s, l) => s + l.gross, 0));
   const net = cents(lines.reduce((s, l) => s + l.net, 0));
-  const eligible = cents(lines.reduce((s, l) => s + (l.offer ? 0 : l.net), 0));
+  const eligible = cents(lines.reduce((s, l) => s + (lineHasOffer(l) ? 0 : l.net), 0));
   const couponDisc = Math.round(eligible * couponPct);
   const pixDisc = method === "pix" ? Math.round(((eligible - couponDisc) * 95) / 100) - (eligible - couponDisc) : 0;
   const total = net - couponDisc + pixDisc;
@@ -259,7 +286,7 @@ export function checkoutTotals(
     discount: (gross - total) / 100,
     net: total / 100,
     freeShipping: gross > FREE_SHIPPING_ABOVE * 100,
-    hasOffers: lines.some((l) => l.offer),
+    hasOffers: lines.some(lineHasOffer),
   };
 }
 
