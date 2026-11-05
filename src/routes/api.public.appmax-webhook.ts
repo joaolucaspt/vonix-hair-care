@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as appmax from "@/lib/appmax.server";
 import * as bling from "@/lib/bling.server";
+import { notifyAffiliateSale } from "@/lib/affiliate-notify.server";
 
 /**
  * Appmax webhooks carry no signature, so the payload is never trusted:
@@ -17,6 +18,9 @@ export const Route = createFileRoute("/api/public/appmax-webhook")({
           if (body.event && Number.isInteger(orderId) && orderId > 0 && body.event.startsWith("order_")) {
             const order = await appmax.getOrder(orderId);
             console.log("[appmax-webhook]", body.event, orderId, order.data.order.status, appmax.isPaid(order) ? "PAGO" : "pendente");
+            const statusText = String(order.data.order.status).toLowerCase();
+            if (appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
+            else if (/cancel|estorn|reembols|refund/.test(statusText)) await notifyAffiliateSale({ orderId, status: "cancelado" });
             if (appmax.isPaid(order)) {
               try {
                 console.log("[bling]", orderId, await bling.sendPaidOrder(order));

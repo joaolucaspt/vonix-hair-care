@@ -6,6 +6,7 @@ import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
 import { calculateShipping } from "./melhorenvio.server";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
+import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
 import { couponCheck, couponFreeShipping, couponPercent, findCoupon } from "./coupons";
 
@@ -145,6 +146,9 @@ export const createPayment = createServerFn({ method: "POST" })
         products,
       });
       const total = totals.net + option.price;
+      // Venda pelo link de uma afiliada: o app de expedição registra como pendente; só conta comissão depois de paga.
+      const ref = normalizeRef(data.ref);
+      if (ref) await notifyAffiliateSale({ orderId, status: "pendente", ref, totalCents: cents(total) });
 
       if (data.method === "pix") {
         const pix = await appmax.payWithPix(orderId, document);
@@ -161,6 +165,7 @@ export const createPayment = createServerFn({ method: "POST" })
         installments: data.installments ?? 1,
       });
       const order = await appmax.getOrder(orderId);
+      if (ref && appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
       return { ok: true as const, method: "card" as const, orderId, total, paid: appmax.isPaid(order), status: order.data.order.status };
     } catch (e) {
       console.error("[pagamento]", e);
@@ -173,7 +178,9 @@ export const getOrderStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const order = await appmax.getOrder(data.orderId);
-      return { ok: true as const, paid: appmax.isPaid(order), status: order.data.order.status };
+      const paid = appmax.isPaid(order);
+      if (paid) await notifyAffiliateSale({ orderId: data.orderId, status: "pago" }); // o app ignora pedidos que não são de afiliada
+      return { ok: true as const, paid, status: order.data.order.status };
     } catch (e) {
       console.error("[status]", e);
       return { ok: false as const };
