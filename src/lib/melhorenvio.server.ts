@@ -1,3 +1,4 @@
+import { isAllowedCarrier } from "./carriers";
 import { env, requireEnv } from "./env.server";
 
 export type ShippingProduct = { id: string; unitPrice: number; quantity: number };
@@ -52,7 +53,7 @@ export async function calculateShipping(toCep: string, products: ShippingProduct
     company?: { name?: string };
   }[];
   return data
-    .filter((q) => !q.error && (q.custom_price ?? q.price) != null)
+    .filter((q) => !q.error && (q.custom_price ?? q.price) != null && isAllowedCarrier(q.company?.name ?? ""))
     .map((q) => ({
       id: q.id,
       name: q.name,
