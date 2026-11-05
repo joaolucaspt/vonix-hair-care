@@ -4,6 +4,7 @@ import { SecuritySeal, Shell } from "@/components/site";
 import { ShippingBar } from "@/components/cart-summary";
 import { toItem, track } from "@/lib/analytics";
 import { isValidCpf } from "@/lib/cpf";
+import { getRef } from "@/lib/affiliate-ref";
 import { createPayment, getOrderStatus, getPaymentConfig, quoteShipping } from "@/lib/checkout.functions";
 import { OFFER_LABEL, WHATSAPP, brl, checkoutTotals, getSavedCep, installments, maskCep, saveCep, useCart, useHydrated } from "@/lib/store";
 import { couponCheck, couponPercent, findCoupon, getPrize, type Coupon } from "@/lib/coupons";
@@ -247,6 +248,7 @@ function Checkout() {
           method: pay,
           ...(applied ? { coupon: applied.code } : {}),
           ...(ip.current ? { ip: ip.current } : {}),
+          ...(getRef() ? { ref: getRef() as string } : {}),
           ...(token ? { token, holderName: card.holder, installments: parcels } : {}),
         },
       });
