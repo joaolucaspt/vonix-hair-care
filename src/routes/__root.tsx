@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { META_PIXEL_ID } from "@/lib/analytics";
+import { captureRef } from "@/lib/affiliate-ref";
 import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
 
 // IDs lidos do site publicado; confirmar o ID do Clarity em Configurações > Visão geral do projeto.
@@ -168,6 +169,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // Link de afiliada (?ref=codigo): guarda o código por 30 dias para a venda ser contada para ela.
+  useEffect(() => { captureRef(window.location.search); }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -5,6 +5,7 @@ import * as appmax from "./appmax.server";
 import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
 import { calculateShipping } from "./melhorenvio.server";
+import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
 import { couponCheck, couponFreeShipping, couponPercent, findCoupon } from "./coupons";
 
@@ -81,6 +82,7 @@ const paySchema = z.object({
   serviceId: z.number().int(),
   coupon: couponSchema,
   ip: z.string().max(64).optional(),
+  ref: z.string().max(30).optional(),
   method: z.enum(["pix", "card"]),
   token: z.string().max(200).optional(),
   holderName: z.string().max(120).optional(),
@@ -124,6 +126,8 @@ export const createPayment = createServerFn({ method: "POST" })
           city: data.address.cidade,
           state: data.address.uf.toUpperCase(),
         },
+        // Venda pelo link de uma afiliada: a origem fica registrada no pedido (utm_campaign = afiliada-<codigo>).
+        ...(normalizeRef(data.ref) ? { tracking: { utm_source: "afiliada", utm_campaign: refCampaign(normalizeRef(data.ref) as string) } } : {}),
       });
 
       const products = lines.map((l) => ({
