@@ -22,6 +22,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
 import { Route as ApiPublicAppmaxWebhookRouteImport } from './routes/api.public.appmax-webhook'
+import { Route as ApiPublicMetaCatalogRouteImport } from './routes/api.public.meta-catalog'
 import { Route as ApiPublicBlingCallbackRouteImport } from './routes/api.public.bling.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -89,6 +90,11 @@ const ApiPublicAppmaxWebhookRoute = ApiPublicAppmaxWebhookRouteImport.update({
   path: '/api/public/appmax-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMetaCatalogRoute = ApiPublicMetaCatalogRouteImport.update({
+  id: '/api/public/meta-catalog',
+  path: '/api/public/meta-catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBlingCallbackRoute = ApiPublicBlingCallbackRouteImport.update({
   id: '/api/public/bling/callback',
   path: '/api/public/bling/callback',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
+  '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
   '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
+  '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
   '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
+  '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
   '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/public/appmax-webhook'
+    | '/api/public/meta-catalog'
     | '/api/public/bling/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/public/appmax-webhook'
+    | '/api/public/meta-catalog'
     | '/api/public/bling/callback'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/public/appmax-webhook'
+    | '/api/public/meta-catalog'
     | '/api/public/bling/callback'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
   ApiPublicAppmaxWebhookRoute: typeof ApiPublicAppmaxWebhookRoute
+  ApiPublicMetaCatalogRoute: typeof ApiPublicMetaCatalogRoute
   ApiPublicBlingCallbackRoute: typeof ApiPublicBlingCallbackRoute
 }
 
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAppmaxWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/meta-catalog': {
+      id: '/api/public/meta-catalog'
+      path: '/api/public/meta-catalog'
+      fullPath: '/api/public/meta-catalog'
+      preLoaderRoute: typeof ApiPublicMetaCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bling/callback': {
       id: '/api/public/bling/callback'
       path: '/api/public/bling/callback'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
   ApiPublicAppmaxWebhookRoute: ApiPublicAppmaxWebhookRoute,
+  ApiPublicMetaCatalogRoute: ApiPublicMetaCatalogRoute,
   ApiPublicBlingCallbackRoute: ApiPublicBlingCallbackRoute,
 }
 export const routeTree = rootRouteImport
