@@ -8,16 +8,22 @@ declare global {
   }
 }
 
-/** ID do Pixel da Meta (Gerenciador de Eventos). Vazio = o pixel não é carregado. */
-export const META_PIXEL_ID = "";
+/** Pixel Vonix | E-commerce no Gerenciador de Eventos. */
+export const META_PIXEL_ID = "2866590430205824";
 
 type Item = { item_id: string; item_name: string; item_variant: string; price: number; quantity: number };
 
-/**
- * Código do produto no catálogo da Meta: VONIX-PROGRESSIVA-FIO-DE-LUZ, VONIX-BOTOX-VONIX, VONIX-COMBO-FIO-DE-LUZ.
- * Os kits (slug "kit-...") são "COMBO" no catálogo. Usado em todos os eventos para o catálogo reconhecer o produto.
- */
+/** Identificador já usado nos relatórios do GA4. */
 export const catalogId = (slug: string) => `VONIX-${slug.replace(/^kit-/, "combo-").toUpperCase()}`;
+
+const META_CATALOG_IDS: Record<string, string> = {
+  "VONIX-MASCARA-EFEITO-TEIA-COCO-NUTRI": "VONIX-MASCARA-COCO-NUTRI",
+  "VONIX-COMBO-MATIZADOR-SHAMPOO-E-MASCARA": "VONIX-KIT-MATIZADOR",
+};
+
+/** Mantém os identificadores dos produtos que já existem no Gerenciador de Comércio. */
+export const metaCatalogId = (itemId: string) =>
+  META_CATALOG_IDS[itemId] ?? itemId.replace(/^VONIX-COMBO-/, "VONIX-KIT-");
 
 export const toItem = (p: Product, variant: string, price: number, quantity = 1): Item => ({
   item_id: catalogId(p.slug),
@@ -44,8 +50,8 @@ export function metaParams(params: Record<string, unknown>) {
     ...(items.length
       ? {
           content_type: "product",
-          content_ids: items.map((i) => i.item_id),
-          contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity, item_price: i.price })),
+          content_ids: items.map((i) => metaCatalogId(i.item_id)),
+          contents: items.map((i) => ({ id: metaCatalogId(i.item_id), quantity: i.quantity, item_price: i.price })),
           num_items: items.reduce((s, i) => s + i.quantity, 0),
         }
       : {}),
