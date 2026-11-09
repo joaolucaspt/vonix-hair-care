@@ -8,8 +8,7 @@ const addressSchema = z.object({
   uf: z.string().regex(/^[A-Z]{2}$/),
 });
 export type AddressResult =
-  | { ok: true; address: z.infer<typeof addressSchema> }
-  | { ok: false; message: string };
+  { ok: true; address: z.infer<typeof addressSchema> } | { ok: false; message: string };
 
 /** Public postal data only; fixed providers, bounded requests, no logging. */
 export async function fetchAddress(cep: string): Promise<AddressResult> {
@@ -41,5 +40,9 @@ export async function fetchAddress(cep: string): Promise<AddressResult> {
       // Timeout, network errors and malformed JSON all try the next provider.
     }
   }
-  return { ok: false, message: "Não foi possível localizar o endereço deste CEP. Preencha manualmente; o cálculo de frete continua independente." };
+  return {
+    ok: false,
+    message:
+      "Não foi possível localizar o endereço deste CEP. Preencha manualmente; o cálculo de frete continua independente.",
+  };
 }

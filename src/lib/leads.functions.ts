@@ -18,11 +18,22 @@ const leadSchema = z.object({
 export const registerLead = createServerFn({ method: "POST" })
   .inputValidator(leadSchema)
   .handler(async ({ data }) => {
-    if (data.empresa) return { ok: false as const, saved: false, message: "Não foi possível concluir o cadastro." };
-    const lead = { origem: "cadastro-site", nome: data.nome ?? "", email: data.email, cupom: SIGNUP_COUPON, em: new Date().toISOString() };
+    if (data.empresa)
+      return { ok: false as const, saved: false, message: "Não foi possível concluir o cadastro." };
+    const lead = {
+      origem: "cadastro-site",
+      nome: data.nome ?? "",
+      email: data.email,
+      cupom: SIGNUP_COUPON,
+      em: new Date().toISOString(),
+    };
     const url = env("LEAD_WEBHOOK_URL");
     if (!url) {
-      return { ok: false as const, saved: false, message: "O cadastro está indisponível no momento. Tente novamente mais tarde." };
+      return {
+        ok: false as const,
+        saved: false,
+        message: "O cadastro está indisponível no momento. Tente novamente mais tarde.",
+      };
     }
     try {
       const r = await fetch(url, {
@@ -34,6 +45,10 @@ export const registerLead = createServerFn({ method: "POST" })
       if (!r.ok) throw new Error(`webhook respondeu ${r.status}`);
       return { ok: true as const, saved: true };
     } catch {
-      return { ok: false as const, saved: false, message: "Não foi possível salvar seu cadastro. Tente novamente em instantes." };
+      return {
+        ok: false as const,
+        saved: false,
+        message: "Não foi possível salvar seu cadastro. Tente novamente em instantes.",
+      };
     }
   });
