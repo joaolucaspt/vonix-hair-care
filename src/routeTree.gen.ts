@@ -26,6 +26,7 @@ import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
 import { Route as ApiInternalAffiliateMailWorkerRouteImport } from './routes/api.internal.affiliate-mail-worker'
 import { Route as ApiPublicAppmaxWebhookRouteImport } from './routes/api.public.appmax-webhook'
 import { Route as ApiPublicMetaCatalogRouteImport } from './routes/api.public.meta-catalog'
+import { Route as ApiPublicMetaEventRouteImport } from './routes/api.public.meta-event'
 import { Route as ApiPublicBlingCallbackRouteImport } from './routes/api.public.bling.callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -114,6 +115,11 @@ const ApiPublicMetaCatalogRoute = ApiPublicMetaCatalogRouteImport.update({
   path: '/api/public/meta-catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMetaEventRoute = ApiPublicMetaEventRouteImport.update({
+  id: '/api/public/meta-event',
+  path: '/api/public/meta-event',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBlingCallbackRoute = ApiPublicBlingCallbackRouteImport.update({
   id: '/api/public/bling/callback',
   path: '/api/public/bling/callback',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/affiliate-mail-worker': typeof ApiInternalAffiliateMailWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
   '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
+  '/api/public/meta-event': typeof ApiPublicMetaEventRoute
   '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/api/internal/affiliate-mail-worker': typeof ApiInternalAffiliateMailWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
   '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
+  '/api/public/meta-event': typeof ApiPublicMetaEventRoute
   '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRoutesById {
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/api/internal/affiliate-mail-worker': typeof ApiInternalAffiliateMailWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
   '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
+  '/api/public/meta-event': typeof ApiPublicMetaEventRoute
   '/api/public/bling/callback': typeof ApiPublicBlingCallbackRoute
 }
 export interface FileRouteTypes {
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/api/internal/affiliate-mail-worker'
     | '/api/public/appmax-webhook'
     | '/api/public/meta-catalog'
+    | '/api/public/meta-event'
     | '/api/public/bling/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/api/internal/affiliate-mail-worker'
     | '/api/public/appmax-webhook'
     | '/api/public/meta-catalog'
+    | '/api/public/meta-event'
     | '/api/public/bling/callback'
   id:
     | '__root__'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/api/internal/affiliate-mail-worker'
     | '/api/public/appmax-webhook'
     | '/api/public/meta-catalog'
+    | '/api/public/meta-event'
     | '/api/public/bling/callback'
   fileRoutesById: FileRoutesById
 }
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   ApiInternalAffiliateMailWorkerRoute: typeof ApiInternalAffiliateMailWorkerRoute
   ApiPublicAppmaxWebhookRoute: typeof ApiPublicAppmaxWebhookRoute
   ApiPublicMetaCatalogRoute: typeof ApiPublicMetaCatalogRoute
+  ApiPublicMetaEventRoute: typeof ApiPublicMetaEventRoute
   ApiPublicBlingCallbackRoute: typeof ApiPublicBlingCallbackRoute
 }
 
@@ -386,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMetaCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/meta-event': {
+      id: '/api/public/meta-event'
+      path: '/api/public/meta-event'
+      fullPath: '/api/public/meta-event'
+      preLoaderRoute: typeof ApiPublicMetaEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bling/callback': {
       id: '/api/public/bling/callback'
       path: '/api/public/bling/callback'
@@ -414,6 +434,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalAffiliateMailWorkerRoute: ApiInternalAffiliateMailWorkerRoute,
   ApiPublicAppmaxWebhookRoute: ApiPublicAppmaxWebhookRoute,
   ApiPublicMetaCatalogRoute: ApiPublicMetaCatalogRoute,
+  ApiPublicMetaEventRoute: ApiPublicMetaEventRoute,
   ApiPublicBlingCallbackRoute: ApiPublicBlingCallbackRoute,
 }
 export const routeTree = rootRouteImport
