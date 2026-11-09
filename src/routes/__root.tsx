@@ -15,6 +15,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { META_PIXEL_ID } from "@/lib/analytics";
+import { TRACKING_CONSENT_KEY } from "@/lib/tracking-consent";
+import { TrackingConsentBanner } from "@/components/tracking-consent";
 import { captureRef } from "@/lib/affiliate-ref";
 import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
 
@@ -111,6 +113,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     scripts: [
       {
+        // Read consent before any third-party bootstrap; storage failures deny tracking.
+        children: `window.__vonixMarketingAllowed=function(){try{return window.localStorage.getItem(${JSON.stringify(TRACKING_CONSENT_KEY)})==="accepted";}catch(e){return false;}};`,
+      },
+      {
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
@@ -134,7 +140,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         // GA4 só carrega no domínio público — previews não devem contaminar vendas ou sessões.
-        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)}) {
+        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)} && window.__vonixMarketingAllowed?.()) {
           window.dataLayer=window.dataLayer||[];
           window.gtag=function(){window.dataLayer.push(arguments);};
           window.gtag("js",new Date());
@@ -147,7 +153,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         // Clarity usa o mesmo isolamento por origem e carrega após a página.
-        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)}) {
+        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)} && window.__vonixMarketingAllowed?.()) {
           window.addEventListener("load",function(){setTimeout(function(){
             (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a]||[]).push(arguments)};
               t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
@@ -158,7 +164,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         // A prévia da Lovable não deve gerar eventos de produção.
-        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)} && !window.fbq) {
+        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)} && window.__vonixMarketingAllowed?.() && !window.fbq) {
           !function(f,b,e,v,n,t,s){n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
           fbq('init','${META_PIXEL_ID}');
           var pvId='PageView-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
@@ -204,7 +210,7 @@ function RootComponent() {
   useEffect(() => {
     if (previousPathname.current === pathname) return;
     previousPathname.current = pathname;
-    if (window.location.origin === SITE_URL) window.fbq?.("track", "PageView");
+    if (window.location.origin === SITE_URL && window.__vonixMarketingAllowed?.()) window.fbq?.("track", "PageView");
   }, [pathname]);
 
   return (
@@ -212,6 +218,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
+      <TrackingConsentBanner />
     </QueryClientProvider>
   );
 }

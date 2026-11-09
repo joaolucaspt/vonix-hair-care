@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-09",
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "base": "f5a7269",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "checks": {
+    "vitest": {
+      "passed": 410,
+      "total": 410,
+      "files": 57,
+      "exit": 0
+    },
+    "typescript": 0,
+    "build": 0,
+    "eslintTargeted": 0,
+    "ssr": {
+      "products": 43,
+      "passed": 43,
+      "failed": 0
+    },
+    "browserConsent": {
+      "firstVisitBlocked": true,
+      "refusedBlocked": true,
+      "acceptedLoadedVendors": [
+        "GA4",
+        "Clarity",
+        "Meta Pixel"
+      ],
+      "revocationBlocked": true,
+      "requestsToVendorsSent": 0,
+      "capiRequestsSentToProduction": 0
+    },
+    "responsive": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "overflow": false,
+      "checkoutUnblocked": true
+    }
+  },
+  "externalEffects": {
+    "productionDeploy": false,
+    "realPayment": false,
+    "productionDatabaseWrites": false,
+    "affiliateCodeModified": false
+  },
+  "blockers": [
+    "Appmax sandbox",
+    "Supabase staging RLS migration and backup",
+    "Bling homologation",
+    "SKU stock",
+    "legal consent review",
+    "server-side Purchase CAPI consent/legal basis",
+    "real paid-order vs session analytics",
+    "historical prices/social proof"
+  ]
+}

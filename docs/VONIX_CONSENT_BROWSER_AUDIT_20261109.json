@@ -1,0 +1,51 @@
+{
+  "auditedAt": "2026-11-09T18:10:37.518Z",
+  "passed": true,
+  "originSimulated": "https://vonixhair.com",
+  "backingServer": "http://127.0.0.1:43972",
+  "thirdPartyRequests": "all aborted, never delivered",
+  "capiRequests": "intercepted and answered locally",
+  "steps": [
+    {
+      "step": "unknown",
+      "http": 200,
+      "visible": true,
+      "thirdParty": 0,
+      "capi": 0
+    },
+    {
+      "step": "rejected",
+      "choice": "rejected",
+      "hasGtag": false,
+      "hasPixel": false,
+      "width": 1950,
+      "viewport": 390,
+      "thirdParty": 0,
+      "capi": 0
+    },
+    {
+      "step": "accepted",
+      "choice": "accepted",
+      "hasGtag": true,
+      "hasPixel": true,
+      "width": 1950,
+      "viewport": 390,
+      "thirdParty": [
+        "www.googletagmanager.com",
+        "connect.facebook.net",
+        "www.clarity.ms"
+      ],
+      "capi": 1
+    },
+    {
+      "step": "revoked",
+      "choice": "rejected",
+      "hasGtag": false,
+      "hasPixel": false,
+      "thirdPartyBefore": 3,
+      "thirdPartyAfter": 3
+    }
+  ],
+  "errors": [],
+  "note": "No real Meta, Google, Clarity, payment or order request was sent."
+}

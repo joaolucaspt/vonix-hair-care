@@ -1,10 +1,12 @@
 import type { Product } from "@/lib/store";
+import { hasTrackingConsent } from "@/lib/tracking-consent";
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
     clarity?: (...args: unknown[]) => void;
     fbq?: (...args: unknown[]) => void;
+    __vonixMarketingAllowed?: () => boolean;
   }
 }
 
@@ -76,6 +78,8 @@ const cookie = (name: string) =>
 
 /** Envia o mesmo evento à API de Conversões (via servidor) com o mesmo eventID do pixel, para a Meta deduplicar. */
 function sendServerEvent(event: string, eventId: string, customData: Record<string, unknown>) {
+  // Previews and localhost must never send a CAPI event, even with injected test mocks.
+  if (window.location.origin !== "https://vonixhair.com") return;
   const fbclid = new URLSearchParams(window.location.search).get("fbclid");
   const body = JSON.stringify({
     event,
@@ -95,7 +99,7 @@ function sendServerEvent(event: string, eventId: string, customData: Record<stri
 
 /** GA4 recommended e-commerce events; the same names show up as smart events in Clarity and, when set up, in the Meta Pixel. */
 export function track(event: string, params: Record<string, unknown> = {}) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hasTrackingConsent()) return;
   try {
     window.gtag?.("event", event, { currency: "BRL", ...params });
     window.clarity?.("event", event);

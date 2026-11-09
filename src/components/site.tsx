@@ -10,6 +10,7 @@ import { soldFor } from "@/lib/sales";
 import { useVisitorSummary } from "@/lib/review-summary";
 import { PaymentLogos } from "@/components/payment-logos";
 import { toItem, track } from "@/lib/analytics";
+import { TRACKING_PREFERENCES_EVENT } from "@/lib/tracking-consent";
 import {
   FREE_SHIPPING_ABOVE,
   MAX_DISCOUNT,
@@ -402,6 +403,7 @@ function Footer() {
         <span>© 2026 Vonix Hair. Todos os direitos reservados.</span>
         <div className="flex flex-wrap gap-x-4 gap-y-0 [&_a]:py-3.5">
           <Link to="/$page" params={{ page: "politica-de-privacidade" }}>Política de Privacidade</Link>
+          <button type="button" className="min-h-11 text-left underline-offset-2 hover:underline focus-visible:outline-2" onClick={() => window.dispatchEvent(new Event(TRACKING_PREFERENCES_EVENT))}>Preferências de cookies</button>
           <Link to="/$page" params={{ page: "termos-de-uso" }}>Termos de Uso</Link>
           <Link to="/$page" params={{ page: "politica-de-trocas-e-devolucoes" }}>Política de Troca e Devoluções</Link>
           <Link to="/$page" params={{ page: "politica-de-frete" }}>Política de Frete</Link>

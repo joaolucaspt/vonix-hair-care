@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getProduct, lineTotals } from "@/lib/store";
 import { savePendingCard } from "@/lib/pending-card";
 import { savePendingPix } from "@/lib/pending-pix";
+import { TRACKING_CONSENT_KEY } from "@/lib/tracking-consent";
 
 const mocks = vi.hoisted(() => ({
   address: vi.fn(),
@@ -55,6 +56,7 @@ const tick = async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  localStorage.setItem(TRACKING_CONSENT_KEY, "accepted");
   sessionStorage.clear();
   const product = getProduct("kit-banana-e-mel");
   if (!product) throw new Error("Produto de teste ausente");
@@ -121,6 +123,17 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("permite solicitar Pix com cookies opcionais recusados sem disparar analytics", async () => {
+    localStorage.setItem(TRACKING_CONSENT_KEY, "rejected");
+    const gtag = window.gtag;
+    const fbq = window.fbq;
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    await waitFor(() => expect(mocks.payment).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(gtag!).mock.calls).toHaveLength(0);
+    expect(vi.mocked(fbq!).mock.calls).toHaveLength(0);
+  });
   it("não permite gerar outro Pix vencido se a Appmax ainda informa pagamento pendente", async () => {
     savePendingPix({
       orderId: 2041,
