@@ -194,10 +194,18 @@ export const affiliateWizardFieldsSchema = z
     phone: z
       .string()
       .trim()
-      .refine((v) => onlyDigits(v).length === 11, "Informe um celular com DDD."),
+      .max(20, "Informe um celular com DDD.")
+      .regex(/^(?:\d{11}|\(\d{2}\) \d{5}-\d{4})$/, "Informe um celular com DDD."),
     email: z.string().trim().email("Informe um e-mail válido.").max(180),
     emailConfirmation: z.string().trim().email("Confirme seu e-mail.").max(180),
-    cpf: z.string().refine(validCpf, "Informe um CPF válido."),
+    cpf: z
+      .string()
+      .trim()
+      .max(14, "Informe um CPF válido.")
+      .refine(
+        (value) => /^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/.test(value) && validCpf(value),
+        "Informe um CPF válido.",
+      ),
     cnpj: z
       .string()
       .trim()
@@ -211,7 +219,11 @@ export const affiliateWizardFieldsSchema = z
         return age >= 18 && age <= 100;
       }, "É necessário ter entre 18 e 100 anos."),
     birthCity: requiredText("sua cidade de nascimento", 90),
-    postalCode: z.string().refine((v) => onlyDigits(v).length === 8, "Informe um CEP válido."),
+    postalCode: z
+      .string()
+      .trim()
+      .max(9, "Informe um CEP válido.")
+      .regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido."),
     city: requiredText("sua cidade", 90),
     state: z.enum(WIZARD_BRAZIL_STATES),
     street: requiredText("o logradouro", 120),

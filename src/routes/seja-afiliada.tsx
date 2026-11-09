@@ -30,6 +30,8 @@ export const Route = createFileRoute("/seja-afiliada")({
 export function AffiliateApplicationPage() {
   const [recruitment, setRecruitment] = useState<"loading" | "open" | "closed">("loading");
   const [preview, setPreview] = useState(false);
+  const [previewHasDraft, setPreviewHasDraft] = useState(false);
+  const [confirmPreviewExit, setConfirmPreviewExit] = useState(false);
   // Keep an already-started application mounted if the operator closes
   // recruitment while somebody is filling it in. It becomes read-only preview
   // mode, but never loses the unsent local draft or attempts to POST.
@@ -71,6 +73,20 @@ export function AffiliateApplicationPage() {
 
   const showWizard = preview || recruitment === "open" || liveFormStarted;
   const simulationOnly = preview || recruitment !== "open";
+
+  function requestPreviewExit() {
+    if (previewHasDraft) {
+      setConfirmPreviewExit(true);
+      return;
+    }
+    finishPreviewExit();
+  }
+
+  function finishPreviewExit() {
+    setPreview(false);
+    setPreviewHasDraft(false);
+    setConfirmPreviewExit(false);
+  }
 
   return (
     <Shell>
@@ -179,7 +195,10 @@ export function AffiliateApplicationPage() {
               {recruitment !== "loading" && (
                 <button
                   type="button"
-                  onClick={() => setPreview(true)}
+                  onClick={() => {
+                    setConfirmPreviewExit(false);
+                    setPreview(true);
+                  }}
                   className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#693440] px-7 py-3 text-sm font-bold text-white hover:bg-[#814d58]"
                 >
                   Visualizar formulário (prévia) <ArrowRight className="h-4 w-4" />
@@ -205,18 +224,56 @@ export function AffiliateApplicationPage() {
               )}
               {/* A preview must never turn into a live POST because status changed.
                   Switching explicitly to live starts a fresh form, not an old draft. */}
-              <AffiliateWizard key={preview ? "preview" : "live"} preview={simulationOnly} />
+              <AffiliateWizard
+                key={preview ? "preview" : "live"}
+                preview={simulationOnly}
+                onDraftChange={setPreviewHasDraft}
+              />
               {preview && (
                 <div className="mt-6 text-center">
-                  <button
-                    type="button"
-                    className="text-sm font-semibold text-[#8a5962] underline"
-                    onClick={() => setPreview(false)}
-                  >
-                    {recruitment === "open"
-                      ? "Iniciar inscrição real (novo formulário)"
-                      : "Fechar prévia"}
-                  </button>
+                  {confirmPreviewExit ? (
+                    <div
+                      role="group"
+                      aria-label="Confirmar saída da prévia"
+                      className="mx-auto max-w-xl rounded-2xl border border-[#e9cec8] bg-white p-6 text-left shadow-sm"
+                    >
+                      <p className="font-semibold text-[#623b44]">
+                        Descartar os dados desta prévia?
+                      </p>
+                      <p className="mt-2 text-sm text-[#806268]">
+                        O rascunho ainda não foi enviado nem armazenado. Para sair, confirme o
+                        descarte dos dados digitados.
+                      </p>
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-full bg-[#693440] px-5 text-sm font-semibold text-white"
+                          onClick={finishPreviewExit}
+                        >
+                          {recruitment === "open"
+                            ? "Descartar dados e iniciar inscrição real"
+                            : "Descartar dados e fechar prévia"}
+                        </button>
+                        <button
+                          type="button"
+                          className="min-h-11 rounded-full border border-[#d8bfc2] px-5 text-sm font-semibold text-[#693440]"
+                          onClick={() => setConfirmPreviewExit(false)}
+                        >
+                          Continuar preenchendo
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-sm font-semibold text-[#8a5962] underline"
+                      onClick={requestPreviewExit}
+                    >
+                      {recruitment === "open"
+                        ? "Iniciar inscrição real (novo formulário)"
+                        : "Fechar prévia"}
+                    </button>
+                  )}
                 </div>
               )}
             </>
