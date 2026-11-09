@@ -222,7 +222,7 @@ describe("Private encrypted questionnaire storage", () => {
     const rows = [
       {
         ...body,
-        id: "synthetic-id",
+        id: "00000000-0000-4000-8000-000000000321",
         status: "pendente",
         created_at: new Date().toISOString(),
         reviewed_at: null,
@@ -231,7 +231,18 @@ describe("Private encrypted questionnaire storage", () => {
     const db = vi
       .fn()
       .mockResolvedValueOnce(Response.json({ total: 1, applications: rows }))
-      .mockResolvedValueOnce(Response.json({ pendente: 1, aprovada: 0, recusada: 0 }));
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 1,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 0,
+        }),
+      );
     vi.stubGlobal("fetch", db);
     const result = await listAffiliateApplications({ status: "pendente", page: 0 });
     expect(result.applications[0]?.questionnaireSummary?.preferredLine).toBe("Botox Vonix");

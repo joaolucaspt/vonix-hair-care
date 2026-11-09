@@ -27,6 +27,25 @@ const valid = {
   website: "",
 };
 
+// Synthetic row with every documented field from the privileged search RPC.
+const listedCandidate = {
+  id: "00000000-0000-4000-8000-000000000123",
+  full_name: "Maria de Teste",
+  age: 27,
+  city: "Belo Horizonte",
+  state: "MG",
+  hair_type: "Cacheado",
+  email: "maria@example.invalid",
+  instagram_url: "https://instagram.com/qa",
+  tiktok_url: null,
+  motivation: null,
+  questionnaire_encrypted: null,
+  status: "pendente",
+  created_at: "2026-11-09T12:00:00Z",
+  reviewed_at: null,
+  vonix_affiliate_mail_outbox: [],
+};
+
 const original = {
   url: process.env["AFFILIATE_SUPABASE_URL"],
   ref: process.env["AFFILIATE_SUPABASE_PROJECT_REF"],
@@ -165,7 +184,7 @@ describe("Acesso e decisões", () => {
       .mockResolvedValueOnce(
         Response.json({
           total: 245,
-          applications: [{ id: "a", full_name: "Maria" }],
+          applications: [listedCandidate],
         }),
       )
       .mockResolvedValueOnce(
@@ -205,6 +224,96 @@ describe("Acesso e decisões", () => {
     });
   });
 
+  it("projects only approved triage fields, even if the privileged RPC returns extra PII", async () => {
+    const raw = {
+      ...listedCandidate,
+      cpf: "SENSITIVE_CPF_NOT_FOR_BROWSER",
+      mailing_address: "SENSITIVE_HOME_NOT_FOR_BROWSER",
+      questionnaire_encrypted: "SENSITIVE_CIPHERTEXT_NOT_FOR_BROWSER",
+      private_bank_token: "SENSITIVE_TOKEN_NOT_FOR_BROWSER",
+      vonix_affiliate_mail_outbox: [
+        {
+          status: "incerto",
+          sent_at: null,
+          provider_id: "SENSITIVE_PROVIDER_ID_NOT_FOR_BROWSER",
+          recipient: "SENSITIVE_RECIPIENT_NOT_FOR_BROWSER",
+        },
+      ],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ total: 1, applications: [raw] }))
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 1,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 1,
+          secret_server_field: "SENSITIVE_STATS_NOT_FOR_BROWSER",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await listAffiliateApplications({ status: "pendente", page: 0 });
+    expect(response.applications).toHaveLength(1);
+    expect(response.applications[0]?.email).toBe(listedCandidate.email);
+    expect(response.applications[0]?.vonix_affiliate_mail_outbox).toEqual([
+      { status: "incerto", sent_at: null },
+    ]);
+    expect(Object.keys(response.applications[0]!)).not.toContain("questionnaire_encrypted");
+    const serialized = JSON.stringify(response);
+    for (const sensitive of [
+      "SENSITIVE_CPF_NOT_FOR_BROWSER",
+      "SENSITIVE_HOME_NOT_FOR_BROWSER",
+      "SENSITIVE_CIPHERTEXT_NOT_FOR_BROWSER",
+      "SENSITIVE_TOKEN_NOT_FOR_BROWSER",
+      "SENSITIVE_PROVIDER_ID_NOT_FOR_BROWSER",
+      "SENSITIVE_RECIPIENT_NOT_FOR_BROWSER",
+      "SENSITIVE_STATS_NOT_FOR_BROWSER",
+    ]) {
+      expect(serialized).not.toContain(sensitive);
+    }
+  });
+
+  it("fails closed on malformed applicant rows rather than exposing arbitrary RPC objects", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          total: 1,
+          applications: [{ ...listedCandidate, age: "not-an-age", cpf: "should-not-pass" }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 1,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 0,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(listAffiliateApplications({ status: "pendente", page: 0 })).rejects.toThrow();
+  });
+
+  it("rejects non-finite and missing database counters rather than showing incorrect figures", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ total: 1, applications: [listedCandidate] }))
+      .mockResolvedValueOnce(Response.json({ pendente: "invalid", aprovada: 0, recusada: 0 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(listAffiliateApplications({ status: "pendente", page: 0 })).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("filtra globalmente notificações incertas sem buscar dados de pendentes", async () => {
     const fetchMock = vi
       .fn()
@@ -213,7 +322,7 @@ describe("Acesso e decisões", () => {
           total: 1,
           applications: [
             {
-              id: "incerta-qa",
+              ...listedCandidate,
               status: "recusada",
               vonix_affiliate_mail_outbox: [{ status: "incerto", sent_at: null }],
             },
@@ -254,7 +363,24 @@ describe("Acesso e decisões", () => {
 describe("Diagnóstico de preparação sem segredos", () => {
   it("mostra apenas indicadores e resultados de consultas de leitura", async () => {
     process.env["AFFILIATE_GOVERNANCE_MIGRATED"] = "false";
-    const fake = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    const fake = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        Response.json(
+          String(url).includes("retention_preview")
+            ? { pending_eligible: 0, rejected_eligible: 0 }
+            : {
+                pendente: 0,
+                aprovada: 0,
+                recusada: 0,
+                email_pendente: 0,
+                email_processando: 0,
+                email_enviado: 0,
+                email_falhou: 0,
+                email_incerto: 0,
+              },
+        ),
+      ),
+    );
     vi.stubGlobal("fetch", fake);
     const result = await affiliateOperationalReadiness();
     expect(result.recruitmentOpen).toBe(false);
@@ -266,6 +392,51 @@ describe("Diagnóstico de preparação sem segredos", () => {
     expect(printed).not.toContain("a-long-test-password-for-team");
     expect(fake).toHaveBeenCalledTimes(2);
     delete process.env["AFFILIATE_GOVERNANCE_MIGRATED"];
+  });
+
+  it("não confunde HTTP 200 com RPC saudável quando o formato de retorno é incorreto", async () => {
+    const fake = vi
+      .fn()
+      .mockImplementation((url: string) =>
+        Promise.resolve(
+          Response.json(
+            String(url).includes("retention_preview")
+              ? { pending_eligible: 0, rejected_eligible: 0 }
+              : { error: "not-a-valid-stats-payload" },
+          ),
+        ),
+      );
+    vi.stubGlobal("fetch", fake);
+    const readiness = await affiliateOperationalReadiness();
+    expect(readiness.databaseResponding).toBe(false);
+    expect(readiness.governanceResponding).toBe(true);
+    expect(fake).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(readiness)).not.toContain("not-a-valid-stats-payload");
+  });
+
+  it("avalia a disponibilidade dos dois RPCs de modo independente", async () => {
+    const fake = vi.fn().mockImplementation((url: string) => {
+      if (String(url).includes("retention_preview")) {
+        return Promise.reject(new Error("synthetic-network-error"));
+      }
+      return Promise.resolve(
+        Response.json({
+          pendente: 3,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 0,
+        }),
+      );
+    });
+    vi.stubGlobal("fetch", fake);
+    const readiness = await affiliateOperationalReadiness();
+    expect(readiness.databaseResponding).toBe(true);
+    expect(readiness.governanceResponding).toBe(false);
+    expect(JSON.stringify(readiness)).not.toContain("synthetic-network-error");
   });
 });
 
@@ -302,6 +473,19 @@ describe("Exclusão LGPD e prévia de retenção", () => {
       eraseAffiliateApplication(uuid, "valid@example.com", "irrelevante" as "correcao"),
     ).rejects.toThrow();
     expect(mock).not.toHaveBeenCalled();
+  });
+
+  it("recusa contadores LGPD inválidos sem inventar números ou executar exclusões", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ pending_eligible: "five", rejected_eligible: 9 }))
+      .mockResolvedValueOnce(Response.json({ pending_eligible: -1, rejected_eligible: 9 }))
+      .mockResolvedValueOnce(Response.json({ pending_eligible: 5 }));
+    vi.stubGlobal("fetch", mock);
+    await expect(previewAffiliateRetention(90, 180)).rejects.toThrow();
+    await expect(previewAffiliateRetention(90, 180)).rejects.toThrow();
+    await expect(previewAffiliateRetention(90, 180)).rejects.toThrow();
+    expect(mock.mock.calls.every(([url]) => String(url).includes("retention_preview"))).toBe(true);
   });
 
   it("retorna apenas totais estimados, sem executar exclusões", async () => {

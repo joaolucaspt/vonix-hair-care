@@ -20,6 +20,22 @@ import {
   encryptAffiliateWizard,
 } from "./affiliate-wizard-crypto.server";
 
+const nonNegativeCount = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+const affiliateStatsSchema = z.object({
+  pendente: nonNegativeCount,
+  aprovada: nonNegativeCount,
+  recusada: nonNegativeCount,
+  email_pendente: nonNegativeCount,
+  email_processando: nonNegativeCount,
+  email_enviado: nonNegativeCount,
+  email_falhou: nonNegativeCount,
+  email_incerto: nonNegativeCount,
+});
+const affiliateRetentionStatsSchema = z.object({
+  pending_eligible: nonNegativeCount,
+  rejected_eligible: nonNegativeCount,
+});
+
 /**
  * Publishing the source must never advertise an open signup before infrastructure
  * has been configured and independently tested by an operator.
@@ -187,19 +203,28 @@ export async function affiliateOperationalReadiness() {
   let databaseResponding = false;
   let governanceResponding = false;
   if (dbConfigured) {
-    try {
-      const [stats, governance] = await Promise.all([
-        requestSupabase("rpc/vonix_affiliate_stats", { method: "POST", body: "{}" }),
-        requestSupabase("rpc/vonix_affiliate_retention_preview", {
-          method: "POST",
-          body: JSON.stringify({ p_pending_days: 90, p_rejected_days: 180 }),
-        }),
-      ]);
-      databaseResponding = stats.ok;
-      governanceResponding = governance.ok;
-    } catch {
-      // Never expose URLs, provider response bodies, tokens or database details.
-    }
+    // HTTP 200 alone does not prove an RPC returns usable, correctly migrated
+    // data. Probe each read-only endpoint independently and validate its shape.
+    // Never expose credentials, provider error bodies or applicant records.
+    const [statsHealthy, governanceHealthy] = await Promise.all([
+      requestSupabase("rpc/vonix_affiliate_stats", { method: "POST", body: "{}" })
+        .then(
+          async (response) =>
+            response.ok && affiliateStatsSchema.safeParse(await response.json()).success,
+        )
+        .catch(() => false),
+      requestSupabase("rpc/vonix_affiliate_retention_preview", {
+        method: "POST",
+        body: JSON.stringify({ p_pending_days: 90, p_rejected_days: 180 }),
+      })
+        .then(
+          async (response) =>
+            response.ok && affiliateRetentionStatsSchema.safeParse(await response.json()).success,
+        )
+        .catch(() => false),
+    ]);
+    databaseResponding = statsHealthy;
+    governanceResponding = governanceHealthy;
   }
   return {
     recruitmentOpen: affiliateRecruitmentOpen(),
@@ -227,6 +252,30 @@ export interface AffiliateList {
 
 const validStatus = z.enum(["pendente", "aprovada", "recusada", "todas"]);
 const validMailStatus = z.enum(["pendente", "processando", "enviado", "falhou", "incerto"]);
+
+// A private RPC response is NOT a browser-facing DTO. Explicitly project every
+// field that the triage screen is allowed to receive. A future database migration
+// must never accidentally expose plaintext documents, addresses, tokens or PII.
+const affiliateAdminRowSchema = z.object({
+  id: z.string().uuid(),
+  full_name: z.string().min(1).max(120),
+  age: z.number().int().min(18).max(100),
+  city: z.string().max(90),
+  state: z.string().length(2),
+  hair_type: z.string().max(50),
+  email: z.string().email().max(180),
+  instagram_url: z.string().max(240),
+  tiktok_url: z.string().max(240).nullable(),
+  motivation: z.string().max(3000).nullable(),
+  status: z.enum(["pendente", "aprovada", "recusada"]),
+  created_at: z.string().max(64),
+  reviewed_at: z.string().max(64).nullable(),
+  questionnaire_encrypted: z.string().nullable().optional(),
+  vonix_affiliate_mail_outbox: z
+    .array(z.object({ status: validMailStatus, sent_at: z.string().max(64).nullable() }))
+    .nullable()
+    .optional(),
+});
 
 export async function listAffiliateApplications(input: {
   status: AffiliateListStatus;
@@ -257,40 +306,38 @@ export async function listAffiliateApplications(input: {
   ]);
   if (!rows.ok || !totals.ok) throw new Error("Consulta de inscrições indisponível.");
   const result = (await rows.json()) as { total?: unknown; applications?: unknown };
-  const raw = (await totals.json()) as Partial<Record<AffiliateStatus, number>> | null;
-  if (
-    !Array.isArray(result?.applications) ||
-    typeof result?.total !== "number" ||
-    result.total < 0
-  ) {
+  const raw: unknown = await totals.json();
+  const checkedTotal = nonNegativeCount.safeParse(result?.total);
+  if (!Array.isArray(result?.applications) || !checkedTotal.success) {
     throw new Error("Formato inválido da consulta de inscrições.");
   }
-  // RPC is service-role-only. Never return encrypted or unmasked identity data to
-  // the browser, even when the admin interface is authorized.
-  const applications = result.applications.map((value) => {
-    const rec = value as AffiliateApplicationRecord & {
-      questionnaire_encrypted?: string | null;
-    };
-    const { questionnaire_encrypted, ...publicFields } = rec;
+  // The RPC is privileged and may evolve independently of the browser. Zod
+  // strips unknown keys, but ciphertext is handled separately on the server.
+  // Never spread a raw database object into a client response.
+  const applications: AffiliateApplicationRecord[] = result.applications.map((value) => {
+    const row = affiliateAdminRowSchema.parse(value);
+    const { questionnaire_encrypted, vonix_affiliate_mail_outbox, ...visible } = row;
     return {
-      ...publicFields,
+      ...visible,
+      ...(vonix_affiliate_mail_outbox === undefined ? {} : { vonix_affiliate_mail_outbox }),
       questionnaireSummary: affiliateWizardSummary(questionnaire_encrypted),
     };
   });
+  const counters = affiliateStatsSchema.parse(raw);
   return {
     applications,
-    total: result.total,
+    total: checkedTotal.data,
     stats: {
-      pendente: Number(raw?.pendente ?? 0),
-      aprovada: Number(raw?.aprovada ?? 0),
-      recusada: Number(raw?.recusada ?? 0),
+      pendente: counters.pendente,
+      aprovada: counters.aprovada,
+      recusada: counters.recusada,
     },
     mailStats: {
-      pendente: Number((raw as Record<string, unknown> | null)?.["email_pendente"] ?? 0),
-      processando: Number((raw as Record<string, unknown> | null)?.["email_processando"] ?? 0),
-      enviado: Number((raw as Record<string, unknown> | null)?.["email_enviado"] ?? 0),
-      falhou: Number((raw as Record<string, unknown> | null)?.["email_falhou"] ?? 0),
-      incerto: Number((raw as Record<string, unknown> | null)?.["email_incerto"] ?? 0),
+      pendente: counters.email_pendente,
+      processando: counters.email_processando,
+      enviado: counters.email_enviado,
+      falhou: counters.email_falhou,
+      incerto: counters.email_incerto,
     },
   };
 }
@@ -343,10 +390,12 @@ export async function previewAffiliateRetention(pendingDays: number, rejectedDay
     body: JSON.stringify({ p_pending_days: pending, p_rejected_days: rejected }),
   });
   if (!response.ok) throw new Error("Prévia de retenção não disponível.");
-  const result = (await response.json()) as Record<string, unknown>;
+  // Never render a fabricated zero, NaN, or infinity when the database
+  // returns an unexpected shape. This RPC is a read-only estimate.
+  const result = affiliateRetentionStatsSchema.parse(await response.json());
   return {
-    pendingEligible: Number(result["pending_eligible"] ?? 0),
-    rejectedEligible: Number(result["rejected_eligible"] ?? 0),
+    pendingEligible: result.pending_eligible,
+    rejectedEligible: result.rejected_eligible,
     executedDeletions: 0,
   };
 }
