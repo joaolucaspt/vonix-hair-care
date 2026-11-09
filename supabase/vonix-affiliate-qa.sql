@@ -106,6 +106,11 @@ begin
   if (public.vonix_affiliate_search('aprovada', 'missing@example.invalid', 0, 40)->>'total')::integer <> 0 then
     raise exception 'Search returned unrelated candidate';
   end if;
+  if (public.vonix_affiliate_search('aprovada', '%', 0, 40)->>'total')::integer <> 0
+     or (public.vonix_affiliate_search('aprovada', '_', 0, 40)->>'total')::integer <> 0
+     or (public.vonix_affiliate_search('aprovada', chr(92), 0, 40)->>'total')::integer <> 0 then
+    raise exception 'Search wildcards were incorrectly interpreted as patterns';
+  end if;
   select public.vonix_affiliate_stats() into statuses;
   if (statuses->>'aprovada')::integer <>
       (select count(*) from public.vonix_affiliate_applications where status = 'aprovada')
@@ -113,7 +118,15 @@ begin
       (select count(*) from public.vonix_affiliate_applications where status = 'recusada') then
     raise exception 'Dashboard status counts are wrong';
   end if;
-  raise notice 'SQL QA PASS: quotas, RLS role, atomic decisions, idempotency, sent/uncertain mail, counts';
+  if (statuses->>'email_enviado')::integer <>
+      (select count(*) from public.vonix_affiliate_mail_outbox where status = 'enviado')
+    or (statuses->>'email_incerto')::integer <>
+      (select count(*) from public.vonix_affiliate_mail_outbox where status = 'incerto')
+    or (statuses->>'email_pendente')::integer <>
+      (select count(*) from public.vonix_affiliate_mail_outbox where status = 'pendente') then
+    raise exception 'Email queue dashboard counters are wrong';
+  end if;
+  raise notice 'SQL QA PASS: quotas, private search, wildcard escapes, concurrent decisions, email status counters';
 end;
 $test$;
 

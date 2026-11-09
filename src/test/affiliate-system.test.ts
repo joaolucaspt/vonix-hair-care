@@ -162,7 +162,18 @@ describe("Acesso e decisões", () => {
           applications: [{ id: "a", full_name: "Maria" }],
         }),
       )
-      .mockResolvedValueOnce(Response.json({ pendente: 245, aprovada: 12, recusada: 9 }));
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 245,
+          aprovada: 12,
+          recusada: 9,
+          email_pendente: 8,
+          email_processando: 2,
+          email_enviado: 10,
+          email_falhou: 1,
+          email_incerto: 3,
+        }),
+      );
     vi.stubGlobal("fetch", fetchMock);
     const result = await listAffiliateApplications({
       status: "pendente",
@@ -171,6 +182,13 @@ describe("Acesso e decisões", () => {
     });
     expect(result.total).toBe(245);
     expect(result.stats).toEqual({ pendente: 245, aprovada: 12, recusada: 9 });
+    expect(result.mailStats).toEqual({
+      pendente: 8,
+      processando: 2,
+      enviado: 10,
+      falhou: 1,
+      incerto: 3,
+    });
     expect(fetchMock.mock.calls[0]![0]).toContain("rpc/vonix_affiliate_search");
     expect(JSON.parse(String(fetchMock.mock.calls[0]![1].body))).toEqual({
       p_status: "pendente",

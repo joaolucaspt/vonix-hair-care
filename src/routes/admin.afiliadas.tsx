@@ -1,22 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowRight,
   CheckCircle2,
   Clock3,
   ExternalLink,
   LockKeyhole,
+  Mail,
   Search,
   ShieldCheck,
   XCircle,
 } from "lucide-react";
 import { LOGO } from "@/components/site";
-import { getAffiliateApplications, reviewAffiliateApplication } from "@/lib/affiliate-functions";
+import {
+  getAffiliateAdminSession,
+  getAffiliateApplications,
+  loginAffiliateAdmin,
+  logoutAffiliateAdmin,
+  reviewAffiliateApplication,
+} from "@/lib/affiliate-functions";
 import type {
   AffiliateApplicationRecord,
   AffiliateStatus,
   AffiliateMailStatus,
 } from "@/lib/affiliate-application";
+import type { AffiliateMailCounters } from "@/lib/affiliate-applications.server";
 
 export const Route = createFileRoute("/admin/afiliadas")({
   head: () => ({
@@ -34,6 +42,13 @@ const STATUS: { key: AffiliateStatus; label: string }[] = [
   { key: "recusada", label: "Recusadas" },
 ];
 const PER_PAGE = 40;
+const MAIL_STATUS: { key: keyof AffiliateMailCounters; label: string; color: string }[] = [
+  { key: "pendente", label: "Aguardando", color: "text-[#a16b23]" },
+  { key: "processando", label: "Processando", color: "text-[#4b709f]" },
+  { key: "enviado", label: "Aceitos", color: "text-[#2c7859]" },
+  { key: "falhou", label: "Falhas", color: "text-[#b14a4a]" },
+  { key: "incerto", label: "Incertos", color: "text-[#995d78]" },
+];
 const statusStyle: Record<AffiliateStatus, string> = {
   pendente: "bg-amber-50 text-amber-800",
   aprovada: "bg-emerald-50 text-emerald-800",
@@ -64,6 +79,8 @@ function safeProfileLink(value: string, platform: "instagram" | "tiktok") {
 
 function AffiliateAdminPage() {
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [status, setStatus] = useState<AffiliateStatus>("pendente");
   const [page, setPage] = useState(0);
@@ -74,6 +91,13 @@ function AffiliateAdminPage() {
     pendente: 0,
     aprovada: 0,
     recusada: 0,
+  });
+  const [mailStats, setMailStats] = useState<AffiliateMailCounters>({
+    pendente: 0,
+    processando: 0,
+    enviado: 0,
+    falhou: 0,
+    incerto: 0,
   });
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -86,7 +110,7 @@ function AffiliateAdminPage() {
     setError("");
     try {
       const response = await getAffiliateApplications({
-        data: { password, status: nextStatus, page: nextPage, search: nextSearch || undefined },
+        data: { status: nextStatus, page: nextPage, search: nextSearch || undefined },
       });
       if (!response.ok) {
         setError(response.reason);
@@ -99,6 +123,7 @@ function AffiliateAdminPage() {
       setSearch(nextSearch);
       setApplications(response.applications);
       setStats(response.stats);
+      setMailStats(response.mailStats);
       setTotal(response.total);
     } catch {
       setError("Não foi possível carregar os dados. Tente novamente.");
@@ -107,12 +132,65 @@ function AffiliateAdminPage() {
     }
   }
 
-  function signOut() {
-    setPassword("");
-    setAuthorized(false);
-    setApplications([]);
+  useEffect(() => {
+    let active = true;
+    void getAffiliateAdminSession()
+      .then(async (session) => {
+        if (active && session.authenticated) await load("pendente", 0, "");
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setCheckingSession(false);
+      });
+    return () => {
+      active = false;
+    };
+    // Session status is checked only on initial mount, not on each filter change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function login(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (loading) return;
+    setLoading(true);
     setError("");
-    setNotice("");
+    try {
+      const result = await loginAffiliateAdmin({ data: { password, otp } });
+      setPassword("");
+      setOtp("");
+      if (!result.ok) {
+        setError(result.reason);
+        return;
+      }
+      await load("pendente", 0, "");
+    } catch {
+      setError("Não foi possível autenticar. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signOut() {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await logoutAffiliateAdmin();
+      if (!result.ok) {
+        setError("Não foi possível encerrar a sessão. Tente novamente.");
+        return;
+      }
+      setPassword("");
+      setOtp("");
+      setAuthorized(false);
+      setApplications([]);
+      setMailStats({ pendente: 0, processando: 0, enviado: 0, falhou: 0, incerto: 0 });
+      setError("");
+      setNotice("");
+    } catch {
+      setError("Não foi possível encerrar a sessão. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function decide(app: AffiliateApplicationRecord, decision: "aprovada" | "recusada") {
@@ -121,7 +199,7 @@ function AffiliateAdminPage() {
     setError("");
     setNotice("");
     try {
-      const result = await reviewAffiliateApplication({ data: { password, id: app.id, decision } });
+      const result = await reviewAffiliateApplication({ data: { id: app.id, decision } });
       if (!result.ok) {
         setError(result.reason);
       } else {
@@ -158,7 +236,7 @@ function AffiliateAdminPage() {
             </span>
             {authorized && (
               <button
-                onClick={signOut}
+                onClick={() => void signOut()}
                 className="rounded-full border border-[#dcc7c9] px-5 py-2 text-sm font-semibold hover:bg-[#faf2f2]"
               >
                 Sair
@@ -179,12 +257,16 @@ function AffiliateAdminPage() {
           </p>
         </div>
 
-        {!authorized ? (
+        {checkingSession ? (
+          <div
+            role="status"
+            className="rounded-2xl border border-[#eadbd7] bg-white px-6 py-12 text-sm text-[#806a6c]"
+          >
+            Verificando acesso da equipe...
+          </div>
+        ) : !authorized ? (
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void load("pendente", 0, "");
-            }}
+            onSubmit={(e) => void login(e)}
             className="max-w-lg rounded-[2rem] border border-[#e8dcd8] bg-white p-7 shadow-sm sm:p-10"
           >
             <LockKeyhole className="mb-5 h-9 w-9 text-[#864a56]" />
@@ -203,6 +285,21 @@ function AffiliateAdminPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 outline-none focus:ring-2 focus:ring-[#e8c9c5]"
+            />
+            <label className="mt-5 block text-sm font-semibold" htmlFor="admin-otp">
+              Código do autenticador
+            </label>
+            <input
+              id="admin-otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              pattern="[0-9]{6}"
+              placeholder="6 dígitos (se habilitado)"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 tracking-[.3em] outline-none focus:ring-2 focus:ring-[#e8c9c5]"
             />
             {error && (
               <p role="alert" className="mt-4 text-sm text-red-700">
@@ -253,6 +350,37 @@ function AffiliateAdminPage() {
                 </button>
               ))}
             </div>
+
+            <section
+              aria-labelledby="affiliate-mail-summary"
+              className="mt-6 rounded-[1.5rem] border border-[#e8dcd8] bg-white p-5 sm:p-6"
+            >
+              <div className="flex items-start gap-3">
+                <Mail className="mt-1 h-5 w-5 shrink-0 text-[#8f5361]" aria-hidden="true" />
+                <div>
+                  <h2 id="affiliate-mail-summary" className="font-display text-xl">
+                    Notificações das candidatas
+                  </h2>
+                  <p className="mt-1 text-xs leading-relaxed text-[#856f73]">
+                    Os e-mails aceitos pelo provedor não são necessariamente entregues. Em caso de
+                    envio incerto, confira o provedor antes de tentar novamente.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {MAIL_STATUS.map((item) => (
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-[#f0e6e2] bg-[#fcf9f7] px-4 py-3"
+                  >
+                    <p className="text-xs font-medium text-[#786467]">{item.label}</p>
+                    <p className={"mt-1 font-display text-3xl " + item.color}>
+                      {mailStats[item.key]}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
               <div>

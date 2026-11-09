@@ -11,7 +11,7 @@ Trabalho feito na branch feat/vonix-afiliadas-inscricoes do MESMO repositório v
 ## Campos e fluxo
 O formulário pede nome completo, idade, cidade, UF, tipo de cabelo, e-mail, URL Instagram, URL TikTok e justificativa (mínimo 30 caracteres). Há aceite da política de privacidade e campo anti-bot invisível. Idade mínima provisória: 18 anos, para evitar contratação de menores sem desenho jurídico adequado. Todos os dados são validados no servidor; os perfis devem apontar para URLs HTTPS reais dos domínios oficiais, não para links arbitrários.
 
-Inscrições são guardadas em vonix_affiliate_applications. A restrição UNIQUE no e-mail impede duplicidade do cadastro. O painel mostra os três status, contadores totais, busca por nome/e-mail, paginação de 40 em 40, links de perfis e justificativa. Apenas quem envia AFFILIATE_ADMIN_PASSWORD correta (mínimo 16 caracteres) ao servidor acessa as ações. A senha não é persistida no navegador e não consta da URL.
+Inscrições são guardadas em vonix_affiliate_applications. A restrição UNIQUE no e-mail impede duplicidade do cadastro. O painel mostra os três status, contadores totais, busca por nome/e-mail, paginação de 40 em 40, links de perfis e justificativa. O login envia a senha administrativa (mínimo 16 caracteres) **apenas na autenticação inicial**, e exige código TOTP quando configurado. Depois, consultas e decisões validam no servidor um cookie HTTP-only assinado, com duração de 2 horas. A senha e o TOTP são apagados do estado da tela após o login, não aparecem nas URLs e não são enviados junto com cada decisão.
 
 A decisão é transacional por RPC SQL: um UPDATE condicional de pendente para aprovada/recusada cria uma única entrada na tabela de e-mails, com UNIQUE(application_id). A decisão não pode ser repetida nem revertida pelo painel. Uma tentativa imediata de envio ocorre após salvar a decisão, se o provedor estiver configurado. Um worker autenticado pode processar a fila/repetições a cada cinco minutos, via agendamento do ambiente de hospedagem.
 
@@ -22,6 +22,8 @@ A decisão é transacional por RPC SQL: um UPDATE condicional de pendente para a
    - SUPABASE_URL
    - SUPABASE_SERVICE_ROLE_KEY
    - AFFILIATE_ADMIN_PASSWORD: uma senha forte de equipe com pelo menos 16 caracteres
+   - AFFILIATE_ADMIN_SESSION_SECRET: segredo aleatório independente, com pelo menos 32 caracteres, usado para assinar cookies de sessão
+   - AFFILIATE_ADMIN_TOTP_SECRET: segredo Base32 do aplicativo autenticador; obrigatório no ambiente de produção
    - RESEND_API_KEY: chave privada para o envio de e-mails transacionais
    - AFFILIATE_FROM_EMAIL: remetente em domínio previamente verificado no Resend (ex.: "Vonix Hair <afiliados@seudominio.com>")
    - AFFILIATE_WORKER_SECRET: senha aleatória com pelo menos 24 caracteres, distinta da senha de admin
@@ -56,3 +58,17 @@ O repositório já contém persistência de checkout que utiliza as variáveis c
 Para um banco dedicado exclusivamente às candidaturas, configurar **ambas** `AFFILIATE_SUPABASE_URL` e `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY`. Se nenhuma delas estiver definida, o módulo usa as credenciais compartilhadas já existentes. Se somente uma das duas variáveis dedicadas estiver definida, o módulo falha de forma segura e não mistura URL e chave de bancos distintos. O SQL de afiliadas deve ser aplicado apenas no banco selecionado.
 
 A implantação só deve prosseguir após verificar quem administra o banco atual do e-commerce, configurar o segredo `AFFILIATE_TRAFFIC_PEPPER`, testar o cabeçalho de IP do proxy e homologar ao menos uma inscrição de ponta a ponta **sem utilizar dados ou destinatários reais**.
+
+## Sessão administrativa com autenticação em duas etapas
+- Login: senha + código TOTP de 6 dígitos se a equipe ativou o segundo fator. A produção exige o segredo TOTP, e não aceita login caso esteja ausente ou inválido. O código nunca é salvo no cadastro de candidatas.
+- Sessão: cookie `__Host-vonix-affiliates-admin` em produção, `HttpOnly`, `Secure`, `SameSite=Strict`, limitado à origem do site e válido por **2 horas**. Em desenvolvimento local HTTP usa cookie distinto, sem `Secure`, exclusivamente para testes.
+- Qualquer rotação da senha, do TOTP ou de `AFFILIATE_ADMIN_SESSION_SECRET` invalida as sessões anteriores. Logout apaga o cookie no navegador; sessões copiadas antes do logout só expiram após duas horas ou rotação de segredo (limitação de sessões stateless).
+- Operações privadas validam a sessão e a mesma origem diretamente nas funções de servidor. O formulário público permanece independente da sessão.
+- A senha única de equipe é um mecanismo temporário de bootstrap. Para uso com várias pessoas, o ideal ainda é substituir por contas individuais com MFA e registros auditáveis de cada decisão. Até isso acontecer, a equipe compartilha uma única identidade administrativa e não há rastreabilidade individual.
+- Testes específicos cobrem assinatura, expiração, alteração de credenciais, TOTP (vetor RFC 6238), cookies, logout e proteção de origem. Não divulgar o link de administração sem primeiro configurar o banco de produção validado e os segredos.
+
+## Observabilidade do recrutamento
+- O painel exibe cinco contadores globais da fila: **aguardando, processando, aceitos, falhas e incertos**. O estado `enviado` significa que o provedor aceitou o envio, não que a destinatária recebeu/abriu a mensagem.
+- A consulta administrativa usa busca **literal** por nome ou e-mail: `%`, `_` e barras invertidas não podem ser interpretados como curingas SQL. Isso foi verificado no PostgreSQL isolado com uma transação de QA que executa `ROLLBACK`.
+- Os contadores permitem identificar problemas de envio sem expor dados de candidatas aos usuários públicos. O acesso continua exigindo sessão administrativa válida, e a checagem inicial de sessão envia `Cache-Control: no-store`.
+- Ainda faltam webhooks de confirmação de entrega, monitoramento de rejeição/bounce e uma trilha de auditoria por funcionário. Esses itens não são substituídos pelos contadores atuais.

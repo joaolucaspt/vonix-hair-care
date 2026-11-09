@@ -85,10 +85,16 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
   return { ok: true as const };
 }
 
+export type AffiliateMailCounters = Record<
+  "pendente" | "processando" | "enviado" | "falhou" | "incerto",
+  number
+>;
+
 export interface AffiliateList {
   applications: AffiliateApplicationRecord[];
   total: number;
   stats: Record<AffiliateStatus, number>;
+  mailStats: AffiliateMailCounters;
 }
 
 const validStatus = z.enum(["pendente", "aprovada", "recusada"]);
@@ -129,6 +135,13 @@ export async function listAffiliateApplications(input: {
       pendente: Number(raw?.pendente ?? 0),
       aprovada: Number(raw?.aprovada ?? 0),
       recusada: Number(raw?.recusada ?? 0),
+    },
+    mailStats: {
+      pendente: Number((raw as Record<string, unknown> | null)?.["email_pendente"] ?? 0),
+      processando: Number((raw as Record<string, unknown> | null)?.["email_processando"] ?? 0),
+      enviado: Number((raw as Record<string, unknown> | null)?.["email_enviado"] ?? 0),
+      falhou: Number((raw as Record<string, unknown> | null)?.["email_falhou"] ?? 0),
+      incerto: Number((raw as Record<string, unknown> | null)?.["email_incerto"] ?? 0),
     },
   };
 }

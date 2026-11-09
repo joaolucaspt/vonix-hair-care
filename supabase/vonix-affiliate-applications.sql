@@ -90,7 +90,12 @@ as $$
   select jsonb_build_object(
     'pendente', count(*) filter (where status = 'pendente'),
     'aprovada', count(*) filter (where status = 'aprovada'),
-    'recusada', count(*) filter (where status = 'recusada')
+    'recusada', count(*) filter (where status = 'recusada'),
+    'email_pendente', (select count(*) from public.vonix_affiliate_mail_outbox where status = 'pendente'),
+    'email_processando', (select count(*) from public.vonix_affiliate_mail_outbox where status = 'processando'),
+    'email_enviado', (select count(*) from public.vonix_affiliate_mail_outbox where status = 'enviado'),
+    'email_falhou', (select count(*) from public.vonix_affiliate_mail_outbox where status = 'falhou'),
+    'email_incerto', (select count(*) from public.vonix_affiliate_mail_outbox where status = 'incerto')
   ) from public.vonix_affiliate_applications;
 $$;
 
@@ -101,6 +106,9 @@ create or replace function public.vonix_affiliate_search(
 as $$
 declare
   v_query text := trim(coalesce(p_query, ''));
+  -- Escape LIKE wildcard metacharacters; user search must be literal, not a pattern.
+  v_pattern text := replace(replace(replace(trim(coalesce(p_query, '')), chr(92),
+    chr(92) || chr(92)), '%', chr(92) || '%'), '_', chr(92) || '_');
 begin
   if p_status not in ('pendente', 'aprovada', 'recusada')
     or length(v_query) > 70
@@ -116,8 +124,8 @@ begin
       from public.vonix_affiliate_applications a
       where a.status = p_status
         and (v_query = ''
-          or a.full_name ilike '%' || v_query || '%'
-          or a.email ilike '%' || v_query || '%')
+          or a.full_name ilike '%' || v_pattern || '%' escape chr(92)
+          or a.email ilike '%' || v_pattern || '%' escape chr(92))
     ), paged as (
       select f.*, m.status as mail_status, m.sent_at as mail_sent_at, m.id as mail_id
       from filtered f
