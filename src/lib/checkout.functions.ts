@@ -5,6 +5,7 @@ import * as appmax from "./appmax.server";
 import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
 import { calculateShipping } from "./melhorenvio.server";
+import { pickTwoShipping } from "./shipping-pick";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
@@ -40,7 +41,10 @@ async function shippingOptions(cep: string, lines: ReturnType<typeof buildLines>
   );
   const t = checkoutTotals(lines, "pix");
   const free = t.freeShipping || couponFreeShipping(findCoupon(couponCode), t.gross);
-  return quotes.map((q, k) => ({ ...q, free: free && k === 0, price: free && k === 0 ? 0 : q.price }));
+  const picked = pickTwoShipping(quotes);
+  // Frete grátis vale para a opção mais barata (a econômica), como antes.
+  const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
+  return picked.map((q) => ({ ...q, free: free && q.id === cheapestId, price: free && q.id === cheapestId ? 0 : q.price }));
 }
 
 export const quoteShipping = createServerFn({ method: "POST" })
