@@ -19,8 +19,11 @@ import { Route as ContaRouteImport } from './routes/conta'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
 import { Route as LojaRouteImport } from './routes/loja'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as SejaAfiliadaRouteImport } from './routes/seja-afiliada'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AdminAfiliadasRouteImport } from './routes/admin.afiliadas'
 import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
+import { Route as ApiInternalAffiliateMailWorkerRouteImport } from './routes/api.internal.affiliate-mail-worker'
 import { Route as ApiInternalBlingConnectRouteImport } from './routes/api.internal.bling-connect'
 import { Route as ApiInternalMetaRecoveryRouteImport } from './routes/api.internal.meta-recovery'
 import { Route as ApiInternalOrderHealthRouteImport } from './routes/api.internal.order-health'
@@ -80,9 +83,19 @@ const PainelRoute = PainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SejaAfiliadaRoute = SejaAfiliadaRouteImport.update({
+  id: '/seja-afiliada',
+  path: '/seja-afiliada',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAfiliadasRoute = AdminAfiliadasRouteImport.update({
+  id: '/admin/afiliadas',
+  path: '/admin/afiliadas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProdutoSlugRoute = ProdutoSlugRouteImport.update({
@@ -90,6 +103,12 @@ const ProdutoSlugRoute = ProdutoSlugRouteImport.update({
   path: '/produto/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalAffiliateMailWorkerRoute =
+  ApiInternalAffiliateMailWorkerRouteImport.update({
+    id: '/api/internal/affiliate-mail-worker',
+    path: '/api/internal/affiliate-mail-worker',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalBlingConnectRoute = ApiInternalBlingConnectRouteImport.update({
   id: '/api/internal/bling-connect',
   path: '/api/internal/bling-connect',
@@ -142,8 +161,11 @@ export interface FileRoutesByFullPath {
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
   '/painel': typeof PainelRoute
+  '/seja-afiliada': typeof SejaAfiliadaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/afiliadas': typeof AdminAfiliadasRoute
   '/produto/$slug': typeof ProdutoSlugRoute
+  '/api/internal/affiliate-mail-worker': typeof ApiInternalAffiliateMailWorkerRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
   '/api/internal/meta-recovery': typeof ApiInternalMetaRecoveryRoute
   '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
@@ -164,8 +186,11 @@ export interface FileRoutesByTo {
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
   '/painel': typeof PainelRoute
+  '/seja-afiliada': typeof SejaAfiliadaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/afiliadas': typeof AdminAfiliadasRoute
   '/produto/$slug': typeof ProdutoSlugRoute
+  '/api/internal/affiliate-mail-worker': typeof ApiInternalAffiliateMailWorkerRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
   '/api/internal/meta-recovery': typeof ApiInternalMetaRecoveryRoute
   '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
@@ -187,8 +212,11 @@ export interface FileRoutesById {
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
   '/painel': typeof PainelRoute
+  '/seja-afiliada': typeof SejaAfiliadaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/afiliadas': typeof AdminAfiliadasRoute
   '/produto/$slug': typeof ProdutoSlugRoute
+  '/api/internal/affiliate-mail-worker': typeof ApiInternalAffiliateMailWorkerRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
   '/api/internal/meta-recovery': typeof ApiInternalMetaRecoveryRoute
   '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
@@ -211,8 +239,11 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/loja'
     | '/painel'
+    | '/seja-afiliada'
     | '/sitemap.xml'
+    | '/admin/afiliadas'
     | '/produto/$slug'
+    | '/api/internal/affiliate-mail-worker'
     | '/api/internal/bling-connect'
     | '/api/internal/meta-recovery'
     | '/api/internal/order-health'
@@ -233,8 +264,11 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/loja'
     | '/painel'
+    | '/seja-afiliada'
     | '/sitemap.xml'
+    | '/admin/afiliadas'
     | '/produto/$slug'
+    | '/api/internal/affiliate-mail-worker'
     | '/api/internal/bling-connect'
     | '/api/internal/meta-recovery'
     | '/api/internal/order-health'
@@ -255,8 +289,11 @@ export interface FileRouteTypes {
     | '/favoritos'
     | '/loja'
     | '/painel'
+    | '/seja-afiliada'
     | '/sitemap.xml'
+    | '/admin/afiliadas'
     | '/produto/$slug'
+    | '/api/internal/affiliate-mail-worker'
     | '/api/internal/bling-connect'
     | '/api/internal/meta-recovery'
     | '/api/internal/order-health'
@@ -278,8 +315,11 @@ export interface RootRouteChildren {
   FavoritosRoute: typeof FavoritosRoute
   LojaRoute: typeof LojaRoute
   PainelRoute: typeof PainelRoute
+  SejaAfiliadaRoute: typeof SejaAfiliadaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AdminAfiliadasRoute: typeof AdminAfiliadasRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
+  ApiInternalAffiliateMailWorkerRoute: typeof ApiInternalAffiliateMailWorkerRoute
   ApiInternalBlingConnectRoute: typeof ApiInternalBlingConnectRoute
   ApiInternalMetaRecoveryRoute: typeof ApiInternalMetaRecoveryRoute
   ApiInternalOrderHealthRoute: typeof ApiInternalOrderHealthRoute
@@ -362,6 +402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/seja-afiliada': {
+      id: '/seja-afiliada'
+      path: '/seja-afiliada'
+      fullPath: '/seja-afiliada'
+      preLoaderRoute: typeof SejaAfiliadaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -369,11 +416,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/afiliadas': {
+      id: '/admin/afiliadas'
+      path: '/admin/afiliadas'
+      fullPath: '/admin/afiliadas'
+      preLoaderRoute: typeof AdminAfiliadasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/produto/$slug': {
       id: '/produto/$slug'
       path: '/produto/$slug'
       fullPath: '/produto/$slug'
       preLoaderRoute: typeof ProdutoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/affiliate-mail-worker': {
+      id: '/api/internal/affiliate-mail-worker'
+      path: '/api/internal/affiliate-mail-worker'
+      fullPath: '/api/internal/affiliate-mail-worker'
+      preLoaderRoute: typeof ApiInternalAffiliateMailWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/internal/bling-connect': {
@@ -446,8 +507,11 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritosRoute: FavoritosRoute,
   LojaRoute: LojaRoute,
   PainelRoute: PainelRoute,
+  SejaAfiliadaRoute: SejaAfiliadaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AdminAfiliadasRoute: AdminAfiliadasRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
+  ApiInternalAffiliateMailWorkerRoute: ApiInternalAffiliateMailWorkerRoute,
   ApiInternalBlingConnectRoute: ApiInternalBlingConnectRoute,
   ApiInternalMetaRecoveryRoute: ApiInternalMetaRecoveryRoute,
   ApiInternalOrderHealthRoute: ApiInternalOrderHealthRoute,

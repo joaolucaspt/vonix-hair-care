@@ -1,0 +1,21 @@
+src/lib/affiliate-application.ts text eol=lf
+src/lib/affiliate-applications.server.ts text eol=lf
+src/lib/affiliate-email.ts text eol=lf
+src/lib/affiliate-functions.ts text eol=lf
+src/lib/affiliate-throttle.server.ts text eol=lf
+src/lib/affiliate-admin-session.server.ts text eol=lf
+src/test/affiliate-admin-session.test.ts text eol=lf
+src/routes/admin.afiliadas.tsx text eol=lf
+src/routes/api.internal.affiliate-mail-worker.ts text eol=lf
+src/routes/seja-afiliada.tsx text eol=lf
+src/test/affiliate-system.test.ts text eol=lf
+src/test/affiliate-throttle.test.ts text eol=lf
+src/test/affiliate-recruitment.test.ts text eol=lf
+scripts/qa-affiliate-concurrency.mjs text eol=lf
+src/routeTree.gen.ts text eol=lf
+
+src/test/affiliate-admin-ui.test.tsx text eol=lf
+.github/workflows/vonix-affiliates.yml text eol=lf
+
+src/lib/affiliate-admin-auth.server.ts text eol=lf
+src/test/affiliate-admin-auth.test.ts text eol=lf
