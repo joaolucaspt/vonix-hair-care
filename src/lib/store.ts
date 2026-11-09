@@ -15,7 +15,9 @@ export type Product = {
   reviews: number;
 };
 
-export const products = raw as unknown as Product[];
+/** Produtos sem estoque por enquanto: saem da loja, do sitemap e do catálogo da Meta. Para voltar, é só remover o slug daqui. */
+export const OUT_OF_STOCK = new Set<string>(["plex-vonix"]);
+export const products = (raw as unknown as Product[]).filter((p) => !OUT_OF_STOCK.has(p.slug));
 export const getProduct = (slug: string) => products.find((p) => p.slug === slug);
 
 export const FREE_SHIPPING_ABOVE = 150;
