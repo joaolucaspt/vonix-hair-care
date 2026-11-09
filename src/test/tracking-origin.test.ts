@@ -95,6 +95,9 @@ describe("rastreamento respeita origem e consentimento opcional", () => {
 
   it("carrega os três serviços e PageView somente após consentimento na loja publicada", () => {
     const r = simulate("https://vonixhair.com", "accepted");
+    if (!r.externalScripts.includes("https://www.googletagmanager.com/gtag/js?id=G-JW91EQ32F3")) {
+      throw new Error("Unexpected GA bootstrap scripts (public URLs only): " + JSON.stringify(r.externalScripts));
+    }
     expect(r.externalScripts).toContain("https://www.googletagmanager.com/gtag/js?id=G-JW91EQ32F3");
     expect(r.externalScripts).toContain("https://www.clarity.ms/tag/zaq09ea2zy");
     expect(r.externalScripts).toContain("https://connect.facebook.net/en_US/fbevents.js");
