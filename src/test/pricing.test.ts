@@ -126,14 +126,60 @@ describe("desconto por quantidade (segue a quantidade, em qualquer lugar)", () =
     const old = [
       { slug: "botox-vonix", variant: "1Kg", qty: 1, offer: "kit2" as const },
       { slug: "botox-vonix", variant: "1Kg", qty: 1 },
-      { slug: "mascara-whey-protein", variant: "1Kg", qty: 2, offer: "kit3" as const },
+      { slug: "mascara-whey-protein", variant: "2Kg", qty: 2, offer: "kit3" as const },
       { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const },
     ];
     const out = migrateCart(old);
     expect(out).toEqual([
       { slug: "botox-vonix", variant: "1Kg", qty: 3 },
-      { slug: "mascara-whey-protein", variant: "1Kg", qty: 6 },
-      { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" },
+      { slug: "mascara-whey-protein", variant: "2Kg", qty: 6 },
+      { slug: "serum-argan", variant: "60ml", qty: 1 },
+    ]);
+  });
+});
+
+describe("revalidação de carrinhos antigos e itens fora de estoque", () => {
+  it("remove produto indisponível e entradas inválidas sem apagar outros itens", () => {
+    const saved: unknown = [
+      { slug: "plex-vonix", variant: "1000ml", qty: 1 },
+      { slug: "kit-banana-e-mel", variant: "Kit", qty: 1 },
+      null, 8,
+      { slug: "serum-argan", variant: "60ml", qty: -4 },
+      { slug: "serum-argan", variant: "60ml", qty: "2" },
+      { slug: "serum-argan", variant: "1000ml", qty: 1 },
+    ];
+    expect(migrateCart(saved)).toEqual([{ slug: "kit-banana-e-mel", variant: "Kit", qty: 1 }]);
+    expect(migrateCart(null)).toEqual([]);
+    expect(migrateCart({ slug: "plex-vonix" })).toEqual([]);
+  });
+
+  it("recalcula desconto quando o único item-base ficou sem estoque", () => {
+    const saved = [
+      { slug: "plex-vonix", variant: "1000ml", qty: 1 },
+      { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const },
+    ];
+    expect(migrateCart(saved)).toEqual([{ slug: "serum-argan", variant: "60ml", qty: 1 }]);
+    const stillEligible = [
+      { slug: "kit-banana-e-mel", variant: "Kit", qty: 1 },
+      { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const },
+    ];
+    expect(migrateCart(stillEligible)).toEqual(stillEligible);
+    // A standalone bestseller is not a valid "complement" just because it
+    // appears among general recommendations for an empty cart.
+    expect(migrateCart([{ slug: "botox-vonix", variant: "1Kg", qty: 1, offer: "comp5" }]))
+      .toEqual([{ slug: "botox-vonix", variant: "1Kg", qty: 1 }]);
+  });
+
+  it("soma unidades antigas no limite e retira promoção incompatível", () => {
+    const saved = [
+      { slug: "botox-vonix", variant: "1Kg", qty: 1, offer: "kit3" as const },
+      { slug: "botox-vonix", variant: "1Kg", qty: 99 },
+      { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const },
+      { slug: "serum-argan", variant: "60ml", qty: 1 },
+    ];
+    expect(migrateCart(saved)).toEqual([
+      { slug: "botox-vonix", variant: "1Kg", qty: 99 },
+      { slug: "serum-argan", variant: "60ml", qty: 2 },
     ]);
   });
 });

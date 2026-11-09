@@ -134,3 +134,13 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 **P2 pós-homologação:** acessibilidade completa, auditoria Lighthouse em rede móvel fria, SEO Search Console, automação de e-mail com consentimento, testes A/B controlados de proposta de valor e prova social.
 
 **Decisão de publicação:** manter PR #26 em revisão e produção intocada até portas P0 validadas. Backups e reversão por commit/PR sem reset/force push. A branch de afiliadas pertence a outro fluxo e não deve ser modificada.
+
+## Auditoria C9 — carrinho antigo e disponibilidade (09/11)
+
+| ID | Prioridade | Falha | Correção e prova |
+| --- | --- | --- | --- |
+| N43 | Alta | Carrinhos persistidos continham Plex Vonix indisponível, variantes antigas ou dados malformados, deixando armazenamento e UI divergentes | Revalidar SKU, variante e quantidade em carregamentos/mutações; retirar somente itens inválidos, persistir sacola limpa e mostrar aviso não pessoal. Chrome testou três cenários antigos com preservação de itens válidos |
+| N44 | Alta | Complemento promocional poderia permanecer após remover o item-base ou ser usado sozinho em mais vendidos | Recalcular elegibilidade após cada mutação; exigir base ativo no cliente e no servidor; remoção de item principal ao vivo extinguiu a oferta, e falsificação foi recusada antes do pagamento |
+| N45 | Alta | Produto retirado do catálogo gerava erro de compra ambígua mesmo sem haver chamada à Appmax | Cotação e checkout distinguem rejeição de catálogo de falha incerta de gateway; mensagem para revisar sacola, `retrySafe:true`, nenhum frete/intent/customer/order/Pix em teste simulado |
+
+**Recibo C9:** **475/475 testes Vitest em 62 arquivos**, TypeScript/ESLint/build PASS, Chrome com normalização de carrinho e atualização de oferta em 390/1366 px PASS; SSR **42/42** com `plex-vonix` HTTP 404. Ver `docs/VONIX_AUDITORIA_CONTINUIDADE_C9_20261109.md` e `docs/VONIX_C9_VERIFIED_RECEIPT_20261109.json`. **Homologação Appmax, Supabase staging, Bling, estoque físico, consentimento tardio e desempenho comercial real continuam P0/P1.**

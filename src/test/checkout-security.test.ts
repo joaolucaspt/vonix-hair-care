@@ -125,6 +125,40 @@ describe("server authoritative checkout", () => {
     expect(mocks.customer).not.toHaveBeenCalled();
     expect(mocks.pix).not.toHaveBeenCalled();
   });
+  it("rejeita Plex fora de estoque antes de consultar frete ou pagamento", async () => {
+    const unavailable = { slug: "plex-vonix", variant: "1000ml", qty: 1 };
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items: [unavailable] } });
+    expect(quote).toMatchObject({ ok: false, message: expect.stringMatching(/produto ou desconto do carrinho/) });
+    const payment = await createPayment({ data: { ...data, items: [unavailable] } });
+    expect(payment).toMatchObject({ ok: false, retrySafe: true, message: expect.stringMatching(/Revise a sacola/) });
+    expect(mocks.shipping).not.toHaveBeenCalled();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("rejeita complemento sem produto-base como erro seguro, sem tentativa de cobrança", async () => {
+    const orphan = { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const };
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items: [orphan] } });
+    expect(quote).toMatchObject({ ok: false, message: expect.stringMatching(/Revise a sacola/) });
+    const payment = await createPayment({ data: { ...data, items: [orphan] } });
+    expect(payment).toMatchObject({ ok: false, retrySafe: true });
+    expect(mocks.shipping).not.toHaveBeenCalled();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("bloqueia desconto de complemento em best-seller sem produto principal", async () => {
+    const forged = { slug: "botox-vonix", variant: "1Kg", qty: 1, offer: "comp5" as const };
+    const shipping = await quoteShipping({ data: { cep: data.address.cep, items: [forged] } });
+    const payment = await createPayment({ data: { ...data, items: [forged] } });
+    expect(shipping).toMatchObject({ ok: false, message: expect.stringMatching(/Revise a sacola/) });
+    expect(payment).toMatchObject({ ok: false, retrySafe: true });
+    expect(mocks.shipping).not.toHaveBeenCalled();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
   it("records explicit marketing acceptance before calling a payment method", async () => {
     const answer = await createPayment({ data: { ...data, marketingConsent: true } });
     expect(answer).toMatchObject({ ok: true });

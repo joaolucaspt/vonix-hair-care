@@ -32,7 +32,7 @@ const cepSchema = z.string().regex(/^\d{5}-?\d{3}$/);
 function buildLines(items: z.infer<typeof itemSchema>[]) {
   // Validate that complement discounts are among recommendations for the other items.
   const baseProducts = items.filter((i) => i.offer !== "comp5").map((i) => i.slug);
-  const eligible = new Set(complementsFor(baseProducts).map((p) => p.slug));
+  const eligible = new Set(baseProducts.length ? complementsFor(baseProducts).map((p) => p.slug) : []);
   if (items.some((i) => i.offer === "comp5" && !eligible.has(i.slug))) {
     throw new Error("Complemento promocional indisponível para este carrinho");
   }
@@ -44,6 +44,9 @@ function buildLines(items: z.infer<typeof itemSchema>[]) {
     return { product: p, variant: v.label, offer: i.offer as Offer | undefined, ...t };
   });
 }
+
+const staleCartMessage =
+  "Um produto ou desconto do carrinho não está disponível. Revise a sacola antes de continuar.";
 
 const cents = (v: number) => Math.round(v * 100);
 
@@ -85,10 +88,17 @@ export const quoteShipping = createServerFn({ method: "POST" })
     z.object({ cep: cepSchema, items: z.array(itemSchema).min(1).max(40), coupon: couponSchema }),
   )
   .handler(async ({ data }) => {
+    let lines: ReturnType<typeof buildLines>;
+    try {
+      lines = buildLines(data.items);
+    } catch {
+      // Rejected before contacting any payment or shipping provider.
+      return { ok: false as const, message: staleCartMessage };
+    }
     try {
       return {
         ok: true as const,
-        options: await shippingOptions(data.cep, buildLines(data.items), data.coupon),
+        options: await shippingOptions(data.cep, lines, data.coupon),
       };
     } catch {
       console.error("[frete] Cotação indisponível");
@@ -176,8 +186,14 @@ export const createPayment = createServerFn({ method: "POST" })
         message:
           "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora.",
       };
+    let lines: ReturnType<typeof buildLines>;
     try {
-      const lines = buildLines(data.items);
+      lines = buildLines(data.items);
+    } catch {
+      // The input basket was invalid before any provider call or payment intent.
+      return { ok: false as const, retrySafe: true as const, message: staleCartMessage };
+    }
+    try {
       const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find(
         (o) => o.id === data.serviceId,
       );

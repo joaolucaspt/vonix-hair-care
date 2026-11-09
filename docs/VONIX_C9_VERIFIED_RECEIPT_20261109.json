@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-09",
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "pr": 26,
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "startingCommit": "9934332aadfb184ba8db7300b759d60306d73418",
+  "findings": [
+    "N43 stale cart contains out of stock products and retired variants",
+    "N44 complementary discount may outlive its qualifying base or be forged with an empty cart",
+    "N45 expired product returned ambiguous payment verification despite no gateway call"
+  ],
+  "evidence": {
+    "focusedTests": {
+      "passed": 68,
+      "files": 2,
+      "exit": 0,
+      "afterEmptyBaseGuard": true
+    },
+    "fullTests": {
+      "passed": 475,
+      "total": 475,
+      "files": 62,
+      "exit": 0,
+      "finalPending": false
+    },
+    "typeScript": 0,
+    "eslintTargeted": 0,
+    "build": 0,
+    "ssr": {
+      "sourceCount": 43,
+      "activeCount": 42,
+      "passed": 42,
+      "failed": 0,
+      "excluded": [
+        {
+          "slug": "plex-vonix",
+          "http": 404
+        }
+      ]
+    },
+    "browser": {
+      "staleCases": [
+        "only out-of-stock Plex",
+        "orphan discount after Plex removed",
+        "valid complement preserved with active base"
+      ],
+      "allPassed": true,
+      "externalCallsBlocked": true,
+      "stockSkuNeverCharged": true,
+      "viewportWidths": [
+        390,
+        1366
+      ],
+      "noticeVisible": true,
+      "liveBaseRemoval": {
+        "width": 390,
+        "discountRemoved": true,
+        "noticeVisible": true,
+        "overflow": false
+      },
+      "sensitivePersonalInfoPersisted": false
+    }
+  },
+  "safety": {
+    "affiliateFilesEdited": false,
+    "realPayments": false,
+    "realDatabaseWrites": false,
+    "realMarketing": false,
+    "deploy": false,
+    "mergeToMain": false
+  },
+  "externalPending": [
+    "Appmax sandbox",
+    "Supabase staging and backup",
+    "Bling and SKU inventory",
+    "LGPD Purchase revocation",
+    "edge rate limiting",
+    "verified real paid-order funnel"
+  ]
+}

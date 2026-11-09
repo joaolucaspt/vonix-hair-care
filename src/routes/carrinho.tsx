@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toItem, track } from "@/lib/analytics";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
-import { OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
+import { CART_REVALIDATED_KEY, OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
 import { ShippingBar, Summary } from "@/components/cart-summary";
 
 export const Route = createFileRoute("/carrinho")({
@@ -85,6 +85,18 @@ function Cart() {
   const c = useCart();
   const hydrated = useHydrated();
   const seen = useRef("");
+  const [cartAdjusted, setCartAdjusted] = useState(false);
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (sessionStorage.getItem(CART_REVALIDATED_KEY) === "1") {
+        sessionStorage.removeItem(CART_REVALIDATED_KEY);
+        setCartAdjusted(true);
+      }
+    } catch {
+      // In private mode the cart stays usable without an adjustment notice.
+    }
+  }, [hydrated, c.lines]);
   useEffect(() => {
     if (!hydrated || !c.lines.length) return;
     const items = c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units));
@@ -97,6 +109,18 @@ function Cart() {
     <Shell>
       <div className="container-site py-10 pb-28 lg:pb-10">
         <h1 className="mb-8 font-display text-h1">Carrinho</h1>
+        {hydrated && cartAdjusted && (
+          <div className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-body text-amber-950" role="status">
+            <p>
+              Atualizamos sua sacola conforme os produtos e ofertas disponíveis.
+              Itens indisponíveis são removidos e ofertas sem elegibilidade são recalculadas, quando aplicável.
+              Confira os valores antes de finalizar.
+            </p>
+            <button type="button" aria-label="Dispensar aviso do carrinho" className="shrink-0 rounded-md border border-amber-500 px-3 py-1 text-small font-semibold" onClick={() => setCartAdjusted(false)}>
+              Fechar
+            </button>
+          </div>
+        )}
         {!hydrated ? (
           <div className="min-h-[40vh]" aria-busy="true" />
         ) : c.lines.length === 0 ? (

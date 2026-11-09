@@ -150,17 +150,44 @@ export type CartItem = { slug: string; variant: string; qty: number; offer?: Off
  * Old carts kept "combos" (kit2/kit3 = N kits). Now the discount follows the quantity, so a combo becomes plain units
  * (merged with the same product's units) and the volume discount is recalculated from the total.
  */
-export function migrateCart(items: CartItem[]): CartItem[] {
-  const out: CartItem[] = [];
-  for (const i of items) {
-    const units = i.offer === "kit2" ? i.qty * 2 : i.offer === "kit3" ? i.qty * 3 : i.qty;
-    const offer: Offer | undefined = i.offer === "comp5" ? "comp5" : undefined;
-    const ex = out.find((o) => o.slug === i.slug && o.variant === i.variant && o.offer === offer);
-    if (ex) ex.qty = Math.min(99, ex.qty + units);
-    else out.push({ slug: i.slug, variant: i.variant, qty: Math.min(99, units), ...(offer ? { offer } : {}) });
+export function migrateCart(items: unknown): CartItem[] {
+  if (!Array.isArray(items)) return [];
+  const valid: CartItem[] = [];
+  for (const raw of items) {
+    if (!raw || typeof raw !== "object") continue;
+    const i = raw as { slug?: unknown; variant?: unknown; qty?: unknown; offer?: unknown };
+    if (
+      typeof i.slug !== "string" ||
+      typeof i.variant !== "string" ||
+      typeof i.qty !== "number" ||
+      !Number.isSafeInteger(i.qty) ||
+      i.qty <= 0
+    ) continue;
+    // Do not keep unavailable catalog items, retired variants or bad entries.
+    const p = getProduct(i.slug);
+    if (!p || !p.variants.some((v) => v.label === i.variant)) continue;
+    const offer = i.offer === "kit2" || i.offer === "kit3" || i.offer === "comp5" ? i.offer : undefined;
+    const units = Math.min(99, i.qty * (offer === "kit2" ? 2 : offer === "kit3" ? 3 : 1));
+    valid.push({ slug: i.slug, variant: i.variant, qty: units, ...(offer === "comp5" ? { offer } : {}) });
   }
-  return out;
+
+  // A complement offer is valid only if the remaining base basket qualifies.
+  const bases = valid.filter((i) => i.offer !== "comp5").map((i) => i.slug);
+  const eligible = new Set(bases.length ? complementsFor(bases).map((p) => p.slug) : []);
+  const normalized: CartItem[] = [];
+  for (const i of valid) {
+    const offer = i.offer === "comp5" && eligible.has(i.slug) ? "comp5" : undefined;
+    const existing = normalized.find((o) =>
+      o.slug === i.slug && o.variant === i.variant && o.offer === offer,
+    );
+    if (existing) existing.qty = Math.min(99, existing.qty + i.qty);
+    else normalized.push({ slug: i.slug, variant: i.variant, qty: i.qty, ...(offer ? { offer } : {}) });
+  }
+  return normalized;
 }
+
+/** Non-PII notice marker when a saved basket is revalidated. */
+export const CART_REVALIDATED_KEY = "vonix-cart-revalidated-v1";
 
 /** "session" storage forgets the choice when the visit ends, so the visitor chooses again next time. */
 function createStore<T>(key: string, initial: T, kind: "local" | "session" = "local", migrate?: (s: T) => T) {
@@ -173,7 +200,18 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
     loaded = true;
     try {
       const s = storage().getItem(key);
-      if (s) state = migrate ? migrate(JSON.parse(s)) : JSON.parse(s);
+      if (s) {
+        const stored: T = JSON.parse(s);
+        state = migrate ? migrate(stored) : stored;
+        if (migrate && JSON.stringify(stored) !== JSON.stringify(state)) {
+          try {
+            storage().setItem(key, JSON.stringify(state));
+            if (key === "vonix-cart") sessionStorage.setItem(CART_REVALIDATED_KEY, "1");
+          } catch {
+            // In-memory normalized cart remains safe in restricted browsers.
+          }
+        }
+      }
     } catch {
       /* ignore */
     }
@@ -186,7 +224,11 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
     server: () => initial,
     set: (fn: (s: T) => T) => {
       load();
-      state = fn(state);
+      const proposed = fn(state);
+      state = migrate ? migrate(proposed) : proposed;
+      if (migrate && JSON.stringify(proposed) !== JSON.stringify(state)) {
+        try { sessionStorage.setItem(CART_REVALIDATED_KEY, "1"); } catch { /* private mode */ }
+      }
       try {
         storage().setItem(key, JSON.stringify(state));
       } catch {
