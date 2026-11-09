@@ -1,0 +1,105 @@
+# Vonix Hair — operação final do programa de candidaturas
+
+**Estado de segurança:** formulário de cinco etapas publicado, mas **inscrições fechadas por padrão**.
+Este documento é para operadores autorizados. Não contém chaves ou URLs de banco.
+A liberação de candidaturas **não** significa que cupons individuais, atribuição de
+vendas, cálculo ou pagamento de comissões já estejam implementados.
+
+## 1. O que está implementado e testável sem dados reais
+
+- Formulário Vonix em cinco etapas, com validação de CPF/CNPJ, email, maioridade e termos.
+- Prévia pública do formulário sem envios e sem armazenamento.
+- Criptografia AES-256-GCM do questionário completo, com resumo sem documentos no painel.
+- Login administrativo com sessão HttpOnly/SameSite Strict, TOTP no servidor e quota por IP.
+- Busca, triagem, decisões atômicas, fila Resend com idempotência e estados incertos.
+- Exclusão definitiva **por administrador após validação externa da titular**, com confirmação
+  de email, motivo e bloqueio durante mensagens em processamento.
+- Trilha técnica de decisões e exclusões sem PII direta, preservada após apagar a candidata.
+  Atenção: a senha compartilhada **não identifica individualmente** qual membro da equipe agiu.
+- Prévia de retenção de inscrições pendentes/recusadas; **não apaga ninguém**.
+- Testes sintéticos SQL/RLS, concorrência e CI sem rede externa de banco.
+
+## 2. Procedimento de preparação do banco
+
+1. Identificar a instância Supabase autorizada para o módulo de candidaturas. Pode ser
+   dedicada; **não substituir** as variáveis ou chaves de checkout da loja.
+2. Fazer backup/restauração de teste, revisar permissões e responsável pela base.
+3. Aplicar, **nesta ordem**, em ambiente de homologação:
+   `supabase/vonix-affiliate-applications.sql`;
+   `supabase/vonix-affiliate-governance.sql`.
+4. Validar as tabelas com acesso apenas ao `service_role` e os RPCs:
+   `vonix_affiliate_stats`, `vonix_affiliate_search`,
+   `vonix_affiliate_decide`, `vonix_affiliate_erase` e
+   `vonix_affiliate_retention_preview`.
+5. Testar concorrência, rollback e exclusão em **dados fictícios** na homologação.
+   **Nunca executar** os arquivos `*-qa.sql` no banco de produção.
+6. Aplicar as migrações revisadas na base real apenas depois da autorização operacional,
+   backup e teste de restauração. Confirmar que a instância produtiva responde aos RPCs.
+7. Só então atestar no ambiente do servidor `AFFILIATE_GOVERNANCE_MIGRATED=true`.
+   A atestação é uma declaração de operação, não uma migração automática.
+
+## 3. Configuração de variáveis privadas no servidor
+
+Configurar pela interface do provedor de hospedagem, sem colar valores em chats,
+commits, GitHub issues ou telas públicas. Não acessar/alterar os segredos de checkout.
+
+| Variável | Finalidade |
+| --- | --- |
+| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | Par dedicado opcional, preferível à reutilização das credenciais da loja |
+| `AFFILIATE_ADMIN_PASSWORD` | Senha de equipe (mínimo 16 caracteres); planejar identidades individuais antes de escalar |
+| `AFFILIATE_ADMIN_SESSION_SECRET` | Assinatura da sessão (mínimo 32 caracteres, separada da senha) |
+| `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 do autenticador em produção |
+| `AFFILIATE_TRAFFIC_PEPPER` | Segredo de pseudonimização de IP (mínimo 32 caracteres) |
+| `AFFILIATE_TRUSTED_IP_HEADER` | Um de `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for`; **testar a borda** |
+| `AFFILIATE_QUESTIONNAIRE_KEY` | Chave privada de **32 bytes** (64 caracteres hex ou base64url); backup seguro separado |
+| `AFFILIATE_WORKER_SECRET` | Autorização do worker (mínimo 24 caracteres) |
+| `RESEND_API_KEY`, `AFFILIATE_FROM_EMAIL` | Envio de e-mails e remetente verificado |
+| `AFFILIATE_GOVERNANCE_MIGRATED` | `true` só após migração e testes na base correta |
+| `AFFILIATE_PRIVACY_POLICY_APPROVED` | `true` só após aprovação do aviso de privacidade e política de retenção |
+| `AFFILIATE_PROVIDER_VERIFIED` | `true` só após validação externa de domínio, Resend, proxy e worker |
+| `AFFILIATE_RECRUITMENT_OPEN` | **Última chave a ativar**; `true` somente após todas as etapas |
+
+No computador do operador ou no ambiente de homologação, executar
+`node scripts/check-affiliate-readiness.mjs`. O script apenas lê variáveis
+já presentes no processo e **não imprime segredos**. Ele verifica presença e
+formato aproximado; NÃO valida migração real, posse de domínio ou conformidade jurídica.
+
+## 4. Fluxos de homologação obrigatórios
+
+- Abrir a URL pública: quando fechada, mostrar prévia e nunca chamar a API de cadastro.
+- Ativar apenas em homologação e testar CPF válido/inválido, idade, email repetido,
+  profiles, faixas de seguidores, honeypot, rate limit, redes compartilhadas.
+- Verificar no banco que os campos completos de endereço e documento existem apenas
+  em `questionnaire_encrypted`, nunca no log ou na resposta do navegador.
+- Validar login/TOTP, origem, sessão, bloqueio por IP e logout com chamadas concorrentes.
+- Validar decisão atômica, apenas um e-mail enfileirado por candidatura, Resend sandbox
+  com domínio permitido, falhas 401/429/500, timeout e situação `incerto`.
+- Homologar o `POST /api/internal/affiliate-mail-worker` com agendador autorizado.
+  **Não agendar chamadas reais** até o remetente e a política de contato serem aprovados.
+- Verificar recebimento e entregabilidade: resposta HTTP de aceitação não prova entrega.
+- Solicitação de exclusão: verificar a identidade por processo interno, confirmar
+  email exato no painel, executar exclusão, consultar registro técnico e verificar
+  que dados, fila e ciphertext desapareceram. E-mail já enviado ao Resend requer
+  procedimentos adicionais de privacidade junto ao provedor.
+- Aprovar formalmente prazo de retenção de pendentes e recusadas; usar o RPC
+  `vonix_affiliate_retention_preview` para estimar o impacto antes da exclusão.
+  Não definir prazos arbitrários: alinhar com obrigações comerciais e legais.
+
+## 5. Limitações que exigem decisões humanas e serviços externos
+
+- Banco de produção real, backups, domínio de email, credenciais e agendador ainda
+  precisam ser confirmados pelo respectivo operador/fornecedor.
+- Regulamento comercial de comissão, produtos, cupons, atribuição, estornos e pagamentos
+  precisa ser aprovado. O formulário coleta uma **sugestão de cupom**, não o cria.
+- Política LGPD, controlador, contato, base legal, retenção e descarte precisam
+  de revisão apropriada antes de solicitar documentos pessoais em produção.
+- A autenticação compartilhada não é identidade individual por funcionário;
+  implantar acesso por usuário e trilha de auditoria atribuível antes de operar
+  com equipe maior. A trilha técnica atual registra o que ocorreu, não quem fez.
+- Monitoramento de abuso/WAF, entrega de e-mails, falhas e backup devem ser
+  verificados no ambiente real, não presumidos por testes sintéticos.
+
+**Liberação:** a abertura só é defensável quando o responsável confirma e documenta
+cada etapa, os testes reais passam e `AFFILIATE_RECRUITMENT_OPEN=true` é ativado
+intencionalmente. Não afirmar que está em produção com recebimento de candidaturas
+com base apenas em build/CI verde.

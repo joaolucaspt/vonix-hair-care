@@ -14,7 +14,9 @@ import {
 import { LOGO } from "@/components/site";
 import {
   getAffiliateAdminSession,
+  eraseAffiliateApplicationAdmin,
   getAffiliateApplications,
+  getAffiliateOperationalReadiness,
   loginAffiliateAdmin,
   logoutAffiliateAdmin,
   reviewAffiliateApplication,
@@ -111,6 +113,17 @@ export function AffiliateAdminPage() {
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [erasureId, setErasureId] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<{
+    checks: Array<{ id: string; label: string; ok: boolean }>;
+    databaseResponding: boolean;
+    governanceResponding: boolean;
+    recruitmentOpen: boolean;
+  } | null>(null);
+  const [erasureEmail, setErasureEmail] = useState("");
+  const [erasureReason, setErasureReason] = useState<
+    "solicitacao_titular" | "retencao" | "correcao"
+  >("solicitacao_titular");
 
   // Versions prevent any in-flight list or decision from restoring private data after logout.
   const sessionVersion = useRef(0);
@@ -128,6 +141,9 @@ export function AffiliateAdminPage() {
     setTotal(0);
     setWorkingId(null);
     setNotice("");
+    setErasureId(null);
+    setErasureEmail("");
+    setReadiness(null);
   }
 
   async function load(
@@ -277,6 +293,57 @@ export function AffiliateAdminPage() {
     }
   }
 
+  async function eraseCandidate(app: AffiliateApplicationRecord) {
+    if (!authorized || workingId || erasureEmail.trim().toLowerCase() !== app.email) return;
+    const sessionId = sessionVersion.current;
+    setWorkingId(app.id);
+    setError("");
+    setNotice("");
+    try {
+      const result = await eraseAffiliateApplicationAdmin({
+        data: {
+          id: app.id,
+          emailConfirmation: erasureEmail.trim().toLowerCase(),
+          reason: erasureReason,
+        },
+      });
+      if (sessionId !== sessionVersion.current) return;
+      if (!result.ok) {
+        setError(result.reason);
+      } else {
+        setErasureId(null);
+        setErasureEmail("");
+        setNotice(
+          "Candidatura excluída. Dados, questionário criptografado e notificações pendentes foram eliminados.",
+        );
+        await load(status, Math.max(0, page), search);
+      }
+    } catch {
+      if (sessionId === sessionVersion.current)
+        setError("Falha na exclusão. Nenhum resultado foi confirmado.");
+    } finally {
+      if (sessionId === sessionVersion.current) setWorkingId(null);
+    }
+  }
+
+  async function inspectReadiness() {
+    if (!authorized || loading) return;
+    const sessionId = sessionVersion.current;
+    setError("");
+    try {
+      const result = await getAffiliateOperationalReadiness();
+      if (sessionId !== sessionVersion.current) return;
+      if (!result.ok) {
+        setError(result.reason);
+        return;
+      }
+      setReadiness(result);
+    } catch {
+      if (sessionId === sessionVersion.current)
+        setError("Não foi possível verificar a preparação do programa.");
+    }
+  }
+
   async function applySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await load(status, 0, searchText.trim());
@@ -377,6 +444,79 @@ export function AffiliateAdminPage() {
           </form>
         ) : (
           <>
+            <section
+              aria-label="Preparação do programa"
+              className="mb-6 rounded-[1.5rem] border border-[#e8dcd8] bg-white p-5 sm:p-6"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-display text-2xl">Preparação para abertura</h2>
+                  <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[#806a6c]">
+                    Diagnóstico privado de configuração. A presença de uma chave não confirma que o
+                    envio de e-mails, a migração ou os requisitos jurídicos estejam homologados.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void inspectReadiness()}
+                  className="min-h-11 rounded-full border border-[#d6b6be] px-5 text-sm font-semibold text-[#733e4a]"
+                >
+                  Verificar preparação
+                </button>
+              </div>
+              {readiness && (
+                <div className="mt-5">
+                  <p role="status" className="text-sm font-semibold text-[#6c4b53]">
+                    {readiness.recruitmentOpen
+                      ? "A configuração autoriza abertura; confira a homologação operacional."
+                      : "As inscrições permanecem bloqueadas."}
+                  </p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                    {readiness.checks.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-[#f1e4e2] p-3 text-sm"
+                      >
+                        <span>{item.label}</span>
+                        <span
+                          className={
+                            item.ok
+                              ? "font-semibold text-emerald-700"
+                              : "font-semibold text-amber-700"
+                          }
+                        >
+                          {item.ok ? "Configurado" : "Pendente"}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#f1e4e2] p-3 text-sm">
+                      <span>Consulta de banco</span>
+                      <span
+                        className={
+                          readiness.databaseResponding
+                            ? "font-semibold text-emerald-700"
+                            : "font-semibold text-amber-700"
+                        }
+                      >
+                        {readiness.databaseResponding ? "Respondeu" : "Não confirmada"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#f1e4e2] p-3 text-sm">
+                      <span>RPC de governança</span>
+                      <span
+                        className={
+                          readiness.governanceResponding
+                            ? "font-semibold text-emerald-700"
+                            : "font-semibold text-amber-700"
+                        }
+                      >
+                        {readiness.governanceResponding ? "Respondeu" : "Não confirmada"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {STATUS.map((item) => (
                 <button
@@ -696,6 +836,88 @@ export function AffiliateAdminPage() {
                         </span>
                       </div>
                     )}
+                    <div className="border-t border-[#f3e7e3] px-6 py-4">
+                      <button
+                        type="button"
+                        disabled={workingId !== null || loading}
+                        onClick={() => {
+                          setErasureId(erasureId === app.id ? null : app.id);
+                          setErasureEmail("");
+                          setErasureReason("solicitacao_titular");
+                        }}
+                        aria-expanded={erasureId === app.id}
+                        className="text-xs font-semibold text-[#8e5761] underline disabled:opacity-50"
+                      >
+                        {erasureId === app.id
+                          ? "Cancelar solicitação de exclusão"
+                          : "Exclusão de dados (LGPD)"}
+                      </button>
+                      {erasureId === app.id && (
+                        <form
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void eraseCandidate(app);
+                          }}
+                          className="mt-4 rounded-xl border border-red-200 bg-red-50 p-5"
+                        >
+                          <h4 className="font-semibold text-red-900">
+                            Exclusão irreversível da candidatura
+                          </h4>
+                          <p className="mt-2 text-xs leading-relaxed text-red-800">
+                            Só execute após verificar a identidade da solicitante ou aprovar
+                            formalmente a política de retenção. O banco apagará o questionário,
+                            contatos e mensagens ainda não enviadas. E-mails já entregues a
+                            provedores externos não podem ser apagados por este botão. Envios em
+                            processamento bloqueiam a exclusão.
+                          </p>
+                          <label
+                            htmlFor={"erase-reason-" + app.id}
+                            className="mt-4 block text-xs font-semibold"
+                          >
+                            Motivo documentado
+                          </label>
+                          <select
+                            id={"erase-reason-" + app.id}
+                            value={erasureReason}
+                            onChange={(event) =>
+                              setErasureReason(event.target.value as typeof erasureReason)
+                            }
+                            className="mt-2 min-h-11 w-full rounded-lg border border-red-200 bg-white px-3 text-sm"
+                          >
+                            <option value="solicitacao_titular">
+                              Solicitação da titular verificada
+                            </option>
+                            <option value="retencao">
+                              Retenção expirada após aprovação da política
+                            </option>
+                            <option value="correcao">Correção de cadastro</option>
+                          </select>
+                          <label
+                            htmlFor={"erase-email-" + app.id}
+                            className="mt-4 block text-xs font-semibold"
+                          >
+                            Confirme digitando o e-mail da candidata: {app.email}
+                          </label>
+                          <input
+                            id={"erase-email-" + app.id}
+                            type="email"
+                            autoComplete="off"
+                            value={erasureEmail}
+                            onChange={(event) => setErasureEmail(event.target.value)}
+                            className="mt-2 min-h-11 w-full rounded-lg border border-red-200 bg-white px-3 text-sm"
+                          />
+                          <button
+                            type="submit"
+                            disabled={
+                              workingId !== null || erasureEmail.trim().toLowerCase() !== app.email
+                            }
+                            className="mt-4 min-h-11 rounded-full bg-red-800 px-6 text-sm font-bold text-white disabled:opacity-40"
+                          >
+                            Confirmar exclusão definitiva
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </article>
                 );
               })}

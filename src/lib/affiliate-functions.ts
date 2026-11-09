@@ -11,6 +11,9 @@ import {
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
 import {
   affiliateRecruitmentOpen,
+  affiliateOperationalReadiness,
+  eraseAffiliateApplication,
+  previewAffiliateRetention,
   createAffiliateApplication,
   decideAffiliateApplication,
   listAffiliateApplications,
@@ -98,6 +101,72 @@ export const getAffiliateApplications = createServerFn({ method: "POST" })
         ok: false as const,
         reason: "Não foi possível carregar as inscrições. Verifique a configuração do banco.",
       };
+    }
+  });
+
+/** Restricted configuration and read-only RPC probes. No secrets or applicant data. */
+export const getAffiliateOperationalReadiness = createServerFn({ method: "POST" }).handler(
+  async () => {
+    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
+      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    if (!(await affiliateRateLimitAllowed("admin")))
+      return { ok: false as const, reason: "Acesso temporariamente indisponível." };
+    try {
+      const readiness = await affiliateOperationalReadiness();
+      return { ok: true as const, ...readiness };
+    } catch {
+      return { ok: false as const, reason: "Diagnóstico indisponível." };
+    }
+  },
+);
+
+/** A verified GDPR/LGPD deletion request. Never accept the operation anonymously. */
+export const eraseAffiliateApplicationAdmin = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      id: z.string().uuid(),
+      emailConfirmation: z.string().trim().toLowerCase().email().max(180),
+      reason: z.enum(["solicitacao_titular", "retencao", "correcao"]),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
+      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    if (!(await affiliateRateLimitAllowed("admin")))
+      return { ok: false as const, reason: "Acesso temporariamente indisponível." };
+    try {
+      const erased = await eraseAffiliateApplication(data.id, data.emailConfirmation, data.reason);
+      return erased
+        ? { ok: true as const }
+        : {
+            ok: false as const,
+            reason:
+              "Exclusão não autorizada: confira o e-mail ou aguarde o processamento da notificação.",
+          };
+    } catch {
+      return {
+        ok: false as const,
+        reason: "Não foi possível executar a exclusão. Verifique a migração de governança.",
+      };
+    }
+  });
+
+/** This is a read-only estimate, not an automatic deletion. */
+export const getAffiliateRetentionPreview = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      pendingDays: z.number().int().min(30).max(3650),
+      rejectedDays: z.number().int().min(30).max(3650),
+    }),
+  )
+  .handler(async ({ data }) => {
+    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
+      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    try {
+      const result = await previewAffiliateRetention(data.pendingDays, data.rejectedDays);
+      return { ok: true as const, ...result };
+    } catch {
+      return { ok: false as const, reason: "Prévia de retenção indisponível." };
     }
   });
 

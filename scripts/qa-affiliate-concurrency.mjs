@@ -6,8 +6,20 @@ import { promisify } from "node:util";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 const exec = promisify(execFile);
-const container = "vonix-affiliates-sql-qa";
-const database = "vonix_affiliates_qa";
+const container = process.env["VONIX_QA_CONTAINER"] || "vonix-affiliates-sql-qa";
+const database = process.env["VONIX_QA_DATABASE"] || "vonix_affiliates_qa";
+
+// Refuse all other containers or non-disposable DB names. Never use production.
+if (!["vonix-affiliates-sql-qa", "vonix-governance-sqlqa"].includes(container) ||
+    !["vonix_affiliates_qa", "affiliate_qa"].includes(database)) {
+  throw new Error("QA target must be an approved disposable database");
+}
+const { stdout: networkMode } = await exec("docker", [
+  "inspect", "--format", "{{.HostConfig.NetworkMode}}", container,
+], { timeout: 10000 });
+if (networkMode.trim() !== "none") {
+  throw new Error("Refusing QA: container must be isolated with --network none");
+}
 
 async function sql(statement) {
   const { stdout } = await exec(
