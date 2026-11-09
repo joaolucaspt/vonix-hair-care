@@ -3,16 +3,36 @@ import { deleteCookie, getCookie, getRequest, setCookie } from "@tanstack/react-
 import { env } from "./env.server";
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+/**
+ * Only HTTP loopback development can use the insecure dev cookie. The hosted
+ * deployment must keep the __Host prefix and Secure attribute even when
+ * NODE_ENV is accidentally missing or set to development.
+ */
+function localHttpDevelopmentRequest(): boolean {
+  const mode = process.env["NODE_ENV"];
+  if (mode !== "development" && mode !== "test") return false;
+  try {
+    const url = new URL(getRequest().url);
+    return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  } catch {
+    // Absent request context is not proof of localhost, even in test mode.
+    return false;
+  }
+}
+
 const cookieName = () =>
-  process.env["NODE_ENV"] === "production"
-    ? "__Host-vonix-affiliates-admin"
-    : "vonix-affiliates-admin-dev";
+  localHttpDevelopmentRequest() ? "vonix-affiliates-admin-dev" : "__Host-vonix-affiliates-admin";
 
 function sessionSigningKey(): Buffer | null {
   const secret = env("AFFILIATE_ADMIN_SESSION_SECRET");
   const password = env("AFFILIATE_ADMIN_PASSWORD");
   const otpSecret = env("AFFILIATE_ADMIN_TOTP_SECRET");
-  if (secret.length < 32 || password.length < 16) return null;
+  if (
+    secret.length < 32 ||
+    password.length < 16 ||
+    !/^[A-Z2-7]{32,128}$/i.test(otpSecret.replace(/\s+/g, ""))
+  )
+    return null;
   // Rotating any authentication factor immediately invalidates previous cookies.
   return createHmac("sha256", secret)
     .update("vonix-affiliates-admin:v1:")
@@ -135,7 +155,8 @@ export function affiliateAdminSameOrigin(): boolean {
 
 export function affiliateAdminSecondFactorValid(code: string): boolean {
   const configured = env("AFFILIATE_ADMIN_TOTP_SECRET");
-  if (!configured) return process.env["NODE_ENV"] !== "production";
+  // No bypass for missing NODE_ENV: hosted Workers can omit that variable.
+  if (!configured) return false;
   return verifyAffiliateTotp(code, configured);
 }
 
@@ -144,7 +165,7 @@ export function createAffiliateAdminSession(): boolean {
   if (!key) return false;
   setCookie(cookieName(), createAffiliateSessionToken(key), {
     httpOnly: true,
-    secure: process.env["NODE_ENV"] === "production",
+    secure: !localHttpDevelopmentRequest(),
     sameSite: "strict",
     path: "/",
     maxAge: SESSION_TTL_MS / 1000,
@@ -158,7 +179,7 @@ export function affiliateAdminSessionValid(): boolean {
 
 export function destroyAffiliateAdminSession(): void {
   deleteCookie(cookieName(), {
-    secure: process.env["NODE_ENV"] === "production",
+    secure: !localHttpDevelopmentRequest(),
     path: "/",
     sameSite: "strict",
     httpOnly: true,
@@ -168,10 +189,8 @@ export function destroyAffiliateAdminSession(): void {
 /** For diagnostics only: never expose tokens or signing material. */
 export function affiliateSessionConfiguration() {
   return {
-    ready:
-      sessionSigningKey() !== null &&
-      (process.env["NODE_ENV"] !== "production" || env("AFFILIATE_ADMIN_TOTP_SECRET").length >= 32),
-    requiresTwoFactor: Boolean(env("AFFILIATE_ADMIN_TOTP_SECRET")),
+    ready: sessionSigningKey() !== null,
+    requiresTwoFactor: true,
     ttlMinutes: SESSION_TTL_MS / 60000,
   };
 }

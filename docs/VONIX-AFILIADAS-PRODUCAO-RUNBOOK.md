@@ -48,7 +48,7 @@ commits, GitHub issues ou telas públicas. Não acessar/alterar os segredos de c
 | `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | Par dedicado opcional, preferível à reutilização das credenciais da loja |
 | `AFFILIATE_ADMIN_PASSWORD` | Senha de equipe (mínimo 16 caracteres); planejar identidades individuais antes de escalar |
 | `AFFILIATE_ADMIN_SESSION_SECRET` | Assinatura da sessão (mínimo 32 caracteres, separada da senha) |
-| `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 do autenticador em produção |
+| `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 TOTP obrigatória para login e abertura em qualquer ambiente, mesmo sem `NODE_ENV` |
 | `AFFILIATE_TRAFFIC_PEPPER` | Segredo de pseudonimização de IP (mínimo 32 caracteres) |
 | `AFFILIATE_TRUSTED_IP_HEADER` | Um de `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for`; **testar a borda** |
 | `AFFILIATE_QUESTIONNAIRE_KEY` | Chave privada de **32 bytes** (64 caracteres hex ou base64url); backup seguro separado |
@@ -72,6 +72,9 @@ formato aproximado; NÃO valida migração real, posse de domínio ou conformida
 - Verificar no banco que os campos completos de endereço e documento existem apenas
   em `questionnaire_encrypted`, nunca no log ou na resposta do navegador.
 - Validar login/TOTP, origem, sessão, bloqueio por IP e logout com chamadas concorrentes.
+  O servidor **não** permite bypass de TOTP quando `NODE_ENV` está ausente ou incorreto;
+  sessões de domínio HTTPS usam cookie `__Host-`/`Secure` no login e no logout.
+  Apenas localhost HTTP explicitamente em modo `development` ou `test` aceita cookie local de desenvolvimento.
 - Validar decisão atômica, apenas um e-mail enfileirado por candidatura, Resend sandbox
   com domínio permitido, falhas 401/429/500, timeout e situação `incerto`.
 - Homologar o `POST /api/internal/affiliate-mail-worker` com agendador autorizado.
