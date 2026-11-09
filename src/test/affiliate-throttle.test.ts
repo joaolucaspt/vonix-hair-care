@@ -18,14 +18,14 @@ import {
 } from "@/lib/affiliate-throttle.server";
 
 const original = {
-  url: process.env["SUPABASE_URL"],
-  key: process.env["SUPABASE_SERVICE_ROLE_KEY"],
+  url: process.env["AFFILIATE_SUPABASE_URL"],
+  key: process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
   pepper: process.env["AFFILIATE_TRAFFIC_PEPPER"],
   header: process.env["AFFILIATE_TRUSTED_IP_HEADER"],
 };
 beforeEach(() => {
-  process.env["SUPABASE_URL"] = "https://example.supabase.co";
-  process.env["SUPABASE_SERVICE_ROLE_KEY"] = "fake-service-role-for-unit-test";
+  process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+  process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "fake-service-role-for-unit-test";
   process.env["AFFILIATE_TRAFFIC_PEPPER"] = "very-long-hmac-pepper-only-for-unit-testing-1234";
   process.env["AFFILIATE_TRUSTED_IP_HEADER"] = "cf-connecting-ip";
   ipHeaders.cf = "203.0.113.14";
@@ -33,8 +33,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   const values = {
-    SUPABASE_URL: original.url,
-    SUPABASE_SERVICE_ROLE_KEY: original.key,
+    AFFILIATE_SUPABASE_URL: original.url,
+    AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: original.key,
     AFFILIATE_TRAFFIC_PEPPER: original.pepper,
     AFFILIATE_TRUSTED_IP_HEADER: original.header,
   };
@@ -129,6 +129,33 @@ describe("Persisted affiliate request rate limiting", () => {
       affiliateIpDigest("203.0.113.14", "submit", process.env["AFFILIATE_TRAFFIC_PEPPER"]!),
     );
     expect(mock).toHaveBeenCalledTimes(3);
+  });
+
+  it("never sends rate-limit data or service key to the checkout database", async () => {
+    const originalStoreUrl = process.env["SUPABASE_URL"];
+    const originalStoreKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
+    const dedicatedUrl = process.env["AFFILIATE_SUPABASE_URL"];
+    const dedicatedKey = process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
+    try {
+      process.env["SUPABASE_URL"] = "https://checkout.example.supabase.co";
+      process.env["SUPABASE_SERVICE_ROLE_KEY"] = "store-only-service-role-key";
+      delete process.env["AFFILIATE_SUPABASE_URL"];
+      delete process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      expect(await consumeAffiliateRateLimit("submit")).toBe(false);
+      expect(await affiliateRateLimitAllowed("admin")).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      if (originalStoreUrl === undefined) delete process.env["SUPABASE_URL"];
+      else process.env["SUPABASE_URL"] = originalStoreUrl;
+      if (originalStoreKey === undefined) delete process.env["SUPABASE_SERVICE_ROLE_KEY"];
+      else process.env["SUPABASE_SERVICE_ROLE_KEY"] = originalStoreKey;
+      if (dedicatedUrl === undefined) delete process.env["AFFILIATE_SUPABASE_URL"];
+      else process.env["AFFILIATE_SUPABASE_URL"] = dedicatedUrl;
+      if (dedicatedKey === undefined) delete process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
+      else process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = dedicatedKey;
+    }
   });
 
   it("enforces database denial and fails closed on network errors", async () => {

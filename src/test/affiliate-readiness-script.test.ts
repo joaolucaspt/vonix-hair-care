@@ -29,7 +29,8 @@ function runReadiness(overrides: Record<string, string> = {}) {
     missing: string[];
     optionalNotificationsMissing: string[];
   };
-  expect(result.stdout).not.toContain(env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"]);
+  if (env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"])
+    expect(result.stdout).not.toContain(env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"]);
   expect(result.stdout).not.toContain(env["AFFILIATE_ADMIN_PASSWORD"]);
   return { output, status: result.status };
 }
@@ -43,6 +44,18 @@ describe("Checklist do cadastro sem serviços de comissão", () => {
       expect.arrayContaining(["resend", "resend_sender", "worker_secret"]),
     );
     expect(output.missing).toEqual([]);
+  });
+
+  it("não considera as credenciais do checkout suficientes para receber candidaturas", () => {
+    const { output, status } = runReadiness({
+      AFFILIATE_SUPABASE_URL: "",
+      AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: "",
+      SUPABASE_URL: "https://checkout.example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "store-only-service-role-key",
+    });
+    expect(status).toBe(2);
+    expect(output.canOpenFromConfiguration).toBe(false);
+    expect(output.missing).toContain("database_pair");
   });
 
   it("mantém bloqueios de proteção de dados, migrações e HTTPS", () => {
