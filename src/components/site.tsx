@@ -9,7 +9,6 @@ import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
 import { useVisitorSummary } from "@/lib/review-summary";
 import { PaymentLogos } from "@/components/payment-logos";
-import { SignupCoupon } from "@/components/signup-coupon";
 import { toItem, track } from "@/lib/analytics";
 import {
   FREE_SHIPPING_ABOVE,
@@ -359,9 +358,6 @@ function Footer() {
         <span>Até 6x sem juros no cartão</span>
         <span>Frete grátis acima de R$ 150 em produtos</span>
       </div>
-      <div className="container-site border-b border-marquee-foreground/15 py-6">
-        <div className="mx-auto max-w-xl"><SignupCoupon dark compact /></div>
-      </div>
       <div className="container-site grid gap-8 py-8 text-body sm:grid-cols-4">
         <div>
           <div className="mb-4"><GoldLogo className="h-14" /></div>
@@ -443,6 +439,8 @@ export function PriceBlock({ price, compare, big, offer = false }: { price: numb
  * Real average rating (from src/data/reviews.json): gold stars filled in proportion to the score, plus the number.
  * A product with no reviews yet shows the five empty stars, never an invented score.
  */
+const NO_STARS = new Set(["botox-vonix"]);
+
 export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; big?: boolean; hideEmpty?: boolean }) {
   const list = reviewsFor(slug);
   const sold = soldFor(slug);
@@ -460,7 +458,9 @@ export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; 
     </span>
   );
   // Nos cards, produto sem nota não mostra as cinco estrelas vazias (parecem "ninguém gostou"); fica só o número de vendidos.
-  const showStars = count > 0 || !hideEmpty;
+  // Produtos em que a loja prefere não exibir a nota em estrelas (só o número de vendidos).
+  const noRating = NO_STARS.has(slug);
+  const showStars = !noRating && (count > 0 || !hideEmpty);
   return (
     <div className="flex min-h-[1.25rem] items-center gap-2 text-small" role="img" aria-label={count ? `Nota ${label} de 5` : "Ainda sem avaliações"}>
       {showStars && (
@@ -473,7 +473,7 @@ export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; 
           )}
         </span>
       )}
-      {count > 0 && <b className="text-body">{label}</b>}
+      {count > 0 && !noRating && <b className="text-body">{label}</b>}
       {sold > 0 && <span className="text-muted-foreground">{showStars ? "· " : ""}{sold} {sold === 1 ? "vendido" : "vendidos"}</span>}
     </div>
   );
