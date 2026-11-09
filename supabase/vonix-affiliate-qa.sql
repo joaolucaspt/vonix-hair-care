@@ -111,6 +111,19 @@ begin
      or (public.vonix_affiliate_search('aprovada', chr(92), 0, 40)->>'total')::integer <> 0 then
     raise exception 'Search wildcards were incorrectly interpreted as patterns';
   end if;
+  -- Cross-decision mail triage must not be constrained to one status tab.
+  if (public.vonix_affiliate_search('todas', '', 0, 40, null)->>'total')::integer <> 2 then
+    raise exception 'Global decisions list should show both reviewed candidates';
+  end if;
+  if (public.vonix_affiliate_search('todas', '', 0, 40, 'incerto')->>'total')::integer <> 1
+     or (public.vonix_affiliate_search('todas', '', 0, 40, 'enviado')->>'total')::integer <> 1
+     or (public.vonix_affiliate_search('todas', '', 0, 40, 'falhou')->>'total')::integer <> 0 then
+    raise exception 'Mail triage filters returned wrong counts';
+  end if;
+  if (public.vonix_affiliate_search('aprovada', '', 0, 40, 'incerto')->>'total')::integer <> 0
+     or (public.vonix_affiliate_search('recusada', '', 0, 40, 'incerto')->>'total')::integer <> 1 then
+    raise exception 'Mail triage filter did not respect the selected decision status';
+  end if;
   select public.vonix_affiliate_stats() into statuses;
   if (statuses->>'aprovada')::integer <>
       (select count(*) from public.vonix_affiliate_applications where status = 'aprovada')
@@ -139,7 +152,7 @@ begin
   if has_table_privilege('authenticated','public.vonix_affiliate_mail_outbox','SELECT') then
     raise exception 'Authenticated customers can directly read mail records';
   end if;
-  if has_function_privilege('anon','public.vonix_affiliate_search(text,text,integer,integer)','EXECUTE') then
+  if has_function_privilege('anon','public.vonix_affiliate_search(text,text,integer,integer,text)','EXECUTE') then
     raise exception 'Anonymous users can search private applications';
   end if;
   if has_function_privilege('anon','public.vonix_affiliate_decide(uuid,text)','EXECUTE') then

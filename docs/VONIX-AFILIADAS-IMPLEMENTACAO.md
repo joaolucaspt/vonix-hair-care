@@ -86,3 +86,11 @@ O workflow `.github/workflows/vonix-affiliates.yml` foi acrescentado à branch p
 
 ## Proteção do painel contra respostas tardias
 Consultas administrativas simultâneas são identificadas por versão; apenas a resposta da consulta atual pode atualizar a tela. Ao clicar em sair, os dados pessoais, contadores e detalhes de candidaturas são limpos **imediatamente**, antes da resposta de rede. Uma requisição que termine depois do logout não pode repovoar dados pessoais. Se o servidor recusar a sessão, os dados são igualmente apagados. Há testes de interface de regressão para logout com consulta pendente, expiração da sessão e tela não autenticada. Isso não altera a limitação conhecida de revogação de cookies stateless copiados antes do logout, que permanecem válidos até expiração/rotação.
+
+## Filas de notificações — triagem por situação
+Na aba administrativa **Notificações**, os cards **Aguardando, Processando, Aceitos, Falhas e Incertos** são filtros clicáveis. A pesquisa e a paginação são executadas no banco com `vonix_affiliate_search(..., p_mail_status)`, cobrindo aprovações **e** recusas sem depender dos primeiros 40 registros da tela. Clicar novamente no filtro o remove. O resultado `incerto` deve ser conciliado no painel do Resend antes de qualquer reenvio; o sistema não cria novo e-mail automaticamente.
+
+A migração SQL agora instala a assinatura de cinco parâmetros da RPC e, caso exista um rascunho de quatro parâmetros, o elimina para evitar duas versões da busca. **Somente aplicar após revisar dependências na base correta e fazer backup.** O script de QA sintético valida busca de ambas as decisões, filtros por status de e-mail e bloqueio de execução anônima. Os contadores refletem aceites do provedor, não entrega definitiva.
+
+## Login e quotas por falha
+O login consulta primeiro o bloqueio persistido do IP. **Somente senha/TOTP incorretos consomem o limite de 12 falhas a cada 15 minutos**; logins corretos não aumentam o contador, mas um IP já bloqueado permanece impedido de entrar. Falha da consulta ao banco ou origem incompatível nega acesso. Os novos testes cobrem logins corretos, senha errada, segundo fator errado, IP bloqueado, indisponibilidade do limitador e falha ao criar cookie.

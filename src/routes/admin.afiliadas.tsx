@@ -24,7 +24,11 @@ import type {
   AffiliateStatus,
   AffiliateMailStatus,
 } from "@/lib/affiliate-application";
-import type { AffiliateMailCounters } from "@/lib/affiliate-applications.server";
+import type {
+  AffiliateMailCounters,
+  AffiliateListStatus,
+  AffiliateMailStatus as AffiliateQueueFilter,
+} from "@/lib/affiliate-applications.server";
 
 export const Route = createFileRoute("/admin/afiliadas")({
   head: () => ({
@@ -36,10 +40,11 @@ export const Route = createFileRoute("/admin/afiliadas")({
   component: AffiliateAdminPage,
 });
 
-const STATUS: { key: AffiliateStatus; label: string }[] = [
+const STATUS: { key: AffiliateListStatus; label: string }[] = [
   { key: "pendente", label: "Pendentes" },
   { key: "aprovada", label: "Aprovadas" },
   { key: "recusada", label: "Recusadas" },
+  { key: "todas", label: "Notificações" },
 ];
 const PER_PAGE = 40;
 const MAIL_STATUS: { key: keyof AffiliateMailCounters; label: string; color: string }[] = [
@@ -82,7 +87,8 @@ export function AffiliateAdminPage() {
   const [otp, setOtp] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
   const [authorized, setAuthorized] = useState(false);
-  const [status, setStatus] = useState<AffiliateStatus>("pendente");
+  const [status, setStatus] = useState<AffiliateListStatus>("pendente");
+  const [mailFilter, setMailFilter] = useState<AffiliateQueueFilter | null>(null);
   const [page, setPage] = useState(0);
   const [searchText, setSearchText] = useState("");
   const [search, setSearch] = useState("");
@@ -111,6 +117,11 @@ export function AffiliateAdminPage() {
 
   function clearPrivateData() {
     setApplications([]);
+    setStatus("pendente");
+    setPage(0);
+    setMailFilter(null);
+    setSearch("");
+    setSearchText("");
     setStats({ pendente: 0, aprovada: 0, recusada: 0 });
     setMailStats({ pendente: 0, processando: 0, enviado: 0, falhou: 0, incerto: 0 });
     setTotal(0);
@@ -118,7 +129,12 @@ export function AffiliateAdminPage() {
     setNotice("");
   }
 
-  async function load(nextStatus = status, nextPage = page, nextSearch = search) {
+  async function load(
+    nextStatus = status,
+    nextPage = page,
+    nextSearch = search,
+    nextMailFilter: AffiliateQueueFilter | null = mailFilter,
+  ) {
     const requestId = ++loadVersion.current;
     const sessionId = sessionVersion.current;
     const isCurrent = () =>
@@ -127,7 +143,12 @@ export function AffiliateAdminPage() {
     setError("");
     try {
       const response = await getAffiliateApplications({
-        data: { status: nextStatus, page: nextPage, search: nextSearch || undefined },
+        data: {
+          status: nextStatus,
+          page: nextPage,
+          search: nextSearch || undefined,
+          mailStatus: nextMailFilter,
+        },
       });
       if (!isCurrent()) return;
       if (!response.ok) {
@@ -140,6 +161,7 @@ export function AffiliateAdminPage() {
       }
       setAuthorized(true);
       setStatus(nextStatus);
+      setMailFilter(nextMailFilter);
       setPage(nextPage);
       setSearch(nextSearch);
       setApplications(response.applications);
@@ -205,6 +227,7 @@ export function AffiliateAdminPage() {
     setPassword("");
     setOtp("");
     clearPrivateData();
+    setMailFilter(null);
     setLoading(true);
     setError("");
     try {
@@ -353,13 +376,13 @@ export function AffiliateAdminPage() {
           </form>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {STATUS.map((item) => (
                 <button
                   key={item.key}
                   onClick={() => {
                     setNotice("");
-                    void load(item.key, 0, search);
+                    void load(item.key, 0, search, null);
                   }}
                   disabled={loading}
                   aria-pressed={status === item.key}
@@ -374,12 +397,16 @@ export function AffiliateAdminPage() {
                     <div className="text-xs font-semibold uppercase tracking-wider text-[#8b7375]">
                       {item.label}
                     </div>
-                    <div className="mt-2 font-display text-4xl">{stats[item.key]}</div>
+                    <div className="mt-2 font-display text-4xl">
+                      {item.key === "todas" ? stats.aprovada + stats.recusada : stats[item.key]}
+                    </div>
                   </div>
                   {item.key === "pendente" ? (
                     <Clock3 className="h-6 w-6 text-amber-700" />
                   ) : item.key === "aprovada" ? (
                     <CheckCircle2 className="h-6 w-6 text-emerald-700" />
+                  ) : item.key === "todas" ? (
+                    <Mail className="h-6 w-6 text-[#8f5361]" />
                   ) : (
                     <XCircle className="h-6 w-6 text-slate-500" />
                   )}
@@ -399,21 +426,40 @@ export function AffiliateAdminPage() {
                   </h2>
                   <p className="mt-1 text-xs leading-relaxed text-[#856f73]">
                     Os e-mails aceitos pelo provedor não são necessariamente entregues. Em caso de
-                    envio incerto, confira o provedor antes de tentar novamente.
+                    envio incerto, confira o provedor antes de tentar novamente. Clique em um status
+                    abaixo para localizar notificações que precisam de atenção.
                   </p>
                 </div>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {MAIL_STATUS.map((item) => (
-                  <div
+                  <button
+                    type="button"
                     key={item.key}
-                    className="rounded-xl border border-[#f0e6e2] bg-[#fcf9f7] px-4 py-3"
+                    disabled={loading}
+                    aria-pressed={status === "todas" && mailFilter === item.key}
+                    aria-label={`Ver notificações: ${item.label.toLowerCase()}`}
+                    onClick={() => {
+                      setNotice("");
+                      void load(
+                        "todas",
+                        0,
+                        search,
+                        status === "todas" && mailFilter === item.key ? null : item.key,
+                      );
+                    }}
+                    className={
+                      "rounded-xl border px-4 py-3 text-left transition disabled:opacity-50 " +
+                      (status === "todas" && mailFilter === item.key
+                        ? "border-[#8c4d59] bg-[#fff0ec] shadow-sm"
+                        : "border-[#f0e6e2] bg-[#fcf9f7] hover:border-[#c9a6aa] hover:bg-[#fffaf8]")
+                    }
                   >
                     <p className="text-xs font-medium text-[#786467]">{item.label}</p>
                     <p className={"mt-1 font-display text-3xl " + item.color}>
                       {mailStats[item.key]}
                     </p>
-                  </div>
+                  </button>
                 ))}
               </div>
             </section>
@@ -422,6 +468,9 @@ export function AffiliateAdminPage() {
               <div>
                 <h2 className="font-display text-2xl">
                   {STATUS.find((item) => item.key === status)?.label}
+                  {status === "todas" &&
+                    mailFilter &&
+                    " — " + MAIL_STATUS.find((item) => item.key === mailFilter)?.label}
                 </h2>
                 <p className="mt-1 text-xs text-[#8c7778]">
                   {total} inscrição(ões) nesta consulta · {PER_PAGE} por página

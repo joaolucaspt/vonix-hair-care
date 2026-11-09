@@ -113,6 +113,26 @@ describe("Vonix affiliate private panel", () => {
     expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
   });
 
+  it("opens global uncertain mail triage with a database-backed filter and can clear it", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    const uncertain = screen.getByRole("button", { name: "Ver notificações: incertos" });
+    fireEvent.click(uncertain);
+    await waitFor(() =>
+      expect(server.getAffiliateApplications).toHaveBeenLastCalledWith({
+        data: { status: "todas", page: 0, search: undefined, mailStatus: "incerto" },
+      }),
+    );
+    expect(uncertain).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(uncertain);
+    await waitFor(() =>
+      expect(server.getAffiliateApplications).toHaveBeenLastCalledWith({
+        data: { status: "todas", page: 0, search: undefined, mailStatus: null },
+      }),
+    );
+    expect(uncertain).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("does not display any applicant data before the session check succeeds", async () => {
     server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
     render(<Page />);

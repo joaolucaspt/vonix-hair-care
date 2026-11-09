@@ -100,8 +100,11 @@ as $$
 $$;
 
 -- Safe, parameterized pagination/search; no client string is interpreted as PostgREST syntax.
+-- Replaces the previous four-argument function in upgrades; avoids an exposed
+-- outdated overload if an earlier draft migration was deployed for testing.
+drop function if exists public.vonix_affiliate_search(text,text,integer,integer);
 create or replace function public.vonix_affiliate_search(
-  p_status text, p_query text, p_offset integer, p_limit integer
+  p_status text, p_query text, p_offset integer, p_limit integer, p_mail_status text default null
 ) returns jsonb language plpgsql stable security invoker set search_path = ''
 as $$
 declare
@@ -110,7 +113,8 @@ declare
   v_pattern text := replace(replace(replace(trim(coalesce(p_query, '')), chr(92),
     chr(92) || chr(92)), '%', chr(92) || '%'), '_', chr(92) || '_');
 begin
-  if p_status not in ('pendente', 'aprovada', 'recusada')
+  if p_status not in ('pendente', 'aprovada', 'recusada', 'todas')
+    or (p_mail_status is not null and p_mail_status not in ('pendente', 'processando', 'enviado', 'falhou', 'incerto'))
     or length(v_query) > 70
     or p_offset is null or p_offset < 0 or p_offset > 2000000
     or p_limit is null or p_limit < 1 or p_limit > 40 then
@@ -122,7 +126,11 @@ begin
       select a.id, a.full_name, a.age, a.city, a.state, a.hair_type, a.email,
              a.instagram_url, a.tiktok_url, a.motivation, a.status, a.created_at, a.reviewed_at
       from public.vonix_affiliate_applications a
-      where a.status = p_status
+      where (a.status = p_status or (p_status = 'todas' and a.status <> 'pendente'))
+        and (p_mail_status is null or exists (
+          select 1 from public.vonix_affiliate_mail_outbox m
+           where m.application_id = a.id and m.status = p_mail_status
+        ))
         and (v_query = ''
           or a.full_name ilike '%' || v_pattern || '%' escape chr(92)
           or a.email ilike '%' || v_pattern || '%' escape chr(92))
@@ -282,7 +290,7 @@ $$;
 revoke all on function public.vonix_affiliate_consume_rate_limit(text,text) from public, anon, authenticated;
 revoke all on function public.vonix_affiliate_rate_limit_allowed(text,text) from public, anon, authenticated;
 revoke all on function public.vonix_affiliate_purge_throttle() from public, anon, authenticated;
-revoke all on function public.vonix_affiliate_search(text,text,integer,integer) from public, anon, authenticated;
+revoke all on function public.vonix_affiliate_search(text,text,integer,integer,text) from public, anon, authenticated;
 revoke all on function public.vonix_affiliate_decide(uuid,text) from public, anon, authenticated;
 revoke all on function public.vonix_affiliate_stats() from public, anon, authenticated;
 revoke all on function public.vonix_affiliate_claim_mail(uuid) from public, anon, authenticated;
@@ -290,7 +298,7 @@ revoke all on function public.vonix_affiliate_finish_mail(uuid,integer,boolean,t
 grant execute on function public.vonix_affiliate_consume_rate_limit(text,text) to service_role;
 grant execute on function public.vonix_affiliate_rate_limit_allowed(text,text) to service_role;
 grant execute on function public.vonix_affiliate_purge_throttle() to service_role;
-grant execute on function public.vonix_affiliate_search(text,text,integer,integer) to service_role;
+grant execute on function public.vonix_affiliate_search(text,text,integer,integer,text) to service_role;
 grant execute on function public.vonix_affiliate_decide(uuid,text) to service_role;
 grant execute on function public.vonix_affiliate_stats() to service_role;
 grant execute on function public.vonix_affiliate_claim_mail(uuid) to service_role;

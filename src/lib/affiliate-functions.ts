@@ -2,17 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
+import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import {
   affiliateAdminSameOrigin,
-  affiliateAdminSecondFactorValid,
   affiliateAdminSessionValid,
-  createAffiliateAdminSession,
   destroyAffiliateAdminSession,
 } from "./affiliate-admin-session.server";
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
 import {
   affiliateRecruitmentOpen,
-  affiliateAdminAuthorized,
   createAffiliateApplication,
   decideAffiliateApplication,
   listAffiliateApplications,
@@ -52,25 +50,7 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
 
 export const loginAffiliateAdmin = createServerFn({ method: "POST" })
   .validator(affiliateAdminSchema.extend({ otp: z.string().max(6).optional() }))
-  .handler(async ({ data }) => {
-    if (!affiliateAdminSameOrigin() || !(await consumeAffiliateRateLimit("admin"))) {
-      return {
-        ok: false as const,
-        reason: "Acesso indisponível. Verifique as configurações e tente mais tarde.",
-      };
-    }
-    if (
-      !affiliateAdminAuthorized(data.password) ||
-      !affiliateAdminSecondFactorValid(data.otp ?? "") ||
-      !createAffiliateAdminSession()
-    ) {
-      return {
-        ok: false as const,
-        reason: "Credenciais inválidas ou autenticação não configurada.",
-      };
-    }
-    return { ok: true as const };
-  });
+  .handler(async ({ data }) => attemptAffiliateAdminLogin(data.password, data.otp ?? ""));
 
 export const getAffiliateAdminSession = createServerFn({ method: "GET" }).handler(async () => {
   setResponseHeader("Cache-Control", "no-store");
@@ -86,9 +66,13 @@ export const logoutAffiliateAdmin = createServerFn({ method: "POST" }).handler(a
 export const getAffiliateApplications = createServerFn({ method: "POST" })
   .validator(
     z.object({
-      status: z.enum(["pendente", "aprovada", "recusada"]),
+      status: z.enum(["pendente", "aprovada", "recusada", "todas"]),
       page: z.number().int().min(0).max(50000),
       search: z.string().trim().max(70).optional(),
+      mailStatus: z
+        .enum(["pendente", "processando", "enviado", "falhou", "incerto"])
+        .nullable()
+        .optional(),
     }),
   )
   .handler(async ({ data }) => {

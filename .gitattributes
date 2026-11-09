@@ -16,3 +16,6 @@ src/routeTree.gen.ts text eol=lf
 
 src/test/affiliate-admin-ui.test.tsx text eol=lf
 .github/workflows/vonix-affiliates.yml text eol=lf
+
+src/lib/affiliate-admin-auth.server.ts text eol=lf
+src/test/affiliate-admin-auth.test.ts text eol=lf

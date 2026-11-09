@@ -195,6 +195,52 @@ describe("Acesso e decisões", () => {
       p_query: "maria.souza@example.com",
       p_offset: 80,
       p_limit: 40,
+      p_mail_status: null,
+    });
+  });
+
+  it("filtra globalmente notificações incertas sem buscar dados de pendentes", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          total: 1,
+          applications: [
+            {
+              id: "incerta-qa",
+              status: "recusada",
+              vonix_affiliate_mail_outbox: [{ status: "incerto", sent_at: null }],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 10,
+          aprovada: 5,
+          recusada: 3,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 5,
+          email_falhou: 1,
+          email_incerto: 1,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await listAffiliateApplications({
+      status: "todas",
+      page: 0,
+      search: "",
+      mailStatus: "incerto",
+    });
+    expect(response.total).toBe(1);
+    expect(response.applications[0]?.status).toBe("recusada");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1].body))).toEqual({
+      p_status: "todas",
+      p_query: "",
+      p_offset: 0,
+      p_limit: 40,
+      p_mail_status: "incerto",
     });
   });
 });

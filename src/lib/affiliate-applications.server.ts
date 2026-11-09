@@ -112,6 +112,9 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
   return { ok: true as const };
 }
 
+export type AffiliateListStatus = AffiliateStatus | "todas";
+export type AffiliateMailStatus = "pendente" | "processando" | "enviado" | "falhou" | "incerto";
+
 export type AffiliateMailCounters = Record<
   "pendente" | "processando" | "enviado" | "falhou" | "incerto",
   number
@@ -124,14 +127,17 @@ export interface AffiliateList {
   mailStats: AffiliateMailCounters;
 }
 
-const validStatus = z.enum(["pendente", "aprovada", "recusada"]);
+const validStatus = z.enum(["pendente", "aprovada", "recusada", "todas"]);
+const validMailStatus = z.enum(["pendente", "processando", "enviado", "falhou", "incerto"]);
 
 export async function listAffiliateApplications(input: {
-  status: AffiliateStatus;
+  status: AffiliateListStatus;
   page: number;
   search?: string | undefined;
+  mailStatus?: AffiliateMailStatus | null | undefined;
 }): Promise<AffiliateList> {
   const status = validStatus.parse(input.status);
+  const mailStatus = input.mailStatus == null ? null : validMailStatus.parse(input.mailStatus);
   const page = z.number().int().min(0).max(50000).parse(input.page);
   const q = z
     .string()
@@ -141,7 +147,13 @@ export async function listAffiliateApplications(input: {
   const [rows, totals] = await Promise.all([
     requestSupabase("rpc/vonix_affiliate_search", {
       method: "POST",
-      body: JSON.stringify({ p_status: status, p_query: q, p_offset: page * 40, p_limit: 40 }),
+      body: JSON.stringify({
+        p_status: status,
+        p_query: q,
+        p_offset: page * 40,
+        p_limit: 40,
+        p_mail_status: mailStatus,
+      }),
     }),
     requestSupabase("rpc/vonix_affiliate_stats", { method: "POST", body: "{}" }),
   ]);
