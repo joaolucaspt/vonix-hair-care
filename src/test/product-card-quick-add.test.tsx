@@ -55,7 +55,8 @@ describe("sacola rápida da vitrine", () => {
   });
 
   it("o catálogo separa variantes sem forçar escolha de quantidade nos demais produtos", () => {
-    expect(products.filter((p) => p.variants.length === 1)).toHaveLength(39);
+    expect(products.filter((p) => p.variants.length === 1)).toHaveLength(38);
     expect(products.filter((p) => p.variants.length > 1)).toHaveLength(4);
+    expect(products).toHaveLength(42);
   });
 });

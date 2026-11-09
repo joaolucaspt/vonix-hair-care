@@ -86,6 +86,13 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N39 | Alta | Checkout descartava pedido pendente quando `paid:true` estava armazenado, reexibindo tentativa de compra | Restaurar todo pedido válido em análise até confirmar status autenticado, sem CTA de nova cobrança. Chrome 320/390/1366 px com sessão adulterada PASS. |
 | N40 | Alta | SQL de idempotência usava `SECURITY DEFINER` com `search_path=public` | As três funções passaram a `search_path=''`; PostgreSQL 16 isolado e teste sintético passaram após corrigir a assertiva de serialização. **Não aplicado no Supabase operacional/staging**. |
 
+| N41 | Média | Nova `main` com cabeçalho móvel gerou conflito na integração e 9 px de overflow na PDP a 390 px | Mesclados layout móvel compacto e rodapé de consentimento, CTA “Pedidos” preservado; rótulo oculto apenas na PDP móvel, sem overflow em 320/390/1366 px. |
+| N42 | Alta | Plex Vonix excluído por falta de estoque, mas SSR C3 ainda esperava 43 produtos e marcava o 404 intencional como falha | Auditor agora acompanha catálogo ativo e exige 404 para excluídos: 43 no JSON, 42 vendáveis, 42/42 SSR, 42 URLs no sitemap, 42 no feed Meta, Plex indisponível. Três testes de contagem atualizados. |
+
+## Recibo C8 — integração da main (09/11)
+
+**469/469 testes em 62 arquivos**, TypeScript/build/lint PASS, SSR **42/42** com `plex-vonix` 404. Chrome em 320/390/1366 px sem overflow, prevenção a `paid:true` falsificado preservada. Com as mudanças da `main` `0bd0643`, diferenças em arquivos de afiliadas: **zero**. Registro: `docs/VONIX_C8_MAIN_INTEGRATION_20261109.md` e `docs/VONIX_C8_MAIN_INTEGRATION_RECEIPT_20261109.json`. O CI do merge deve ser conferido no GitHub; não há deploy ou operação real.
+
 ## Recibo C8 (09/11)
 
 **445/445 testes PASS em 59 arquivos**; TypeScript/build/ESLint PASS; SSR **43/43**, Chrome anti-spoof 320/390/1366 PASS, PostgreSQL 16 temporário PASS. Evidências: `docs/VONIX_AUDITORIA_CONTINUIDADE_C8_20261109.md`, `docs/VONIX_C8_VERIFIED_RECEIPT_20261109.json` e `scripts/qa-checkout-idempotency-hardened.sql`. O workflow de e-commerce agora inclui um job isolado de PostgreSQL, com validação remota pendente até CI. A aplicação de SQL em staging e a homologação Appmax ainda exigem autorização e evidência externa.

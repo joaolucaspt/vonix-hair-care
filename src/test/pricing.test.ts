@@ -48,7 +48,7 @@ describe("ambiente e preços dos cards", () => {
 });
 
 describe("regras comerciais", () => {
-  it("catálogo tem 43 produtos", () => expect(products.length).toBe(43));
+  it("catálogo tem 42 produtos (Plex Vonix sem estoque)", () => expect(products.length).toBe(42));
   it("preço já inclui +15 uma vez", () => {
     expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(191.9);
     expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([81.9, 213.9]);
@@ -139,8 +139,9 @@ describe("desconto por quantidade (segue a quantidade, em qualquer lugar)", () =
 });
 
 describe("consistência de informações de produto e entrega", () => {
-  it("nenhuma das 43 descrições promete transportadoras excluídas pelo checkout", () => {
-    expect(products.length).toBe(43);
+  it("nenhuma das 42 descrições ativas promete transportadoras excluídas pelo checkout", () => {
+    expect(products.length).toBe(42);
+    expect(getProduct("plex-vonix")).toBeUndefined();
     for (const p of products) {
       expect(p.description).not.toMatch(/Loggi|Total Express/i);
       expect(p.description).toContain("opções de entrega disponíveis para o seu CEP");

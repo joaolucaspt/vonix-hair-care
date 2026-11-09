@@ -1,0 +1,74 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "pr": 26,
+  "securityC8": "54d15169ebfee1608e0c3e72a94fb2aca750e28e",
+  "firstIntegration": "5f87e71cc8af65e9d7f131856644ecd6664cf944",
+  "upstreamIntegrated": [
+    "ec6d7f5d5b749f650dde8e9fe1c0517d9dd8899e",
+    "0bd06431e0c92d391ceaeb2ff7902cc8bac50407"
+  ],
+  "evidence": {
+    "vitest": {
+      "passed": 469,
+      "total": 469,
+      "files": 62,
+      "exit": 0
+    },
+    "typescriptExit": 0,
+    "buildExit": 0,
+    "lintAffectedExit": 0,
+    "ssr": {
+      "sourceProducts": 43,
+      "activeProducts": 42,
+      "passed": 42,
+      "failed": 0,
+      "excluded": [
+        {
+          "slug": "plex-vonix",
+          "http": 404
+        }
+      ],
+      "sitemapProductUrls": 42,
+      "metaFeedProducts": 42,
+      "excludedFromMetaFeed": true
+    },
+    "browser": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "pages": [
+        "/",
+        "/produto/kit-banana-e-mel",
+        "/checkout"
+      ],
+      "overflow": false,
+      "errors": 0,
+      "productMobileSearchFunctional": true,
+      "privacyFooterPreserved": true,
+      "accountLabel": "Pedidos",
+      "tamperedPaidGuardPassed": true
+    },
+    "integration": {
+      "manualAffiliateEdits": false,
+      "affiliatePathsDifferFromMain": 0,
+      "oldCheckpointsPreserved": true,
+      "mergeOfPrIntoMain": false,
+      "deploy": false,
+      "realPayments": false,
+      "realDatabaseWrites": false
+    }
+  },
+  "pending": [
+    "Appmax sandbox",
+    "Supabase staging and production controlled migration",
+    "Bling contract/stock weights",
+    "LGPD late consent revocation",
+    "WAF/rate limiting",
+    "paid order conversion evidence"
+  ],
+  "remoteChecks": "pending until latest integration is pushed"
+}

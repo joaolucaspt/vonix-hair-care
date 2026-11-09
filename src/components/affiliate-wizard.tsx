@@ -18,6 +18,7 @@ import {
   stepErrors,
   onlyDigits,
   instagramProfileUrl,
+  validInstagramUsername,
   WIZARD_STEPS,
   CONTENT_NICHES,
   INSTAGRAM_FOLLOWERS,
@@ -210,6 +211,8 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  // Synchronous lock prevents a second POST before React updates the disabled button.
+  const sendingRef = useRef(false);
   const [website, setWebsite] = useState("");
   const [sent, setSent] = useState(false);
   const [zipLoading, setZipLoading] = useState(false);
@@ -331,7 +334,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (sending) return;
+    if (sending || sendingRef.current || sent) return;
     const localErrors = stepErrors(step, values);
     if (Object.keys(localErrors).length) {
       setErrors(localErrors);
@@ -368,6 +371,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
       setMessage("Não foi possível validar a candidatura. Revise os campos anteriores.");
       return;
     }
+    sendingRef.current = true;
     setSending(true);
     setMessage("");
     try {
@@ -381,6 +385,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
     } catch {
       setMessage("Não foi possível enviar a candidatura. Tente novamente mais tarde.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }
@@ -534,19 +539,18 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
                 <div className="sm:col-span-2">
                   {field("instagramUsername", "Usuário do instagram", {
                     placeholder: "@seuusuario",
-                    maxLength: 30,
+                    maxLength: 31,
                   })}
-                  {value("instagramUsername") &&
-                    /^@?[A-Za-z0-9._]{1,30}$/.test(value("instagramUsername")) && (
-                      <a
-                        href={instagramProfileUrl(value("instagramUsername"))}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[#8e4f5d] underline"
-                      >
-                        Conferir link do perfil <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
+                  {validInstagramUsername(value("instagramUsername")) && (
+                    <a
+                      href={instagramProfileUrl(value("instagramUsername"))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[#8e4f5d] underline"
+                    >
+                      Conferir link do perfil <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  )}
                   <p className="mt-2 text-xs text-[#96797d]">
                     A conferência abre o perfil informado; não confirma automaticamente a
                     titularidade.
@@ -555,6 +559,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
                 {field("tiktokUsername", "Usuário do Tiktok", {
                   required: false,
                   placeholder: "@seuusuario",
+                  maxLength: 31,
                 })}
                 {field("xUsername", "Usuário do X", {
                   required: false,

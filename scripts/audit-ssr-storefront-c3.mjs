@@ -3,7 +3,20 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = new URL("../", import.meta.url);
-const products = JSON.parse(await readFile(new URL("../src/data/products.json", import.meta.url), "utf8"));
+const rawProducts = JSON.parse(await readFile(new URL("../src/data/products.json", import.meta.url), "utf8"));
+// The storefront excludes known unavailable SKUs in src/lib/store.ts. Audit the
+// exact active catalog instead of falsely flagging deliberate 404 product pages.
+// Fail closed if the source declaration changes or references unknown products.
+const storeSource = await readFile(new URL("../src/lib/store.ts", import.meta.url), "utf8");
+const excludedDeclaration = /export const OUT_OF_STOCK\s*=\s*new Set<string>\(\s*(\[[\s\S]*?\])\s*\)/.exec(storeSource);
+if (!excludedDeclaration) throw new Error("Catalog availability declaration not found");
+const excludedSlugs = JSON.parse(excludedDeclaration[1]);
+if (!Array.isArray(excludedSlugs) ||
+    excludedSlugs.some((slug) => typeof slug !== "string" || !rawProducts.some((p) => p.slug === slug)) ||
+    new Set(excludedSlugs).size !== excludedSlugs.length)
+  throw new Error("Invalid or stale OUT_OF_STOCK declaration");
+const excluded = new Set(excludedSlugs);
+const products = rawProducts.filter((p) => !excluded.has(p.slug));
 const origin = "http://127.0.0.1:43972";
 const canonicalOrigin = "https://vonixhair.com";
 const get = async (path) => {
@@ -56,6 +69,17 @@ async function worker() {
   }
 }
 await Promise.all(Array.from({ length: 6 }, () => worker()));
+const excludedPages = [];
+for (const slug of excludedSlugs) {
+  try {
+    const { status } = await get("/produto/" + slug);
+    excludedPages.push({ slug, status });
+    if (status !== 404) errors.push({ slug, issues: ["excluded_product_accessible", "HTTP " + status] });
+  } catch (e) {
+    excludedPages.push({ slug, status: null });
+    errors.push({ slug, issues: ["excluded_product_fetch_failed", String(e).slice(0, 150)] });
+  }
+}
 const extra = {};
 for (const route of ["/", "/loja", "/carrinho", "/checkout", "/sitemap.xml", "/robots.txt", "/rota-inexistente-auditoria-c3-20261109"]) {
   try {
@@ -68,6 +92,9 @@ const report = {
   environment: origin,
   target: "Local SSR only; no payment, leads or DB operations",
   productCount: products.length,
+  sourceProductCount: rawProducts.length,
+  excludedProductSlugs: excludedSlugs,
+  excludedPages,
   pagesChecked: details.length,
   passed: details.filter((d) => !d.issues.length).length,
   failed: errors.length,

@@ -19,8 +19,9 @@ describe("promessas comerciais coerentes com o checkout", () => {
     expect(pages["politica-de-frete"]).toContain("não será possível concluir o pedido para esse endereço");
   });
 
-  it("mantém o catálogo completo enquanto a oferta do frete depende do CEP", () => {
-    expect(products.length).toBe(43);
+  it("mantém os 42 produtos ativos e exclui Plex Vonix sem estoque da vitrine", () => {
+    expect(products.length).toBe(42);
+    expect(getProduct("plex-vonix")).toBeUndefined();
     expect(getProduct("kit-banana-e-mel")?.variants[0]?.price).toBe(169.9);
   });
 });

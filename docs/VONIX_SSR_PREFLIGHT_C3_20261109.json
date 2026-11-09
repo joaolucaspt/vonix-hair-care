@@ -1,10 +1,20 @@
 {
-  "generatedAt": "2026-11-09T20:43:47.115Z",
+  "generatedAt": "2026-11-09T20:54:43.474Z",
   "environment": "http://127.0.0.1:43972",
   "target": "Local SSR only; no payment, leads or DB operations",
-  "productCount": 43,
-  "pagesChecked": 43,
-  "passed": 43,
+  "productCount": 42,
+  "sourceProductCount": 43,
+  "excludedProductSlugs": [
+    "plex-vonix"
+  ],
+  "excludedPages": [
+    {
+      "slug": "plex-vonix",
+      "status": 404
+    }
+  ],
+  "pagesChecked": 42,
+  "passed": 42,
   "failed": 0,
   "descriptionLengthRange": {
     "min": 139,
@@ -36,7 +46,7 @@
     "/sitemap.xml": {
       "status": 200,
       "descriptionHasCep": null,
-      "productUrls": 43
+      "productUrls": 42
     },
     "/robots.txt": {
       "status": 200,
