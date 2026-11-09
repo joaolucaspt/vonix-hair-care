@@ -11,7 +11,13 @@ declare global {
 /** Pixel Vonix | E-commerce no Gerenciador de Eventos. */
 export const META_PIXEL_ID = "2866590430205824";
 
-type Item = { item_id: string; item_name: string; item_variant: string; price: number; quantity: number };
+type Item = {
+  item_id: string;
+  item_name: string;
+  item_variant: string;
+  price: number;
+  quantity: number;
+};
 
 /** Identificador já usado nos relatórios do GA4. */
 export const catalogId = (slug: string) => `VONIX-${slug.replace(/^kit-/, "combo-").toUpperCase()}`;
@@ -51,7 +57,11 @@ export function metaParams(params: Record<string, unknown>) {
       ? {
           content_type: "product",
           content_ids: items.map((i) => metaCatalogId(i.item_id)),
-          contents: items.map((i) => ({ id: metaCatalogId(i.item_id), quantity: i.quantity, item_price: i.price })),
+          contents: items.map((i) => ({
+            id: metaCatalogId(i.item_id),
+            quantity: i.quantity,
+            item_price: i.price,
+          })),
           num_items: items.reduce((s, i) => s + i.quantity, 0),
         }
       : {}),
@@ -59,7 +69,10 @@ export function metaParams(params: Record<string, unknown>) {
 }
 
 const cookie = (name: string) =>
-  document.cookie.split("; ").find((c) => c.startsWith(`${name}=`))?.slice(name.length + 1);
+  document.cookie
+    .split("; ")
+    .find((c) => c.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
 
 /** Envia o mesmo evento à API de Conversões (via servidor) com o mesmo eventID do pixel, para a Meta deduplicar. */
 function sendServerEvent(event: string, eventId: string, customData: Record<string, unknown>) {
@@ -91,7 +104,9 @@ export function track(event: string, params: Record<string, unknown> = {}) {
       const eventID = `${event}-${params["transaction_id"] ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`;
       const customData = metaParams(params);
       window.fbq("track", metaEvent, customData, { eventID });
-      sendServerEvent(metaEvent, eventID, customData);
+      // A browser cannot assert that a payment was approved. Only the verified
+      // Appmax order path emits server-side Purchase with this same eventID.
+      if (metaEvent !== "Purchase") sendServerEvent(metaEvent, eventID, customData);
     }
   } catch {
     /* tracking must never break the store */

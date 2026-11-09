@@ -1,13 +1,27 @@
 import { META_PIXEL_ID } from "@/lib/analytics";
 import { env } from "@/lib/env.server";
 import { SITE_URL } from "@/lib/store";
+import { loadOrderSnapshot } from "@/lib/order-snapshot.server";
+import { isPaid, type AppmaxOrder } from "@/lib/appmax.server";
 
 /** Eventos que o site já envia pelo pixel e que também vão pelo servidor (mesmo eventID = deduplicação). */
 export const CAPI_EVENTS = new Set([
-  "PageView", "ViewContent", "AddToCart", "InitiateCheckout", "Purchase", "Lead",
+  "PageView",
+  "ViewContent",
+  "AddToCart",
+  "InitiateCheckout",
+  "Purchase",
+  "Lead",
 ]);
 
-const CUSTOM_DATA_KEYS = ["currency", "value", "content_type", "content_ids", "contents", "num_items"] as const;
+const CUSTOM_DATA_KEYS = [
+  "currency",
+  "value",
+  "content_type",
+  "content_ids",
+  "contents",
+  "num_items",
+] as const;
 
 export type CapiInput = {
   event: string;
@@ -27,7 +41,15 @@ export async function sendMetaEvent(input: CapiInput): Promise<"sent" | "skipped
   const token = env("META_CAPI_TOKEN");
   if (!token) return "skipped";
   if (!CAPI_EVENTS.has(input.event) || !input.eventId) return "skipped";
-  if (!input.url.startsWith(SITE_URL)) return "skipped";
+  // Prefix matching is unsafe: https://vonixhair.com.evil.example is not our site.
+  try {
+    const source = new URL(input.url);
+    const site = new URL(SITE_URL);
+    if (source.origin !== site.origin || !["https:", "http:"].includes(source.protocol))
+      return "skipped";
+  } catch {
+    return "skipped";
+  }
 
   const customData: Record<string, unknown> = {};
   for (const key of CUSTOM_DATA_KEYS) {
@@ -60,9 +82,40 @@ export async function sendMetaEvent(input: CapiInput): Promise<"sent" | "skipped
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4500),
     });
     return res.ok ? "sent" : "failed";
   } catch {
+    return "failed";
+  }
+}
+
+/** Only a verified merchant API order is permitted to create a server Purchase.
+ * The public browser endpoint deliberately rejects the same event name.
+ * Repeated notifications carry the same Meta event_id for deduplication.
+ */
+export async function sendVerifiedPurchase(
+  order: AppmaxOrder,
+): Promise<"sent" | "skipped" | "failed"> {
+  if (!env("META_CAPI_TOKEN") || !isPaid(order)) return "skipped";
+  const orderId = order.data.order.id;
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) return "skipped";
+  try {
+    const snapshot = await loadOrderSnapshot(orderId);
+    const subtotalCents = snapshot.products.reduce(
+      (total, p) => total + p.unitValueCents * p.quantity,
+      0,
+    );
+    const valueCents = subtotalCents + snapshot.shippingValueCents - snapshot.discountValueCents;
+    if (!Number.isSafeInteger(valueCents) || valueCents <= 0) return "skipped";
+    return await sendMetaEvent({
+      event: "Purchase",
+      eventId: `purchase-${orderId}`,
+      url: `${SITE_URL}/checkout`,
+      customData: { currency: "BRL", value: valueCents / 100 },
+    });
+  } catch {
+    // Marketing telemetry must never block paid orders or fulfillment.
     return "failed";
   }
 }

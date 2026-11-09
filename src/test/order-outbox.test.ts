@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   blingEnabled: vi.fn(() => true),
   loadOrderSnapshot: vi.fn(),
   finalizeIntent: vi.fn(),
+  metaPurchase: vi.fn(),
 }));
 vi.mock("@/lib/env.server", () => ({
   env: (key: string) =>
@@ -21,6 +22,7 @@ vi.mock("@/lib/order-snapshot.server", () => ({ loadOrderSnapshot: mocks.loadOrd
 vi.mock("@/lib/checkout-idempotency.server", () => ({
   finalizeCheckoutIntent: mocks.finalizeIntent,
 }));
+vi.mock("@/lib/meta-capi.server", () => ({ sendVerifiedPurchase: mocks.metaPurchase }));
 vi.mock("@/lib/bling.server", () => ({
   sendPaidOrder: mocks.sendPaidOrder,
   blingEnabled: mocks.blingEnabled,
@@ -43,6 +45,7 @@ beforeEach(() => {
   mocks.loadOrderSnapshot.mockResolvedValue({ orderId: 12, customer: { name: "Teste" } });
   mocks.sendPaidOrder.mockResolvedValue("enviado");
   mocks.finalizeIntent.mockResolvedValue(undefined);
+  mocks.metaPurchase.mockResolvedValue("sent");
 });
 
 describe("durable Appmax outbox", () => {
@@ -83,6 +86,11 @@ describe("durable Appmax outbox", () => {
     expect(mocks.getOrder).toHaveBeenCalledWith(12);
     expect(mocks.sendPaidOrder).toHaveBeenCalledTimes(1);
     expect(mocks.finalizeIntent).toHaveBeenCalledWith(12, "completed");
+    expect(mocks.metaPurchase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ order: expect.objectContaining({ status: "integrado" }) }),
+      }),
+    );
     expect(mocks.loadOrderSnapshot).toHaveBeenCalledWith(12);
     expect(mocks.sendPaidOrder).toHaveBeenCalledWith(expect.objectContaining({ orderId: 12 }));
   });
