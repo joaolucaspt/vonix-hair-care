@@ -271,6 +271,15 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(await screen.findByText("CPF inválido. Confira os números.")).toBeInTheDocument();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
+  it("não libera cobrança com cotação vazia ou sem transportadora válida", async () => {
+    mocks.quote.mockResolvedValue({ ok: true, options: [] });
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    expect(await screen.findByText(/Não encontramos entrega disponível/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("frete funciona sem endereço; dados manuais permitem continuar", async () => {
     mocks.address.mockRejectedValue(new Error("timeout"));
     render(<Checkout />);

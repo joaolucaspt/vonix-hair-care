@@ -140,6 +140,37 @@ describe("server authoritative checkout", () => {
     const customer = mocks.customer.mock.calls[0]![0];
     expect(customer.ip).toBe("0.0.0.0");
   });
+  it("rejects malformed provider quotes before presenting or charging freight", async () => {
+    mocks.shipping.mockResolvedValue([
+      { id: 21, name: "Inválida", company: "Correios", price: -12, days: 3 },
+      { id: 22, name: "Inválida", company: "Correios", price: Number.NaN, days: 3 },
+      { id: 23, name: "Inválida", company: "Correios", price: 25, days: -1 },
+      { id: 0, name: "Inválida", company: "Correios", price: 20, days: 3 },
+    ]);
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items: [item] } });
+    expect(quote).toEqual({ ok: true, options: [] });
+    const attempt = await createPayment({ data: { ...data, serviceId: 21 } });
+    expect(attempt).toMatchObject({ ok: false, message: "Escolha uma opção de entrega válida." });
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+
+  it("keeps a valid service even when mixed with malformed carrier quotes", async () => {
+    mocks.shipping.mockResolvedValue([
+      { id: 21, name: "Inválida", company: "Correios", price: -12, days: 1 },
+      { id: 23, name: "Normal", company: "Jadlog", price: 17.9, days: 4 },
+    ]);
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items: [item] } });
+    expect(quote).toMatchObject({ ok: true, options: [{ id: 23, price: 0, free: true }] });
+    expect(await createPayment({ data: { ...data, serviceId: 23 } })).toMatchObject({
+      ok: true,
+      method: "pix",
+    });
+    expect(mocks.createOrder.mock.calls[0]?.[0]).toMatchObject({ shipping_value: 0 });
+  });
+
   it("keeps Pix/card unavailable until strong server-side idempotency is configured", async () => {
     mocks.idempotencySecret = "weak";
     const config = await getPaymentConfig({});

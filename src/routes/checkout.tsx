@@ -319,7 +319,9 @@ function Checkout() {
             r.options.some((o) => o.id === cur) ? cur : (r.options[0]?.id ?? null),
           );
           if (!r.options.length)
-            setQuoteErr("Nenhuma transportadora atende este CEP. Fale com a gente no WhatsApp.");
+            setQuoteErr(
+              "Não encontramos entrega disponível para este CEP no momento. Confira o CEP ou fale com a gente no WhatsApp.",
+            );
         } else {
           setOptions([]);
           setServiceId(null);

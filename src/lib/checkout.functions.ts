@@ -60,7 +60,20 @@ async function shippingOptions(
   );
   const t = checkoutTotals(lines, "pix");
   const free = t.freeShipping || couponFreeShipping(findCoupon(couponCode), t.gross);
-  const picked = pickTwoShipping(quotes);
+  // Defense in depth: a future quote adapter must not smuggle invalid
+  // external money/dates into the customer's final payable total.
+  const usable = quotes.filter(
+    (q) =>
+      Number.isSafeInteger(q.id) &&
+      q.id > 0 &&
+      Number.isFinite(q.price) &&
+      q.price >= 0 &&
+      q.price <= 100_000 &&
+      Number.isInteger(q.days) &&
+      q.days >= 0 &&
+      q.days <= 365,
+  );
+  const picked = pickTwoShipping(usable);
   // Preserve the latest main: fastest and cheapest freight choices.
   const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
   const options = picked.map((q) => ({
