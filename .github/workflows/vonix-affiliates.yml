@@ -38,7 +38,6 @@ jobs:
             src/lib/affiliate-admin-session.server.ts \
             src/lib/affiliate-admin-auth.server.ts \
             src/lib/affiliate-application.ts \
-            src/lib/affiliate-commission-simulator.ts \
             src/lib/affiliate-applications.server.ts \
             src/lib/affiliate-email.ts \
             src/lib/affiliate-functions.ts \
@@ -46,15 +45,12 @@ jobs:
             src/lib/affiliate-wizard.ts \
             src/lib/affiliate-wizard-crypto.server.ts \
             src/components/affiliate-wizard.tsx \
-            src/components/affiliate-commission-simulator.tsx \
             src/routes/admin.afiliadas.tsx \
             src/routes/api.internal.affiliate-mail-worker.ts \
             src/routes/seja-afiliada.tsx \
             src/test/affiliate-admin-session.test.ts \
             src/test/affiliate-admin-auth.test.ts \
             src/test/affiliate-admin-ui.test.tsx \
-            src/test/affiliate-commission-simulator.test.ts \
-            src/test/affiliate-commission-simulator-ui.test.tsx \
             src/test/affiliate-recruitment.test.ts \
             src/test/affiliate-system.test.ts \
             src/test/affiliate-throttle.test.ts \
@@ -98,8 +94,6 @@ jobs:
           docker cp supabase/vonix-affiliate-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-qa.sql
           docker cp supabase/vonix-affiliate-governance.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance.sql
           docker cp supabase/vonix-affiliate-governance-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance-qa.sql
-          docker cp supabase/vonix-affiliate-sale-simulation.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-sale-simulation.sql
-          docker cp supabase/vonix-affiliate-sale-simulation-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-sale-simulation-qa.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-applications.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
@@ -108,8 +102,4 @@ jobs:
             -f /tmp/vonix-affiliate-governance.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-governance-qa.sql
-          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
-            -f /tmp/vonix-affiliate-sale-simulation.sql
-          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
-            -f /tmp/vonix-affiliate-sale-simulation-qa.sql
           node scripts/qa-affiliate-concurrency.mjs

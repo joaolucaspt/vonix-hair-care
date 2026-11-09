@@ -59,10 +59,12 @@ describe("Public affiliate launch gate", () => {
   it("only opens with explicit opt-in and a complete server-side configuration", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
     expect(affiliateRecruitmentOpen()).toBe(true);
-    process.env["AFFILIATE_FROM_EMAIL"] = "";
-    expect(affiliateRecruitmentOpen()).toBe(false);
-    process.env["AFFILIATE_FROM_EMAIL"] = "afiliados@example.invalid";
-    expect(affiliateRecruitmentOpen()).toBe(true);
+    // Sending decision e-mails is optional: receiving a candidature only
+    // depends on verified database, privacy, authentication and anti-abuse.
+    for (const setting of ["AFFILIATE_FROM_EMAIL", "RESEND_API_KEY", "AFFILIATE_WORKER_SECRET"]) {
+      delete process.env[setting];
+      expect(affiliateRecruitmentOpen()).toBe(true);
+    }
   });
   it("rejects partially configured dedicated DB instead of mixing credentials", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
@@ -70,6 +72,22 @@ describe("Public affiliate launch gate", () => {
     process.env["SUPABASE_SERVICE_ROLE_KEY"] = "wrong-other-database-key";
     expect(affiliateRecruitmentOpen()).toBe(false);
   });
+  it("rejects insecure or malformed service-role database URLs", () => {
+    process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
+    expect(affiliateRecruitmentOpen()).toBe(true);
+    for (const badUrl of [
+      "http://example.supabase.co",
+      "https://user:password@example.supabase.co",
+      "https://example.supabase.co/unexpected-path",
+      "https://example.supabase.co?apikey=unsafe",
+      "https://example.supabase.co:8080",
+      "javascript:alert(1)",
+    ]) {
+      process.env["AFFILIATE_SUPABASE_URL"] = badUrl;
+      expect(affiliateRecruitmentOpen()).toBe(false);
+    }
+  });
+
   it("requires an explicit trusted proxy header before opening registration", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
     expect(affiliateRecruitmentOpen()).toBe(true);
@@ -113,13 +131,9 @@ describe("Public affiliate launch gate", () => {
     process.env["AFFILIATE_ADMIN_TOTP_SECRET"] = "invalid";
     expect(affiliateRecruitmentOpen()).toBe(false);
   });
-  it("refuses launch when rate limiting, administrative session or worker lacks secrets", () => {
+  it("refuses launch when rate limiting or administrative session lacks secrets", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
-    for (const key of [
-      "AFFILIATE_TRAFFIC_PEPPER",
-      "AFFILIATE_ADMIN_SESSION_SECRET",
-      "AFFILIATE_WORKER_SECRET",
-    ]) {
+    for (const key of ["AFFILIATE_TRAFFIC_PEPPER", "AFFILIATE_ADMIN_SESSION_SECRET"]) {
       const saved = process.env[key]!;
       process.env[key] = "short";
       expect(affiliateRecruitmentOpen()).toBe(false);

@@ -16,6 +16,29 @@ import {
   encryptAffiliateWizard,
 } from "./affiliate-wizard-crypto.server";
 
+/**
+ * Service-role credentials may only travel over a dedicated HTTPS base URL.
+ * Reject credentials, embedded paths, queries and fragments in configuration
+ * before any applicant data or privileged token is sent.
+ */
+function validAffiliateDatabaseUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    return (
+      url.protocol === "https:" &&
+      url.hostname.length > 0 &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      (url.pathname === "/" || url.pathname === "") &&
+      !url.port
+    );
+  } catch {
+    return false;
+  }
+}
+
 function supabase() {
   const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
   const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
@@ -24,7 +47,8 @@ function supabase() {
   }
   const url = dedicatedUrl || env("SUPABASE_URL");
   const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Banco de inscrições não configurado.");
+  if (!url || !key || !validAffiliateDatabaseUrl(url))
+    throw new Error("Banco de inscrições não configurado de forma segura.");
   return {
     url: url.replace(/\/$/, ""),
     headers: {
@@ -54,17 +78,16 @@ export function affiliateRecruitmentOpen(): boolean {
   const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
   const otp = env("AFFILIATE_ADMIN_TOTP_SECRET").replace(/\s/g, "");
   return Boolean(
-    url &&
+    validAffiliateDatabaseUrl(url) &&
     key &&
     env("AFFILIATE_TRAFFIC_PEPPER").length >= 32 &&
     affiliateTrustedIpHeaderValid() &&
     affiliateQuestionnaireEncryptionReady() &&
     env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
     env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32 &&
-    /^[A-Z2-7]{32,128}$/i.test(otp) &&
-    env("AFFILIATE_WORKER_SECRET").length >= 24 &&
-    env("RESEND_API_KEY") &&
-    env("AFFILIATE_FROM_EMAIL"),
+    /^[A-Z2-7]{32,128}$/i.test(otp),
+    // Email notifications are optional for receiving applications. A missing
+    // Resend sender never authorizes sending or relaxes PII security checks.
   );
 }
 
@@ -85,6 +108,8 @@ async function requestSupabase(route: string, init?: RequestInit) {
   const response = await fetch(config.url + "/rest/v1/" + route, {
     ...init,
     headers: { ...config.headers, ...init?.headers },
+    // Do not follow unexpected redirects with privileged credentials.
+    redirect: "error",
     signal: AbortSignal.timeout(8000),
   });
   return response;
@@ -148,8 +173,11 @@ export async function affiliateOperationalReadiness() {
   const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
   const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
   const dbConfigured = Boolean(
-    (dedicatedUrl && dedicatedKey) ||
-    (!dedicatedUrl && !dedicatedKey && env("SUPABASE_URL") && env("SUPABASE_SERVICE_ROLE_KEY")),
+    (dedicatedUrl && dedicatedKey && validAffiliateDatabaseUrl(dedicatedUrl)) ||
+    (!dedicatedUrl &&
+      !dedicatedKey &&
+      validAffiliateDatabaseUrl(env("SUPABASE_URL")) &&
+      env("SUPABASE_SERVICE_ROLE_KEY")),
   );
   const checks = [
     { id: "database", label: "Credenciais do banco no servidor", ok: dbConfigured },
@@ -165,7 +193,7 @@ export async function affiliateOperationalReadiness() {
     },
     {
       id: "provider",
-      label: "Provedor e proxy homologados",
+      label: "Hospedagem e proxy homologados",
       ok: env("AFFILIATE_PROVIDER_VERIFIED") === "true",
     },
     {
@@ -192,18 +220,12 @@ export async function affiliateOperationalReadiness() {
     },
     {
       id: "resend",
-      label: "Envio de e-mails configurado",
+      label: "Notificações por e-mail (opcional para inscrições)",
       ok: Boolean(
         env("RESEND_API_KEY") &&
         env("AFFILIATE_FROM_EMAIL") &&
         env("AFFILIATE_WORKER_SECRET").length >= 24,
       ),
-    },
-    {
-      id: "commercial_ledger",
-      label: "Conciliação, comissões e pagamentos reais",
-      // Synthetic simulations must never be advertised as a live ledger.
-      ok: false,
     },
     {
       id: "launch",
