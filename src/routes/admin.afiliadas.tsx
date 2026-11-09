@@ -129,6 +129,7 @@ export function AffiliateAdminPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [erasureId, setErasureId] = useState<string | null>(null);
+  const [readinessBusy, setReadinessBusy] = useState(false);
   const [readiness, setReadiness] = useState<{
     checks: Array<{ id: string; label: string; ok: boolean }>;
     databaseResponding: boolean;
@@ -143,6 +144,8 @@ export function AffiliateAdminPage() {
     pendingEligible: number;
     rejectedEligible: number;
     executedDeletions: number;
+    pendingDays: number;
+    rejectedDays: number;
   } | null>(null);
   const [erasureEmail, setErasureEmail] = useState("");
   const [erasureReason, setErasureReason] = useState<
@@ -152,6 +155,8 @@ export function AffiliateAdminPage() {
   // Versions prevent any in-flight list or decision from restoring private data after logout.
   const sessionVersion = useRef(0);
   const loadVersion = useRef(0);
+  // A preview becomes obsolete as soon as the operator changes either interval.
+  const retentionVersion = useRef(0);
 
   function clearPrivateData() {
     setApplications([]);
@@ -169,9 +174,31 @@ export function AffiliateAdminPage() {
     setErasureId(null);
     setErasureEmail("");
     setReadiness(null);
+    setReadinessBusy(false);
+    retentionVersion.current += 1;
     setRetentionBusy(false);
     setRetentionError("");
     setRetentionResult(null);
+  }
+
+  function sessionExpired(reason: string): boolean {
+    if (reason !== "Acesso negado. Faça login novamente.") return false;
+    sessionVersion.current += 1;
+    loadVersion.current += 1;
+    setAuthorized(false);
+    setPassword("");
+    setOtp("");
+    clearPrivateData();
+    setLoading(false);
+    setError("Sua sessão expirou. Faça login novamente.");
+    return true;
+  }
+
+  function invalidateRetentionPreview() {
+    retentionVersion.current += 1;
+    setRetentionResult(null);
+    setRetentionError("");
+    setRetentionBusy(false);
   }
 
   async function load(
@@ -198,11 +225,7 @@ export function AffiliateAdminPage() {
       });
       if (!isCurrent()) return;
       if (!response.ok) {
-        setError(response.reason);
-        if (response.reason.includes("Acesso negado")) {
-          setAuthorized(false);
-          clearPrivateData();
-        }
+        if (!sessionExpired(response.reason)) setError(response.reason);
         return;
       }
       setAuthorized(true);
@@ -242,6 +265,45 @@ export function AffiliateAdminPage() {
     // Session status is checked only on initial mount, not on each filter change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A tab left open can outlive the signed two-hour admin session. Recheck
+  // authorization when it becomes active rather than leaving applicant data
+  // visible until the operator attempts a new action.
+  useEffect(() => {
+    if (!authorized) return;
+    let active = true;
+    let inFlight = false;
+
+    async function verifyResumedSession() {
+      if (!active || inFlight) return;
+      inFlight = true;
+      const sessionId = sessionVersion.current;
+      try {
+        const session = await getAffiliateAdminSession();
+        if (active && sessionId === sessionVersion.current && !session.authenticated) {
+          sessionExpired("Acesso negado. Faça login novamente.");
+        }
+      } catch {
+        // Temporary connectivity errors are not evidence that the cookie expired.
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    const onFocus = () => void verifyResumedSession();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void verifyResumedSession();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // Session transitions, not ordinary list rendering, control the listener lifecycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authorized]);
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -310,6 +372,7 @@ export function AffiliateAdminPage() {
       const result = await reviewAffiliateApplication({ data: { id: app.id, decision } });
       if (sessionVersion.current !== sessionId) return;
       if (!result.ok) {
+        if (sessionExpired(result.reason)) return;
         setError(result.reason);
       } else {
         setNotice(
@@ -346,6 +409,7 @@ export function AffiliateAdminPage() {
       });
       if (sessionId !== sessionVersion.current) return;
       if (!result.ok) {
+        if (sessionExpired(result.reason)) return;
         setError(result.reason);
       } else {
         setErasureId(null);
@@ -364,20 +428,24 @@ export function AffiliateAdminPage() {
   }
 
   async function inspectReadiness() {
-    if (!authorized || loading) return;
+    if (!authorized || loading || readinessBusy) return;
     const sessionId = sessionVersion.current;
+    setReadinessBusy(true);
+    setReadiness(null);
     setError("");
     try {
       const result = await getAffiliateOperationalReadiness();
       if (sessionId !== sessionVersion.current) return;
       if (!result.ok) {
-        setError(result.reason);
+        if (!sessionExpired(result.reason)) setError(result.reason);
         return;
       }
       setReadiness(result);
     } catch {
       if (sessionId === sessionVersion.current)
         setError("Não foi possível verificar a preparação do programa.");
+    } finally {
+      if (sessionId === sessionVersion.current) setReadinessBusy(false);
     }
   }
 
@@ -398,6 +466,9 @@ export function AffiliateAdminPage() {
     }
 
     const sessionId = sessionVersion.current;
+    const requestId = ++retentionVersion.current;
+    const isCurrent = () =>
+      sessionId === sessionVersion.current && requestId === retentionVersion.current;
     setRetentionBusy(true);
     setRetentionError("");
     setRetentionResult(null);
@@ -405,21 +476,22 @@ export function AffiliateAdminPage() {
       const response = await getAffiliateRetentionPreview({
         data: { pendingDays: retentionPendingDays, rejectedDays: retentionRejectedDays },
       });
-      if (sessionId !== sessionVersion.current) return;
+      if (!isCurrent()) return;
       if (!response.ok) {
-        setRetentionError(response.reason);
+        if (!sessionExpired(response.reason)) setRetentionError(response.reason);
         return;
       }
       setRetentionResult({
         pendingEligible: response.pendingEligible,
         rejectedEligible: response.rejectedEligible,
         executedDeletions: response.executedDeletions,
+        pendingDays: retentionPendingDays,
+        rejectedDays: retentionRejectedDays,
       });
     } catch {
-      if (sessionId === sessionVersion.current)
-        setRetentionError("Não foi possível consultar a prévia de retenção.");
+      if (isCurrent()) setRetentionError("Não foi possível consultar a prévia de retenção.");
     } finally {
-      if (sessionId === sessionVersion.current) setRetentionBusy(false);
+      if (isCurrent()) setRetentionBusy(false);
     }
   }
 
@@ -538,9 +610,10 @@ export function AffiliateAdminPage() {
                 <button
                   type="button"
                   onClick={() => void inspectReadiness()}
-                  className="min-h-11 rounded-full border border-[#d6b6be] px-5 text-sm font-semibold text-[#733e4a]"
+                  disabled={readinessBusy || loading}
+                  className="min-h-11 rounded-full border border-[#d6b6be] px-5 text-sm font-semibold text-[#733e4a] disabled:opacity-50"
                 >
-                  Verificar preparação
+                  {readinessBusy ? "Verificando preparação..." : "Verificar preparação"}
                 </button>
               </div>
               {readiness && (
@@ -629,7 +702,7 @@ export function AffiliateAdminPage() {
                     value={retentionPendingDays}
                     onChange={(event) => {
                       setRetentionPendingDays(Number(event.target.value));
-                      setRetentionResult(null);
+                      invalidateRetentionPreview();
                     }}
                     className="mt-2 min-h-11 w-full rounded-xl border border-[#dbc3c7] bg-white px-4 text-base"
                   />
@@ -649,7 +722,7 @@ export function AffiliateAdminPage() {
                     value={retentionRejectedDays}
                     onChange={(event) => {
                       setRetentionRejectedDays(Number(event.target.value));
-                      setRetentionResult(null);
+                      invalidateRetentionPreview();
                     }}
                     className="mt-2 min-h-11 w-full rounded-xl border border-[#dbc3c7] bg-white px-4 text-base"
                   />
@@ -669,6 +742,10 @@ export function AffiliateAdminPage() {
               )}
               {retentionResult && (
                 <div role="status" className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <p className="text-xs font-medium text-[#74545d] sm:col-span-2">
+                    Critérios desta consulta: pendentes há pelo menos {retentionResult.pendingDays}{" "}
+                    dias; recusadas há pelo menos {retentionResult.rejectedDays} dias.
+                  </p>
                   <div className="rounded-xl border border-[#f0e3df] bg-[#fffaf8] p-4">
                     <p className="text-xs text-[#806a6c]">Candidaturas pendentes para revisão</p>
                     <p className="mt-2 font-display text-3xl text-[#633e49]">
