@@ -8,9 +8,17 @@ create table if not exists public.vonix_order_outbox (
   claimed_until timestamptz,
   claim_token uuid,
   processed_at timestamptz,
+  review_required boolean not null default false,
+  review_event text,
+  review_marked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Supports reapplying this migration after a previous outbox version.
+alter table public.vonix_order_outbox add column if not exists review_required boolean not null default false;
+alter table public.vonix_order_outbox add column if not exists review_event text;
+alter table public.vonix_order_outbox add column if not exists review_marked_at timestamptz;
 
 create index if not exists vonix_order_outbox_poll
   on public.vonix_order_outbox (status, next_attempt_at);
@@ -53,17 +61,87 @@ revoke execute on function public.vonix_claim_order_outbox(integer) from public,
 grant execute on function public.vonix_claim_order_outbox(integer) to service_role;
 
 -- An incoming newer event wakes pending work immediately while never reopens done orders.
-create or replace function public.vonix_enqueue_order(p_order_id bigint)
+-- Remove legacy one-argument overload before creating the event-aware RPC.
+drop function if exists public.vonix_enqueue_order(bigint);
+create or replace function public.vonix_enqueue_order(p_order_id bigint, p_event text default null)
 returns void language plpgsql security definer set search_path = public
 as $$
 begin
   if p_order_id is null or p_order_id <= 0 then raise exception 'invalid order id'; end if;
+  -- The Appmax webhook is unsigned. Only locally created orders may be enqueued.
+  -- Missing snapshots should fail and be retried instead of exporting foreign IDs.
+  if not exists (select 1 from public.vonix_order_snapshots s where s.order_id = p_order_id) then
+    raise exception 'order snapshot absent' using errcode = '23503';
+  end if;
   insert into public.vonix_order_outbox(order_id) values (p_order_id)
   on conflict (order_id) do update
-    set next_attempt_at = least(public.vonix_order_outbox.next_attempt_at, now()),
+    set next_attempt_at = case
+          when public.vonix_order_outbox.status = 'pending'
+          then least(public.vonix_order_outbox.next_attempt_at, now())
+          else public.vonix_order_outbox.next_attempt_at
+        end,
+        -- Never re-export a completed order because a later refund/chargeback arrived.
+        -- Preserve it and raise a human-review flag instead (no automatic refunds).
+        review_required = public.vonix_order_outbox.review_required or
+          (public.vonix_order_outbox.status = 'completed'
+           and p_event in ('order_refund', 'order_partial_refund',
+                           'order_chargeback_in_treatment', 'order_refused_by_risk',
+                           'order_cancelled', 'order_canceled')),
+        review_event = case
+          when public.vonix_order_outbox.status = 'completed'
+           and p_event in ('order_refund', 'order_partial_refund',
+                           'order_chargeback_in_treatment', 'order_refused_by_risk',
+                           'order_cancelled', 'order_canceled')
+          then p_event else public.vonix_order_outbox.review_event
+        end,
+        review_marked_at = case
+          when public.vonix_order_outbox.status = 'completed'
+           and p_event in ('order_refund', 'order_partial_refund',
+                           'order_chargeback_in_treatment', 'order_refused_by_risk',
+                           'order_cancelled', 'order_canceled')
+          then now() else public.vonix_order_outbox.review_marked_at
+        end,
         updated_at = now()
-  where public.vonix_order_outbox.status = 'pending';
+  where public.vonix_order_outbox.status = 'pending'
+     or (public.vonix_order_outbox.status = 'completed'
+         and p_event in ('order_refund', 'order_partial_refund',
+                         'order_chargeback_in_treatment', 'order_refused_by_risk',
+                         'order_cancelled', 'order_canceled'));
 end;
 $$;
-revoke execute on function public.vonix_enqueue_order(bigint) from public, anon, authenticated;
-grant execute on function public.vonix_enqueue_order(bigint) to service_role;
+revoke execute on function public.vonix_enqueue_order(bigint, text) from public, anon, authenticated;
+grant execute on function public.vonix_enqueue_order(bigint, text) to service_role;
+
+-- Recovery path for webhooks that Appmax dropped after the maximum four attempts.
+-- Recover only locally created, old-enough, not-yet-enqueued orders. Never reopen
+-- completed ones or shorten backoffs of pending/leased work. Scheduled workers
+-- will re-check the real Appmax status before any export.
+create or replace function public.vonix_reconcile_order_outbox(max_count integer default 10)
+returns integer language plpgsql security definer set search_path = public
+as $$
+declare
+  inserted_count integer;
+begin
+  with missing as (
+    select s.order_id
+    from public.vonix_order_snapshots s
+    where s.created_at < now() - interval '2 minutes'
+      and s.created_at >= now() - interval '90 days'
+      and not exists (
+        select 1 from public.vonix_order_outbox o where o.order_id = s.order_id
+      )
+    order by s.created_at, s.order_id
+    limit least(greatest(coalesce(max_count, 10), 1), 20)
+  ), added as (
+    insert into public.vonix_order_outbox(order_id)
+    select order_id from missing
+    on conflict (order_id) do nothing
+    returning order_id
+  )
+  select count(*)::integer into inserted_count from added;
+  return inserted_count;
+end;
+$$;
+
+revoke execute on function public.vonix_reconcile_order_outbox(integer) from public, anon, authenticated;
+grant execute on function public.vonix_reconcile_order_outbox(integer) to service_role;

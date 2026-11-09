@@ -3,6 +3,8 @@ const EVENTS = new Set([
   "order_paid",
   "order_approved",
   "order_integrated",
+  "order_pending_integration",
+  "order_refused_by_risk",
   "order_paid_by_pix",
   "order_refund",
   "order_partial_refund",

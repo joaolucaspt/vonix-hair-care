@@ -24,6 +24,7 @@ async function getToken(force = false) {
     method: "POST",
     headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded", Accept: "1.0" },
     body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: currentRefreshToken }),
+    signal: AbortSignal.timeout(8_000),
   });
   if (!res.ok) throw new Error(`Bling auth ${res.status}`);
   const j = (await res.json()) as { access_token: string; refresh_token: string; expires_in: number };
@@ -37,6 +38,7 @@ async function bling<T>(method: "GET" | "POST", path: string, body?: unknown, re
     method,
     headers: { Authorization: `Bearer ${await getToken(retried)}`, Accept: "application/json", "Content-Type": "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),
+    signal: AbortSignal.timeout(10_000),
   });
   if (res.status === 401 && !retried) return bling<T>(method, path, body, true);
   const text = await res.text();

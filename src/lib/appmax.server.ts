@@ -17,6 +17,7 @@ async function getToken(force = false) {
       client_id: requireEnv("APPMAX_CLIENT_ID"),
       client_secret: requireEnv("APPMAX_CLIENT_SECRET"),
     }),
+    signal: AbortSignal.timeout(8_000),
   });
   if (!res.ok) throw new Error(`Appmax auth ${res.status}`);
   const j = (await res.json()) as { access_token: string; expires_in: number };
@@ -33,6 +34,7 @@ async function appmax<T>(method: "GET" | "POST", path: string, body?: unknown, r
       "Content-Type": "application/json",
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
+    signal: AbortSignal.timeout(10_000),
   });
   if (res.status === 401 && !retried) return appmax<T>(method, path, body, true);
   const text = await res.text();

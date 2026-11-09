@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { parseOrderEvent } from "@/lib/order-events";
 import { env } from "@/lib/env.server";
+import { BodyLimitError, readTextBounded } from "@/lib/bounded-http-body";
 import { enqueueOrder } from "@/lib/order-outbox.server";
 
 /** Appmax has no HMAC: never trust the event status, only enqueue the ID.
@@ -8,14 +9,15 @@ import { enqueueOrder } from "@/lib/order-outbox.server";
  * Appmax expects a response within 5 seconds; no ERP calls occur here.
  */
 export async function receiveAppmaxWebhook(request: Request): Promise<Response> {
-  const bytes = Number(request.headers.get("content-length") ?? 0);
-  if (bytes > 16_384) return new Response("payload too large", { status: 413 });
   let payload: unknown;
   try {
-    const text = await request.text();
-    if (text.length > 16_384) return new Response("payload too large", { status: 413 });
-    payload = JSON.parse(text) as unknown;
-  } catch {
+    payload = JSON.parse(await readTextBounded(request)) as unknown;
+  } catch (error) {
+    if (error instanceof BodyLimitError) {
+      return new Response(error.kind === "too_large" ? "payload too large" : "request timeout", {
+        status: error.kind === "too_large" ? 413 : 408,
+      });
+    }
     return new Response("invalid json", { status: 400 });
   }
   // Appmax does not sign webhooks. Bind their envelope to the authorized store
@@ -44,7 +46,7 @@ export async function receiveAppmaxWebhook(request: Request): Promise<Response> 
     );
   }
   try {
-    await enqueueOrder(event.orderId); // durable unique key, safely ignores duplicates
+    await enqueueOrder(event.orderId, event.event); // durable unique key, human-review flags for later reversals
     return new Response("queued", { status: 202 });
   } catch {
     // Do not acknowledge a failed durable write. Appmax retries non-2xx replies.

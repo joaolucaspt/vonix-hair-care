@@ -42,6 +42,12 @@ describe("webhooks are untrusted IDs, not payment evidence", () => {
       orderId: 502,
     });
   });
+  it.each(["order_pending_integration", "order_refused_by_risk", "order_chargeback_in_treatment"])(
+    "accepts the documented %s event for reconciliation or manual review",
+    (event) => {
+      expect(parseOrderEvent({ event, data: { order_id: 503 } })).toEqual({ event, orderId: 503 });
+    },
+  );
   it.each([
     null,
     {},

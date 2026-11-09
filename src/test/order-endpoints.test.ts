@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   enqueueOrder: vi.fn(),
   processOrderOutbox: vi.fn(),
+  reconcileOrderOutbox: vi.fn(),
 }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: unknown) => ({ config }),
@@ -19,6 +20,7 @@ vi.mock("@/lib/env.server", () => ({
 vi.mock("@/lib/order-outbox.server", () => ({
   enqueueOrder: mocks.enqueueOrder,
   processOrderOutbox: mocks.processOrderOutbox,
+  reconcileOrderOutbox: mocks.reconcileOrderOutbox,
 }));
 import { receiveAppmaxWebhook } from "@/routes/api.public.appmax-webhook";
 import { receiveOrderWorker } from "@/routes/api.internal.order-worker";
@@ -35,7 +37,10 @@ const request = (data: unknown, headers: Record<string, string> = {}) =>
     }),
   });
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.reconcileOrderOutbox.mockResolvedValue(2);
+});
 
 describe("Appmax webhook is durable and does no synchronous ERP work", () => {
   it("accepts official nested order.id only after durable enqueue", async () => {
@@ -43,7 +48,15 @@ describe("Appmax webhook is durable and does no synchronous ERP work", () => {
       request({ event: "order_integrated", data: { order: { id: 10 } } }),
     );
     expect(response.status).toBe(202);
-    expect(mocks.enqueueOrder).toHaveBeenCalledExactlyOnceWith(10);
+    expect(mocks.enqueueOrder).toHaveBeenCalledExactlyOnceWith(10, "order_integrated");
+  });
+  it("flags late refunds for review, without executing the ERP synchronously", async () => {
+    const response = await receiveAppmaxWebhook(
+      request({ event: "order_refund", data: { order_id: 10 } }),
+    );
+    expect(response.status).toBe(202);
+    expect(mocks.enqueueOrder).toHaveBeenCalledExactlyOnceWith(10, "order_refund");
+    expect(mocks.processOrderOutbox).not.toHaveBeenCalled();
   });
   it("returns non-2xx on storage failure so Appmax retries", async () => {
     mocks.enqueueOrder.mockRejectedValueOnce(new Error("supabase offline"));
@@ -90,6 +103,15 @@ describe("protected outbox worker", () => {
   it("rejects unauthenticated callers without running jobs", async () => {
     expect((await receiveOrderWorker(request({}))).status).toBe(401);
     expect(mocks.processOrderOutbox).not.toHaveBeenCalled();
+    expect(mocks.reconcileOrderOutbox).not.toHaveBeenCalled();
+  });
+  it("returns service unavailable if recovery storage is down, before claiming any orders", async () => {
+    mocks.reconcileOrderOutbox.mockRejectedValueOnce(new Error("database down"));
+    const response = await receiveOrderWorker(
+      request({}, { authorization: "Bearer test-only-worker-secret" }),
+    );
+    expect(response.status).toBe(503);
+    expect(mocks.processOrderOutbox).not.toHaveBeenCalled();
   });
   it("accepts exact secret and reports counts only", async () => {
     mocks.processOrderOutbox.mockResolvedValueOnce({
@@ -103,6 +125,7 @@ describe("protected outbox worker", () => {
       request({}, { authorization: "Bearer test-only-worker-secret" }),
     );
     expect(response.status).toBe(200);
-    expect((await response.json()).exported).toBe(1);
+    expect(await response.json()).toMatchObject({ recovered: 2, exported: 1 });
+    expect(mocks.reconcileOrderOutbox).toHaveBeenCalledWith(10);
   });
 });

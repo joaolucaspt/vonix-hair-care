@@ -195,7 +195,7 @@ function Checkout() {
   const [pix, setPix] = useState<PixResult | null>(null);
   const [paid, setPaid] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [cardDone, setCardDone] = useState<{ orderId: number; paid: boolean } | null>(null);
+  const [cardDone, setCardDone] = useState<{ orderId: number; paid: boolean; statusToken: string; total: number; status: string } | null>(null);
   const [cfg, setCfg] = useState<{
     externalId: string;
     sandbox: boolean;
@@ -329,7 +329,10 @@ function Checkout() {
     setCouponMsg(chk.ok ? `Cupom ${found.code} aplicado: ${found.label}.` : chk.reason);
   };
 
+  const finishedOrders = useRef(new Set<number>());
   const finish = (orderId: number, value: number) => {
+    if (finishedOrders.current.has(orderId)) return;
+    finishedOrders.current.add(orderId);
     track("purchase", {
       transaction_id: String(orderId),
       value,
@@ -353,6 +356,40 @@ function Checkout() {
     }, 5000);
     return () => clearInterval(timer);
   }, [pix, paid]);
+
+  // Card authorization and antifraud checks are asynchronous. Poll the same
+  // order instead of inviting a second payment while its status is uncertain.
+  useEffect(() => {
+    if (!cardDone || cardDone.paid ||
+        ["cancelado", "estornado", "recusado_por_risco"].includes(cardDone.status)) return;
+    let disposed = false;
+    let checking = false;
+    const check = async () => {
+      if (checking) return;
+      checking = true;
+      try {
+        const result = await getOrderStatus({
+          data: { orderId: cardDone.orderId, statusToken: cardDone.statusToken },
+        });
+        if (disposed || !result.ok) return;
+        if (result.paid) {
+          setCardDone((previous) => previous?.orderId === cardDone.orderId
+            ? { ...previous, paid: true, status: result.status } : previous);
+          finishRef.current(cardDone.orderId, cardDone.total);
+        } else if (result.status !== cardDone.status) {
+          setCardDone((previous) => previous?.orderId === cardDone.orderId
+            ? { ...previous, status: result.status } : previous);
+        }
+      } catch {
+        // A network error does not mean the card was declined.
+      } finally {
+        checking = false;
+      }
+    };
+    void check();
+    const timer = setInterval(() => { void check(); }, 5_000);
+    return () => { disposed = true; clearInterval(timer); };
+  }, [cardDone]);
 
   const submitPayment = async (token?: string) => {
     if (!chosen) {
@@ -398,12 +435,8 @@ function Checkout() {
         });
         window.scrollTo({ top: 0 });
       } else {
-        setCardDone({ orderId: r.orderId, paid: r.paid });
+        setCardDone({ orderId: r.orderId, paid: r.paid, statusToken: r.statusToken, total: r.total, status: r.status });
         if (r.paid) finish(r.orderId, r.total);
-        else
-          setError(
-            "Pagamento em análise ou não aprovado. Confira com seu banco ou tente outro cartão ou o Pix.",
-          );
       }
     } catch {
       setError("Não conseguimos processar agora. Tente novamente em instantes.");
@@ -481,6 +514,36 @@ function Checkout() {
         </div>
       </Shell>
     );
+
+  if (cardDone && !cardDone.paid) {
+    const declined = ["cancelado", "estornado", "recusado_por_risco"].includes(cardDone.status);
+    return (
+      <Shell>
+        <div className="container-site max-w-xl py-16 text-center" role="status" aria-live="polite">
+          <h1 className="font-display text-h1">
+            {declined ? "Pagamento não aprovado" : "Pagamento em análise"}
+          </h1>
+          <p className="mt-3 text-body text-muted-foreground">
+            Pedido nº {cardDone.orderId}.
+            {declined
+              ? " A Appmax informou que este pedido não foi aprovado. Consulte o suporte antes de iniciar uma nova tentativa."
+              : cardDone.status === "autorizado"
+                ? " O banco autorizou o cartão, mas a análise antifraude ainda não terminou."
+                : " Estamos verificando a confirmação junto à Appmax. Este processo pode levar alguns minutos."}
+          </p>
+          {!declined && (
+            <p className="mt-4 rounded-lg border border-border bg-muted p-4 text-body">
+              Não efetue outro pagamento enquanto este pedido estiver em análise.
+              A página verifica a situação automaticamente.
+            </p>
+          )}
+          <Link to="/conta" className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground">
+            Acompanhar pelo atendimento
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
 
   if (cardDone?.paid)
     return (

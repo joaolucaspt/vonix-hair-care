@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   customer: vi.fn(),
   createOrder: vi.fn(),
   pix: vi.fn(),
+  card: vi.fn(),
   shipping: vi.fn(),
   status: vi.fn(),
   affiliate: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock("@/lib/appmax.server", () => ({
   createCustomer: mocks.customer,
   createOrder: mocks.createOrder,
   payWithPix: mocks.pix,
+  payWithCard: mocks.card,
   getOrder: mocks.status,
   isPaid: () => true,
 }));
@@ -66,6 +68,8 @@ beforeEach(() => {
   mocks.customer.mockResolvedValue(321);
   mocks.createOrder.mockResolvedValue(654);
   mocks.saveSnapshot.mockResolvedValue(undefined);
+  mocks.card.mockResolvedValue(undefined);
+  mocks.status.mockResolvedValue({ data: { order: { id: 654, status: "autorizado" } } });
   mocks.pix.mockResolvedValue({
     pix_emv: "test-emv",
     pix_qrcode: "test-qr",
@@ -95,6 +99,33 @@ describe("server authoritative checkout", () => {
     expect(mocks.createOrder).toHaveBeenCalledTimes(1);
     expect(mocks.saveSnapshot).toHaveBeenCalledTimes(1);
     expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("never reports a card payment as declined merely because gateway confirmation timed out", async () => {
+    mocks.card.mockRejectedValueOnce(new Error("network timeout"));
+    const r = await createPayment({ data: { ...data, method: "card", token: "token-test" } });
+    expect(r).toMatchObject({
+      ok: true,
+      method: "card",
+      orderId: 654,
+      paid: false,
+      status: "verificacao_necessaria",
+    });
+    expect(mocks.createOrder).toHaveBeenCalledTimes(1);
+    expect(mocks.card).toHaveBeenCalledTimes(1);
+    expect(mocks.status).not.toHaveBeenCalled();
+  });
+  it("preserves the order reference if post-charge status polling is unavailable", async () => {
+    mocks.status.mockRejectedValueOnce(new Error("status timeout"));
+    const r = await createPayment({ data: { ...data, method: "card", token: "token-test" } });
+    expect(r).toMatchObject({
+      ok: true,
+      method: "card",
+      orderId: 654,
+      paid: false,
+      status: "aguardando_confirmacao",
+    });
+    expect(mocks.card).toHaveBeenCalledTimes(1);
+    expect(mocks.status).toHaveBeenCalledTimes(1);
   });
   it("denies forged complement discounts without a real eligible base product", async () => {
     const invalid = await createPayment({

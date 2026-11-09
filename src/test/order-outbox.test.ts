@@ -19,13 +19,14 @@ vi.mock("@/lib/bling.server", () => ({
   sendPaidOrder: mocks.sendPaidOrder,
   blingEnabled: mocks.blingEnabled,
 }));
-import { enqueueOrder, processOrderOutbox } from "@/lib/order-outbox.server";
+import { enqueueOrder, processOrderOutbox, reconcileOrderOutbox } from "@/lib/order-outbox.server";
 
 const fetchMock = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockImplementation(async (input: string, init: RequestInit) => {
+    if (input.includes("rpc/vonix_reconcile_order_outbox")) return Response.json(2);
     if (input.includes("rpc/vonix_claim_order_outbox"))
       return Response.json([{ order_id: 12, claim_token: "11111111-1111-4111-8111-111111111111" }]);
     if (input.includes("rpc/vonix_enqueue_order")) return new Response(null, { status: 204 });
@@ -38,6 +39,20 @@ beforeEach(() => {
 });
 
 describe("durable Appmax outbox", () => {
+  it("recovers only IDs with missing webhooks, without calling payment or Bling APIs", async () => {
+    const count = await reconcileOrderOutbox(100);
+    expect(count).toBe(2);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("rpc/vonix_reconcile_order_outbox"),
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ max_count: 20 }) }),
+    );
+    expect(mocks.getOrder).not.toHaveBeenCalled();
+    expect(mocks.sendPaidOrder).not.toHaveBeenCalled();
+  });
+  it("rejects malformed recovery replies rather than reporting imaginary work", async () => {
+    fetchMock.mockResolvedValue(Response.json({ recovered: "all" }));
+    await expect(reconcileOrderOutbox()).rejects.toThrow("Contagem de conciliação inválida");
+  });
   it("enqueues by unique order_id without calling Appmax or Bling", async () => {
     await enqueueOrder(12);
     expect(fetchMock).toHaveBeenCalledWith(

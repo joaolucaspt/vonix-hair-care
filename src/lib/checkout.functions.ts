@@ -178,17 +178,27 @@ export const createPayment = createServerFn({ method: "POST" })
       }
 
       if (!data.token) return { ok: false as const, message: "Não foi possível validar o cartão. Confira os dados e tente de novo." };
-      await appmax.payWithCard({
-        orderId,
-        customerId,
-        token: data.token,
-        holderName: data.holderName || data.customer.nome,
-        document,
-        installments: data.installments ?? 1,
-      });
-      const order = await appmax.getOrder(orderId);
-      if (ref && appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
-      return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: appmax.isPaid(order), status: order.data.order.status };
+      // A timeout after submitting a card is NOT proof that payment was declined.
+      // Preserve the order reference and check asynchronously, never prompt double charge.
+      try {
+        await appmax.payWithCard({
+          orderId,
+          customerId,
+          token: data.token,
+          holderName: data.holderName || data.customer.nome,
+          document,
+          installments: data.installments ?? 1,
+        });
+      } catch {
+        return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: false, status: "verificacao_necessaria" };
+      }
+      try {
+        const order = await appmax.getOrder(orderId);
+        if (ref && appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
+        return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: appmax.isPaid(order), status: order.data.order.status };
+      } catch {
+        return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: false, status: "aguardando_confirmacao" };
+      }
     } catch (e) {
       console.error("[pagamento]", e);
       return { ok: false as const, message: "Não conseguimos processar o pagamento. Confira os dados ou tente outra forma de pagamento." };

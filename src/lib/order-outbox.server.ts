@@ -41,9 +41,29 @@ async function db<T>(
   return (await response.json()) as T;
 }
 
-export async function enqueueOrder(orderId: number): Promise<void> {
+export async function enqueueOrder(orderId: number, event: string | null = null): Promise<void> {
   if (!Number.isSafeInteger(orderId) || orderId < 1) throw new Error("ID de pedido inválido");
-  await db<void>("rpc/vonix_enqueue_order", "POST", { p_order_id: orderId }, "return=minimal");
+  // Used only to signal manual review of already-exported refunded/charged-back orders.
+  // The database validates that the order was created by this checkout.
+  await db<void>(
+    "rpc/vonix_enqueue_order",
+    "POST",
+    { p_order_id: orderId, p_event: event },
+    "return=minimal",
+  );
+}
+
+/** Repair lost Appmax callbacks: enqueue only snapshots with no outbox record.
+ * The SQL RPC applies a bounded, age-gated insert; no browser access or secrets.
+ * A recovered ID still needs authoritative Appmax payment status confirmation.
+ */
+export async function reconcileOrderOutbox(limit = 10): Promise<number> {
+  const count = await db<number>("rpc/vonix_reconcile_order_outbox", "POST", {
+    max_count: Math.max(1, Math.min(Math.floor(limit), 20)),
+  });
+  if (!Number.isSafeInteger(count) || count < 0 || count > 20)
+    throw new Error("Contagem de conciliação inválida");
+  return count;
 }
 
 async function claim(limit: number) {

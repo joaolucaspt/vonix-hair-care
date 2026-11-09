@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getProduct, lineTotals } from "@/lib/store";
 
@@ -82,6 +82,7 @@ afterEach(() => {
   delete window.gtag;
   delete window.fbq;
   delete window.clarity;
+  delete window.AppmaxScripts;
 });
 const fill = async () => {
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
@@ -176,6 +177,84 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(await screen.findByText(/Estimativa de frete/)).toBeInTheDocument();
     expect(screen.getByText("Correios PAC")).toBeInTheDocument();
     expect(mocks.quote).toHaveBeenCalledTimes(1);
+  });
+  it("cartão em análise fica em acompanhamento, sem sugerir uma segunda cobrança", async () => {
+    let onTokenize: ((value: { token: string }) => void) | undefined;
+    window.AppmaxScripts = {
+      init: ({ onTokenize: handler }) => {
+        onTokenize = handler;
+      },
+    };
+    mocks.payment.mockResolvedValueOnce({
+      ok: true,
+      method: "card",
+      orderId: 654,
+      statusToken: "signed-test-only",
+      total: 154.9,
+      paid: false,
+      status: "autorizado",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "autorizado" });
+    const gtag = window.gtag;
+    if (!gtag) throw new Error("Analytics mock ausente");
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const script = await waitFor(() => {
+      const element = document.querySelector('script[src*="appmax.min.js"]');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.load(script);
+    expect(onTokenize).toBeDefined();
+    await act(async () => {
+      onTokenize?.({ token: "token-test" });
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em análise" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Não efetue outro pagamento/)).toBeInTheDocument();
+    expect(screen.queryByText(/tente outro cartão/)).not.toBeInTheDocument();
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(gtag).mock.calls.filter((call) => call[1] === "purchase")).toHaveLength(0);
+  });
+  it("registra a compra uma única vez após a Appmax confirmar cartão antes em análise", async () => {
+    let onTokenize: ((value: { token: string }) => void) | undefined;
+    window.AppmaxScripts = {
+      init: ({ onTokenize: handler }) => {
+        onTokenize = handler;
+      },
+    };
+    mocks.payment.mockResolvedValueOnce({
+      ok: true,
+      method: "card",
+      orderId: 655,
+      statusToken: "signed-test-only",
+      total: 154.9,
+      paid: false,
+      status: "autorizado",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: true, status: "aprovado" });
+    const gtag = window.gtag;
+    if (!gtag) throw new Error("Analytics mock ausente");
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const script = await waitFor(() => {
+      const element = document.querySelector('script[src*="appmax.min.js"]');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.load(script);
+    await act(async () => {
+      onTokenize?.({ token: "test-token" });
+    });
+    expect(await screen.findByRole("heading", { name: "Pagamento aprovado!" })).toBeInTheDocument();
+    expect(mocks.status).toHaveBeenCalledWith({
+      data: { orderId: 655, statusToken: "signed-test-only" },
+    });
+    expect(mocks.cart.clear).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(gtag).mock.calls.filter((call) => call[1] === "purchase")).toHaveLength(1);
   });
   it("view_cart e add_shipping_info sem duplicatas ou dados pessoais", async () => {
     const gtag = window.gtag;
