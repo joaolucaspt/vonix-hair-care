@@ -62,3 +62,7 @@ A main `6ce6952` alterou `src/components/buy-drawer.tsx`, checkout e PDP. O merg
 ### Portas C15 — versão com gaveta de compra
 
 Na integração futura da nova `main`, exigir simultaneamente (1) testes de idempotência, `statusToken` e recuperação após timeout Pix/cartão do checkout auditado; (2) modal da PDP com foco/teclado e alvos >=44 px; (3) frete não garantido sem cotação de CEP, utilizando subtotal de produtos bruto para a regra comercial; (4) consentimento não pode interceptar CTA nem forçar rastreamento; (5) teste no **runtime Cloudflare** real de staging, já que `vite preview` local não serve o preset Nitro emitido. Sem assinatura de Appmax/Supabase/Bling e conciliação de vendas pagas, PR #26 não é liberado a produção.
+
+### C16 — gate adicional de checkout acessível e recuperável
+
+Antes de liberar o PR #26, executar homologação do checkout real no runtime Cloudflare staging com frete e cartões simulados: (a) retentativa de CEP após erro, sem novo pagamento; (b) CPF inválido recebendo foco e sem cobrança; (c) total mobile refletindo Pix/cartão e cotação, sem prometer frete antes do CEP; (d) ida/volta sacola preservando itens; (e) idempotência e recuperação de tentativas ambíguas Pix/cartão mantidas após conciliação com a interface compacta da main. Sem Appmax sandbox/Supabase staging/estoque real validados, manter **NOT_APPROVED**.

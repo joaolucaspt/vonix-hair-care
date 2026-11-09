@@ -17,7 +17,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => ({ options }),
-  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+  Link: ({ children, to }: { children: React.ReactNode; to?: string }) => (
+    <a href={to}>{children}</a>
+  ),
   notFound: vi.fn(),
   useNavigate: () => vi.fn(),
 }));
@@ -124,6 +126,59 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("erro de frete mantém botão fora do parágrafo de alerta para HTML e hidratação válidos", async () => {
+    mocks.quote.mockResolvedValueOnce({
+      ok: false,
+      message: "Transportadora temporariamente indisponível",
+    });
+    const { container } = render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    expect(
+      await screen.findByText("Transportadora temporariamente indisponível"),
+    ).toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    expect(alert.tagName).toBe("P");
+    expect(alert.querySelector("button")).toBeNull();
+    const retry = screen.getByRole("button", { name: "Tentar calcular frete novamente" });
+    expect(alert.parentElement).toContainElement(retry);
+    expect(container.querySelector("p button")).toBeNull();
+  });
+
+  it("CPF recusado destaca o campo correspondente sem chamar pagamento", async () => {
+    render(<Checkout />);
+    await fill();
+    fireEvent.change(screen.getByLabelText("CPF"), { target: { value: "00000000000" } });
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(screen.getByText("CPF inválido. Confira os números.")).toBeInTheDocument();
+    expect(screen.getByLabelText("CPF")).toHaveFocus();
+    expect(screen.getByLabelText("CPF")).toHaveAttribute("aria-invalid", "true");
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("mostra total atualizado e acesso para editar sacola no começo do checkout em telas pequenas", async () => {
+    render(<Checkout />);
+    expect(screen.getByText("Resumo rápido da compra")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /editar sacola/i })).toHaveAttribute(
+      "href",
+      "/carrinho",
+    );
+    expect(screen.getByText(/frete calculado pelo CEP/i)).toBeInTheDocument();
+  });
+
+  it("resumo rápido acompanha cotação e método sem prometer frete antecipadamente", async () => {
+    render(<Checkout />);
+    const quick = screen.getByText("Resumo rápido da compra").parentElement?.parentElement;
+    expect(quick?.textContent).toContain("Frete calculado pelo CEP");
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    await screen.findByText(/Correios PAC/);
+    await waitFor(() => expect(quick?.textContent).toContain("Frete grátis cotado"));
+    const before = quick?.querySelector("b")?.textContent;
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const after = quick?.querySelector("b")?.textContent;
+    expect(after).not.toBe(before);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("refaz a cotação após total alterado sem repetir pagamento", async () => {
     mocks.payment.mockResolvedValueOnce({
       ok: false,

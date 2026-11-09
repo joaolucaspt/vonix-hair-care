@@ -220,6 +220,8 @@ function Checkout() {
     uf: "",
   });
   const numeroRef = useRef<HTMLInputElement>(null);
+  const cpfRef = useRef<HTMLInputElement>(null);
+  const [cpfInvalid, setCpfInvalid] = useState(false);
   const [pay, setPay] = useState<"pix" | "card">("pix");
   const [showCoupon, setShowCoupon] = useState(false);
   const [coupon, setCoupon] = useState("");
@@ -724,7 +726,9 @@ function Checkout() {
     if (busy || cardDone || paymentInFlight.current) return;
     if (!isValidCpf(f.cpf)) {
       track("checkout_error", { step: "customer", reason: "invalid_cpf" });
+      setCpfInvalid(true);
       setError("CPF inválido. Confira os números.");
+      cpfRef.current?.focus();
       return;
     }
     track("add_payment_info", { payment_type: pay, value: total });
@@ -917,7 +921,29 @@ function Checkout() {
         <div className="min-w-0 space-y-8">
           <form id="checkout-form" className="min-w-0 space-y-8" onSubmit={onSubmit}>
             <div>
-              <h1 className="font-display text-h1">Finalizar compra</h1>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1 className="font-display text-h1">Finalizar compra</h1>
+                <Link
+                  to="/carrinho"
+                  className="inline-flex min-h-11 items-center text-body font-medium underline underline-offset-4 focus-visible:outline-2"
+                >
+                  Editar sacola
+                </Link>
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border bg-white px-4 py-3 text-body lg:hidden">
+                <div>
+                  <p className="font-semibold">Resumo rápido da compra</p>
+                  <p className="text-small text-muted-foreground">
+                    {c.count} {c.count === 1 ? "item" : "itens"} ·{" "}
+                    {chosen
+                      ? chosen.free
+                        ? "Frete grátis cotado"
+                        : `Frete ${brl(shipping)}`
+                      : "Frete calculado pelo CEP"}
+                  </p>
+                </div>
+                <b className="shrink-0 text-name">{chosen ? brl(total) : brl(t.net)}</b>
+              </div>
               {cfg?.sandbox && (
                 <p
                   role="note"
@@ -961,15 +987,27 @@ function Checkout() {
                 className={inp}
               />
               <input
+                ref={cpfRef}
                 required
                 inputMode="numeric"
                 aria-label="CPF"
+                aria-invalid={cpfInvalid}
+                aria-describedby={cpfInvalid ? "checkout-cpf-error" : undefined}
                 placeholder="CPF"
                 value={f.cpf}
                 maxLength={14}
-                onChange={(e) => setF((old) => ({ ...old, cpf: maskCpf(e.target.value) }))}
+                onChange={(e) => {
+                  setCpfInvalid(false);
+                  setError((old) => (old === "CPF inválido. Confira os números." ? null : old));
+                  setF((old) => ({ ...old, cpf: maskCpf(e.target.value) }));
+                }}
                 className={inp}
               />
+              {cpfInvalid && (
+                <p id="checkout-cpf-error" role="alert" className="text-body text-destructive">
+                  CPF inválido. Confira os números.
+                </p>
+              )}
             </fieldset>
 
             <fieldset className={panel}>
@@ -1062,18 +1100,20 @@ function Checkout() {
               <div className="space-y-2 pt-2" aria-live="polite">
                 {quoting && <p className="text-body text-muted-foreground">Calculando frete…</p>}
                 {quoteErr && !quoting && (
-                  <p role="alert" className="text-body text-destructive">
-                    {quoteErr}
+                  <div className="space-y-2">
+                    <p role="alert" className="text-body text-destructive">
+                      {quoteErr}
+                    </p>
                     {f.cep.replace(/\D/g, "").length === 8 && (
                       <button
                         type="button"
                         onClick={() => setQuoteRetry((value) => value + 1)}
-                        className="mt-2 block min-h-11 rounded-lg border border-current px-4 font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+                        className="min-h-11 rounded-lg border border-destructive px-4 text-body font-medium text-destructive transition hover:bg-destructive/5 focus-visible:outline-2 focus-visible:outline-offset-2"
                       >
                         Tentar calcular frete novamente
                       </button>
                     )}
-                  </p>
+                  </div>
                 )}
                 {!quoting &&
                   options.map((o) => (
@@ -1354,7 +1394,7 @@ function Checkout() {
           </div>
         </aside>
         <div className="min-w-0 space-y-4 lg:col-start-1">
-          {error && (
+          {error && !cpfInvalid && (
             <p
               role="alert"
               className="rounded-lg border border-destructive p-3 text-body text-destructive"

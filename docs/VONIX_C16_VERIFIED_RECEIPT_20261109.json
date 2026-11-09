@@ -1,0 +1,103 @@
+{
+  "project": "vonix-hair-care",
+  "area": "ecommerce audit only",
+  "date": "2026-11-09",
+  "workloopId": "d84740cb-f195-401c-87f3-c0fffeebdff4",
+  "runId": "d8e83f6b-73e5-4cd8-b847-bb276f8ae35e",
+  "baseHead": "639da50",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "implemented": [
+    "N62 valid HTML for shipping quote retry",
+    "N63 contextual CPF focus/accessibility and error clear",
+    "N64 mobile quick summary, cart edit, shipping caveat and live total"
+  ],
+  "tests": {
+    "unit": {
+      "passed": 539,
+      "files": 66,
+      "exitCode": 0
+    },
+    "focused": {
+      "passed": 41,
+      "exitCode": 0
+    },
+    "typescript": {
+      "exitCode": 0
+    },
+    "eslint": {
+      "exitCode": 0
+    },
+    "prettier": {
+      "exitCode": 0
+    },
+    "build": {
+      "exitCode": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "activeProducts": 42,
+      "failures": 0,
+      "exitCode": 0
+    },
+    "browser": {
+      "passed": 3,
+      "failed": 0,
+      "widths": [
+        320,
+        390,
+        1366
+      ],
+      "pageErrors": 0,
+      "cartPersisted": true,
+      "overflow": false,
+      "paymentDisabledWithoutQuote": true,
+      "externalRequestsBlocked": true
+    },
+    "diffCheck": {
+      "exitCode": 0
+    }
+  },
+  "sha256": {
+    "src/routes/checkout.tsx": "D9DD2D226989B3133B2360C11E31273F20DB265C8719E53F7D2BCDDDDDDED4B0",
+    "src/test/checkout-audit.test.tsx": "F564016564765F7D47E9C13D67A93C57AB8522D74F548DA7A03682164C7E8B02",
+    "scripts/qa-c16-checkout-flow.mjs": "98E8E2F3C35FE1306E9D02146E649A5FA0D9FB8DE4802B959CF8D820476C8862",
+    "qa-artifacts/vonix-c16/dev/report.json": "8E63BE2DE869F04334A72C973CF787CDE1F86EF10421DDB0752F051330A72F2F",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C16_20261109.md": "34DDFDB046D48DF412C18AD2DF1AC36C2577A468F2571235221F4E90D3164312"
+  },
+  "files": [
+    "src/routes/checkout.tsx",
+    "src/test/checkout-audit.test.tsx",
+    "scripts/qa-c16-checkout-flow.mjs",
+    "qa-artifacts/vonix-c16/dev/report.json",
+    "qa-artifacts/vonix-c16/dev/checkout-{320,390,1366}.png",
+    "qa-artifacts/vonix-c16/dev/drawer-{320,390,1366}.png",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C16_20261109.md",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
+  ],
+  "originMain": "4d77dc2",
+  "mergeConflicts": [
+    "src/components/buy-drawer.tsx",
+    "src/lib/checkout.functions.ts",
+    "src/lib/upsell.ts",
+    "src/routes/checkout.tsx",
+    "src/routes/produto.$slug.tsx"
+  ],
+  "production": "NOT_APPROVED",
+  "livePaymentOperations": false,
+  "realDatabaseWrites": false,
+  "affiliateFilesModified": false,
+  "mergePerformed": false,
+  "deployPerformed": false,
+  "outstanding": [
+    "PR26 conflict integration with newest main",
+    "Appmax sandbox paid/canceled/antifraud",
+    "Supabase staging backup/RLS/SQL",
+    "Bling stock and physical SKU details",
+    "GDPR/LGPD consent withdrawal after order",
+    "WAF and shared rate limit",
+    "Paid-order attribution vs traffic in GA4",
+    "Cloudflare runtime staging smoke"
+  ]
+}

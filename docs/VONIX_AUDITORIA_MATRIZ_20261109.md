@@ -186,3 +186,13 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N61 | Alta | Nova main não preserva proteção financeira C11–C14 em checkout compacto, e PR #26 não é automaticamente integrável | **Bloqueio mantido:** portado drawer e upsell sem substituir checkout; três conflitos reais em merge-tree. Homologação e reconciliação ainda necessárias. |
 
 **C15:** 535/535 testes, 66 arquivos, build e TypeScript exit 0, SSR 42/42, Chrome dev 3/3. A prévia de bundle Cloudflare via `vite preview` não funciona neste preset (falta entry `dist/server/server.js`); evidência negativa mantida, sem inferir falha de produção. Ver `VONIX_AUDITORIA_CONTINUIDADE_C15_20261109.md`.
+
+## C16 — fechamento do checkout seguro com validação no browser (09/11)
+
+| ID | Severidade | Falha reproduzida | Situação |
+| --- | --- | --- | --- |
+| N62 | Alta | `<button>` de retentativa de frete estava dentro de `<p role=alert>`, HTML inválido que pode gerar mismatch de hidratação | **Corrigido na branch auditada**, regressão React/Vitest |
+| N63 | Média | CPF inválido exibia erro somente após os formulários, sem foco/acessibilidade contextual | **Corrigido**: foco no CPF, aria-invalid, descrição relacionada e limpeza após edição |
+| N64 | Média | Checkout mobile apresentava total detalhado somente após o formulário longo; frete ainda não cotado pouco claro | **Corrigido**: faixa de resumo rápido com frete condicionado ao CEP, total dinâmico e link editar sacola |
+
+**C16:** 539/539 testes PASS, 66 arquivos, build/TS/lint exit 0, SSR 42/42, Chrome local 3/3 (320/390/1366), sem operações financeiras. **Cinco conflitos de merge com `origin/main` 4d77dc2** e homologação real P0 permanecem pendentes. Ver `VONIX_AUDITORIA_CONTINUIDADE_C16_20261109.md`.
