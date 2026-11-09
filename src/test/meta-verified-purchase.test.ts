@@ -33,6 +33,7 @@ beforeEach(() => {
     products: [{ sku: "test-product", unitValueCents: 15490, quantity: 1 }],
     shippingValueCents: 1200,
     discountValueCents: 490,
+    marketingConsent: { accepted: true, policyVersion: "v1", recordedAt: "2026-11-09T15:00:00.000Z" },
   });
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockResolvedValue(
@@ -55,6 +56,48 @@ describe("Meta CAPI must not count unverified purchases", () => {
     expect(JSON.stringify(data)).not.toContain("529982");
     expect(req.signal).toBeInstanceOf(AbortSignal);
   });
+  it("does not call Meta or claim a delivery for a legacy paid order with no recorded consent", async () => {
+    mocks.snapshot.mockResolvedValueOnce({
+      orderId: 5501,
+      products: [{ sku: "test-product", unitValueCents: 15490, quantity: 1 }],
+      shippingValueCents: 1200,
+      discountValueCents: 490,
+    });
+    expect(await sendVerifiedPurchase(order("aprovado") as never)).toBe("skipped");
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.ack).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never sends a paid Purchase if the buyer refused optional marketing at checkout", async () => {
+    const legacy = {
+      orderId: 5501,
+      products: [{ sku: "test-product", unitValueCents: 15490, quantity: 1 }],
+      shippingValueCents: 1200,
+      discountValueCents: 490,
+    };
+    mocks.snapshot.mockResolvedValueOnce({
+      ...legacy,
+      marketingConsent: { accepted: false, policyVersion: "v1", recordedAt: "2026-11-09T15:00:00.000Z" },
+    });
+    expect(await sendVerifiedPurchase(order("integrado") as never)).toBe("skipped");
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not accept a record using an unknown consent policy version", async () => {
+    mocks.snapshot.mockResolvedValueOnce({
+      orderId: 5501,
+      products: [{ sku: "test-product", unitValueCents: 15490, quantity: 1 }],
+      shippingValueCents: 1200,
+      discountValueCents: 490,
+      marketingConsent: { accepted: true, policyVersion: "v0", recordedAt: "2026-11-09T15:00:00.000Z" },
+    });
+    expect(await sendVerifiedPurchase(order("aprovado") as never)).toBe("skipped");
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("uses the merchant-confirmed paid_at time instead of the recovery time when available", async () => {
     const paidAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const paidOrder = {

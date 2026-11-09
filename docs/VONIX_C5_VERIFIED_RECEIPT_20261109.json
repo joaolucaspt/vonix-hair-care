@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-09",
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "previousCommit": "2ca61051f3ed0f2df25335148295198bbceb5380",
+  "evidence": {
+    "vitest": {
+      "passed": 421,
+      "total": 421,
+      "files": 57,
+      "exit": 0
+    },
+    "typescript": {
+      "exit": 0
+    },
+    "productionBuild": {
+      "exit": 0
+    },
+    "eslintTargeted": {
+      "exit": 0
+    },
+    "ssr": {
+      "productsChecked": 43,
+      "passed": 43,
+      "failed": 0
+    },
+    "browser": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "checkoutHttp": 200,
+      "productHttp": 200,
+      "overflow": false,
+      "retakeAfterDevServerRestart": true,
+      "exit": 0
+    },
+    "postgresSynthetic": {
+      "version": 16,
+      "network": "none",
+      "temporaryContainer": true,
+      "tests": [
+        1001,
+        1002,
+        1003,
+        1004
+      ],
+      "consentingOrder": 1003,
+      "denied": [
+        1001,
+        1002,
+        1004
+      ],
+      "rlsRolesDenied": true,
+      "searchPathEmpty": true,
+      "transactionRolledBack": true,
+      "containersRemoved": true
+    }
+  },
+  "technicalChanges": [
+    "Checkout opt-in recorded in server-side snapshot before charging",
+    "Old/rejected/unknown policy versions suppress server Meta Purchase",
+    "PostgreSQL seed/recovery/claim requires consent version v1",
+    "Privileges limited to service_role and security definer search_path emptied",
+    "Post-payment copy no longer claims unverified automated email/WhatsApp"
+  ],
+  "protected": {
+    "affiliateFilesUnchanged": true,
+    "realPayment": false,
+    "realDatabaseWrites": false,
+    "realMarketingDelivery": false,
+    "productionDeployment": false
+  },
+  "pendingExternal": [
+    "Apply and verify SQL in isolated Supabase staging with backups and role audit",
+    "Legal review and propagated cross-device post-checkout consent withdrawal",
+    "Appmax sandbox Pix/card/antifraud, Bling staging and inventory per SKU",
+    "Operational delivery proof, verified price history, attribution of paid orders"
+  ]
+}

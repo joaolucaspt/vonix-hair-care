@@ -117,6 +117,26 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("records explicit marketing acceptance before calling a payment method", async () => {
+    const answer = await createPayment({ data: { ...data, marketingConsent: true } });
+    expect(answer).toMatchObject({ ok: true });
+    const record = mocks.saveSnapshot.mock.calls[0]![0];
+    expect(record.marketingConsent).toMatchObject({
+      accepted: true,
+      policyVersion: "v1",
+      recordedAt: expect.any(String),
+    });
+    expect(new Date(record.marketingConsent.recordedAt).toISOString()).toBe(record.marketingConsent.recordedAt);
+    expect(mocks.pix).toHaveBeenCalledOnce();
+  });
+  it("records rejection when consent is missing or false without blocking the payment", async () => {
+    const answer = await createPayment({ data });
+    expect(answer).toMatchObject({ ok: true });
+    expect(mocks.saveSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ marketingConsent: expect.objectContaining({ accepted: false, policyVersion: "v1" }) }),
+    );
+    expect(mocks.pix).toHaveBeenCalledOnce();
+  });
   it("never trusts a user-supplied IP when sending buyer data to Appmax", async () => {
     // Legacy browsers can still include "ip" in the POST request. Zod strips
     // it, and the checkout reads the IP only from the trusted edge.

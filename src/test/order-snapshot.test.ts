@@ -30,6 +30,7 @@ const snapshot = {
   ],
   shippingValueCents: 0,
   discountValueCents: 774,
+  marketingConsent: { accepted: true, policyVersion: "v1" as const, recordedAt: "2026-11-09T15:00:00.000Z" },
 };
 const fetchMock = vi.fn();
 beforeEach(() => {
@@ -55,6 +56,19 @@ describe("durable server-side Appmax order snapshots", () => {
     expect(await loadOrderSnapshot(3501)).toEqual(snapshot);
     expect(fetchMock.mock.calls[0]![0]).toContain("order_id=eq.3501");
     await expect(loadOrderSnapshot(3502)).rejects.toThrow("Snapshot de outro pedido");
+  });
+  it("loads legacy snapshots but never invents consent for an old order", async () => {
+    const { marketingConsent: _unused, ...legacy } = snapshot;
+    fetchMock.mockImplementation(async () => Response.json([{ payload: legacy }]));
+    const loaded = await loadOrderSnapshot(3501);
+    expect(loaded.marketingConsent).toBeUndefined();
+  });
+  it("rejects malformed consent policy metadata before saving a paid order snapshot", async () => {
+    await expect(saveOrderSnapshot({
+      ...snapshot,
+      marketingConsent: { accepted: true, policyVersion: "v0", recordedAt: "2026-11-09T15:00:00.000Z" } as never,
+    })).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
   it("fails closed if a customer record is missing", async () => {
     fetchMock.mockResolvedValue(Response.json([]));

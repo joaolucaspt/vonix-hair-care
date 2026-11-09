@@ -24,7 +24,7 @@ grant select, insert, update on public.vonix_meta_purchase_delivery to service_r
 -- always using the same deterministic Meta event_id (purchase-ORDER_ID).
 create or replace function public.vonix_claim_meta_purchase(p_order_id bigint)
 returns jsonb language plpgsql security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   row_state public.vonix_meta_purchase_delivery%rowtype;
@@ -38,6 +38,16 @@ begin
     where o.order_id = p_order_id
   ) then
     raise exception 'order is not enrolled in outbox';
+  end if;
+  -- A paid order is not permission to send marketing. Historical snapshots
+  -- without explicit v1 acceptance do not create or acquire delivery leases.
+  if not exists (
+    select 1 from public.vonix_order_snapshots s
+    where s.order_id = p_order_id
+      and s.payload #>> '{marketingConsent,accepted}' = 'true'
+      and s.payload #>> '{marketingConsent,policyVersion}' = 'v1'
+  ) then
+    return jsonb_build_object('claimed', false, 'claimToken', null);
   end if;
   insert into public.vonix_meta_purchase_delivery(order_id)
     values (p_order_id)
@@ -69,7 +79,7 @@ create or replace function public.vonix_ack_meta_purchase(
   p_order_id bigint, p_claim_token uuid
 )
 returns boolean language plpgsql security definer
-set search_path = public
+set search_path = ''
 as $$
 declare changed integer;
 begin
@@ -102,7 +112,7 @@ create index if not exists vonix_meta_purchase_due
 
 create or replace function public.vonix_meta_recovery_candidates(max_count integer default 3)
 returns table(order_id bigint)
-language plpgsql security definer set search_path = public
+language plpgsql security definer set search_path = ''
 as $$
 declare max_rows integer := least(greatest(coalesce(max_count, 3), 1), 5);
 begin
@@ -113,6 +123,13 @@ begin
   from public.vonix_order_outbox o
   where o.created_at >= now() - interval '6 days'
     and o.created_at <= now() - interval '2 minutes'
+    -- Exclude legacy/refused orders before scheduling any Appmax polling.
+    and exists (
+      select 1 from public.vonix_order_snapshots s
+      where s.order_id = o.order_id
+        and s.payload #>> '{marketingConsent,accepted}' = 'true'
+        and s.payload #>> '{marketingConsent,policyVersion}' = 'v1'
+    )
     and not exists (
       select 1 from public.vonix_meta_purchase_delivery m
       where m.order_id = o.order_id
@@ -125,8 +142,11 @@ begin
   select m.order_id
   from public.vonix_meta_purchase_delivery m
   join public.vonix_order_outbox o on o.order_id = m.order_id
+  join public.vonix_order_snapshots s on s.order_id = m.order_id
   where o.created_at >= now() - interval '6 days'
     and o.created_at <= now() - interval '2 minutes'
+    and s.payload #>> '{marketingConsent,accepted}' = 'true'
+    and s.payload #>> '{marketingConsent,policyVersion}' = 'v1'
     and m.status <> 'sent'
     and m.next_check_at <= now()
     and (m.status <> 'leased' or m.claimed_until is null or m.claimed_until < now())
@@ -144,7 +164,7 @@ grant execute on function public.vonix_meta_recovery_candidates(integer)
 create or replace function public.vonix_defer_meta_recovery(
   p_order_id bigint, p_delay_minutes integer default 60
 )
-returns boolean language plpgsql security definer set search_path = public
+returns boolean language plpgsql security definer set search_path = ''
 as $$
 declare changed integer;
 begin

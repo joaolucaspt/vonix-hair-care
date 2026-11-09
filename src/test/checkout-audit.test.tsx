@@ -131,8 +131,21 @@ describe("checkout auditado sem chamadas reais", () => {
     await fill();
     fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
     await waitFor(() => expect(mocks.payment).toHaveBeenCalledTimes(1));
+    expect(mocks.payment).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ marketingConsent: false }) }),
+    );
     expect(vi.mocked(gtag!).mock.calls).toHaveLength(0);
     expect(vi.mocked(fbq!).mock.calls).toHaveLength(0);
+  });
+  it("inclui opt-in de marketing no checkout quando o visitante aceitou", async () => {
+    localStorage.setItem(TRACKING_CONSENT_KEY, "accepted");
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    await waitFor(() => expect(mocks.payment).toHaveBeenCalledTimes(1));
+    expect(mocks.payment).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ marketingConsent: true }) }),
+    );
   });
   it("não permite gerar outro Pix vencido se a Appmax ainda informa pagamento pendente", async () => {
     savePendingPix({
@@ -590,6 +603,7 @@ describe("checkout auditado sem chamadas reais", () => {
       onTokenize?.({ token: "test-token" });
     });
     expect(await screen.findByRole("heading", { name: "Pagamento aprovado!" })).toBeInTheDocument();
+    expect(screen.getByText(/Guarde este número para acompanhar seu pedido/)).toBeInTheDocument();
     expect(mocks.status).toHaveBeenCalledWith({
       data: { orderId: 655, statusToken: "signed-test-only" },
     });

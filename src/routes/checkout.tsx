@@ -14,6 +14,7 @@ import { SecuritySeal, Shell } from "@/components/site";
 import { ShippingBar } from "@/components/cart-summary";
 import { useCepAddress } from "@/hooks/use-cep-address";
 import { toItem, track } from "@/lib/analytics";
+import { hasTrackingConsent } from "@/lib/tracking-consent";
 import { isValidCpf } from "@/lib/cpf";
 import { getRef } from "@/lib/affiliate-ref";
 import {
@@ -132,7 +133,7 @@ function PixPanel({
       <div role="status" className="rounded-2xl border border-border bg-card p-6 text-center">
         <h1 className="font-display text-h1">Pagamento confirmado!</h1>
         <p className="mt-2 text-body text-muted-foreground">
-          Pedido nº {pix.orderId}. Você receberá os detalhes por e-mail e WhatsApp.
+          Pedido nº {pix.orderId}. Guarde este número para acompanhar seu pedido pela área Meus pedidos ou pelo atendimento.
         </p>
         <Link
           to="/loja"
@@ -555,6 +556,8 @@ function Checkout() {
           items,
           serviceId: chosen.id,
           method: pay,
+          // The optional Meta Purchase event must follow consent at checkout.
+          marketingConsent: hasTrackingConsent(),
           ...(applied ? { coupon: applied.code } : {}),
 
           ...(getRef() ? { ref: getRef() as string } : {}),
@@ -798,7 +801,7 @@ function Checkout() {
         <div className="container-site max-w-xl py-16 text-center" role="status">
           <h1 className="font-display text-h1">Pagamento aprovado!</h1>
           <p className="mt-2 text-body text-muted-foreground">
-            Pedido nº {cardDone.orderId}. Você receberá os detalhes por e-mail e WhatsApp.
+            Pedido nº {cardDone.orderId}. Guarde este número para acompanhar seu pedido pela área Meus pedidos ou pelo atendimento.
           </p>
           <Link
             to="/loja"

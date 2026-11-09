@@ -33,6 +33,12 @@ export const orderSnapshotSchema = z
       .max(40),
     shippingValueCents: cents,
     discountValueCents: cents,
+    // Optional for legacy snapshots; absence means marketing consent is unproven.
+    marketingConsent: z.object({
+      accepted: z.boolean(),
+      policyVersion: z.literal("v1"),
+      recordedAt: z.string().datetime(),
+    }).optional(),
   })
   .strict();
 

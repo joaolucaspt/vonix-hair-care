@@ -124,6 +124,10 @@ export async function sendVerifiedPurchase(
   if (!Number.isSafeInteger(orderId) || orderId <= 0) return "skipped";
   try {
     const snapshot = await loadOrderSnapshot(orderId);
+    // Delivery and payment must continue regardless of marketing consent.
+    // Legacy snapshots have no consent record and must never create a Meta Purchase.
+    if (snapshot.marketingConsent?.accepted !== true || snapshot.marketingConsent.policyVersion !== "v1")
+      return "skipped";
     const subtotalCents = snapshot.products.reduce(
       (total, p) => total + p.unitValueCents * p.quantity,
       0,

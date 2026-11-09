@@ -67,8 +67,16 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N25 | Média | Botão da sacola nos cards obrigava abrir a página do produto mesmo quando só havia uma variante | 39/43 itens com uma opção agora usam adição direta com `add_to_cart`; 4 itens multivariantes ainda exigem escolha. Três testes específicos e navegação Chrome com produto em carrinho aprovados. |
 
 | N26 | Alta | GA4, Clarity e Meta Pixel iniciavam no domínio publicado sem escolha expressa de cookies opcionais | Bootstrap default-deny com consentimento versionado, opção aceitar/recusar/reabrir/revogar, política atualizada, 14 testes de consentimento/bootstraps + validação Chrome com requisições externas interceptadas. |
-| N27 | Alta, pendente | Meta Purchase por servidor pode ser enviado sem consultar consentimento de cookies registrado no navegador | **BLOQUEIO de afirmação de conformidade integral:** revisar fundamento legal, contrato, evidência de preferência e pipeline com staging; não alterar conciliação de vendas nem acionar cobranças reais. |
+| N27 | Alta, correção técnica C5 / staging pendente | Meta Purchase por servidor podia ser enviado sem consultar consentimento do comprador | Snapshot do checkout registra aceite v1 com data de servidor; backend/SQL filtram pedidos sem aceite. PostgreSQL sintético PASS; **ainda sem aplicação no staging/produção, revisão jurídica ou revogação tardia**. |
 | N28 | Média | Página institucional anunciava 480 vendas, entrega universal e SLA de atendimento sem documentação comprobatória nesta auditoria | Substituídas por descrições sem números não verificados e cobertura por CEP. Obter provas reais antes de divulgar contagem e prazos de atendimento. |
+
+| N29 | Alta | Recuperação CAPI consultava pedidos históricos sem aceite, inclusive após regra do backend | SQL de seleção e claim exige consentimento v1; quatro pedidos sintéticos em PostgreSQL 16 PASS, sem acesso por roles públicas. Migrar/homologar em staging antes de uso real. |
+| N30 | Média | Checkout prometia envio de confirmação por e-mail/WhatsApp sem evidência de automação transacional homologada | Telas de Pix e cartão agora orientam guardar número do pedido e consultar acompanhamento/atendimento; regressão em teste. |
+| N31 | Alta, ainda pendente | Revogação de cookies após a criação do pedido não é automaticamente propagada ao snapshot server-side | Risco documentado; depende de ledger e endpoint autenticado, validação de identidade, bases legais e staging. Não declarar conformidade LGPD integral. |
+
+## Recibo C5 (09/11)
+
+Compra continua independente de marketing; o snapshot versiona aceite opcional e a Meta só recebe Purchase aprovado com opt-in. **421 testes iniciais PASS, PostgreSQL 16 real descartável PASS**. Suite final e CI devem ser verificados depois das últimas edições. Ver `docs/VONIX_AUDITORIA_CONTINUIDADE_C5_20261109.md` e `docs/VONIX_P0_STAGING_RUNBOOK_20261109.md`.
 
 ## Recibo adicional C4 (09/11)
 

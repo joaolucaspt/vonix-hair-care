@@ -144,6 +144,7 @@ const paySchema = z.object({
   token: z.string().max(200).optional(),
   holderName: z.string().max(120).optional(),
   installments: z.number().int().min(1).max(6).optional(),
+  marketingConsent: z.boolean().optional(),
 });
 
 export const createPayment = createServerFn({ method: "POST" })
@@ -318,6 +319,13 @@ export const createPayment = createServerFn({ method: "POST" })
         })),
         shippingValueCents: cents(option.price),
         discountValueCents: cents(totals.pixDiscount) + cents(totals.couponDiscount),
+        // Record the browser\'s checkout choice for the later paid-only marketing worker.
+        // No choice or older clients are conservatively interpreted as rejection.
+        marketingConsent: {
+          accepted: data.marketingConsent === true,
+          policyVersion: "v1",
+          recordedAt: new Date().toISOString(),
+        },
       });
       const total = totals.net + option.price;
       // Venda pelo link de uma afiliada: o app de expedição registra como pendente; só conta comissão depois de paga.
