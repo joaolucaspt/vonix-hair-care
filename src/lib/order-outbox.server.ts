@@ -1,8 +1,9 @@
 import { env } from "./env.server";
-import { getOrder, isReadyForFulfillment } from "./appmax.server";
+import { getOrder, isPaid, isReadyForFulfillment } from "./appmax.server";
 import { blingEnabled, sendPaidOrder } from "./bling.server";
 import { loadOrderSnapshot } from "./order-snapshot.server";
 import { isTerminatedOrder } from "./order-events";
+import { finalizeCheckoutIntent } from "./checkout-idempotency.server";
 
 /**
  * Durable, fail-closed outbox backed by Supabase/PostgREST.
@@ -115,6 +116,11 @@ export async function processOrderOutbox(limit = 3): Promise<WorkerSummary> {
   for (const { order_id: id, claim_token: token } of rows) {
     try {
       const order = await getOrder(id); // never trust unsigned webhook status
+      // Reconcile the duplicate-payment guard even if the buyer never returns
+      // to the checkout. ERP failures should not hide an Appmax-confirmed status.
+      if (isPaid(order)) await finalizeCheckoutIntent(id, "completed").catch(() => undefined);
+      else if (["cancelado", "recusado_por_risco"].includes(order.data.order.status))
+        await finalizeCheckoutIntent(id, "cancelled").catch(() => undefined);
       if (isTerminatedOrder(order.data.order.status)) {
         await finish(id, token, "completed");
         stats.deferred++;

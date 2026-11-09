@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   sendPaidOrder: vi.fn(),
   blingEnabled: vi.fn(() => true),
   loadOrderSnapshot: vi.fn(),
+  finalizeIntent: vi.fn(),
 }));
 vi.mock("@/lib/env.server", () => ({
   env: (key: string) =>
@@ -13,8 +14,13 @@ vi.mock("@/lib/appmax.server", () => ({
   getOrder: mocks.getOrder,
   isReadyForFulfillment: (o: { data: { order: { status: string } } }) =>
     o.data.order.status === "integrado",
+  isPaid: (o: { data: { order: { status: string } } }) =>
+    ["aprovado", "integrado", "pendente_integracao"].includes(o.data.order.status),
 }));
 vi.mock("@/lib/order-snapshot.server", () => ({ loadOrderSnapshot: mocks.loadOrderSnapshot }));
+vi.mock("@/lib/checkout-idempotency.server", () => ({
+  finalizeCheckoutIntent: mocks.finalizeIntent,
+}));
 vi.mock("@/lib/bling.server", () => ({
   sendPaidOrder: mocks.sendPaidOrder,
   blingEnabled: mocks.blingEnabled,
@@ -36,6 +42,7 @@ beforeEach(() => {
   mocks.getOrder.mockResolvedValue({ data: { order: { id: 12, status: "integrado" } } });
   mocks.loadOrderSnapshot.mockResolvedValue({ orderId: 12, customer: { name: "Teste" } });
   mocks.sendPaidOrder.mockResolvedValue("enviado");
+  mocks.finalizeIntent.mockResolvedValue(undefined);
 });
 
 describe("durable Appmax outbox", () => {
@@ -75,6 +82,7 @@ describe("durable Appmax outbox", () => {
     });
     expect(mocks.getOrder).toHaveBeenCalledWith(12);
     expect(mocks.sendPaidOrder).toHaveBeenCalledTimes(1);
+    expect(mocks.finalizeIntent).toHaveBeenCalledWith(12, "completed");
     expect(mocks.loadOrderSnapshot).toHaveBeenCalledWith(12);
     expect(mocks.sendPaidOrder).toHaveBeenCalledWith(expect.objectContaining({ orderId: 12 }));
   });

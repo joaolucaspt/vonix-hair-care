@@ -6,6 +6,12 @@ import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
 import { orderStatusToken, validOrderStatusToken } from "./order-status-token.server";
 import { saveOrderSnapshot } from "./order-snapshot.server";
+import {
+  checkoutFingerprint,
+  claimCheckoutIntent,
+  advanceCheckoutIntent,
+  finalizeCheckoutIntent,
+} from "./checkout-idempotency.server";
 import { calculateShipping } from "./melhorenvio.server";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
@@ -69,8 +75,8 @@ export const quoteShipping = createServerFn({ method: "POST" })
         ok: true as const,
         options: await shippingOptions(data.cep, buildLines(data.items), data.coupon),
       };
-    } catch (e) {
-      console.error("[frete]", e);
+    } catch {
+      console.error("[frete] Cotação indisponível");
       return {
         ok: false as const,
         message: "Não foi possível calcular o frete agora. Tente novamente em instantes.",
@@ -85,13 +91,15 @@ export const getPaymentConfig = createServerFn({ method: "GET" }).handler(async 
     !!env("APPMAX_CLIENT_ID") &&
     !!env("APPMAX_CLIENT_SECRET") &&
     !!env("SUPABASE_URL") &&
-    !!env("SUPABASE_SERVICE_ROLE_KEY"),
+    !!env("SUPABASE_SERVICE_ROLE_KEY") &&
+    env("CHECKOUT_IDEMPOTENCY_SECRET").length >= 32,
   cardEnabled:
     !!env("APPMAX_CLIENT_ID") &&
     !!env("APPMAX_CLIENT_SECRET") &&
     !!env("APPMAX_EXTERNAL_ID") &&
     !!env("SUPABASE_URL") &&
-    !!env("SUPABASE_SERVICE_ROLE_KEY"),
+    !!env("SUPABASE_SERVICE_ROLE_KEY") &&
+    env("CHECKOUT_IDEMPOTENCY_SECRET").length >= 32,
 }));
 
 const customerSchema = z.object({
@@ -127,11 +135,26 @@ const paySchema = z.object({
 export const createPayment = createServerFn({ method: "POST" })
   .inputValidator(paySchema)
   .handler(async ({ data }) => {
+    // Validate card token BEFORE external configuration or side effects.
+    if (data.method === "card" && !data.token) {
+      return {
+        ok: false as const,
+        message: "Não foi possível validar o cartão. Confira os dados e tente de novo.",
+      };
+    }
+    if (data.method === "card" && !env("APPMAX_EXTERNAL_ID")) {
+      return {
+        ok: false as const,
+        message:
+          "Pagamento por cartão temporariamente indisponível. Escolha Pix ou fale com o atendimento.",
+      };
+    }
     if (
       !env("APPMAX_CLIENT_ID") ||
       !env("APPMAX_CLIENT_SECRET") ||
       !env("SUPABASE_URL") ||
-      !env("SUPABASE_SERVICE_ROLE_KEY")
+      !env("SUPABASE_SERVICE_ROLE_KEY") ||
+      env("CHECKOUT_IDEMPOTENCY_SECRET").length < 32
     )
       return {
         ok: false as const,
@@ -139,13 +162,6 @@ export const createPayment = createServerFn({ method: "POST" })
           "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora.",
       };
     try {
-      // Avoid creating an Appmax customer or order when card tokenization has failed.
-      if (data.method === "card" && !data.token) {
-        return {
-          ok: false as const,
-          message: "Não foi possível validar o cartão. Confira os dados e tente de novo.",
-        };
-      }
       const lines = buildLines(data.items);
       const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find(
         (o) => o.id === data.serviceId,
@@ -175,6 +191,50 @@ export const createPayment = createServerFn({ method: "POST" })
         getRequestHeader("cf-connecting-ip") ||
         getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ||
         "0.0.0.0";
+
+      // Reserve this server-priced shopping intent atomically BEFORE external
+      // customer, order or payment calls. A second browser/device cannot charge it.
+      const fingerprint = checkoutFingerprint({
+        document,
+        address: {
+          postcode: data.address.cep,
+          street: data.address.rua,
+          number: data.address.numero,
+          city: data.address.cidade,
+          state: data.address.uf,
+        },
+        items: lines.map((l) => ({
+          // The physical SKU/variant and UNIT count, not coupon, price or
+          // payment method, define whether this is the same shopping attempt.
+          sku: `${l.product.slug}:${l.variant}`,
+          quantity: l.units,
+        })),
+      });
+      const intent = await claimCheckoutIntent(fingerprint);
+      if (!intent.claimed) {
+        if (intent.orderId) {
+          // The original browser may have lost the response after creating
+          // the order. Only follow its existing status; NEVER submit again.
+          return {
+            ok: true as const,
+            method: "verification" as const,
+            orderId: intent.orderId,
+            statusToken: orderStatusToken(intent.orderId),
+            total: totals.net + option.price,
+            paid: false,
+            status: "aguardando_confirmacao",
+          };
+        }
+        return {
+          ok: false as const,
+          message:
+            "Já existe uma tentativa de compra em verificação. Não tente pagar novamente; entre em contato com o atendimento para confirmar o pedido.",
+        };
+      }
+      const claimToken = intent.claimToken!;
+      // Fence the intent BEFORE the first external side effect.
+      // A timeout after this point is ambiguous; it must NEVER be retried blindly.
+      await advanceCheckoutIntent(fingerprint, claimToken, "reserved");
 
       const customerId = await appmax.createCustomer({
         first_name: first,
@@ -217,6 +277,7 @@ export const createPayment = createServerFn({ method: "POST" })
         shipping_value: cents(option.price),
         products,
       });
+      await advanceCheckoutIntent(fingerprint, claimToken, "creating_order", orderId);
       // Save data available only at checkout (not returned by Appmax GET /v1/orders/{id}).
       // Fail closed BEFORE requesting a payment if durable storage is unavailable.
       await saveOrderSnapshot({
@@ -249,10 +310,35 @@ export const createPayment = createServerFn({ method: "POST" })
       // Venda pelo link de uma afiliada: o app de expedição registra como pendente; só conta comissão depois de paga.
       const ref = normalizeRef(data.ref);
       if (ref)
-        await notifyAffiliateSale({ orderId, status: "pendente", ref, totalCents: cents(total) });
+        await notifyAffiliateSale({
+          orderId,
+          status: "pendente",
+          ref,
+          totalCents: cents(total),
+        }).catch(() => undefined);
+
+      // One fenced transition for BOTH payment methods. If the gateway response
+      // disappears, this purchase remains blocked until independently verified.
+      await advanceCheckoutIntent(fingerprint, claimToken, "order_created");
 
       if (data.method === "pix") {
-        const pix = await appmax.payWithPix(orderId, document);
+        let pix: Awaited<ReturnType<typeof appmax.payWithPix>>;
+        try {
+          pix = await appmax.payWithPix(orderId, document);
+        } catch {
+          // Appmax may have created a Pix before the connection failed.
+          // Never create a second Pix automatically; recover by status only.
+          return {
+            ok: true as const,
+            method: "verification" as const,
+            orderId,
+            statusToken: orderStatusToken(orderId),
+            total,
+            paid: false,
+            status: "aguardando_confirmacao",
+          };
+        }
+        await advanceCheckoutIntent(fingerprint, claimToken, "charging");
         return {
           ok: true as const,
           method: "pix" as const,
@@ -279,6 +365,7 @@ export const createPayment = createServerFn({ method: "POST" })
           document,
           installments: data.installments ?? 1,
         });
+        await advanceCheckoutIntent(fingerprint, claimToken, "charging");
       } catch {
         return {
           ok: true as const,
@@ -292,7 +379,12 @@ export const createPayment = createServerFn({ method: "POST" })
       }
       try {
         const order = await appmax.getOrder(orderId);
-        if (ref && appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
+        if (appmax.isPaid(order)) {
+          await finalizeCheckoutIntent(orderId, "completed").catch(() => undefined);
+          if (ref) await notifyAffiliateSale({ orderId, status: "pago" }).catch(() => undefined);
+        } else if (["cancelado", "recusado_por_risco"].includes(order.data.order.status)) {
+          await finalizeCheckoutIntent(orderId, "cancelled").catch(() => undefined);
+        }
         return {
           ok: true as const,
           method: "card" as const,
@@ -314,11 +406,13 @@ export const createPayment = createServerFn({ method: "POST" })
         };
       }
     } catch (e) {
-      console.error("[pagamento]", e);
+      // An external API timeout can occur AFTER an order has been created.
+      // Never imply that the customer is safe to retry a charge blindly.
+      console.error("[pagamento] Falha na operação de compra; reconciliação necessária");
       return {
         ok: false as const,
         message:
-          "Não conseguimos processar o pagamento. Confira os dados ou tente outra forma de pagamento.",
+          "Não foi possível confirmar a tentativa de compra. Para evitar cobrança duplicada, consulte o atendimento antes de tentar pagar novamente.",
       };
     }
   });
@@ -332,10 +426,15 @@ export const getOrderStatus = createServerFn({ method: "POST" })
       if (!validOrderStatusToken(data.orderId, data.statusToken)) return { ok: false as const };
       const order = await appmax.getOrder(data.orderId);
       const paid = appmax.isPaid(order);
-      if (paid) await notifyAffiliateSale({ orderId: data.orderId, status: "pago" }); // o app ignora pedidos que não são de afiliada
+      if (paid) {
+        await finalizeCheckoutIntent(data.orderId, "completed").catch(() => undefined);
+        await notifyAffiliateSale({ orderId: data.orderId, status: "pago" }).catch(() => undefined);
+      } else if (["cancelado", "recusado_por_risco"].includes(order.data.order.status)) {
+        await finalizeCheckoutIntent(data.orderId, "cancelled").catch(() => undefined);
+      }
       return { ok: true as const, paid, status: order.data.order.status };
-    } catch (e) {
-      console.error("[status]", e);
+    } catch {
+      console.error("[status] Consulta temporariamente indisponível");
       return { ok: false as const };
     }
   });

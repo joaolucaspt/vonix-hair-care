@@ -10,6 +10,12 @@ const mocks = vi.hoisted(() => ({
   status: vi.fn(),
   affiliate: vi.fn(),
   saveSnapshot: vi.fn(),
+  claimIntent: vi.fn(),
+  advanceIntent: vi.fn(),
+  finalizeIntent: vi.fn(),
+  validStatus: vi.fn(() => false),
+  idempotencySecret: "test-idempotency-secret-that-is-at-least-32-bytes",
+  externalId: "test-external-id",
 }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => ({
@@ -18,11 +24,24 @@ vi.mock("@tanstack/react-start", () => ({
   }),
 }));
 vi.mock("@tanstack/react-start/server", () => ({ getRequestHeader: () => undefined }));
-vi.mock("@/lib/env.server", () => ({ env: () => "configured-for-unit-test" }));
+vi.mock("@/lib/env.server", () => ({
+  env: (key: string) =>
+    key === "CHECKOUT_IDEMPOTENCY_SECRET"
+      ? mocks.idempotencySecret
+      : key === "APPMAX_EXTERNAL_ID"
+        ? mocks.externalId
+        : "configured-for-unit-test",
+}));
+vi.mock("@/lib/checkout-idempotency.server", async (load) => ({
+  ...(await load<Record<string, unknown>>()),
+  claimCheckoutIntent: mocks.claimIntent,
+  advanceCheckoutIntent: mocks.advanceIntent,
+  finalizeCheckoutIntent: mocks.finalizeIntent,
+}));
 vi.mock("@/lib/order-snapshot.server", () => ({ saveOrderSnapshot: mocks.saveSnapshot }));
 vi.mock("@/lib/order-status-token.server", () => ({
   orderStatusToken: () => "signed-only-for-test",
-  validOrderStatusToken: () => false,
+  validOrderStatusToken: mocks.validStatus,
 }));
 vi.mock("@/lib/melhorenvio.server", () => ({ calculateShipping: mocks.shipping }));
 vi.mock("@/lib/appmax.server", () => ({
@@ -31,11 +50,17 @@ vi.mock("@/lib/appmax.server", () => ({
   payWithPix: mocks.pix,
   payWithCard: mocks.card,
   getOrder: mocks.status,
-  isPaid: () => true,
+  isPaid: (o: { data: { order: { status: string } } }) =>
+    ["aprovado", "integrado", "pendente_integracao"].includes(o.data.order.status),
 }));
 vi.mock("@/lib/affiliate-notify.server", () => ({ notifyAffiliateSale: mocks.affiliate }));
 
-import { createPayment, getOrderStatus, quoteShipping } from "@/lib/checkout.functions";
+import {
+  createPayment,
+  getOrderStatus,
+  quoteShipping,
+  getPaymentConfig,
+} from "@/lib/checkout.functions";
 
 const p = getProduct("kit-banana-e-mel")!;
 const v = p.variants[0]!;
@@ -68,6 +93,18 @@ beforeEach(() => {
   mocks.customer.mockResolvedValue(321);
   mocks.createOrder.mockResolvedValue(654);
   mocks.saveSnapshot.mockResolvedValue(undefined);
+  mocks.claimIntent.mockResolvedValue({
+    claimed: true,
+    phase: "reserved",
+    orderId: null,
+    claimToken: "11111111-1111-4111-8111-111111111111",
+  });
+  mocks.advanceIntent.mockResolvedValue(undefined);
+  mocks.finalizeIntent.mockResolvedValue(undefined);
+  mocks.affiliate.mockResolvedValue(undefined);
+  mocks.validStatus.mockReturnValue(false);
+  mocks.idempotencySecret = "test-idempotency-secret-that-is-at-least-32-bytes";
+  mocks.externalId = "test-external-id";
   mocks.card.mockResolvedValue(undefined);
   mocks.status.mockResolvedValue({ data: { order: { id: 654, status: "autorizado" } } });
   mocks.pix.mockResolvedValue({
@@ -78,6 +115,29 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("keeps Pix/card unavailable until strong server-side idempotency is configured", async () => {
+    mocks.idempotencySecret = "weak";
+    const config = await getPaymentConfig({});
+    expect(config.pixEnabled).toBe(false);
+    expect(config.cardEnabled).toBe(false);
+    const attempt = await createPayment({ data });
+    expect(attempt).toMatchObject({ ok: false });
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+  });
+  it("does not submit card charges if the card tokenization integration is unavailable", async () => {
+    mocks.externalId = "";
+    const config = await getPaymentConfig({});
+    expect(config.pixEnabled).toBe(true);
+    expect(config.cardEnabled).toBe(false);
+    const result = await createPayment({
+      data: { ...data, method: "card", token: "token-test-only" },
+    });
+    expect(result).toMatchObject({ ok: false });
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.card).not.toHaveBeenCalled();
+  });
   it("never sends both products_value and unit_value to Appmax", async () => {
     const result = await createPayment({ data });
     expect(result).toMatchObject({ ok: true, method: "pix", orderId: 654 });
@@ -91,6 +151,109 @@ describe("server authoritative checkout", () => {
     expect(mocks.saveSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: 654, shippingValueCents: 0 }),
     );
+  });
+  it("blocks a second identical attempt before creating another Appmax customer/order/payment", async () => {
+    const first = await createPayment({ data });
+    expect(first).toMatchObject({ ok: true, method: "pix", orderId: 654 });
+    mocks.claimIntent.mockResolvedValueOnce({
+      claimed: false,
+      phase: "submitted",
+      orderId: 654,
+      claimToken: null,
+    });
+    const second = await createPayment({ data });
+    expect(second).toMatchObject({
+      ok: true,
+      method: "verification",
+      orderId: 654,
+      paid: false,
+      status: "aguardando_confirmacao",
+    });
+    expect(mocks.customer).toHaveBeenCalledTimes(1);
+    expect(mocks.createOrder).toHaveBeenCalledTimes(1);
+    expect(mocks.pix).toHaveBeenCalledTimes(1);
+    expect(mocks.advanceIntent).toHaveBeenCalledTimes(4);
+  });
+  it("prevents switching from Pix to card to bypass the same pending purchase", async () => {
+    const first = await createPayment({ data });
+    expect(first).toMatchObject({ ok: true, method: "pix" });
+    mocks.claimIntent.mockResolvedValueOnce({
+      claimed: false,
+      phase: "submitted",
+      orderId: 654,
+      claimToken: null,
+    });
+    const second = await createPayment({
+      data: { ...data, method: "card", token: "new-card-token" },
+    });
+    expect(second).toMatchObject({ ok: true, method: "verification", orderId: 654 });
+    expect(mocks.claimIntent.mock.calls[0]![0]).toBe(mocks.claimIntent.mock.calls[1]![0]);
+    expect(mocks.customer).toHaveBeenCalledTimes(1);
+    expect(mocks.createOrder).toHaveBeenCalledTimes(1);
+    expect(mocks.pix).toHaveBeenCalledTimes(1);
+    expect(mocks.card).not.toHaveBeenCalled();
+  });
+  it("blocks a second attempt even when the original request lost its Appmax order ID", async () => {
+    mocks.claimIntent.mockResolvedValueOnce({
+      claimed: false,
+      phase: "creating_order",
+      orderId: null,
+      claimToken: null,
+    });
+    const r = await createPayment({ data });
+    expect(r).toMatchObject({ ok: false });
+    expect(r.message).toMatch(/tentativa de compra em verificação/);
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("does not contact Appmax when reservation storage is unavailable", async () => {
+    mocks.claimIntent.mockRejectedValueOnce(new Error("storage offline"));
+    const r = await createPayment({ data });
+    expect(r).toMatchObject({ ok: false });
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("never contacts Appmax after a lost state-machine fencing lease", async () => {
+    mocks.advanceIntent.mockRejectedValueOnce(new Error("stale lease"));
+    const r = await createPayment({ data });
+    expect(r).toMatchObject({ ok: false });
+    expect(mocks.customer).not.toHaveBeenCalled();
+  });
+  it("preserves order tracking rather than starting a new Pix on ambiguous network failure", async () => {
+    mocks.pix.mockRejectedValueOnce(new Error("gateway timeout"));
+    const r = await createPayment({ data });
+    expect(r).toMatchObject({
+      ok: true,
+      method: "verification",
+      orderId: 654,
+      paid: false,
+      status: "aguardando_confirmacao",
+    });
+    expect(mocks.pix).toHaveBeenCalledTimes(1);
+    expect(mocks.createOrder).toHaveBeenCalledTimes(1);
+  });
+  it("marks a payment completed only after authentic Appmax status says paid", async () => {
+    mocks.validStatus.mockReturnValueOnce(true);
+    mocks.status.mockResolvedValueOnce({ data: { order: { status: "aprovado", id: 654 } } });
+    const status = await getOrderStatus({ data: { orderId: 654, statusToken: "a".repeat(43) } });
+    expect(status).toMatchObject({ ok: true, paid: true, status: "aprovado" });
+    expect(mocks.finalizeIntent).toHaveBeenCalledWith(654, "completed");
+  });
+  it("allows confirmed cancellation to unlock a new attempt, but not authorization", async () => {
+    mocks.validStatus.mockReturnValue(true);
+    mocks.status
+      .mockResolvedValueOnce({ data: { order: { status: "autorizado", id: 654 } } })
+      .mockResolvedValueOnce({ data: { order: { status: "cancelado", id: 654 } } });
+    expect(
+      await getOrderStatus({ data: { orderId: 654, statusToken: "a".repeat(43) } }),
+    ).toMatchObject({ ok: true, paid: false, status: "autorizado" });
+    expect(mocks.finalizeIntent).not.toHaveBeenCalled();
+    expect(
+      await getOrderStatus({ data: { orderId: 654, statusToken: "a".repeat(43) } }),
+    ).toMatchObject({ ok: true, paid: false, status: "cancelado" });
+    expect(mocks.finalizeIntent).toHaveBeenCalledWith(654, "cancelled");
   });
   it("never generates a Pix if the server cannot save the order snapshot", async () => {
     mocks.saveSnapshot.mockRejectedValueOnce(new Error("storage offline"));
