@@ -16,17 +16,15 @@ const validUrl = (key) => {
       !url.search && !url.hash && (url.pathname === "/" || url.pathname === "");
   } catch { return false; }
 };
-const hasDedicated = present("AFFILIATE_SUPABASE_URL") || present("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-const db = hasDedicated
-  ? validUrl("AFFILIATE_SUPABASE_URL") && present("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY",16)
-  : validUrl("SUPABASE_URL") && present("SUPABASE_SERVICE_ROLE_KEY",16);
+// The checkout Supabase must never be used for confidential applicant records.
+const db = validUrl("AFFILIATE_SUPABASE_URL") && present("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY", 16);
 const encryptionKey = (() => {
   const value = raw["AFFILIATE_QUESTIONNAIRE_KEY"] || "";
   if (/^[a-f0-9]{64}$/i.test(value)) return true;
   return /^[A-Za-z0-9_-]{43}$/.test(value);
 })();
 const checks = [
-  {id:"database_pair",ok:db,kind:"configuration",description:"Credenciais de banco configuradas no servidor"},
+  {id:"database_pair",ok:db,kind:"configuration",description:"Credenciais do Supabase dedicado de afiliadas no servidor"},
   {id:"admin_password",ok:present("AFFILIATE_ADMIN_PASSWORD",16),kind:"configuration",description:"Senha administrativa"},
   {id:"session_secret",ok:present("AFFILIATE_ADMIN_SESSION_SECRET",32),kind:"configuration",description:"Segredo de sessão"},
   {id:"totp",ok:/^[A-Z2-7]{32,128}$/i.test(raw["AFFILIATE_ADMIN_TOTP_SECRET"] || ""),kind:"configuration",description:"TOTP de produção"},

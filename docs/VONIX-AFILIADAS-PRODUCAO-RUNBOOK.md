@@ -24,8 +24,11 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 
 ## 2. Procedimento de preparação do banco
 
-1. Identificar a instância Supabase autorizada para o módulo de candidaturas. Pode ser
-   dedicada; **não substituir** as variáveis ou chaves de checkout da loja.
+1. Identificar a instância Supabase **dedicada** ao módulo de candidaturas.
+   O cadastro **nunca reutiliza** `SUPABASE_URL` ou
+   `SUPABASE_SERVICE_ROLE_KEY` do checkout. A ausência de
+   `AFFILIATE_SUPABASE_URL` e `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY`
+   mantém tanto o formulário quanto a consulta administrativa indisponíveis.
 2. Fazer backup/restauração de teste, revisar permissões e responsável pela base.
 3. Aplicar, **nesta ordem**, em ambiente de homologação:
    `supabase/vonix-affiliate-applications.sql`;
@@ -48,7 +51,7 @@ commits, GitHub issues ou telas públicas. Não acessar/alterar os segredos de c
 
 | Variável | Finalidade |
 | --- | --- |
-| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | Par dedicado opcional, preferível à reutilização das credenciais da loja |
+| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | **Obrigatórias** para o módulo de inscrições; apenas no servidor, sem fallback para checkout |
 | `AFFILIATE_ADMIN_PASSWORD` | Senha de equipe (mínimo 16 caracteres); planejar identidades individuais antes de escalar |
 | `AFFILIATE_ADMIN_SESSION_SECRET` | Assinatura da sessão (mínimo 32 caracteres, separada da senha) |
 | `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 TOTP obrigatória para login e abertura em qualquer ambiente, mesmo sem `NODE_ENV` |
@@ -95,8 +98,11 @@ Resend/worker. Ter e-mails desligados não bloqueia o formulário.
 
 ## 5. Limitações que exigem decisões humanas e serviços externos
 
-- Banco de candidaturas, credenciais privadas, backup, domínio HTTPS e proxy
-  ainda precisam ser confirmados pelo respectivo operador/fornecedor.
+- Banco de candidaturas dedicado, credenciais privadas no servidor, backup,
+  domínio HTTPS e proxy ainda precisam ser confirmados pelo operador/fornecedor.
+  O projeto Supabase já provisionado não equivale à conexão ativa no Lovable.
+  A checagem de disponibilidade e o recebimento falham de forma restritiva
+  até existir a configuração dedicada.
   Resend, remetente e agendador são opcionais para o **recebimento**,
   mas necessários antes de enviar qualquer e-mail de decisão.
 - O cadastro não cria cupons nem integra com métricas de vendas ou comissões.
