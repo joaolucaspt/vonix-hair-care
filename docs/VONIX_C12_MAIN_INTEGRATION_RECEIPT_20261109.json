@@ -1,0 +1,51 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "pr": 26,
+  "c12Head": "45c5405269f3f1f6929b6959839e005aa2bdc97b",
+  "mainIntegrated": "58c740be4ad0e0c937461a42dcd47eac94a128cb",
+  "mainPRs": [
+    40,
+    41
+  ],
+  "mainChangeScope": "affiliate-only",
+  "merge": {
+    "conflicts": 0,
+    "inheritedAffiliatePaths": 15,
+    "affiliateBlobDifferencesFromMain": 0,
+    "ecommerceImplementationAlteredByMain": false
+  },
+  "checks": {
+    "vitest": {
+      "passed": 514,
+      "total": 514,
+      "files": 64,
+      "exit": 0
+    },
+    "typescript": 0,
+    "build": 0,
+    "ssr": {
+      "passed": 42,
+      "failed": 0,
+      "plex404": true,
+      "physicalInventoryVerified": false
+    },
+    "githubCI": "pending new head"
+  },
+  "protected": {
+    "noDirectAffiliateCodeEdits": true,
+    "noRealPayment": true,
+    "noProductionDB": true,
+    "noDeploy": true,
+    "noMainPRMerge": true
+  },
+  "pending": [
+    "Appmax paid_at in real sandbox",
+    "staging migrations and RLS",
+    "ERP SKU inventory",
+    "LGPD late Purchase consent revocation",
+    "WAF distributed rate limiting",
+    "real conversion tracking"
+  ]
+}

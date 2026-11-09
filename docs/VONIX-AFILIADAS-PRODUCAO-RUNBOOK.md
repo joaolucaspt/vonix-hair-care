@@ -11,9 +11,11 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 ## 1. O que está implementado e testável sem dados reais
 
 - Formulário Vonix em cinco etapas, com validação de CPF/CNPJ, email, maioridade e termos.
-- Prévia pública do formulário sem envios e sem armazenamento.
+- Prévia pública do formulário sem envios e sem armazenamento; descarte voluntário do rascunho com confirmação, sem salvar documentos no navegador.
+- Envio público exige origem do próprio site (HTTPS ou localhost de desenvolvimento); origem ausente ou divergente não passa ao limitador nem grava candidaturas.
 - Criptografia AES-256-GCM do questionário completo, com resumo sem documentos no painel.
-- Login administrativo com sessão HttpOnly/SameSite Strict, TOTP no servidor e quota por IP.
+- Login administrativo com sessão HttpOnly/SameSite Strict, TOTP no servidor e quota por IP. Ao voltar à aba, o painel revalida a sessão e elimina imediatamente os dados privados se ela expirou.
+- Acesso negado durante pesquisa, decisão, exclusão ou diagnósticos limpa os dados da candidata. A prévia de retenção descarta respostas antigas quando seus prazos são alterados, exibe os critérios efetivamente consultados e continua somente leitura.
 - Busca, triagem, decisões atômicas, fila Resend com idempotência e estados incertos.
 - Exclusão definitiva **por administrador após validação externa da titular**, com confirmação
   de email, motivo e bloqueio durante mensagens em processamento.

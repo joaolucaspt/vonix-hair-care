@@ -80,6 +80,15 @@ describe("Checklist do cadastro sem serviços de comissão", () => {
     expect(result.output.missing).toContain("database_pair");
   });
 
+  it("bloqueia credencial compartilhada com o checkout, mesmo em URLs diferentes", () => {
+    const result = runReadiness({
+      SUPABASE_URL: "https://checkout.example.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "synthetic-only-credential-1234",
+    });
+    expect(result.status).toBe(2);
+    expect(result.output.missing).toContain("database_pair");
+  });
+
   it("mantém bloqueios de proteção de dados, migrações e HTTPS", () => {
     for (const overrides of [
       { AFFILIATE_PRIVACY_POLICY_APPROVED: "false" },
