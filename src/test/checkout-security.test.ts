@@ -138,6 +138,51 @@ describe("server authoritative checkout", () => {
     expect(mocks.claimIntent).not.toHaveBeenCalled();
     expect(mocks.card).not.toHaveBeenCalled();
   });
+  it("shows only the free freight option for purchases above the threshold", async () => {
+    mocks.shipping.mockResolvedValue([
+      { id: 1, name: "Expressa", company: "Correios", price: 30, days: 2 },
+      { id: 2, name: "Economica", company: "Jadlog", price: 18, days: 5 },
+      { id: 3, name: "Intermediaria", company: "Jadlog", price: 22, days: 4 },
+    ]);
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items: [item] } });
+    expect(quote).toMatchObject({
+      ok: true,
+      options: [{ id: 2, price: 0, free: true }],
+    });
+    const bad = await createPayment({ data: { ...data, serviceId: 1 } });
+    expect(bad).toMatchObject({
+      ok: false,
+      message: "Escolha uma opção de entrega válida.",
+    });
+    expect(mocks.customer).not.toHaveBeenCalled();
+    const paid = await createPayment({ data: { ...data, serviceId: 2 } });
+    expect(paid).toMatchObject({ ok: true, method: "pix" });
+    expect(mocks.createOrder.mock.calls[0]?.[0]).toMatchObject({ shipping_value: 0 });
+  });
+  it("preserves fast/economy choices when free freight is not earned", async () => {
+    const cheaper = getProduct("reparador-de-pontas")!;
+    const small = {
+      slug: cheaper.slug,
+      variant: cheaper.variants[0]!.label,
+      qty: 1,
+    };
+    mocks.shipping.mockResolvedValue([
+      { id: 1, name: "Expressa", company: "Correios", price: 30, days: 2 },
+      { id: 2, name: "Economica", company: "Jadlog", price: 18, days: 5 },
+      { id: 3, name: "Intermediaria", company: "Jadlog", price: 22, days: 4 },
+    ]);
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items: [small] } });
+    expect(quote).toMatchObject({
+      ok: true,
+      options: [
+        { id: 1, price: 30, free: false },
+        { id: 2, price: 18, free: false },
+      ],
+    });
+    const result = await createPayment({ data: { ...data, items: [small], serviceId: 2 } });
+    expect(result).toMatchObject({ ok: true, method: "pix" });
+    expect(mocks.createOrder.mock.calls[0]?.[0]).toMatchObject({ shipping_value: 1800 });
+  });
   it("never sends both products_value and unit_value to Appmax", async () => {
     const result = await createPayment({ data });
     expect(result).toMatchObject({ ok: true, method: "pix", orderId: 654 });

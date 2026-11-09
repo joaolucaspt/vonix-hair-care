@@ -62,11 +62,14 @@ async function shippingOptions(
   const picked = pickTwoShipping(quotes);
   // Preserve the latest main: fastest and cheapest freight choices.
   const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
-  return picked.map((q) => ({
+  const options = picked.map((q) => ({
     ...q,
     free: free && q.id === cheapestId,
     price: free && q.id === cheapestId ? 0 : q.price,
   }));
+  // Keep the newest storefront behavior: when shipping is free, show only
+  // the free economy quote. Otherwise keep both fast/economy options.
+  return free ? options.filter((o) => o.free) : options;
 }
 
 export const quoteShipping = createServerFn({ method: "POST" })
