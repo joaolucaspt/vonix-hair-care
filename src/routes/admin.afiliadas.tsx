@@ -122,6 +122,10 @@ export function AffiliateAdminPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<{
+    id: string;
+    decision: "aprovada" | "recusada";
+  } | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [erasureId, setErasureId] = useState<string | null>(null);
@@ -160,6 +164,7 @@ export function AffiliateAdminPage() {
     setMailStats({ pendente: 0, processando: 0, enviado: 0, falhou: 0, incerto: 0 });
     setTotal(0);
     setWorkingId(null);
+    setPendingDecision(null);
     setNotice("");
     setErasureId(null);
     setErasureEmail("");
@@ -180,6 +185,7 @@ export function AffiliateAdminPage() {
     const isCurrent = () =>
       requestId === loadVersion.current && sessionId === sessionVersion.current;
     setLoading(true);
+    setPendingDecision(null);
     setError("");
     try {
       const response = await getAffiliateApplications({
@@ -287,8 +293,16 @@ export function AffiliateAdminPage() {
   }
 
   async function decide(app: AffiliateApplicationRecord, decision: "aprovada" | "recusada") {
-    if (workingId || app.status !== "pendente" || !authorized) return;
+    if (
+      workingId ||
+      app.status !== "pendente" ||
+      !authorized ||
+      pendingDecision?.id !== app.id ||
+      pendingDecision.decision !== decision
+    )
+      return;
     const sessionId = sessionVersion.current;
+    setPendingDecision(null);
     setWorkingId(app.id);
     setError("");
     setNotice("");
@@ -961,7 +975,7 @@ export function AffiliateAdminPage() {
                         <button
                           type="button"
                           disabled={workingId !== null || loading}
-                          onClick={() => void decide(app, "aprovada")}
+                          onClick={() => setPendingDecision({ id: app.id, decision: "aprovada" })}
                           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#315f50] px-6 text-sm font-bold text-white hover:bg-[#204d3e] disabled:opacity-50"
                         >
                           <CheckCircle2 className="h-4 w-4" />{" "}
@@ -970,11 +984,48 @@ export function AffiliateAdminPage() {
                         <button
                           type="button"
                           disabled={workingId !== null || loading}
-                          onClick={() => void decide(app, "recusada")}
+                          onClick={() => setPendingDecision({ id: app.id, decision: "recusada" })}
                           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#ba8589] px-6 text-sm font-bold text-[#773c45] hover:bg-[#fff1f1] disabled:opacity-50"
                         >
                           <XCircle className="h-4 w-4" /> RECUSAR
                         </button>
+                        {pendingDecision?.id === app.id && (
+                          <div
+                            role="group"
+                            aria-label="Confirmar decisão da candidatura"
+                            className="w-full rounded-xl border border-[#d6b6be] bg-white p-5"
+                          >
+                            <p className="text-sm font-semibold text-[#5b343b]">
+                              {pendingDecision.decision === "aprovada"
+                                ? "Confirmar aprovação"
+                                : "Confirmar recusa"}{" "}
+                              de {app.full_name}?
+                            </p>
+                            <p className="mt-2 text-xs leading-relaxed text-[#806a6c]">
+                              Esta decisão é definitiva no painel e poderá gerar uma notificação por
+                              e-mail. Confira a candidatura antes de confirmar.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                disabled={workingId !== null || loading}
+                                onClick={() => void decide(app, pendingDecision.decision)}
+                                className="min-h-11 rounded-full bg-[#673541] px-5 text-sm font-bold text-white disabled:opacity-50"
+                              >
+                                {pendingDecision.decision === "aprovada"
+                                  ? "Confirmar aprovação"
+                                  : "Confirmar recusa"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPendingDecision(null)}
+                                className="min-h-11 rounded-full border border-[#dcc8c6] px-5 text-sm font-semibold text-[#68464e]"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#f3e7e3] bg-[#fffaf7] px-6 py-4 text-sm">

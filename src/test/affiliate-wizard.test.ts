@@ -96,6 +96,14 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(submitted.tiktok).toBe("");
     expect(submitted.wizard?.couponSuggestion).toBe("MARINA10");
   });
+  it("uses the Brazilian calendar day for the legal 18-year age boundary", () => {
+    const born = "2008-11-09";
+    // UTC already says November 9 while São Paulo is still on November 8.
+    expect(ageFromBirthDate(born, new Date("2026-11-09T02:59:59Z"))).toBe(17);
+    expect(ageFromBirthDate(born, new Date("2026-11-09T03:00:00Z"))).toBe(18);
+    expect(ageFromBirthDate("2008-11-10", new Date("2026-11-09T23:00:00Z"))).toBe(17);
+  });
+
   it("rejects invalid Brazilian documents and implausible birthdates", () => {
     expect(validCpf(fixture.cpf)).toBe(true);
     expect(validCpf("111.111.111-11")).toBe(false);
