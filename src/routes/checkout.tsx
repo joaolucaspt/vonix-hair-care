@@ -8,7 +8,11 @@ import {
   type PendingCard,
 } from "@/lib/pending-card";
 import { clearPendingPix, restorePendingPix, savePendingPix } from "@/lib/pending-pix";
-import { rememberPaymentAttempt, recoverUncertainPayment, clearUncertainPayment } from "@/lib/uncertain-payment";
+import {
+  rememberPaymentAttempt,
+  recoverUncertainPayment,
+  clearUncertainPayment,
+} from "@/lib/uncertain-payment";
 import { isTerminatedOrder } from "@/lib/order-events";
 import { Lock } from "lucide-react";
 import { SecuritySeal, Shell } from "@/components/site";
@@ -56,8 +60,7 @@ export const Route = createFileRoute("/checkout")({
 const inp =
   "h-12 w-full rounded-xl border border-border bg-white px-3.5 text-body outline-none transition focus:border-action focus:ring-2 focus:ring-action/40";
 
-const panel =
-  "space-y-3 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5";
+const panel = "space-y-3 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5";
 
 const StepTitle = ({ n, children }: { n: number; children: React.ReactNode }) => (
   <legend className="mb-1 flex items-center gap-2 text-name font-semibold">
@@ -134,7 +137,8 @@ function PixPanel({
       <div role="status" className="rounded-2xl border border-border bg-card p-6 text-center">
         <h1 className="font-display text-h1">Pagamento confirmado!</h1>
         <p className="mt-2 text-body text-muted-foreground">
-          Pedido nº {pix.orderId}. Guarde este número para acompanhar seu pedido pela área Meus pedidos ou pelo atendimento.
+          Pedido nº {pix.orderId}. Guarde este número para acompanhar seu pedido pela área Meus
+          pedidos ou pelo atendimento.
         </p>
         <Link
           to="/loja"
@@ -223,6 +227,7 @@ function Checkout() {
   const [applied, setApplied] = useState<Coupon | null>(null);
   const [options, setOptions] = useState<ShipOption[]>([]);
   const [quoting, setQuoting] = useState(false);
+  const [quoteRetry, setQuoteRetry] = useState(0);
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<number | null>(null);
   const [card, setCard] = useState({ number: "", holder: "", month: "", year: "", cvv: "" });
@@ -265,7 +270,9 @@ function Checkout() {
       setApplied(prize);
       setShowCoupon(true);
       setCoupon(prize.code);
-      setCouponMsg(`Cupom ${prize.code} disponível. O desconto será calculado apenas nos itens sem outra oferta.`);
+      setCouponMsg(
+        `Cupom ${prize.code} disponível. O desconto será calculado apenas nos itens sem outra oferta.`,
+      );
     }
   }, []);
 
@@ -352,7 +359,8 @@ function Checkout() {
       .then((r) => {
         if (cancelled) return;
         if (r.ok) {
-          if (!r.options.length) track("checkout_error", { step: "shipping", reason: "no_options" });
+          if (!r.options.length)
+            track("checkout_error", { step: "shipping", reason: "no_options" });
           setOptions(r.options);
           setServiceId((cur) =>
             r.options.some((o) => o.id === cur) ? cur : (r.options[0]?.id ?? null),
@@ -377,7 +385,7 @@ function Checkout() {
     return () => {
       cancelled = true;
     };
-  }, [f.cep, itemsKey, appliedCode]);
+  }, [f.cep, itemsKey, appliedCode, quoteRetry]);
 
   const gross = checkoutTotals(c.lines, "card").gross;
   const pct = couponPercent(applied ?? undefined, gross);
@@ -421,11 +429,15 @@ function Checkout() {
     const saving = checkoutTotals(c.lines, "card", couponPercent(found, gross)).couponDiscount;
     if (saving <= 0) {
       setApplied(null);
-      setCouponMsg("Os produtos deste carrinho já têm outra promoção. O cupom vale somente para itens sem desconto de quantidade ou outra oferta.");
+      setCouponMsg(
+        "Os produtos deste carrinho já têm outra promoção. O cupom vale somente para itens sem desconto de quantidade ou outra oferta.",
+      );
       return;
     }
     setApplied(found);
-    setCouponMsg(`Cupom ${found.code} aplicado aos itens elegíveis: você economiza ${brl(saving)}.`);
+    setCouponMsg(
+      `Cupom ${found.code} aplicado aos itens elegíveis: você economiza ${brl(saving)}.`,
+    );
   };
 
   const finishedOrders = useRef(new Set<number>());
@@ -544,7 +556,9 @@ function Checkout() {
     }
     if (paymentInFlight.current || cardDone || paymentRecoveryRequired) return;
     if (pay === "card" && cardSdkState !== "ready") {
-      setError("A validação segura do cartão não está pronta. Recarregue a validação ou escolha Pix.");
+      setError(
+        "A validação segura do cartão não está pronta. Recarregue a validação ou escolha Pix.",
+      );
       return;
     }
     paymentInFlight.current = true;
@@ -568,6 +582,7 @@ function Checkout() {
           },
           items,
           serviceId: chosen.id,
+          quotedTotalCents: Math.round(total * 100),
           method: pay,
           // The optional Meta Purchase event must follow consent at checkout.
           marketingConsent: hasTrackingConsent(),
@@ -578,12 +593,20 @@ function Checkout() {
         },
       });
       if (!r.ok) {
-        track("checkout_error", { step: "payment", reason: "gateway_or_validation", payment_type: pay });
+        track("checkout_error", {
+          step: "payment",
+          reason: "gateway_or_validation",
+          payment_type: pay,
+        });
         if ("retrySafe" in r && r.retrySafe === false) {
           setPaymentRecoveryRequired(true);
         } else {
           // Explicit rejection before payment is not a pending charge.
           clearUncertainPayment();
+        }
+        // A stale quote must be visibly refreshed before the next attempt.
+        if ("reason" in r && r.reason === "price_changed") {
+          setQuoteRetry((value) => value + 1);
         }
         setError(r.message);
         return;
@@ -616,7 +639,9 @@ function Checkout() {
     } catch {
       track("checkout_error", { step: "payment", reason: "network_or_server", payment_type: pay });
       setPaymentRecoveryRequired(true);
-      setError("Não foi possível confirmar a resposta do pagamento. Não tente pagar novamente antes de consultar o atendimento.");
+      setError(
+        "Não foi possível confirmar a resposta do pagamento. Não tente pagar novamente antes de consultar o atendimento.",
+      );
     } finally {
       paymentInFlight.current = false;
       setBusy(false);
@@ -636,7 +661,8 @@ function Checkout() {
       : "https://scripts.appmax.com.br/appmax.min.js";
     s.async = true;
     const clearTokenTimer = () => {
-      if (cardTokenizationTimer.current !== null) window.clearTimeout(cardTokenizationTimer.current);
+      if (cardTokenizationTimer.current !== null)
+        window.clearTimeout(cardTokenizationTimer.current);
       cardTokenizationTimer.current = null;
     };
     const loadTimer = window.setTimeout(() => {
@@ -706,7 +732,9 @@ function Checkout() {
     else if (!cfg?.cardEnabled)
       setError("Pagamento por cartão indisponível no momento. Use o Pix ou entre em contato.");
     else if (cardSdkState !== "ready")
-      setError("A validação segura do cartão ainda não carregou. Recarregue a validação ou escolha Pix.");
+      setError(
+        "A validação segura do cartão ainda não carregou. Recarregue a validação ou escolha Pix.",
+      );
     else {
       const cardForm = document.getElementById("card-form");
       if (!(cardForm instanceof HTMLFormElement) || !cardForm.reportValidity()) return;
@@ -718,7 +746,9 @@ function Checkout() {
         cardTokenizationPending.current = false;
         cardTokenizationTimer.current = null;
         setBusy(false);
-        setError("A validação do cartão não respondeu. Nenhuma cobrança foi solicitada. Tente novamente ou escolha Pix.");
+        setError(
+          "A validação do cartão não respondeu. Nenhuma cobrança foi solicitada. Tente novamente ou escolha Pix.",
+        );
         track("checkout_error", { step: "card_sdk", reason: "tokenization_timeout" });
       }, 18000);
       cardForm.requestSubmit();
@@ -823,7 +853,8 @@ function Checkout() {
         <div className="container-site max-w-xl py-16 text-center" role="status">
           <h1 className="font-display text-h1">Pagamento aprovado!</h1>
           <p className="mt-2 text-body text-muted-foreground">
-            Pedido nº {cardDone.orderId}. Guarde este número para acompanhar seu pedido pela área Meus pedidos ou pelo atendimento.
+            Pedido nº {cardDone.orderId}. Guarde este número para acompanhar seu pedido pela área
+            Meus pedidos ou pelo atendimento.
           </p>
           <Link
             to="/loja"
@@ -1033,6 +1064,15 @@ function Checkout() {
                 {quoteErr && !quoting && (
                   <p role="alert" className="text-body text-destructive">
                     {quoteErr}
+                    {f.cep.replace(/\D/g, "").length === 8 && (
+                      <button
+                        type="button"
+                        onClick={() => setQuoteRetry((value) => value + 1)}
+                        className="mt-2 block min-h-11 rounded-lg border border-current px-4 font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        Tentar calcular frete novamente
+                      </button>
+                    )}
                   </p>
                 )}
                 {!quoting &&
@@ -1135,11 +1175,14 @@ function Checkout() {
                   )}
                   {applied && couponNoSavings && (
                     <p role="status" className="text-body text-muted-foreground">
-                      Este carrinho não tem itens elegíveis ao cupom. Nenhum desconto adicional foi considerado.
+                      Este carrinho não tem itens elegíveis ao cupom. Nenhum desconto adicional foi
+                      considerado.
                     </p>
                   )}
                   {applied && couponProblem?.ok === false && (
-                    <p role="status" className="text-body text-muted-foreground">{couponProblem.reason}</p>
+                    <p role="status" className="text-body text-muted-foreground">
+                      {couponProblem.reason}
+                    </p>
                   )}
                 </div>
               )}
@@ -1335,7 +1378,11 @@ function Checkout() {
                 ? "Não foi possível carregar a validação segura do cartão. Você também pode pagar por Pix."
                 : "Carregando validação segura do cartão…"}
               {cardSdkState === "failed" && (
-                <button type="button" className="ml-2 underline" onClick={() => setCardSdkRetry((n) => n + 1)}>
+                <button
+                  type="button"
+                  className="ml-2 underline"
+                  onClick={() => setCardSdkRetry((n) => n + 1)}
+                >
                   Recarregar validação
                 </button>
               )}

@@ -327,6 +327,7 @@ export const createPayment = createServerFn({ method: "POST" })
         return {
           ok: false as const,
           retrySafe: true as const,
+          reason: "price_changed" as const,
           message:
             "O total da compra mudou desde a cotação. Confira o frete e o valor atualizado antes de pagar.",
         };

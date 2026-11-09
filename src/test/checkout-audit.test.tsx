@@ -124,13 +124,52 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("refaz a cotação após total alterado sem repetir pagamento", async () => {
+    mocks.payment.mockResolvedValueOnce({
+      ok: false,
+      retrySafe: true,
+      reason: "price_changed",
+      message: "O total da compra mudou desde a cotação.",
+    });
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(await screen.findByText("O total da compra mudou desde a cotação.")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.quote).toHaveBeenCalledTimes(2));
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+  });
+  it("oferece nova cotação de frete após falha transitória, sem iniciar pagamento", async () => {
+    mocks.quote.mockResolvedValueOnce({ ok: false, message: "Transportadora indisponível" });
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    expect(await screen.findByText("Transportadora indisponível")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar calcular frete novamente" }));
+    expect(await screen.findByText(/Correios PAC/)).toBeInTheDocument();
+    expect(mocks.quote).toHaveBeenCalledTimes(2);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("envia ao servidor o total em centavos que foi mostrado antes da compra", async () => {
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    await waitFor(() => expect(mocks.payment).toHaveBeenCalledOnce());
+    const submitted = mocks.payment.mock.calls[0]![0].data;
+    expect(submitted.quotedTotalCents).toBeGreaterThan(0);
+    expect(Number.isSafeInteger(submitted.quotedTotalCents)).toBe(true);
+    expect(submitted.serviceId).toBe(option.id);
+  });
   it("perda da resposta do gateway impede nova tentativa e persiste guarda após recarregar", async () => {
     mocks.payment.mockRejectedValueOnce(new Error("simulated connection lost after submission"));
     const checkout = render(<Checkout />);
     await fill();
     fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
-    expect(await screen.findByRole("heading", { name: "Pagamento em verificação" })).toBeInTheDocument();
-    expect(screen.getByText(/não tente gerar outro Pix ou pagar com outro cartão/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em verificação" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/não tente gerar outro Pix ou pagar com outro cartão/i),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Gerar Pix/ })).not.toBeInTheDocument();
     expect(mocks.payment).toHaveBeenCalledTimes(1);
     const marker = sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY);
@@ -139,14 +178,19 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(marker).not.toContain("teste@example.com");
     checkout.unmount();
     render(<Checkout />);
-    expect(await screen.findByRole("heading", { name: "Pagamento em verificação" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em verificação" }),
+    ).toBeInTheDocument();
     expect(mocks.payment).toHaveBeenCalledTimes(1);
   });
 
   it("marca tentativa como pendente antes de enviar dados e remove o bloqueio após negativa segura", async () => {
     let reply: ((value: unknown) => void) | undefined;
     mocks.payment.mockImplementationOnce(
-      () => new Promise((resolve) => { reply = resolve; }),
+      () =>
+        new Promise((resolve) => {
+          reply = resolve;
+        }),
     );
     render(<Checkout />);
     await fill();
@@ -170,7 +214,9 @@ describe("checkout auditado sem chamadas reais", () => {
     render(<Checkout />);
     await fill();
     fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
-    expect(await screen.findByRole("heading", { name: "Pagamento em verificação" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em verificação" }),
+    ).toBeInTheDocument();
     expect(mocks.payment).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY)).toContain('"method":"pix"');
   });
@@ -181,7 +227,9 @@ describe("checkout auditado sem chamadas reais", () => {
     await fill();
     fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
     expect(await screen.findByText("Cupom inválido")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Pagamento em verificação" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Pagamento em verificação" }),
+    ).not.toBeInTheDocument();
     expect(sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY)).toBeNull();
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
   });
@@ -290,12 +338,16 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     mocks.status.mockResolvedValue({ ok: true, paid: false, status: "autorizado" });
     render(<Checkout />);
-    expect(await screen.findByRole("heading", { name: "Pagamento em análise" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em análise" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Pagamento aprovado!" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Gerar Pix/ })).not.toBeInTheDocument();
-    await waitFor(() => expect(mocks.status).toHaveBeenCalledWith({
-      data: { orderId: 765, statusToken: "signed-read-only-test-token-0000010" },
-    }));
+    await waitFor(() =>
+      expect(mocks.status).toHaveBeenCalledWith({
+        data: { orderId: 765, statusToken: "signed-read-only-test-token-0000010" },
+      }),
+    );
     expect(mocks.payment).not.toHaveBeenCalled();
     expect(mocks.cart.clear).not.toHaveBeenCalled();
   });
@@ -308,11 +360,20 @@ describe("checkout auditado sem chamadas reais", () => {
       status: "aprovado",
     });
     let resolveStatus: ((data: { ok: true; paid: boolean; status: string }) => void) | undefined;
-    mocks.status.mockImplementationOnce(() => new Promise((resolve) => { resolveStatus = resolve; }));
+    mocks.status.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveStatus = resolve;
+        }),
+    );
     render(<Checkout />);
-    expect(await screen.findByRole("heading", { name: "Pagamento em análise" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em análise" }),
+    ).toBeInTheDocument();
     expect(mocks.cart.clear).not.toHaveBeenCalled();
-    await act(async () => { resolveStatus?.({ ok: true, paid: true, status: "aprovado" }); });
+    await act(async () => {
+      resolveStatus?.({ ok: true, paid: true, status: "aprovado" });
+    });
     expect(await screen.findByRole("heading", { name: "Pagamento aprovado!" })).toBeInTheDocument();
     expect(mocks.cart.clear).toHaveBeenCalledTimes(1);
     expect(mocks.payment).not.toHaveBeenCalled();
@@ -363,22 +424,27 @@ describe("checkout auditado sem chamadas reais", () => {
     render(<Checkout />);
     await fill();
     fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
-    const getScript = async () => waitFor(() => {
-      const script = document.querySelector('script[src*="appmax.min.js"]');
-      expect(script).not.toBeNull();
-      return script!;
-    });
+    const getScript = async () =>
+      waitFor(() => {
+        const script = document.querySelector('script[src*="appmax.min.js"]');
+        expect(script).not.toBeNull();
+        return script!;
+      });
     const script = await getScript();
     expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
     fireEvent.error(script);
-    expect(await screen.findByText(/Não foi possível carregar a validação segura do cartão/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Não foi possível carregar a validação segura do cartão/),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
     expect(mocks.payment).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Recarregar validação" }));
     window.AppmaxScripts = { init: vi.fn() };
     const retryScript = await getScript();
     fireEvent.load(retryScript);
-    await waitFor(() => expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeEnabled(),
+    );
     fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
   });
@@ -392,7 +458,9 @@ describe("checkout auditado sem chamadas reais", () => {
       return element!;
     });
     fireEvent.load(script);
-    expect(await screen.findByText(/Não foi possível carregar a validação segura do cartão/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Não foi possível carregar a validação segura do cartão/),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
@@ -422,7 +490,9 @@ describe("checkout auditado sem chamadas reais", () => {
     const p = getProduct("kit-banana-e-mel")!;
     const v = p.variants[0];
     const t = lineTotals(v.price, 2);
-    mocks.cart.lines = [{ product: p, slug: p.slug, variant: v.label, qty: 2, price: v.price, ...t }];
+    mocks.cart.lines = [
+      { product: p, slug: p.slug, variant: v.label, qty: 2, price: v.price, ...t },
+    ];
     mocks.cart.netSubtotal = t.net;
     mocks.cart.subtotal = t.gross;
     render(<Checkout />);
@@ -442,7 +512,14 @@ describe("checkout auditado sem chamadas reais", () => {
     const one = lineTotals(singleV.price, 1);
     mocks.cart.lines = [
       { product: p, slug: p.slug, variant: v.label, qty: 2, price: v.price, ...two },
-      { product: singleP, slug: singleP.slug, variant: singleV.label, qty: 1, price: singleV.price, ...one },
+      {
+        product: singleP,
+        slug: singleP.slug,
+        variant: singleV.label,
+        qty: 1,
+        price: singleV.price,
+        ...one,
+      },
     ];
     mocks.cart.netSubtotal = two.net + one.net;
     mocks.cart.subtotal = two.gross + one.gross;
@@ -488,8 +565,12 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
     fireEvent.load(sdk);
-    await waitFor(() => expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeEnabled());
-    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ }).className).toContain("bg-emerald-600");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeEnabled(),
+    );
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ }).className).toContain(
+      "bg-emerald-600",
+    );
     fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
     expect(mocks.payment).not.toHaveBeenCalled();
