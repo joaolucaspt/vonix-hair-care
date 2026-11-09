@@ -1,0 +1,86 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "workloop": {
+    "id": "b1195784-b0e6-4236-b3d0-e34d4e202276",
+    "runId": "73658de0-d15a-46fd-9cd3-567f0f0533e6"
+  },
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "base": "b61087c",
+  "pullRequest": 26,
+  "findings": [
+    "N58 no unquoted free-shipping guarantee",
+    "N59 modal overlaps privacy consent on mobile",
+    "N60 modal keyboard/focus and touch targets",
+    "N61 unresolved main checkout merge conflicts"
+  ],
+  "verification": {
+    "vitest": {
+      "passed": 535,
+      "total": 535,
+      "files": 66,
+      "exit": 0
+    },
+    "targetedNew": {
+      "passed": 10,
+      "files": 3,
+      "exit": 0
+    },
+    "typescript": 0,
+    "eslint": 0,
+    "prettier": 0,
+    "build": {
+      "exit": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "pass": 42,
+      "fail": 0,
+      "excluded": "plex-vonix"
+    },
+    "browserDev": {
+      "pass": 3,
+      "fail": 0,
+      "widths": [
+        320,
+        390,
+        1366
+      ],
+      "externalRequestsBlocked": true,
+      "errors": 0,
+      "cartPersisted": true
+    },
+    "browserProductionPreview": {
+      "pass": 0,
+      "fail": 3,
+      "reason": "Vite preview expects dist/server/server.js, Nitro cloudflare-module outputs .output/server/index.mjs; Wrangler not installed. Runtime not certified."
+    },
+    "diffCheck": 0
+  },
+  "filesSha256": {
+    "src/components/buy-drawer.tsx": "D0494C47F731A943514CEAB11F7B6FEB935118BC6D7BB118CB55877D665D4A9C",
+    "src/lib/upsell.ts": "4A76EA4003E64EDD6AA7E97ABA3B9930B7DE9EEA6BA1F99A8990B5D53327C7DA",
+    "src/routes/produto.$slug.tsx": "38F8F91D50610C0B7803CEA9BF5BB0D709A9FE19E0F31F484346CBCAA82DF316",
+    "src/test/buy-drawer-safety.test.tsx": "D688733C50B7186CF8EB27053B08DD498228623F9B5BE9E6A3E8ABB5318973C5",
+    "src/test/upsell-safe.test.ts": "B9A5F7132DAA00BC3C531699065D06EB9DB060A2345400207022988A4C6F5F94",
+    "scripts/qa-c15-buy-drawer.mjs": "DFD8ACD33C7CE589273C9CCA4AD99676A0E3446402867CC3A0A2A9B0EA61C836",
+    "qa-artifacts/vonix-c15/report.json": "565CA9555F377B83539A6328765F43E67D65711E87EF022E23B69395F6226AC2",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C15_20261109.md": "9C2BD6A7FA1A421860734D6C4F0076E311C24C10B060E2D5E5A6D56B7F1C56A3"
+  },
+  "noAffiliateCodeEdited": true,
+  "noRealPayments": true,
+  "noLiveDatabaseWrites": true,
+  "noDeploy": true,
+  "noMainMerge": true,
+  "remaining": [
+    "PR26 conflicts: checkout.functions, checkout route, product route",
+    "Appmax sandbox contract and paid_at",
+    "Supabase isolated staging migrations/RLS",
+    "Bling inventory and SKU dimensional data",
+    "LGPD late revocation",
+    "WAF/rate limit",
+    "GA4 attribution vs paid orders",
+    "Cloudflare-specific production bundle preview"
+  ]
+}

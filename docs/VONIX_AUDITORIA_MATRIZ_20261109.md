@@ -175,3 +175,14 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 **C13:** 524/524 testes em 64 arquivos, TypeScript/ESLint/build PASS, SSR 42/42 e Chrome responsivo 320/390/1366 px após hidratação. Primeiro teste em Vite frio 320 px perdeu clique, não reproduzido após hidratação; produção não avaliada sob CPU/rede lenta. **Sem SQL nova nem pagamentos reais.** Recibo: `docs/VONIX_C13_VERIFIED_RECEIPT_20261109.json`. Homologar SELECT service_role e RLS no Supabase staging; restantes P0 preservados.
 
 | N54 | Bloqueio de integração, aberto | Após testes C13, `origin/main` avançou para `6ce6952` com gaveta Comprar agora/checkout compacto e merge-tree apontou conflitos em checkout/PDP. Uma alteração local de checkout por outra sessão também está não commitada | **Não resolvido**: preservar worktree e commits anteriores; reconciliar checkout/PDP/buy-drawer com segurança sem descartar trabalho local; repetir QA e CI antes de merge/deploy |
+
+## C15 — gaveta de compra, cotação e revisão da integração (09/11)
+
+| ID | Prioridade | Achado | Status |
+| --- | --- | --- | --- |
+| N58 | Alta | Gaveta da main anunciava frete grátis com base no valor do carrinho, sem CEP nem cotação | **Corrigido na branch:** usa subtotal bruto para o limiar e comunica cobertura/prazo condicionados à cotação real. Não publicado. |
+| N59 | Alta | Aviso de privacidade z100 interceptava CTA da gaveta z90 no mobile | **Corrigido e validado em Chrome:** drawer z110; QA local 320/390/1366, 3/3 PASS, consentimento preservado. |
+| N60 | Média | Gaveta nova tinha controles de quantidade/fechamento de 28–36 px e ausência de ciclo de foco | **Corrigido na branch:** controles 44 px, foco/Tab/Shift+Tab/Escape, testes. |
+| N61 | Alta | Nova main não preserva proteção financeira C11–C14 em checkout compacto, e PR #26 não é automaticamente integrável | **Bloqueio mantido:** portado drawer e upsell sem substituir checkout; três conflitos reais em merge-tree. Homologação e reconciliação ainda necessárias. |
+
+**C15:** 535/535 testes, 66 arquivos, build e TypeScript exit 0, SSR 42/42, Chrome dev 3/3. A prévia de bundle Cloudflare via `vite preview` não funciona neste preset (falta entry `dist/server/server.js`); evidência negativa mantida, sem inferir falha de produção. Ver `VONIX_AUDITORIA_CONTINUIDADE_C15_20261109.md`.

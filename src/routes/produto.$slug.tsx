@@ -1,7 +1,8 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { Check, Heart, Minus, Plus, Truck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { BuyDrawer } from "@/components/buy-drawer";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews, reviewsFor } from "@/components/reviews";
@@ -178,7 +179,14 @@ export function ShippingCalc({
           if (current !== request.current) return;
           setOpts(q.ok ? q.options : []);
           if (q.ok && q.options.length === 0)
-            setErr((old) => [old, "Não há opções de entrega para este CEP. Confira o endereço ou fale com nosso atendimento."].filter(Boolean).join(" "));
+            setErr((old) =>
+              [
+                old,
+                "Não há opções de entrega para este CEP. Confira o endereço ou fale com nosso atendimento.",
+              ]
+                .filter(Boolean)
+                .join(" "),
+            );
           if (!q.ok) setErr((old) => [old, q.message].filter(Boolean).join(" "));
         })
         .catch(() => {
@@ -269,6 +277,12 @@ function ProductPage() {
   const nav = useNavigate();
   const [vi, setVi] = useState(0);
   const [qty, setQty] = useState(1);
+  const [buyOpen, setBuyOpen] = useState(false);
+  const closeBuyDrawer = useCallback(() => setBuyOpen(false), []);
+  const payFromDrawer = useCallback(() => {
+    setBuyOpen(false);
+    nav({ to: "/checkout" });
+  }, [nav]);
   const v = p.variants[vi] ?? p.variants[0]!;
   const compare = vi === 0 ? p.compareBase : null;
   const off = discountPct(compare, v.price);
@@ -292,6 +306,7 @@ function ProductPage() {
   const total = sel.net;
   return (
     <Shell>
+      {buyOpen && <BuyDrawer onClose={closeBuyDrawer} onPay={payFromDrawer} />}
       <div className="container-site py-8 pb-28 lg:pb-8">
         <nav className="mb-6 text-small text-muted-foreground">
           <Link to="/">Início</Link> /{" "}
@@ -324,9 +339,7 @@ function ProductPage() {
               <div className="mt-6">
                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                   <div className="font-display text-h2 leading-tight">
-                    {audience === "salao"
-                      ? "Condição por quantidade"
-                      : "Compre mais e economize"}
+                    {audience === "salao" ? "Condição por quantidade" : "Compre mais e economize"}
                   </div>
                   <div className="text-small text-muted-foreground">
                     mesmo produto, mesmo tamanho
@@ -481,7 +494,7 @@ function ProductPage() {
                 className="rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5"
                 onClick={() => {
                   add();
-                  nav({ to: "/checkout" });
+                  setBuyOpen(true);
                 }}
               >
                 Comprar agora
@@ -550,7 +563,7 @@ function ProductPage() {
           className="ml-auto shrink-0 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] px-6 py-3 text-body"
           onClick={() => {
             add();
-            nav({ to: "/checkout" });
+            setBuyOpen(true);
           }}
         >
           Comprar agora

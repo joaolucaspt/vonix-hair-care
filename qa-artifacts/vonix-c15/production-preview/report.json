@@ -1,0 +1,30 @@
+{
+  "scope": "local dev SSR and synthetic browser, no payment",
+  "date": "2026-11-09",
+  "origin": "http://127.0.0.1:45051",
+  "outcomes": [
+    {
+      "viewport": 320,
+      "passed": false,
+      "pageErrors": [],
+      "externalBlocked": 0,
+      "error": "Error: PDP HTTP 500"
+    },
+    {
+      "viewport": 390,
+      "passed": false,
+      "pageErrors": [],
+      "externalBlocked": 0,
+      "error": "Error: PDP HTTP 500"
+    },
+    {
+      "viewport": 1366,
+      "passed": false,
+      "pageErrors": [],
+      "externalBlocked": 0,
+      "error": "Error: PDP HTTP 500"
+    }
+  ],
+  "passed": 0,
+  "failed": 3
+}

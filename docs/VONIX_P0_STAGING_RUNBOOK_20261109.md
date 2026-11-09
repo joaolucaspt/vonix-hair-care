@@ -58,3 +58,7 @@ Em Supabase **staging isolado**, aplicar/revisar a SQL já existente que concede
 ### N54 — nova gaveta Comprar agora da main: integração bloqueada
 
 A main `6ce6952` alterou `src/components/buy-drawer.tsx`, checkout e PDP. O merge com a auditoria tem conflitos nestas duas páginas e há edição local não commitada em checkout de outra sessão. Não executar reset/clean/checkout/stash nem forçar resolução. Integrar conscientemente a nova gaveta à máquina de estados C12/C13, proteção de double charge, consentimento, Pix/cartão, frete/cupom e acessibilidade; comparar checkout local antes de qualquer write e manter o PR aberto enquanto não houver validação completa.
+
+### Portas C15 — versão com gaveta de compra
+
+Na integração futura da nova `main`, exigir simultaneamente (1) testes de idempotência, `statusToken` e recuperação após timeout Pix/cartão do checkout auditado; (2) modal da PDP com foco/teclado e alvos >=44 px; (3) frete não garantido sem cotação de CEP, utilizando subtotal de produtos bruto para a regra comercial; (4) consentimento não pode interceptar CTA nem forçar rastreamento; (5) teste no **runtime Cloudflare** real de staging, já que `vite preview` local não serve o preset Nitro emitido. Sem assinatura de Appmax/Supabase/Bling e conciliação de vendas pagas, PR #26 não é liberado a produção.
