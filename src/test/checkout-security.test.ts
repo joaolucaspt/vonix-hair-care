@@ -194,7 +194,7 @@ describe("server authoritative checkout", () => {
     expect(mocks.claimIntent).not.toHaveBeenCalled();
     expect(mocks.card).not.toHaveBeenCalled();
   });
-  it("shows only the free freight option for purchases above the threshold", async () => {
+  it("prioritizes a validated option of up to 3 days for free freight", async () => {
     mocks.shipping.mockResolvedValue([
       { id: 1, name: "Expressa", company: "Correios", price: 30, days: 2 },
       { id: 2, name: "Economica", company: "Jadlog", price: 18, days: 5 },
@@ -203,17 +203,37 @@ describe("server authoritative checkout", () => {
     const quote = await quoteShipping({ data: { cep: data.address.cep, items: [item] } });
     expect(quote).toMatchObject({
       ok: true,
-      options: [{ id: 2, price: 0, free: true }],
+      options: [{ id: 1, price: 0, free: true }],
     });
-    const bad = await createPayment({ data: { ...data, serviceId: 1 } });
+    const bad = await createPayment({ data: { ...data, serviceId: 2 } });
     expect(bad).toMatchObject({
       ok: false,
       message: "Escolha uma opção de entrega válida.",
     });
     expect(mocks.customer).not.toHaveBeenCalled();
-    const paid = await createPayment({ data: { ...data, serviceId: 2 } });
+    const paid = await createPayment({ data: { ...data, serviceId: 1 } });
     expect(paid).toMatchObject({ ok: true, method: "pix" });
     expect(mocks.createOrder.mock.calls[0]?.[0]).toMatchObject({ shipping_value: 0 });
+  });
+  it("never chooses a malformed fast quote for free freight", async () => {
+    mocks.shipping.mockResolvedValue([
+      { id: 1, name: "Falso rápido", company: "Correios", price: -8, days: 1 },
+      { id: 2, name: "Econômico", company: "Jadlog", price: 18, days: 6 },
+      { id: 3, name: "Rápido válido", company: "Correios", price: 27, days: 3 },
+    ]);
+    const result = await quoteShipping({ data: { cep: data.address.cep, items: [item] } });
+    expect(result).toMatchObject({ ok: true, options: [{ id: 3, price: 0, days: 3, free: true }] });
+    expect((await createPayment({ data: { ...data, serviceId: 1 } })).ok).toBe(false);
+    expect(mocks.customer).not.toHaveBeenCalled();
+  });
+
+  it("uses a real slower deadline if no carrier serves the CEP in 3 days", async () => {
+    mocks.shipping.mockResolvedValue([
+      { id: 2, name: "Econômico", company: "Jadlog", price: 18, days: 6 },
+      { id: 3, name: "Outra", company: "Correios", price: 27, days: 4 },
+    ]);
+    const result = await quoteShipping({ data: { cep: data.address.cep, items: [item] } });
+    expect(result).toMatchObject({ ok: true, options: [{ id: 2, price: 0, days: 6, free: true }] });
   });
   it("preserves fast/economy choices when free freight is not earned", async () => {
     const cheaper = getProduct("reparador-de-pontas")!;
@@ -247,7 +267,7 @@ describe("server authoritative checkout", () => {
     expect(sent).toHaveProperty("products");
     const products = sent["products"] as { unit_value: number }[];
     expect(products[0]?.unit_value).toBe(Math.round(lineTotals(v.price, 1).net * 100));
-    expect(sent["shipping_value"]).toBe(0); // cheapest quote is free above R$ 150
+    expect(sent["shipping_value"]).toBe(0); // validated free quote for an eligible cart
     expect(mocks.saveSnapshot).toHaveBeenCalledOnce();
     expect(mocks.saveSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: 654, shippingValueCents: 0 }),

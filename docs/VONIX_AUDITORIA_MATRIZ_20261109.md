@@ -53,6 +53,10 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N14 | Alta | Novo checkout verde da `main` verificava `cfg.pixEnabled` para habilitar o botão até quando o método escolhido era cartão | Merge preserva layout sticky verde e SDK protegido; CTA valida método escolhido e SDK do cartão; teste com Pix desabilitado/cartão habilitado PASS |
 | N15 | Média | Atualizações de produto na `main` poderiam ser perdidas ao resolver o conflito do JSON | Merge preserva nome “Botox Vonix sem formol”, fotos recentes, todos os preços e variantes da `main`; reaplica somente as 43 descrições de frete corrigidas |
 
+| N16 | Alta | Barra e resumo de frete da `main` anunciavam entrega gratuita como garantida antes de consultar o CEP | Mantida a identidade verde, mas comunicação passa a indicar elegibilidade condicionada à cobertura; total de produtos explicitamente sem frete até cotação; regressões de interface acrescentadas |
+| N17 | Alta | Nova prioridade de frete grátis rápido não usava a validação defensiva anterior das cotações | Integração seleciona serviço em até 3 dias apenas entre cotações válidas; na ausência mantém prazo real da opção disponível, testando também opção rápida inválida |
+| N18 | Média | Um depoimento em vídeo tinha quase 12 MB | Transcodificado com duração/resolução preservadas e SSIM 0,984; entrega passou a 6,25 MB (47,7% menor), com teste de orçamento de mídia |
+
 ## Evidências e validações técnicas
 
 - Varredura pública sem efeitos externos: `scripts/audit-public-catalog.mjs --live`, recibo `docs/VONIX_PUBLIC_CATALOG_AUDIT_20261109.json`.
@@ -61,6 +65,10 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 - Prévia local isolada: 390×844 e 1366×768; home, produto, carrinho e checkout; 8 HTTP 200; scrollWidth igual à viewport; nenhuma exceção JS ou imagem quebrada detectada nos cenários acessados. Teste adicional dos botões do banner 320/390/1366 px: 44 px/seta, 40 px/indicador, sem overflow, avanço funcional, sem erro JS. **Não valida responsividade em todos os aparelhos**.
 - Fluxo público verificado no Chrome headless com cliques até checkout e cotação de CEP público; **sem criar Pix, pedido ou cartão**.
 - Testes unitários novos: preço e transportadoras, promoções/cupom, frete sem cotação, fallback HTTP 500 e verificação do método de pagamento habilitado. Após integrar a `main` mais recente: **373/373 testes aprovados em 50 arquivos**, TypeScript/build/ESLint direcionado PASS. Nenhuma mudança manual em afiliadas; diff em arquivos de afiliadas contra a `main` atualizada é zero.
+
+## Evidência adicional da continuidade C2 (09/11)
+
+A integração da `main` até `06f15b6` preserva a seleção de entrega rápida e o estilo verde do carrinho sem perder validação de cotações nem evento `add_to_cart`. A suíte completa passou com **382 testes em 52 arquivos**, TypeScript/build/ESLint direcionado passaram e a navegação produto → carrinho → checkout foi confirmada em Chrome local em 390 e 1366 px. O depoimento de vídeo mais pesado foi reduzido em 47,7%, com duração/resolução preservadas e SSIM 0,984. A auditoria de navegador em abertura fria exige verificação adicional de hidratação em rede limitada; com espera de interatividade, o fluxo passou.
 
 ## Bloqueios de homologação — não apagar/“dar como concluídos”
 

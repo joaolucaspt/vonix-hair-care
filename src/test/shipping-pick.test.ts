@@ -29,3 +29,19 @@ describe("pickTwoShipping", () => {
     expect(r.map((x) => x.days)).toEqual([4, 8]);
   });
 });
+
+import { pickFreeShipping } from "@/lib/shipping-pick";
+
+describe("pickFreeShipping", () => {
+  it("escolhe a mais barata que entrega em até 3 dias úteis", () => {
+    expect(pickFreeShipping([q(1, 15, 6), q(2, 28, 3), q(3, 39, 2)])?.id).toBe(2);
+  });
+  it("sem opção em até 3 dias, usa a mais barata com o prazo real", () => {
+    const r = pickFreeShipping([q(1, 15, 6), q(2, 28, 4)]);
+    expect(r?.id).toBe(1);
+    expect(r?.days).toBe(6);
+  });
+  it("lista vazia não escolhe nada", () => {
+    expect(pickFreeShipping([])).toBeUndefined();
+  });
+});

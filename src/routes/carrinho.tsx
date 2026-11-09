@@ -69,7 +69,7 @@ function Suggestions() {
                   c.add(p.slug, v.label, 1, "comp5");
                   track("add_to_cart", { value: offer, items: [toItem(p, v.label, offer)] });
                 }}
-                className="mt-3 rounded-full border border-action px-4 py-2 text-small font-medium text-action"
+                className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100"
               >
                 Adicionar
               </button>

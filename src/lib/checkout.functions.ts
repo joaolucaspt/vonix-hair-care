@@ -14,7 +14,7 @@ import {
   finalizeCheckoutIntent,
 } from "./checkout-idempotency.server";
 import { calculateShipping } from "./melhorenvio.server";
-import { pickTwoShipping } from "./shipping-pick";
+import { pickFreeShipping, pickTwoShipping } from "./shipping-pick";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, complementsFor, getProduct, lineTotals, type Offer } from "./store";
@@ -60,8 +60,7 @@ async function shippingOptions(
   );
   const t = checkoutTotals(lines, "pix");
   const free = t.freeShipping || couponFreeShipping(findCoupon(couponCode), t.gross);
-  // Defense in depth: a future quote adapter must not smuggle invalid
-  // external money/dates into the customer's final payable total.
+  // Keep invalid carrier quotes out of the price calculation.
   const usable = quotes.filter(
     (q) =>
       Number.isSafeInteger(q.id) &&
@@ -73,17 +72,12 @@ async function shippingOptions(
       q.days >= 0 &&
       q.days <= 365,
   );
-  const picked = pickTwoShipping(usable);
-  // Preserve the latest main: fastest and cheapest freight choices.
-  const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
-  const options = picked.map((q) => ({
-    ...q,
-    free: free && q.id === cheapestId,
-    price: free && q.id === cheapestId ? 0 : q.price,
-  }));
-  // Keep the newest storefront behavior: when shipping is free, show only
-  // the free economy quote. Otherwise keep both fast/economy options.
-  return free ? options.filter((o) => o.free) : options;
+  if (free) {
+    // Prefer a quote of up to 3 business days, without inventing an ETA.
+    const chosen = pickFreeShipping(usable);
+    return chosen ? [{ ...chosen, free: true, price: 0 }] : [];
+  }
+  return pickTwoShipping(usable).map((q) => ({ ...q, free: false }));
 }
 
 export const quoteShipping = createServerFn({ method: "POST" })

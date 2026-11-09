@@ -26,3 +26,17 @@ export function pickTwoShipping<T extends Pick<ShippingQuote, "id" | "price" | "
 
   return [fast, economy].sort((a, b) => a.days - b.days || a.price - b.price);
 }
+
+/** Prazo que a loja quer para quem ganha frete grátis (dias úteis). */
+export const FREE_MAX_DAYS = 3;
+
+/**
+ * Frete grátis: escolhe a opção mais barata entre as que entregam em até FREE_MAX_DAYS dias úteis.
+ * Se nenhuma transportadora entregar nesse prazo para o CEP, devolve a mais barata com o prazo real
+ * (a loja não promete 3 dias onde a transportadora não entrega em 3 dias).
+ */
+export function pickFreeShipping<T extends Pick<ShippingQuote, "id" | "price" | "days">>(quotes: T[]): T | undefined {
+  if (!quotes.length) return undefined;
+  const byPrice = [...quotes].sort((a, b) => a.price - b.price || a.days - b.days);
+  return byPrice.find((q) => q.days <= FREE_MAX_DAYS) ?? byPrice[0];
+}
