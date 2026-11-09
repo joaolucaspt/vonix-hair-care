@@ -22,13 +22,20 @@ export function encryptAffiliateWizard(wizard: ValidatedAffiliateWizard): string
   const key = encryptionKey();
   if (!key) throw new Error("Criptografia do questionário não configurada.");
   const { emailConfirmation: _confirmation, termsAccepted: _terms, ...answers } = wizard;
+  // A crafted submission can include stale values for fields hidden by
+  // conditional questions. Do not persist data that is no longer applicable.
+  const minimizedAnswers = {
+    ...answers,
+    otherNiche: answers.niche === "Outro" ? answers.otherNiche : "",
+    municipalNumber: answers.municipalRegistration === "sim" ? answers.municipalNumber : "",
+  };
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const raw = Buffer.from(
     JSON.stringify({
       version: 2,
       acceptedAt: new Date().toISOString(),
-      answers,
+      answers: minimizedAnswers,
     }),
     "utf8",
   );

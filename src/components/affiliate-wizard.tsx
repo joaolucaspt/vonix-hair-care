@@ -247,7 +247,14 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
       zipLookupId.current += 1;
       setZipLoading(false);
     }
-    setValues((old) => ({ ...old, [key]: value }));
+    setValues((old) => {
+      const next = { ...old, [key]: value };
+      // Clear answers when their parent question makes them inapplicable.
+      // Hidden personal information must not survive into a later submission.
+      if (key === "niche" && value !== "Outro") next.otherNiche = "";
+      if (key === "municipalRegistration" && value !== "sim") next.municipalNumber = "";
+      return next;
+    });
     setConfirmDiscard(false);
     setErrors((old) => ({ ...old, [key]: "" }));
     setMessage("");
@@ -256,6 +263,19 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
   const hasDraft =
     Object.keys(initial).some((key) => values[key as WizardKey] !== initial[key as WizardKey]) ||
     website.length > 0;
+
+  // Warn before a full-page navigation closes an unsent five-stage draft.
+  // Sensitive answers remain in React memory; never persist them to browser storage.
+  useEffect(() => {
+    if (!hasDraft || sent) return;
+    const warnBeforeExit = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeExit);
+    return () => window.removeEventListener("beforeunload", warnBeforeExit);
+  }, [hasDraft, sent]);
+
   const value = (key: WizardKey) => String(values[key] ?? "");
   const field = (
     key: WizardKey,
@@ -746,11 +766,14 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
                     <Link
                       to="/$page"
                       params={{ page: "politica-de-privacidade" }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Política de Privacidade (abre em nova aba)"
                       className="font-semibold underline"
                     >
                       Política de Privacidade
-                    </Link>
-                    .
+                    </Link>{" "}
+                    (abre em nova aba, sem perder o formulário).
                   </p>
                 </div>
               </div>

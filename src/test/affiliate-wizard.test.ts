@@ -1,3 +1,4 @@
+import { createDecipheriv } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   affiliateWizardSchema,
@@ -190,6 +191,34 @@ describe("Private encrypted questionnaire storage", () => {
     expect(affiliateQuestionnaireEncryptionReady()).toBe(false);
     expect(() => encryptAffiliateWizard(affiliateWizardSchema.parse(fixture))).toThrow();
   });
+  it("does not persist inapplicable conditional answers in encrypted questionnaires", () => {
+    const sensitive = affiliateWizardSchema.parse({
+      ...fixture,
+      otherNiche: "STALE-NICHE-SYNTHETIC-PII",
+      municipalNumber: "STALE-MUNICIPAL-SYNTHETIC-PII",
+    });
+    const packed = encryptAffiliateWizard(sensitive);
+    const [, iv64, tag64, encrypted64] = packed.split(".");
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      Buffer.from(process.env["AFFILIATE_QUESTIONNAIRE_KEY"]!, "base64url"),
+      Buffer.from(iv64!, "base64url"),
+    );
+    decipher.setAuthTag(Buffer.from(tag64!, "base64url"));
+    const decrypted = Buffer.concat([
+      decipher.update(Buffer.from(encrypted64!, "base64url")),
+      decipher.final(),
+    ]).toString("utf8");
+    const parsed = JSON.parse(decrypted);
+    expect(parsed.answers.niche).toBe("Lifestyle");
+    expect(parsed.answers.municipalRegistration).toBe("nao");
+    expect(parsed.answers.otherNiche).toBe("");
+    expect(parsed.answers.municipalNumber).toBe("");
+    expect(decrypted).not.toContain("STALE-NICHE-SYNTHETIC-PII");
+    expect(decrypted).not.toContain("STALE-MUNICIPAL-SYNTHETIC-PII");
+    expect(affiliateWizardSummary(packed)?.preferredLine).toBe("Botox Vonix");
+  });
+
   it("encrypts PII with authentication and returns only business-relevant summary", () => {
     const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
     expect(packed).toMatch(/^v2\.[\w-]+\.[\w-]+\.[\w-]+$/);

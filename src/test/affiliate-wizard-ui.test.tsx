@@ -6,7 +6,21 @@ vi.mock("@/lib/affiliate-functions", () => ({
   submitAffiliateApplication: api.submit,
 }));
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
+  Link: ({
+    children,
+    target,
+    rel,
+    "aria-label": ariaLabel,
+  }: {
+    children: React.ReactNode;
+    target?: string;
+    rel?: string;
+    "aria-label"?: string;
+  }) => (
+    <a href="/politica-de-privacidade" target={target} rel={rel} aria-label={ariaLabel}>
+      {children}
+    </a>
+  ),
 }));
 
 import { AffiliateWizard } from "@/components/affiliate-wizard";
@@ -36,6 +50,25 @@ describe("Vonix five-stage browser wizard", () => {
     next();
     expect(screen.getByText(/Informe seu primeiro nome/)).toBeInTheDocument();
     expect(screen.getByText("Passo 1 de 5")).toBeInTheDocument();
+  });
+
+  it("warns before leaving with an unsent draft, but not after discarding it", () => {
+    render(<AffiliateWizard preview />);
+    const emptyExit = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(emptyExit);
+    expect(emptyExit.defaultPrevented).toBe(false);
+
+    field("firstName", "Marina");
+    const draftedExit = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(draftedExit);
+    expect(draftedExit.defaultPrevented).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpar meus dados" }));
+    fireEvent.click(screen.getByRole("button", { name: "Descartar dados" }));
+    const discardedExit = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(discardedExit);
+    expect(discardedExit.defaultPrevented).toBe(false);
+    expect(api.submit).not.toHaveBeenCalled();
   });
 
   it("requires confirmation before discarding a private draft", async () => {
@@ -119,6 +152,10 @@ describe("Vonix five-stage browser wizard", () => {
     next();
     expect(screen.getByText(/Informe qual é o outro nicho/)).toBeInTheDocument();
     field("otherNiche", "Livros");
+    field("niche", "Lifestyle");
+    field("niche", "Outro");
+    expect((document.getElementById("wizard-otherNiche") as HTMLInputElement).value).toBe("");
+    field("otherNiche", "Livros");
     field("tiktokFollowers", "Não utilizo TikTok");
     next();
 
@@ -126,6 +163,10 @@ describe("Vonix five-stage browser wizard", () => {
     field("municipalRegistration", "sim");
     next();
     expect(screen.getByText(/Informe o número da inscrição municipal/)).toBeInTheDocument();
+    field("municipalNumber", "MUNICIPAL-TEST-12");
+    field("municipalRegistration", "nao");
+    field("municipalRegistration", "sim");
+    expect((document.getElementById("wizard-municipalNumber") as HTMLInputElement).value).toBe("");
     field("municipalNumber", "MUNICIPAL-TEST-12");
     field("dependents", "Não tenho");
     next();
@@ -135,6 +176,12 @@ describe("Vonix five-stage browser wizard", () => {
     field("couponSuggestion", "MARINA10");
     next();
     expect(screen.getByText("Passo 5 de 5")).toBeInTheDocument();
+    const privacy = screen.getByRole("link", {
+      name: "Política de Privacidade (abre em nova aba)",
+    });
+    expect(privacy).toHaveAttribute("target", "_blank");
+    expect(privacy).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getByText(/abre em nova aba, sem perder o formulário/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Revise sua candidatura" })).toBeInTheDocument();
     expect(screen.getByText("marina@example.com")).toBeInTheDocument();
     expect(screen.getByText("Sugestão de cupom: MARINA10")).toBeInTheDocument();

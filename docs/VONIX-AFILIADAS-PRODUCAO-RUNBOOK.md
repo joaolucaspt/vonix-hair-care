@@ -12,11 +12,14 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 
 - Formulário Vonix em cinco etapas, com validação de CPF/CNPJ, email, maioridade e termos.
 - Prévia pública do formulário sem envios e sem armazenamento; descarte voluntário do rascunho com confirmação, sem salvar documentos no navegador.
+- Antes de fechar uma página com candidatura não enviada, o navegador recebe um aviso de saída; a Política de Privacidade abre em outra aba, preservando os dados preenchidos. O aviso de saída depende do suporte do navegador e não substitui o descarte explícito.
+- Campos condicionais ocultos (outro nicho e número de inscrição municipal) são limpos quando deixam de ser aplicáveis. O servidor também elimina esses valores antes de criptografar um questionário, mesmo se receber payload manipulado.
 - Envio público exige origem do próprio site (HTTPS ou localhost de desenvolvimento); origem ausente ou divergente não passa ao limitador nem grava candidaturas.
 - Criptografia AES-256-GCM do questionário completo, com resumo sem documentos no painel. A API privada de triagem usa uma lista explícita de campos autorizados e remove campos adicionais vindos do banco, incluindo propriedades extras na fila de notificações. Registros e contadores inválidos são recusados, não apresentados como dados confiáveis.
 - Prévia LGPD exclusivamente de leitura: números obrigatoriamente inteiros e não negativos, sem preencher valores ausentes como se fossem zero.
 - Diagnóstico privado do banco exige resultados válidos das RPCs de estatísticas e de retenção, não apenas HTTP 200. As duas consultas são independentes; uma falha não esconde o resultado da outra e nenhum corpo de erro é devolvido ao navegador.
-- Login administrativo com sessão HttpOnly/SameSite Strict, TOTP no servidor e quota por IP. Ao voltar à aba, o painel revalida a sessão e elimina imediatamente os dados privados se ela expirou.
+- Login administrativo com sessão HttpOnly/SameSite Strict, TOTP no servidor e quota por IP. O botão de login só habilita após seis dígitos do autenticador.
+- O painel oculta os dados das candidatas assim que a aba é escondida e durante a revalidação ao retomá-la. Se a validação falhar por conexão, mantém a tela protegida e permite repetir a consulta; se a sessão expirou, elimina imediatamente os dados privados.
 - Acesso negado durante pesquisa, decisão, exclusão ou diagnósticos limpa os dados da candidata. A prévia de retenção descarta respostas antigas quando seus prazos são alterados, exibe os critérios efetivamente consultados e continua somente leitura.
 - Busca, triagem, decisões atômicas, fila Resend com idempotência e estados incertos.
 - Exclusão definitiva **por administrador após validação externa da titular**, com confirmação

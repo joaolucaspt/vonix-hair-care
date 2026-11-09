@@ -69,7 +69,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("Vonix affiliate private panel", () => {
   it("does not restore candidate PII from a request that resolves after logout", async () => {
@@ -438,9 +441,96 @@ describe("Vonix affiliate private panel", () => {
     expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
   });
 
-  it("revalidates the cookie on tab focus and hides candidates when it expires", async () => {
+  it("hides private data as soon as the tab becomes hidden and rechecks it on return", async () => {
+    const listenerSpy = vi.spyOn(document, "addEventListener");
     render(<Page />);
     expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(listenerSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function)),
+    );
+    listenerSpy.mockRestore();
+    let state: DocumentVisibilityState = "hidden";
+    const visibilitySpy = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockImplementation(() => state);
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(screen.getByText("Protegendo dados das candidatas")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+
+    state = "visible";
+    server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: true });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(screen.getByText("Segredo da candidata")).toBeInTheDocument();
+    visibilitySpy.mockRestore();
+  });
+
+  it("masks applicant data during resumed-session verification and restores it only after success", async () => {
+    const listenerSpy = vi.spyOn(window, "addEventListener");
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    await waitFor(() => expect(listenerSpy).toHaveBeenCalledWith("focus", expect.any(Function)));
+    listenerSpy.mockRestore();
+    let complete!: (value: { authenticated: boolean }) => void;
+    server.getAffiliateAdminSession.mockReturnValueOnce(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    act(() => window.dispatchEvent(new Event("focus")));
+    expect(screen.getByText("Protegendo dados das candidatas")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(screen.queryByText("secret-candidate@example.invalid")).not.toBeInTheDocument();
+    await act(async () => {
+      complete({ authenticated: true });
+    });
+    expect(screen.getByText("Segredo da candidata")).toBeInTheDocument();
+    expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps PII hidden after a network failure and allows rechecking without another login", async () => {
+    const listenerSpy = vi.spyOn(window, "addEventListener");
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    await waitFor(() => expect(listenerSpy).toHaveBeenCalledWith("focus", expect.any(Function)));
+    listenerSpy.mockRestore();
+    server.getAffiliateAdminSession.mockRejectedValueOnce(new Error("synthetic network failure"));
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Os dados continuam ocultos até uma nova verificação/),
+    ).toBeInTheDocument();
+    server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: true });
+    fireEvent.click(screen.getByRole("button", { name: "Tentar verificar novamente" }));
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires a six-digit authenticator code before enabling sign-in", async () => {
+    server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: false });
+    render(<Page />);
+    expect(await screen.findByRole("heading", { name: "Acesso da equipe" })).toBeInTheDocument();
+    const login = screen.getByRole("button", { name: /Acessar inscrições/i });
+    fireEvent.change(screen.getByLabelText("Senha administrativa"), {
+      target: { value: "synthetic-password" },
+    });
+    expect(login).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Código do autenticador"), {
+      target: { value: "123456" },
+    });
+    expect(login).toBeEnabled();
+    expect(server.loginAffiliateAdmin).not.toHaveBeenCalled();
+  });
+
+  it("revalidates the cookie on tab focus and hides candidates when it expires", async () => {
+    const listenerSpy = vi.spyOn(window, "addEventListener");
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    await waitFor(() => expect(listenerSpy).toHaveBeenCalledWith("focus", expect.any(Function)));
+    listenerSpy.mockRestore();
     server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: false });
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
@@ -452,9 +542,12 @@ describe("Vonix affiliate private panel", () => {
   });
 
   it("ignores a delayed focus check after the administrator signs out", async () => {
+    const listenerSpy = vi.spyOn(window, "addEventListener");
     let finish!: (value: { authenticated: boolean }) => void;
     render(<Page />);
     expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    await waitFor(() => expect(listenerSpy).toHaveBeenCalledWith("focus", expect.any(Function)));
+    listenerSpy.mockRestore();
     server.getAffiliateAdminSession.mockReturnValueOnce(
       new Promise((resolve) => {
         finish = resolve;

@@ -101,6 +101,9 @@ export function AffiliateAdminPage() {
   const [otp, setOtp] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [sessionRechecking, setSessionRechecking] = useState(false);
+  const [sessionRecheckFailed, setSessionRecheckFailed] = useState(false);
+  const [sessionRecheckRetry, setSessionRecheckRetry] = useState(0);
   const [status, setStatus] = useState<AffiliateListStatus>("pendente");
   const [mailFilter, setMailFilter] = useState<AffiliateQueueFilter | null>(null);
   const [page, setPage] = useState(0);
@@ -159,6 +162,9 @@ export function AffiliateAdminPage() {
   const retentionVersion = useRef(0);
 
   function clearPrivateData() {
+    setSessionRechecking(false);
+    setSessionRecheckFailed(false);
+    setSessionRecheckRetry(0);
     setApplications([]);
     setStatus("pendente");
     setPage(0);
@@ -278,24 +284,41 @@ export function AffiliateAdminPage() {
       if (!active || inFlight) return;
       inFlight = true;
       const sessionId = sessionVersion.current;
+      // Never render applicant PII before an active tab has revalidated the
+      // signed cookie. A transient network failure must leave data concealed.
+      setSessionRechecking(true);
+      setSessionRecheckFailed(false);
       try {
         const session = await getAffiliateAdminSession();
-        if (active && sessionId === sessionVersion.current && !session.authenticated) {
+        if (!active || sessionId !== sessionVersion.current) return;
+        if (!session.authenticated) {
           sessionExpired("Acesso negado. Faça login novamente.");
+        } else if (document.visibilityState === "visible") {
+          setSessionRechecking(false);
         }
       } catch {
-        // Temporary connectivity errors are not evidence that the cookie expired.
+        // An uncertain session stays masked; the operator can retry without
+        // discarding the page's state or exposing applicants.
+        if (active && sessionId === sessionVersion.current) setSessionRecheckFailed(true);
       } finally {
         inFlight = false;
       }
     }
 
-    const onFocus = () => void verifyResumedSession();
-    const onVisibility = () => {
+    const onFocus = () => {
       if (document.visibilityState === "visible") void verifyResumedSession();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        setSessionRechecking(true);
+        setSessionRecheckFailed(false);
+      } else if (document.visibilityState === "visible") {
+        void verifyResumedSession();
+      }
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
+    if (sessionRecheckRetry > 0) void verifyResumedSession();
     return () => {
       active = false;
       window.removeEventListener("focus", onFocus);
@@ -303,7 +326,7 @@ export function AffiliateAdminPage() {
     };
     // Session transitions, not ordinary list rendering, control the listener lifecycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authorized]);
+  }, [authorized, sessionRecheckRetry]);
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -570,6 +593,7 @@ export function AffiliateAdminPage() {
             <input
               id="admin-otp"
               type="text"
+              required
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={6}
@@ -586,13 +610,36 @@ export function AffiliateAdminPage() {
             )}
             <button
               type="submit"
-              disabled={loading || !password}
+              disabled={loading || !password || otp.length !== 6}
               className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#693440] px-6 font-semibold text-white disabled:opacity-50"
             >
               {loading ? "Verificando acesso..." : "Acessar inscrições"}{" "}
               {!loading && <ArrowRight className="h-4 w-4" />}
             </button>
           </form>
+        ) : sessionRechecking ? (
+          <section
+            role="status"
+            aria-live="polite"
+            className="max-w-xl rounded-[2rem] border border-[#e8dcd8] bg-white px-7 py-10 shadow-sm"
+          >
+            <LockKeyhole aria-hidden="true" className="mb-4 h-8 w-8 text-[#864a56]" />
+            <h2 className="font-display text-2xl">Protegendo dados das candidatas</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#806c6e]">
+              {sessionRecheckFailed
+                ? "Não foi possível confirmar sua sessão. Os dados continuam ocultos até uma nova verificação."
+                : "Confirmando a validade do acesso antes de mostrar dados pessoais."}
+            </p>
+            {sessionRecheckFailed && (
+              <button
+                type="button"
+                className="mt-5 min-h-11 rounded-full bg-[#693440] px-6 text-sm font-semibold text-white"
+                onClick={() => setSessionRecheckRetry((previous) => previous + 1)}
+              >
+                Tentar verificar novamente
+              </button>
+            )}
+          </section>
         ) : (
           <>
             <section
