@@ -3,6 +3,7 @@ import { env } from "@/lib/env.server";
 import { SITE_URL } from "@/lib/store";
 import { loadOrderSnapshot } from "@/lib/order-snapshot.server";
 import { isPaid, type AppmaxOrder } from "@/lib/appmax.server";
+import { claimMetaPurchase, acknowledgeMetaPurchase } from "@/lib/meta-purchase-delivery.server";
 
 /** Eventos que o site já envia pelo pixel e que também vão pelo servidor (mesmo eventID = deduplicação). */
 export const CAPI_EVENTS = new Set([
@@ -108,12 +109,18 @@ export async function sendVerifiedPurchase(
     );
     const valueCents = subtotalCents + snapshot.shippingValueCents - snapshot.discountValueCents;
     if (!Number.isSafeInteger(valueCents) || valueCents <= 0) return "skipped";
-    return await sendMetaEvent({
+    // Periodic worker polls do not authorize repeated Purchase sends.
+    // A database lease and sent marker guard the provider call.
+    const claimToken = await claimMetaPurchase(orderId);
+    if (!claimToken) return "skipped";
+    const result = await sendMetaEvent({
       event: "Purchase",
       eventId: `purchase-${orderId}`,
       url: `${SITE_URL}/checkout`,
       customData: { currency: "BRL", value: valueCents / 100 },
     });
+    if (result === "sent") await acknowledgeMetaPurchase(orderId, claimToken);
+    return result;
   } catch {
     // Marketing telemetry must never block paid orders or fulfillment.
     return "failed";

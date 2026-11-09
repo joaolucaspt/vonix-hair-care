@@ -1,0 +1,94 @@
+-- Vonix Hair: durable deduplication of VERIFIED Meta CAPI Purchase delivery.
+-- Apply ONLY to an authorized staging database after the snapshots and order
+-- outbox migrations. No production schema is changed by building this project.
+-- The table contains only order IDs and delivery state, never customer PII.
+
+create table if not exists public.vonix_meta_purchase_delivery (
+  order_id bigint primary key references public.vonix_order_snapshots(order_id),
+  status text not null default 'pending'
+    check (status in ('pending', 'leased', 'sent')),
+  claim_token uuid,
+  claimed_until timestamptz,
+  attempts integer not null default 0 check (attempts >= 0),
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.vonix_meta_purchase_delivery enable row level security;
+revoke all on public.vonix_meta_purchase_delivery from public, anon, authenticated;
+grant select, insert, update on public.vonix_meta_purchase_delivery to service_role;
+
+-- Concurrent workers cannot send the same confirmed purchase simultaneously.
+-- If the previous worker crashed, its claim may be retried after five minutes,
+-- always using the same deterministic Meta event_id (purchase-ORDER_ID).
+create or replace function public.vonix_claim_meta_purchase(p_order_id bigint)
+returns jsonb language plpgsql security definer
+set search_path = public
+as $$
+declare
+  row_state public.vonix_meta_purchase_delivery%rowtype;
+begin
+  if p_order_id is null or p_order_id <= 0 then
+    raise exception 'invalid order ID';
+  end if;
+  -- Never create an event for an order that did not enter this storefront.
+  if not exists (
+    select 1 from public.vonix_order_outbox o
+    where o.order_id = p_order_id
+  ) then
+    raise exception 'order is not enrolled in outbox';
+  end if;
+  insert into public.vonix_meta_purchase_delivery(order_id)
+    values (p_order_id)
+    on conflict (order_id) do nothing;
+  select * into row_state
+    from public.vonix_meta_purchase_delivery
+    where order_id = p_order_id for update;
+  if row_state.status = 'sent' or
+     (row_state.status = 'leased' and row_state.claimed_until > now()) then
+    return jsonb_build_object('claimed', false, 'claimToken', null);
+  end if;
+  update public.vonix_meta_purchase_delivery
+    set status = 'leased',
+        claim_token = gen_random_uuid(),
+        claimed_until = now() + interval '5 minutes',
+        attempts = attempts + 1,
+        updated_at = now()
+    where order_id = p_order_id
+    returning * into row_state;
+  return jsonb_build_object('claimed', true, 'claimToken', row_state.claim_token);
+end;
+$$;
+revoke execute on function public.vonix_claim_meta_purchase(bigint) from public, anon, authenticated;
+grant execute on function public.vonix_claim_meta_purchase(bigint) to service_role;
+
+-- Complete only while holding a live lease. A stale worker cannot mark an
+-- event delivered after a newer worker has claimed it.
+create or replace function public.vonix_ack_meta_purchase(
+  p_order_id bigint, p_claim_token uuid
+)
+returns boolean language plpgsql security definer
+set search_path = public
+as $$
+declare changed integer;
+begin
+  if p_order_id is null or p_order_id <= 0 or p_claim_token is null then
+    raise exception 'invalid purchase-delivery acknowledgement';
+  end if;
+  update public.vonix_meta_purchase_delivery
+    set status = 'sent',
+        claim_token = null,
+        claimed_until = null,
+        sent_at = now(),
+        updated_at = now()
+    where order_id = p_order_id
+      and status = 'leased'
+      and claim_token = p_claim_token
+      and claimed_until > now();
+  get diagnostics changed = row_count;
+  return changed = 1;
+end;
+$$;
+revoke execute on function public.vonix_ack_meta_purchase(bigint,uuid) from public, anon, authenticated;
+grant execute on function public.vonix_ack_meta_purchase(bigint,uuid) to service_role;
