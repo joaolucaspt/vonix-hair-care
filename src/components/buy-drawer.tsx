@@ -1,9 +1,8 @@
 import { Check, Lock, Minus, Plus, Trash2, Truck } from "lucide-react";
 import { toItem, track } from "@/lib/analytics";
-import { FREE_SHIPPING_ABOVE, brl, missingForFreeShipping, products, useCart, type Product } from "@/lib/store";
-
-/** Quantos itens extras mostrar (os mais baratos, para ser um "leva também" de um toque). */
-const EXTRAS = 3;
+import { useState } from "react";
+import { pickExtras } from "@/lib/upsell";
+import { FREE_SHIPPING_ABOVE, brl, missingForFreeShipping, useCart, type Product } from "@/lib/store";
 
 /**
  * Gaveta que abre ao clicar em "Comprar agora": confirma o item, mostra quanto falta para o frete grátis,
@@ -12,10 +11,8 @@ const EXTRAS = 3;
 export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () => void }) {
   const cart = useCart();
   const inCart = new Set(cart.lines.map((l) => l.slug));
-  const extras: Product[] = products
-    .filter((p) => !inCart.has(p.slug) && p.images[0])
-    .sort((a, b) => a.variants[0]!.price - b.variants[0]!.price)
-    .slice(0, EXTRAS);
+  // Sorteado uma vez a cada abertura (não muda enquanto a pessoa adiciona itens).
+  const [extras] = useState<Product[]>(() => pickExtras(cart.lines.map((l) => l.slug)));
   const missing = missingForFreeShipping(cart.netSubtotal);
   const pct = Math.min(100, Math.round((cart.netSubtotal / FREE_SHIPPING_ABOVE) * 100));
 
@@ -92,6 +89,9 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
                         <span className="block truncate text-body font-medium">{p.name}</span>
                         <b className="text-body">{brl(v.price)}</b>
                       </span>
+                      {inCart.has(p.slug) ? (
+                        <span className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-body font-bold text-white"><Check className="h-4 w-4" aria-hidden="true" /> Adicionado</span>
+                      ) : (
                       <button
                         type="button"
                         onClick={() => addExtra(p)}
@@ -99,6 +99,7 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
                       >
                         <Plus className="h-4 w-4" aria-hidden="true" /> Adicionar
                       </button>
+                      )}
                     </li>
                   );
                 })}
