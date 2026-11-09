@@ -137,7 +137,7 @@ export function PrizeWheel() {
                           <path d={arc(s.from, s.to)} fill={s.color} stroke="#fff" strokeWidth="1.5" />
                           <g transform={`translate(${tx} ${ty}) rotate(${s.mid})`}>
                             <text textAnchor="middle" fill="#fff" fontSize="15" fontWeight="800" y="-2">{s.c.percent}% OFF</text>
-                            <text textAnchor="middle" fill="#fff" fontSize="6.5" y="9">{s.c.minSubtotal ? `acima de R$ ${s.c.minSubtotal}` : "em qualquer compra"}</text>
+                            <text textAnchor="middle" fill="#fff" fontSize="6.5" y="9">{s.c.minSubtotal ? `acima de R$ ${s.c.minSubtotal}` : "itens sem oferta"}</text>
                           </g>
                         </g>
                       );

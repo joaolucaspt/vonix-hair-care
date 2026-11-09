@@ -57,6 +57,14 @@ function withSecurityHeaders(response: Response): Response {
   return out;
 }
 
+/** Every catastrophic fallback carries the same frame and permissions protections as normal SSR. */
+export function fallbackErrorResponse(): Response {
+  return withSecurityHeaders(new Response(renderErrorPage(), {
+    status: 500,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  }));
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
@@ -65,10 +73,7 @@ export default {
       return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return fallbackErrorResponse();
     }
   },
 };

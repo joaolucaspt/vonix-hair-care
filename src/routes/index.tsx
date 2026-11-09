@@ -98,15 +98,17 @@ function Home() {
       <section className="container-site pt-5">
         <div className="relative overflow-hidden rounded-2xl">
           <Banner slug={BANNERS[i]!} priority={i === 0} />
-          <button aria-label="Anterior" onClick={() => setI((i + 6) % 7)} className="absolute left-3 top-[16%] grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background md:left-4 md:top-1/2">
+          <button aria-label="Anterior" onClick={() => setI((i + 6) % 7)} className="absolute left-3 top-[16%] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-background focus-visible:outline-2 focus-visible:outline-offset-2 md:left-4 md:top-1/2">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button aria-label="Próximo" onClick={() => setI((i + 1) % 7)} className="absolute right-3 top-[16%] grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background md:right-4 md:top-1/2">
+          <button aria-label="Próximo" onClick={() => setI((i + 1) % 7)} className="absolute right-3 top-[16%] grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-background focus-visible:outline-2 focus-visible:outline-offset-2 md:right-4 md:top-1/2">
             <ChevronRight className="h-4 w-4" />
           </button>
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3">
+          <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-0 md:bottom-2">
             {BANNERS.map((_, k) => (
-              <button key={k} aria-label={`Banner ${k + 1}`} onClick={() => setI(k)} className={`relative h-3 w-3 rounded-full border border-foreground before:absolute before:-inset-1.5 before:content-[''] ${k === i ? "bg-foreground" : "bg-background/70"}`} />
+              <button key={k} aria-label={`Banner ${k + 1}`} aria-pressed={k === i} onClick={() => setI(k)} className="grid h-10 w-10 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1">
+                <span aria-hidden="true" className={`h-3 w-3 rounded-full border border-foreground ${k === i ? "bg-foreground" : "bg-background/70"}`} />
+              </button>
             ))}
           </div>
         </div>

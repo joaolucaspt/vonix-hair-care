@@ -12,7 +12,7 @@ const DONE_EVENT = "vonix:cadastro";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /**
- * Cadastro com cupom de boas-vindas (5% OFF em qualquer compra).
+ * Cadastro com cupom de boas-vindas (5% OFF em itens sem outra oferta).
  * O cupom aparece na hora e é aplicado sozinho no checkout, a não ser que a pessoa já tenha um cupom melhor.
  * `dark` = versão para fundo escuro (rodapé); `compact` = só o essencial, sem título grande.
  */
@@ -109,8 +109,8 @@ export function SignupCoupon({
           <div>
             <h2 className="font-display text-h2 leading-tight">Cadastre-se e ganhe 5% OFF</h2>
             <p className="mt-1 text-body opacity-80">
-              Receba novidades e ofertas da Vonix Hair. O cupom aparece na hora e vale em qualquer
-              compra.
+              Receba novidades e ofertas da Vonix Hair. Cupom de 5% para itens sem outra oferta,
+              liberado após a confirmação do cadastro.
             </p>
           </div>
         </div>
@@ -136,7 +136,7 @@ export function SignupCoupon({
           <p className="mt-1 text-small opacity-80">
             {kept
               ? `Você já tinha o cupom ${kept}, que é melhor ou igual e continua aplicado. O ${coupon.code} fica guardado para você digitar no checkout.`
-              : "Ele já entra sozinho no checkout, por 7 dias neste aparelho. Não soma com os combos Leve 2/Leve 3."}
+              : "Ele fica disponível por 7 dias neste aparelho e aparece no checkout. Não soma com descontos de quantidade; só reduz o preço dos itens elegíveis."}
           </p>
         </div>
       ) : (

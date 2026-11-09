@@ -99,7 +99,7 @@ export function PaymentMethods({ dark = false }: { dark?: boolean }) {
   return (
     <ul aria-label="Formas de pagamento" className="flex flex-wrap items-center gap-2">
       <li className={pill}>
-        <span className="inline-flex items-center gap-1 rounded-full bg-[#dff1e8] px-2 text-small font-medium text-[#2c6e55]"><PixMark />Pix</span> 5% de desconto
+        <span className="inline-flex items-center gap-1 rounded-full bg-[#dff1e8] px-2 text-small font-medium text-[#2c6e55]"><PixMark />Pix</span> até 5% em itens sem outra oferta
       </li>
       <li className={pill}>
         <CreditCard className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" /> Cartão de crédito · até 6x sem juros
@@ -116,8 +116,8 @@ export function SecuritySeal({ dark = false }: { dark?: boolean }) {
         <ShieldCheck className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
       </span>
       <span className="leading-tight">
-        <b className="block text-body">Compra 100% segura</b>
-        <span className="block text-small opacity-75">Conexão criptografada · pagamento processado pela Appmax</span>
+        <b className="block text-body">Pagamento protegido</b>
+        <span className="block text-small opacity-75">Conexão criptografada · cartão validado pela Appmax quando disponível</span>
       </span>
     </div>
   );
@@ -356,7 +356,7 @@ function Footer() {
     <footer className="mt-10 bg-marquee text-marquee-foreground">
       <div className="container-site grid gap-6 border-b border-marquee-foreground/15 py-6 text-center text-body sm:grid-cols-4">
         <span>Entrega para todo o Brasil</span>
-        <span>Compra 100% segura</span>
+        <span>Compra com conexão protegida</span>
         <span>Até 6x sem juros no cartão</span>
         <span>Frete grátis acima de R$ 150 em produtos</span>
       </div>

@@ -292,6 +292,42 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     expect(mocks.payment).not.toHaveBeenCalled();
   });
+  it("não promete aplicar cupom a uma cesta totalmente promocional", async () => {
+    const p = getProduct("kit-banana-e-mel")!;
+    const v = p.variants[0];
+    const t = lineTotals(v.price, 2);
+    mocks.cart.lines = [{ product: p, slug: p.slug, variant: v.label, qty: 2, price: v.price, ...t }];
+    mocks.cart.netSubtotal = t.net;
+    mocks.cart.subtotal = t.gross;
+    render(<Checkout />);
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    fireEvent.change(screen.getByLabelText("Código do cupom"), { target: { value: "BEMVINDA5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(await screen.findByText(/já têm outra promoção/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cupom BEMVINDA5 aplicado/)).not.toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("informa economia real do cupom apenas nos itens sem promoção", async () => {
+    const p = getProduct("kit-banana-e-mel")!;
+    const v = p.variants[0];
+    const two = lineTotals(v.price, 2);
+    const singleP = getProduct("kit-cafe-verde")!;
+    const singleV = singleP.variants[0];
+    const one = lineTotals(singleV.price, 1);
+    mocks.cart.lines = [
+      { product: p, slug: p.slug, variant: v.label, qty: 2, price: v.price, ...two },
+      { product: singleP, slug: singleP.slug, variant: singleV.label, qty: 1, price: singleV.price, ...one },
+    ];
+    mocks.cart.netSubtotal = two.net + one.net;
+    mocks.cart.subtotal = two.gross + one.gross;
+    render(<Checkout />);
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    fireEvent.change(screen.getByLabelText("Código do cupom"), { target: { value: "BEMVINDA5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    const result = await screen.findByText(/Cupom BEMVINDA5 aplicado aos itens elegíveis/);
+    expect(result).toHaveTextContent(/você economiza R\$/);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
   it("não apresenta cobrança por cartão se apenas o Pix estiver habilitado", async () => {
     mocks.config.mockResolvedValue({
       externalId: "",
@@ -387,6 +423,14 @@ describe("checkout auditado sem chamadas reais", () => {
     fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "01310" } });
     expect(screen.queryByText(/Correios PAC/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+  });
+  it("não promete frete grátis no produto quando nenhuma transportadora atende o CEP", async () => {
+    mocks.quote.mockResolvedValueOnce({ ok: true, options: [] });
+    render(<ShippingCalc subtotal={200} slug="kit-banana-e-mel" variant="Kit" qty={1} />);
+    fireEvent.change(screen.getByLabelText("CEP de entrega"), { target: { value: "30140010" } });
+    fireEvent.click(screen.getByRole("button", { name: "Calcular" }));
+    expect(await screen.findByText(/Não há opções de entrega para este CEP/)).toBeInTheDocument();
+    expect(screen.queryByText(/Frete Grátis — pedido acima/)).not.toBeInTheDocument();
   });
   it("produto exibe estimativa mesmo quando endereço falha", async () => {
     mocks.address.mockRejectedValue(new Error("network"));

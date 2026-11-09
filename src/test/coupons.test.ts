@@ -7,6 +7,9 @@ describe("cupons e roleta", () => {
     expect(WHEEL.reduce((s, w) => s + w.weight, 0)).toBe(100);
     for (const w of WHEEL) expect(findCoupon(w.code)).toBeDefined();
   });
+  it("copy de desconto explica que cupons não acumulam com ofertas de quantidade", () => {
+    for (const c of COUPONS) expect(c.label).toContain("itens sem outra oferta");
+  });
   it("código é aceito sem diferenciar maiúsculas e espaços; desconhecido não vale", () => {
     expect(findCoupon(" gira5 ")?.code).toBe("GIRA5");
     expect(findCoupon("QUALQUER")).toBeUndefined();

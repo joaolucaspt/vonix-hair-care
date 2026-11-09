@@ -138,31 +138,67 @@ describe("desconto por quantidade (segue a quantidade, em qualquer lugar)", () =
   });
 });
 
+describe("consistência de informações de produto e entrega", () => {
+  it("nenhuma das 43 descrições promete transportadoras excluídas pelo checkout", () => {
+    expect(products.length).toBe(43);
+    for (const p of products) {
+      expect(p.description).not.toMatch(/Loggi|Total Express/i);
+      expect(p.description).toContain("opções de entrega disponíveis para o seu CEP");
+    }
+  });
+  it("preços, SKU e variantes têm valores monetários seguros em todo o catálogo", () => {
+    for (const p of products) {
+      expect(p.slug).toMatch(/^[a-z0-9-]+$/);
+      expect(p.images.length).toBeGreaterThan(0);
+      expect(p.variants.length).toBeGreaterThan(0);
+      for (const v of p.variants) {
+        expect(Number.isFinite(v.price)).toBe(true);
+        expect(v.price).toBeGreaterThan(0);
+        expect(Math.round(v.price * 100) / 100).toBe(v.price);
+      }
+    }
+  });
+});
+
 describe("checkout", () => {
   const line = (gross: number, net = gross, offer?: "comp5" | "kit2" | "kit3") => ({ gross, net, offer });
-  it("Banana e Mel no Pix: 147,16 COM frete grátis (base antes do desconto)", () => {
-    expect(checkoutTotals([line(154.9)], "pix")).toMatchObject({ net: 147.16, pixDiscount: 7.74, freeShipping: true });
+  it("Banana e Mel no Pix: preço atual do catálogo 169,90 → 161,41, com frete grátis", () => {
+    const price = getProduct("kit-banana-e-mel")!.variants[0].price;
+    expect(price).toBe(169.9);
+    expect(checkoutTotals([line(price)], "pix")).toMatchObject({ net: 161.41, pixDiscount: 8.49, freeShipping: true });
   });
-  it("Banana e Mel no cartão: 154,90 com frete grátis", () => {
-    expect(checkoutTotals([line(154.9)], "card")).toMatchObject({ net: 154.9, freeShipping: true });
+  it("Banana e Mel no cartão: 169,90 com frete grátis", () => {
+    const price = getProduct("kit-banana-e-mel")!.variants[0].price;
+    expect(checkoutTotals([line(price)], "card")).toMatchObject({ net: 169.9, freeShipping: true });
   });
-  it("cupom de 10%: 139,41 e mantém o frete grátis", () => {
-    expect(checkoutTotals([line(154.9)], "card", 0.1)).toMatchObject({ net: 139.41, couponDiscount: 15.49, freeShipping: true });
+  it("cupom de 10%: 152,91 no preço atual e mantém o frete grátis", () => {
+    const price = getProduct("kit-banana-e-mel")!.variants[0].price;
+    expect(checkoutTotals([line(price)], "card", 0.1)).toMatchObject({ net: 152.91, couponDiscount: 16.99, freeShipping: true });
   });
   it("frete grátis some se a base cair para 150 ou menos", () => {
     expect(checkoutTotals([line(150)], "pix").freeShipping).toBe(false);
     expect(checkoutTotals([line(150.01)], "pix").freeShipping).toBe(true);
   });
-  it("pedido misto: 2 Banana e Mel + 1 Café Verde = 424,70 no cartão; Sérum com 5% soma 80,66 → 505,36", () => {
-    const lines = [line(309.8), line(114.9), line(84.9, 80.66, "comp5")];
-    expect(checkoutTotals(lines, "card")).toMatchObject({ gross: 509.6, net: 505.36, offerDiscount: 4.24 });
+  it("pedido misto usa o preço atual de cada produto e aplica o desconto por quantidade", () => {
+    const banana = lineTotals(getProduct("kit-banana-e-mel")!.variants[0].price, 2);
+    const cafe = lineTotals(getProduct("kit-cafe-verde")!.variants[0].price, 1);
+    const serum = lineTotals(getProduct("serum-argan")!.variants[0].price, 1, "comp5");
+    const t = checkoutTotals([banana, cafe, { ...serum, offer: "comp5" }], "card");
+    expect(banana.gross).toBe(339.8);
+    expect(banana.net).toBe(299.02);
+    expect(cafe.net).toBe(125.9);
+    expect(t.net).toBeCloseTo(banana.net + cafe.net + serum.net, 2);
+    expect(t.offerDiscount).toBeGreaterThan(0);
   });
-  it("Pix NUNCA incide sobre linha com oferta: só nos itens normais", () => {
-    const lines = [line(309.8), line(114.9), line(84.9, 80.66, "comp5")];
+  it("Pix NUNCA incide sobre linhas com oferta ou quantidade promocional", () => {
+    const banana = lineTotals(getProduct("kit-banana-e-mel")!.variants[0].price, 2);
+    const cafe = lineTotals(getProduct("kit-cafe-verde")!.variants[0].price, 1);
+    const serum = lineTotals(getProduct("serum-argan")!.variants[0].price, 1, "comp5");
+    const lines = [banana, cafe, { ...serum, offer: "comp5" as const }];
     const t = checkoutTotals(lines, "pix");
-    // 5% apenas sobre 424,70 = 21,24 (403,47) + 80,66 = 484,13
-    expect(t.pixDiscount).toBe(21.23);
-    expect(t.net).toBe(484.13);
+    // Só o Café Verde de 1 unidade participa do desconto Pix nesta cesta.
+    expect(t.pixDiscount).toBe(6.29);
+    expect(t.net).toBeCloseTo(banana.net + cafe.net + serum.net - 6.29, 2);
   });
   it("kit profissional não recebe Pix nem cupom por cima", () => {
     const lines = [line(349.8, 307.82, "kit2")];

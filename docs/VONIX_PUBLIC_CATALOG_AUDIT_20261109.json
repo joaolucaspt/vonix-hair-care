@@ -1,0 +1,442 @@
+{
+  "auditedAt": "2026-11-09T15:46:37.537Z",
+  "site": "https://vonixhair.com",
+  "localCatalogProducts": 43,
+  "publicPagesChecked": 43,
+  "priceMismatches": 0,
+  "oldCarrierClaims": 43,
+  "missingCanonical": 0,
+  "checks": [
+    {
+      "slug": "progressiva-fio-de-luz",
+      "status": 200,
+      "expectedPrice": "191.90",
+      "livePrice": "191.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "botox-vonix",
+      "status": 200,
+      "expectedPrice": "180.90",
+      "livePrice": "180.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "shampoo-fio-de-luz-anti-residuo",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-reparacao-nutri-repair",
+      "status": 200,
+      "expectedPrice": "92.90",
+      "livePrice": "92.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-cafe-verde",
+      "status": 200,
+      "expectedPrice": "125.90",
+      "livePrice": "125.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-banana-e-mel",
+      "status": 200,
+      "expectedPrice": "169.90",
+      "livePrice": "169.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-cronograma-capilar",
+      "status": 200,
+      "expectedPrice": "202.90",
+      "livePrice": "202.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-whey-protein",
+      "status": 200,
+      "expectedPrice": "125.90",
+      "livePrice": "125.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "plex-vonix",
+      "status": 200,
+      "expectedPrice": "158.90",
+      "livePrice": "158.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-cauterizacao",
+      "status": 200,
+      "expectedPrice": "224.90",
+      "livePrice": "224.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-desmaia",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-monovonix",
+      "status": 200,
+      "expectedPrice": "81.90",
+      "livePrice": "81.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-hidratacao-lanolina-karite",
+      "status": 200,
+      "expectedPrice": "103.90",
+      "livePrice": "103.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "botox-line",
+      "status": 200,
+      "expectedPrice": "169.90",
+      "livePrice": "169.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "shampoo-hidratante-anabolizante-capilar",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "botox-line-matizador",
+      "status": 200,
+      "expectedPrice": "180.90",
+      "livePrice": "180.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-efeito-teia-tomba-cabelo",
+      "status": 200,
+      "expectedPrice": "125.90",
+      "livePrice": "125.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-efeito-teia-coco-nutri",
+      "status": 200,
+      "expectedPrice": "125.90",
+      "livePrice": "125.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "shampoo-hidratante-desmaia-cabelo",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-efeito-teia-anabolizante",
+      "status": 200,
+      "expectedPrice": "125.90",
+      "livePrice": "125.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "ampola-de-hidratacao-mousse-flash",
+      "status": 200,
+      "expectedPrice": "37.90",
+      "livePrice": "37.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "botox-vonix-matizador",
+      "status": 200,
+      "expectedPrice": "202.90",
+      "livePrice": "202.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-coco-nutri",
+      "status": 200,
+      "expectedPrice": "95.90",
+      "livePrice": "95.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-whey-protein",
+      "status": 200,
+      "expectedPrice": "180.90",
+      "livePrice": "180.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "queratina-em-gel",
+      "status": 200,
+      "expectedPrice": "81.90",
+      "livePrice": "81.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mousse-flash",
+      "status": 200,
+      "expectedPrice": "114.90",
+      "livePrice": "114.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "progressiva-diamond",
+      "status": 200,
+      "expectedPrice": "169.90",
+      "livePrice": "169.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "queratina-com-cistina-molecular",
+      "status": 200,
+      "expectedPrice": "48.90",
+      "livePrice": "48.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "shampoo-diamond-anti-residuo",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "mascara-efeito-teia-desmaia-cabelo",
+      "status": 200,
+      "expectedPrice": "125.90",
+      "livePrice": "125.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-matizador-shampoo-e-mascara",
+      "status": 200,
+      "expectedPrice": "98.90",
+      "livePrice": "98.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "shampoo-hidratante-dep-toc",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "sos-reconstrutor-capilar",
+      "status": 200,
+      "expectedPrice": "169.90",
+      "livePrice": "169.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "progressiva-lift-em-gel",
+      "status": 200,
+      "expectedPrice": "191.90",
+      "livePrice": "191.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "selagem-termica-diamond",
+      "status": 200,
+      "expectedPrice": "191.90",
+      "livePrice": "191.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "progressiva-vonix-special-matizadora",
+      "status": 200,
+      "expectedPrice": "202.90",
+      "livePrice": "202.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "queratina-em-massa",
+      "status": 200,
+      "expectedPrice": "81.90",
+      "livePrice": "81.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "kit-cachos",
+      "status": 200,
+      "expectedPrice": "81.90",
+      "livePrice": "81.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "power-vonix",
+      "status": 200,
+      "expectedPrice": "59.90",
+      "livePrice": "59.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "defrizante",
+      "status": 200,
+      "expectedPrice": "59.90",
+      "livePrice": "59.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "perfume-capilar-vonix",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "reparador-de-pontas",
+      "status": 200,
+      "expectedPrice": "70.90",
+      "livePrice": "70.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    },
+    {
+      "slug": "serum-argan",
+      "status": 200,
+      "expectedPrice": "92.90",
+      "livePrice": "92.90",
+      "priceMatches": true,
+      "oldCarriersAdvertised": true,
+      "hasCanonicalUrl": true,
+      "hasImage": true
+    }
+  ],
+  "note": "Public HTTP/SSR check only, not checkout payment confirmation, stock verification or production release validation."
+}

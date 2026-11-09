@@ -14,14 +14,14 @@ export type Coupon = {
 };
 
 export const COUPONS: Coupon[] = [
-  { code: "GIRA3", label: "3% OFF em qualquer compra", percent: 3 },
-  { code: "GIRA4", label: "4% OFF em compras acima de R$ 99", percent: 4, minSubtotal: 99 },
-  { code: "GIRA5", label: "5% OFF em compras acima de R$ 150", percent: 5, minSubtotal: 150 },
-  { code: "GIRA6", label: "6% OFF em compras acima de R$ 250", percent: 6, minSubtotal: 250 },
+  { code: "GIRA3", label: "3% OFF em itens sem outra oferta", percent: 3 },
+  { code: "GIRA4", label: "4% OFF em itens sem outra oferta, acima de R$ 99", percent: 4, minSubtotal: 99 },
+  { code: "GIRA5", label: "5% OFF em itens sem outra oferta, acima de R$ 150", percent: 5, minSubtotal: 150 },
+  { code: "GIRA6", label: "6% OFF em itens sem outra oferta, acima de R$ 250", percent: 6, minSubtotal: 250 },
   // Parceria Bela Tiozzo: só digitado à mão (link/criativos dela), nunca na roleta.
-  { code: "BT10", label: "10% OFF em qualquer compra", percent: 10 },
-  // Cupom de boas-vindas: quem se cadastra no site ganha, em qualquer compra. Nunca entra na roleta.
-  { code: "BEMVINDA5", label: "5% OFF em qualquer compra (cadastro no site)", percent: 5 },
+  { code: "BT10", label: "10% OFF em itens sem outra oferta", percent: 10 },
+  // Cupom de boas-vindas: para itens sem outra oferta, sem valor mínimo. Nunca entra na roleta.
+  { code: "BEMVINDA5", label: "5% OFF em itens sem outra oferta (cadastro no site)", percent: 5 },
 ];
 
 /** Código do cupom que o cadastro no site entrega. */

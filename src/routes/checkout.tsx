@@ -248,7 +248,7 @@ function Checkout() {
       setApplied(prize);
       setShowCoupon(true);
       setCoupon(prize.code);
-      setCouponMsg(`Cupom ${prize.code} aplicado: ${prize.label}.`);
+      setCouponMsg(`Cupom ${prize.code} disponível. O desconto será calculado apenas nos itens sem outra oferta.`);
     }
   }, []);
 
@@ -360,6 +360,7 @@ function Checkout() {
   const tPix = checkoutTotals(c.lines, "pix", pct);
   const tCard = checkoutTotals(c.lines, "card", pct);
   const couponProblem = applied ? couponCheck(applied, gross) : null;
+  const couponNoSavings = !!applied && couponProblem?.ok === true && tCard.couponDiscount <= 0;
   const chosen = options.find((o) => o.id === serviceId) ?? null;
   const shippingEvent = useRef("");
   useEffect(() => {
@@ -387,8 +388,19 @@ function Checkout() {
     const found = findCoupon(coupon);
     if (!found) return setCouponMsg("Cupom não encontrado. Confira o código.");
     const chk = couponCheck(found, gross);
+    if (!chk.ok) {
+      setApplied(null);
+      setCouponMsg(chk.reason);
+      return;
+    }
+    const saving = checkoutTotals(c.lines, "card", couponPercent(found, gross)).couponDiscount;
+    if (saving <= 0) {
+      setApplied(null);
+      setCouponMsg("Os produtos deste carrinho já têm outra promoção. O cupom vale somente para itens sem desconto de quantidade ou outra oferta.");
+      return;
+    }
     setApplied(found);
-    setCouponMsg(chk.ok ? `Cupom ${found.code} aplicado: ${found.label}.` : chk.reason);
+    setCouponMsg(`Cupom ${found.code} aplicado aos itens elegíveis: você economiza ${brl(saving)}.`);
   };
 
   const finishedOrders = useRef(new Set<number>());
@@ -996,7 +1008,7 @@ function Checkout() {
                     checked={pay === "pix"}
                     onChange={() => setPay("pix")}
                   />{" "}
-                  Pix · 5% de desconto
+                  Pix · até 5% em itens sem outra oferta
                 </span>
                 <b>{brl(tPix.net + shipping)}</b>
               </label>
@@ -1057,6 +1069,14 @@ function Checkout() {
                     <p role="alert" className="text-body text-muted-foreground">
                       {couponMsg}
                     </p>
+                  )}
+                  {applied && couponNoSavings && (
+                    <p role="status" className="text-body text-muted-foreground">
+                      Este carrinho não tem itens elegíveis ao cupom. Nenhum desconto adicional foi considerado.
+                    </p>
+                  )}
+                  {applied && couponProblem?.ok === false && (
+                    <p role="status" className="text-body text-muted-foreground">{couponProblem.reason}</p>
                   )}
                 </div>
               )}

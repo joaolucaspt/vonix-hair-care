@@ -177,6 +177,8 @@ export function ShippingCalc({
         .then((q) => {
           if (current !== request.current) return;
           setOpts(q.ok ? q.options : []);
+          if (q.ok && q.options.length === 0)
+            setErr((old) => [old, "Não há opções de entrega para este CEP. Confira o endereço ou fale com nosso atendimento."].filter(Boolean).join(" "));
           if (!q.ok) setErr((old) => [old, q.message].filter(Boolean).join(" "));
         })
         .catch(() => {
@@ -229,7 +231,7 @@ export function ShippingCalc({
               ? `Entrega para ${dest.city}/${dest.uf}`
               : `Estimativa de frete para o CEP ${cep}`}
           </p>
-          {hasFreeShipping(subtotal) && (
+          {hasFreeShipping(subtotal) && opts.some((o) => o.free) && (
             <p className="mt-1 font-medium">
               Frete Grátis — pedido acima de {brl(FREE_SHIPPING_ABOVE)} em produtos (vale mesmo após
               o desconto do Pix).
@@ -323,7 +325,7 @@ function ProductPage() {
                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                   <div className="font-display text-h2 leading-tight">
                     {audience === "salao"
-                      ? "Promoção para cabeleireiras"
+                      ? "Condição por quantidade"
                       : "Compre mais e economize"}
                   </div>
                   <div className="text-small text-muted-foreground">

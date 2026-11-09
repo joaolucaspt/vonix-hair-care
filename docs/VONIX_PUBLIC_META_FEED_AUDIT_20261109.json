@@ -1,0 +1,12 @@
+{
+  "auditedAt": "2026-11-09T16:14:53.471Z",
+  "publicUrl": "https://vonixhair.com/api/public/meta-catalog",
+  "rowCount": 43,
+  "expectedProducts": 43,
+  "priceLinkOrImageMismatches": 0,
+  "unknownIds": [],
+  "missingOrDifferent": [],
+  "advertisedInStock": 43,
+  "stockDataVerified": false,
+  "note": "Read-only public feed check. A value of 'in stock' is not evidence of real SKU inventory. No Commerce Manager/API credentials, stock systems or live orders were accessed."
+}
