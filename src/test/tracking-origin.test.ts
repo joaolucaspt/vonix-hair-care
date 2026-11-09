@@ -13,6 +13,7 @@ const meta = head.scripts.find((s) => s.children?.includes("connect.facebook.net
 function simulate(origin: string, choice: string | null, blocked = false, rejectedInSession = false) {
   const externalScripts: string[] = [];
   const requests: string[] = [];
+  const payloads: Record<string, unknown>[] = [];
   const loadHandlers: Array<() => void> = [];
   const dataLayer: unknown[] = [];
   const sandbox: Record<string, unknown> = {
@@ -22,7 +23,8 @@ function simulate(origin: string, choice: string | null, blocked = false, reject
     Math,
     URLSearchParams,
     setTimeout: (fn: () => void) => fn(),
-    fetch: (url: string) => {
+    fetch: (url: string, init?: { body?: string }) => {
+      if (init?.body) payloads.push(JSON.parse(init.body) as Record<string, unknown>);
       requests.push(url);
       return Promise.resolve({ ok: true });
     },
@@ -53,7 +55,7 @@ function simulate(origin: string, choice: string | null, blocked = false, reject
     runInNewContext(script, sandbox);
   }
   for (const handler of loadHandlers) handler();
-  return { externalScripts, requests, dataLayer, sandbox };
+  return { externalScripts, requests, payloads, dataLayer, sandbox };
 }
 
 describe("rastreamento respeita origem e consentimento opcional", () => {
@@ -97,6 +99,7 @@ describe("rastreamento respeita origem e consentimento opcional", () => {
     expect(r.externalScripts).toContain("https://www.clarity.ms/tag/zaq09ea2zy");
     expect(r.externalScripts).toContain("https://connect.facebook.net/en_US/fbevents.js");
     expect(r.requests).toContain("/api/public/meta-event");
+    expect(r.payloads).toContainEqual(expect.objectContaining({ event: "PageView", consent: true }));
     expect(typeof r.sandbox["gtag"]).toBe("function");
     expect(typeof r.sandbox["fbq"]).toBe("function");
     expect(r.dataLayer.length).toBe(2);

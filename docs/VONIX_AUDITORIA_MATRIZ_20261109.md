@@ -77,6 +77,15 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N32 | Alta | Perda da resposta HTTP de pagamento mostrava “Tente novamente” apesar de cobrança poder ter sido iniciada | Cliente vê “Pagamento em verificação”, sem CTA para segunda cobrança, com mensagem segura e atendimento; o backend marca sua falha ambígua como `retrySafe:false`. |
 | N33 | Alta | Atualizar a aba enquanto `createPayment` estava pendente poderia apagar o estado da tentativa e convidar outra compra | `sessionStorage` recebe apenas método e horário **antes** da requisição, preserva bloqueio local temporário, sem PII; erro conhecido seguro limpa o marcador. Idempotência de backend continua necessária para outras abas e dispositivos. |
 
+| N34 | Média | Área “Meus pedidos” só oferecia WhatsApp apesar de checkout sugerir consulta de pedidos | Consulta de status para pagamentos recentes guardados nesta aba, usando capacidade assinada já existente, sem expor token; seis cenários + teste de método incerto. Histórico de pedidos antigos permanece no suporte. |
+| N35 | Alta | API pública CAPI aceitava eventos opcionais sem sinal explícito de consentimento nem origem de navegador | Exige `consent:true`, origem canônica e `Sec-Fetch-Site: same-origin` (ou equivalente seguro), preserva bloqueio de Purchase. Cabeçalhos são falsificáveis; revisão LGPD e WAF seguem pendentes. |
+| N36 | Média | CAPI público repassava estruturas de `customData` arbitrárias e confiava em IP de `X-Forwarded-For` | Validação estrita de conteúdo com Zod, limites para preços/IDs/quantidades e IP somente se fornecido via `cf-connecting-ip` válido. |
+| N37 | Alta | Bootstrap PageView inicial não incluía campo de consentimento exigido pela nova API, arriscando perder eventos legítimos | Adicionado `consent:true` e nova verificação no momento da chamada; testes unitários e navegador com interceptação comprovaram PageView e AddToCart aceitos após opt-in, zero eventos antes. |
+
+## Recibo C7 (09/11)
+
+**441/441 testes PASS em 59 arquivos**, TypeScript/build/ESLint PASS, SSR **43/43**. Chrome validou área de pedidos em 320/390/1366 px e PageView/AddToCart com consentimento e origem em domínio simulado, sem comunicação externa real. Ver `docs/VONIX_AUDITORIA_CONTINUIDADE_C7_20261109.md` e `docs/VONIX_C7_VERIFIED_RECEIPT_20261109.json`. Não substitui homologação operacional.
+
 ## Recibo C6 (09/11)
 
 Os testes C6 incluem perda de resposta, retorno ambíguo, tentativa durante a requisição, refresh, expiração e armazenamento bloqueado. A validação final e o status remoto são documentados em `docs/VONIX_AUDITORIA_CONTINUIDADE_C6_20261109.md` e no recibo C6. **Sem homologação de cobranças reais.**

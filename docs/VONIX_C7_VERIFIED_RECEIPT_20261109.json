@@ -1,0 +1,81 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "baseCommit": "77274bbaf241d1897bb6270e0c9a322e20a46512",
+  "verification": {
+    "vitest": {
+      "passed": 441,
+      "total": 441,
+      "files": 59,
+      "exit": 0
+    },
+    "typescript": {
+      "exit": 0
+    },
+    "eslintTargeted": {
+      "exit": 0
+    },
+    "productionBuild": {
+      "exit": 0
+    },
+    "ssr": {
+      "productPages": 43,
+      "passed": 43,
+      "failed": 0,
+      "exit": 0
+    },
+    "accountBrowser": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "http": 200,
+      "errors": 0,
+      "horizontalOverflow": 0,
+      "buttonHeight": 46,
+      "signedTokenInHtml": false,
+      "passed": true
+    },
+    "metaBrowser": {
+      "originSimulated": "https://vonixhair.com",
+      "backingServer": "http://127.0.0.1:43972",
+      "unconsentedRequests": 0,
+      "consentedEvents": [
+        "PageView",
+        "AddToCart"
+      ],
+      "allCapturedRequestsConsentTrue": true,
+      "allCapturedRequestsSameOrigin": true,
+      "thirdPartyRequestsDelivered": 0,
+      "passed": true
+    }
+  },
+  "changes": [
+    "Read-only status lookup for pending orders using existing signed Appmax capability",
+    "Do not falsely label unknown verification-only attempt as a credit-card transaction",
+    "Public Meta CAPI rejects cross-origin, opt-out and malformed shopping metadata",
+    "Original PageView bootstrap emits advisory consent flag with immediate opt-in check",
+    "Do not trust X-Forwarded-For when forwarding client IP to marketing provider"
+  ],
+  "protected": {
+    "affiliateCodeModified": false,
+    "realPayment": false,
+    "realDatabaseWrites": false,
+    "externalMarketingSent": false,
+    "deploy": false,
+    "merge": false
+  },
+  "pending": [
+    "Appmax sandbox P0",
+    "Supabase isolated staging and backups",
+    "Bling inventory and orders",
+    "Stock/weights per SKU",
+    "Legal consent and late revocation for paid-order Purchase",
+    "Edge WAF/rate limiting",
+    "Real paid-order funnel analysis"
+  ]
+}

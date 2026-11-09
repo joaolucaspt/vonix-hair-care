@@ -169,11 +169,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           fbq('init','${META_PIXEL_ID}');
           var pvId='PageView-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
           fbq('track','PageView',{},{eventID:pvId});
-          setTimeout(function(){try{
+          setTimeout(function(){try{if(!window.__vonixMarketingAllowed?.())return;
             var ck=function(n){var m=document.cookie.split('; ').filter(function(c){return c.indexOf(n+'=')===0})[0];return m?m.slice(n.length+1):undefined};
             var fc=new URLSearchParams(location.search).get('fbclid');
             fetch('/api/public/meta-event',{method:'POST',headers:{'content-type':'application/json'},keepalive:true,
-              body:JSON.stringify({event:'PageView',eventId:pvId,url:location.href,fbp:ck('_fbp'),fbc:ck('_fbc')||(fc?'fb.1.'+Date.now()+'.'+fc:undefined)})}).catch(function(){});
+              body:JSON.stringify({event:'PageView',eventId:pvId,consent:true,url:location.href,fbp:ck('_fbp'),fbc:ck('_fbc')||(fc?'fb.1.'+Date.now()+'.'+fc:undefined)})}).catch(function(){});
           }catch(e){}},1500);
         }`,
       },

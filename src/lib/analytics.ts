@@ -84,6 +84,8 @@ function sendServerEvent(event: string, eventId: string, customData: Record<stri
   const body = JSON.stringify({
     event,
     eventId,
+    // Advisory opt-in signal; headers and the purchase worker also enforce boundaries.
+    consent: hasTrackingConsent(),
     url: window.location.href,
     fbp: cookie("_fbp"),
     fbc: cookie("_fbc") ?? (fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined),
