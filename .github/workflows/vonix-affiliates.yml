@@ -59,6 +59,15 @@ jobs:
       - name: Build full storefront
         run: bun run build
 
+  isolated-postgres:
+    name: Isolated PostgreSQL RLS, migration and concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Node for the concurrency fixture
         uses: actions/setup-node@v4
         with:
