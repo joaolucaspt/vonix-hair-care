@@ -61,7 +61,7 @@ export function affiliateRecruitmentOpen(): boolean {
     affiliateQuestionnaireEncryptionReady() &&
     env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
     env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32 &&
-    (process.env["NODE_ENV"] !== "production" || /^[A-Z2-7]{32,128}$/i.test(otp)) &&
+    /^[A-Z2-7]{32,128}$/i.test(otp) &&
     env("AFFILIATE_WORKER_SECRET").length >= 24 &&
     env("RESEND_API_KEY") &&
     env("AFFILIATE_FROM_EMAIL"),

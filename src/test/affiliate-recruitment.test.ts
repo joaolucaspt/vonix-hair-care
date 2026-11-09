@@ -104,8 +104,10 @@ describe("Public affiliate launch gate", () => {
     }
   });
 
-  it("requires MFA before public launch in production", () => {
+  it("requires MFA before public launch even without NODE_ENV", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
+    delete process.env["NODE_ENV"];
+    expect(affiliateRecruitmentOpen()).toBe(true);
     delete process.env["AFFILIATE_ADMIN_TOTP_SECRET"];
     expect(affiliateRecruitmentOpen()).toBe(false);
     process.env["AFFILIATE_ADMIN_TOTP_SECRET"] = "invalid";

@@ -29,13 +29,15 @@ beforeEach(() => {
     "AFFILIATE_ADMIN_SESSION_SECRET",
     "AFFILIATE_ADMIN_PASSWORD",
     "AFFILIATE_ADMIN_TOTP_SECRET",
+    "NODE_ENV",
   ]) {
     saved[key] = process.env[key];
   }
   process.env["AFFILIATE_ADMIN_SESSION_SECRET"] = "unit-session-secret-min-32-characters-2026";
   process.env["AFFILIATE_ADMIN_PASSWORD"] = "unit-long-admin-password";
   process.env["AFFILIATE_ADMIN_TOTP_SECRET"] = OTP_SECRET;
-  vi.clearAllMocks();
+  process.env["NODE_ENV"] = "test";
+  vi.resetAllMocks();
 });
 
 afterEach(() => {
@@ -62,6 +64,7 @@ describe("Vonix affiliate admin session", () => {
   });
 
   it("uses cookie flags and removes the token on logout", () => {
+    cookieApi.getRequest.mockReturnValue({ url: "http://localhost:43919/admin/afiliadas" });
     expect(createAffiliateAdminSession()).toBe(true);
     const [name, token, options] = cookieApi.setCookie.mock.calls[0]!;
     expect(name).toBe("vonix-affiliates-admin-dev");
@@ -75,6 +78,71 @@ describe("Vonix affiliate admin session", () => {
     expect(cookieApi.deleteCookie).toHaveBeenCalledWith(
       "vonix-affiliates-admin-dev",
       expect.objectContaining({ httpOnly: true, sameSite: "strict", path: "/" }),
+    );
+  });
+
+  it("never allows missing TOTP, even when NODE_ENV is unset or development", () => {
+    delete process.env["AFFILIATE_ADMIN_TOTP_SECRET"];
+    for (const mode of [undefined, "development", "production"]) {
+      if (mode) process.env["NODE_ENV"] = mode;
+      else delete process.env["NODE_ENV"];
+      expect(affiliateAdminSecondFactorValid("")).toBe(false);
+      expect(affiliateAdminSecondFactorValid("123456")).toBe(false);
+      expect(createAffiliateAdminSession()).toBe(false);
+    }
+    expect(cookieApi.setCookie).not.toHaveBeenCalled();
+  });
+
+  it("forces secure __Host cookies on a hosted domain despite missing NODE_ENV", () => {
+    cookieApi.getRequest.mockReturnValue({ url: "https://vonixhair.com/admin/afiliadas" });
+    for (const mode of [undefined, "development", "production"]) {
+      if (mode) process.env["NODE_ENV"] = mode;
+      else delete process.env["NODE_ENV"];
+      expect(createAffiliateAdminSession()).toBe(true);
+      const [name, token, attributes] = cookieApi.setCookie.mock.calls.at(-1)!;
+      expect(name).toBe("__Host-vonix-affiliates-admin");
+      expect(typeof token).toBe("string");
+      expect(attributes).toMatchObject({
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        path: "/",
+      });
+      destroyAffiliateAdminSession();
+      expect(cookieApi.deleteCookie).toHaveBeenLastCalledWith(
+        "__Host-vonix-affiliates-admin",
+        expect.objectContaining({ secure: true }),
+      );
+    }
+  });
+
+  it("uses Secure host-only cookies without a trustworthy request context", () => {
+    delete process.env["NODE_ENV"];
+    expect(createAffiliateAdminSession()).toBe(true);
+    expect(cookieApi.setCookie).toHaveBeenLastCalledWith(
+      "__Host-vonix-affiliates-admin",
+      expect.any(String),
+      expect.objectContaining({ secure: true, httpOnly: true, path: "/" }),
+    );
+  });
+
+  it("invalidates an existing cookie immediately when the OTP factor is removed", () => {
+    expect(createAffiliateAdminSession()).toBe(true);
+    const token = cookieApi.setCookie.mock.calls[0]![1];
+    cookieApi.getCookie.mockReturnValue(token);
+    expect(affiliateAdminSessionValid()).toBe(true);
+    delete process.env["AFFILIATE_ADMIN_TOTP_SECRET"];
+    expect(affiliateAdminSessionValid()).toBe(false);
+  });
+
+  it("permits a nonsecure development cookie only for localhost HTTP", () => {
+    process.env["NODE_ENV"] = "development";
+    cookieApi.getRequest.mockReturnValue({ url: "http://127.0.0.1:43922/admin/afiliadas" });
+    expect(createAffiliateAdminSession()).toBe(true);
+    expect(cookieApi.setCookie).toHaveBeenLastCalledWith(
+      "vonix-affiliates-admin-dev",
+      expect.any(String),
+      expect.objectContaining({ secure: false, httpOnly: true, sameSite: "strict" }),
     );
   });
 
