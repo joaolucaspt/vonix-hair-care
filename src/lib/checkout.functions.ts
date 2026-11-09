@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { isIP } from "node:net";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import * as appmax from "./appmax.server";
@@ -131,7 +132,6 @@ const paySchema = z.object({
   items: z.array(itemSchema).min(1).max(40),
   serviceId: z.number().int(),
   coupon: couponSchema,
-  ip: z.string().max(64).optional(),
   ref: z.string().max(30).optional(),
   method: z.enum(["pix", "card"]),
   token: z.string().max(200).optional(),
@@ -193,11 +193,10 @@ export const createPayment = createServerFn({ method: "POST" })
       );
       const document = data.customer.cpf.replace(/\D/g, "");
       const [first = "", ...rest] = data.customer.nome.trim().split(/\s+/);
-      const ip =
-        data.ip ||
-        getRequestHeader("cf-connecting-ip") ||
-        getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ||
-        "0.0.0.0";
+      // Antifraud IP must never come from a browser field or arbitrary
+      // X-Forwarded-For; only trust the IP set by our Cloudflare edge.
+      const edgeIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
+      const ip = isIP(edgeIp) ? edgeIp : "0.0.0.0";
 
       // Reserve this server-priced shopping intent atomically BEFORE external
       // customer, order or payment calls. A second browser/device cannot charge it.

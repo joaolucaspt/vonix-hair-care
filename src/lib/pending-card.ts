@@ -7,7 +7,30 @@ export type PendingCard = {
   total: number;
   paid: boolean;
   status: string;
+  /** True for an unresolved order (including Pix without a QR), not an identified card charge. */
+  verificationOnly?: boolean;
 };
+
+/** A server "verification" response can be from Pix, card or a duplicate
+ * request made with a different payment method. Never label it as card.
+ */
+export function pendingPaymentFromResponse(payment: {
+  method: "card" | "verification";
+  orderId: number;
+  statusToken: string;
+  total: number;
+  paid: boolean;
+  status: string;
+}): PendingCard {
+  return {
+    orderId: payment.orderId,
+    statusToken: payment.statusToken,
+    total: payment.total,
+    paid: payment.paid,
+    status: payment.status,
+    ...(payment.method === "verification" ? { verificationOnly: true } : {}),
+  };
+}
 
 export const PENDING_CARD_KEY = "vonix-card-verification-v1";
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -43,7 +66,8 @@ export function restorePendingCard(now = Date.now()): PendingCard | null {
       data["total"] < 0 ||
       typeof data["paid"] !== "boolean" ||
       typeof data["status"] !== "string" ||
-      data["status"].length > 100
+      data["status"].length > 100 ||
+      (data["verificationOnly"] !== undefined && typeof data["verificationOnly"] !== "boolean")
     ) {
       clearPendingCard();
       return null;
@@ -54,6 +78,7 @@ export function restorePendingCard(now = Date.now()): PendingCard | null {
       total: data["total"],
       paid: data["paid"],
       status: data["status"],
+      ...(data["verificationOnly"] === true ? { verificationOnly: true } : {}),
     };
   } catch {
     clearPendingCard();

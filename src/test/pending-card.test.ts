@@ -4,6 +4,7 @@ import {
   clearPendingCard,
   restorePendingCard,
   savePendingCard,
+  pendingPaymentFromResponse,
   type PendingCard,
 } from "@/lib/pending-card";
 
@@ -17,6 +18,29 @@ const card: PendingCard = {
 beforeEach(() => sessionStorage.clear());
 
 describe("pending card verification is resumable, not a new payment", () => {
+  it("retains the payment-method-neutral verification state for a Pix without a QR code", () => {
+    const pending = pendingPaymentFromResponse({
+      ...card,
+      method: "verification",
+      status: "aguardando_confirmacao",
+    });
+    expect(pending.verificationOnly).toBe(true);
+    savePendingCard(pending, 1000);
+    expect(restorePendingCard(1500)).toEqual(pending);
+    expect(JSON.stringify(restorePendingCard(1500))).not.toContain("card number");
+  });
+  it("keeps ordinary card authorizations labeled as card, without inventing Pix status", () => {
+    const pending = pendingPaymentFromResponse({ ...card, method: "card" });
+    expect(pending).not.toHaveProperty("verificationOnly");
+    savePendingCard(pending, 1000);
+    expect(restorePendingCard(1100)).not.toHaveProperty("verificationOnly");
+  });
+  it("rejects a forged verificationOnly type in session storage", () => {
+    savePendingCard({ ...card, verificationOnly: true }, 1000);
+    const raw = JSON.parse(sessionStorage.getItem(PENDING_CARD_KEY)!);
+    sessionStorage.setItem(PENDING_CARD_KEY, JSON.stringify({ ...raw, verificationOnly: "false" }));
+    expect(restorePendingCard(1001)).toBeNull();
+  });
   it("restores the same order ID and token within the existing browser session", () => {
     savePendingCard(card, 1000);
     expect(restorePendingCard(1500)).toEqual(card);

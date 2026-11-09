@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { clearPendingCard, restorePendingCard, savePendingCard } from "@/lib/pending-card";
+import {
+  clearPendingCard,
+  restorePendingCard,
+  savePendingCard,
+  pendingPaymentFromResponse,
+  type PendingCard,
+} from "@/lib/pending-card";
 import { clearPendingPix, restorePendingPix, savePendingPix } from "@/lib/pending-pix";
 import { isTerminatedOrder } from "@/lib/order-events";
 import { SecuritySeal, Shell } from "@/components/site";
@@ -76,7 +82,7 @@ declare global {
     AppmaxScripts?: {
       init: (o: {
         externalId?: string;
-        onIp?: (r: { ip: string }) => void;
+
         onTokenize?: (r: { token: string }) => void;
         onError?: (e: { code?: string; message?: string; stage?: string }) => void;
       }) => void;
@@ -213,20 +219,14 @@ function Checkout() {
   const [pixRetryVerified, setPixRetryVerified] = useState<number | null>(null);
   const [cardRetryVerified, setCardRetryVerified] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [cardDone, setCardDone] = useState<{
-    orderId: number;
-    paid: boolean;
-    statusToken: string;
-    total: number;
-    status: string;
-  } | null>(null);
+  const [cardDone, setCardDone] = useState<PendingCard | null>(null);
   const [cfg, setCfg] = useState<{
     externalId: string;
     sandbox: boolean;
     pixEnabled?: boolean;
     cardEnabled?: boolean;
   } | null>(null);
-  const ip = useRef("");
+
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF((old) => ({ ...old, [k]: e.target.value }));
 
@@ -508,7 +508,7 @@ function Checkout() {
           serviceId: chosen.id,
           method: pay,
           ...(applied ? { coupon: applied.code } : {}),
-          ...(ip.current ? { ip: ip.current } : {}),
+
           ...(getRef() ? { ref: getRef() as string } : {}),
           ...(token ? { token, holderName: card.holder, installments: parcels } : {}),
         },
@@ -530,13 +530,7 @@ function Checkout() {
         setPix(pixResult);
         window.scrollTo({ top: 0 });
       } else {
-        const cardResult = {
-          orderId: r.orderId,
-          paid: r.paid,
-          statusToken: r.statusToken,
-          total: r.total,
-          status: r.status,
-        };
+        const cardResult = pendingPaymentFromResponse(r);
         if (r.paid) {
           clearPendingCard();
           finish(r.orderId, r.total);
@@ -567,9 +561,6 @@ function Checkout() {
     s.onload = () =>
       window.AppmaxScripts?.init({
         externalId: cfg.externalId,
-        onIp: ({ ip: v }) => {
-          ip.current = v;
-        },
         onTokenize: ({ token }) => void submitPaymentRef.current(token),
         onError: () => {
           setBusy(false);
@@ -637,21 +628,29 @@ function Checkout() {
       <Shell>
         <div className="container-site max-w-xl py-16 text-center" role="status" aria-live="polite">
           <h1 className="font-display text-h1">
-            {declined
-              ? "Pagamento não aprovado"
-              : ended
-                ? "Pedido em revisão"
-                : "Pagamento em análise"}
+            {cardDone.verificationOnly
+              ? declined
+                ? "Pedido cancelado"
+                : "Pedido em verificação"
+              : declined
+                ? "Pagamento não aprovado"
+                : ended
+                  ? "Pedido em revisão"
+                  : "Pagamento em análise"}
           </h1>
           <p className="mt-3 text-body text-muted-foreground">
             Pedido nº {cardDone.orderId}.
-            {ended && !declined
-              ? " A situação exige revisão do atendimento. Não crie outro pagamento para este pedido."
-              : declined
-                ? " A Appmax informou que este pedido não foi aprovado. Consulte o suporte antes de iniciar uma nova tentativa."
-                : cardDone.status === "autorizado"
-                  ? " O banco autorizou o cartão, mas a análise antifraude ainda não terminou."
-                  : " Estamos verificando a confirmação junto à Appmax. Este processo pode levar alguns minutos."}
+            {cardDone.verificationOnly
+              ? declined
+                ? " A Appmax confirmou o encerramento desta tentativa. Se precisar, consulte o atendimento antes de comprar novamente."
+                : " O pagamento anterior ainda não pôde ser confirmado. Se foi Pix, não recebemos um QR Code recuperável; nenhum outro Pix ou cartão será gerado automaticamente. A situação será consultada junto à Appmax."
+              : ended && !declined
+                ? " A situação exige revisão do atendimento. Não crie outro pagamento para este pedido."
+                : declined
+                  ? " A Appmax informou que este pedido não foi aprovado. Consulte o suporte antes de iniciar uma nova tentativa."
+                  : cardDone.status === "autorizado"
+                    ? " O banco autorizou o cartão, mas a análise antifraude ainda não terminou."
+                    : " Estamos verificando a confirmação junto à Appmax. Este processo pode levar alguns minutos."}
           </p>
           {!declined ? (
             <p className="mt-4 rounded-lg border border-border bg-muted p-4 text-body">
@@ -670,7 +669,9 @@ function Checkout() {
                 setError(null);
               }}
             >
-              Tentar novamente após a recusa
+              {cardDone.verificationOnly
+                ? "Voltar após cancelamento confirmado"
+                : "Tentar novamente após a recusa"}
             </button>
           )}
           <Link

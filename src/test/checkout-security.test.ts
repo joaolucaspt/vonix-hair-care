@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   validStatus: vi.fn(() => false),
   idempotencySecret: "test-idempotency-secret-that-is-at-least-32-bytes",
   externalId: "test-external-id",
+  requestHeader: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => ({
@@ -23,7 +24,7 @@ vi.mock("@tanstack/react-start", () => ({
     handler: (fn: unknown) => fn,
   }),
 }));
-vi.mock("@tanstack/react-start/server", () => ({ getRequestHeader: () => undefined }));
+vi.mock("@tanstack/react-start/server", () => ({ getRequestHeader: mocks.requestHeader }));
 vi.mock("@/lib/env.server", () => ({
   env: (key: string) =>
     key === "CHECKOUT_IDEMPOTENCY_SECRET"
@@ -105,6 +106,7 @@ beforeEach(() => {
   mocks.validStatus.mockReturnValue(false);
   mocks.idempotencySecret = "test-idempotency-secret-that-is-at-least-32-bytes";
   mocks.externalId = "test-external-id";
+  mocks.requestHeader.mockReturnValue(undefined);
   mocks.card.mockResolvedValue(undefined);
   mocks.status.mockResolvedValue({ data: { order: { id: 654, status: "autorizado" } } });
   mocks.pix.mockResolvedValue({
@@ -115,6 +117,29 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("never trusts a user-supplied IP when sending buyer data to Appmax", async () => {
+    // Legacy browsers can still include "ip" in the POST request. Zod strips
+    // it, and the checkout reads the IP only from the trusted edge.
+    const submitted = {
+      ...data,
+      ip: "8.8.8.8",
+    };
+    mocks.requestHeader.mockImplementation((key: string) =>
+      key === "cf-connecting-ip" ? "2001:db8::1234" : undefined,
+    );
+    expect(await createPayment({ data: submitted })).toMatchObject({ ok: true });
+    const customer = mocks.customer.mock.calls[0]![0];
+    expect(customer.ip).toBe("2001:db8::1234");
+    expect(customer.ip).not.toBe("8.8.8.8");
+  });
+  it("falls back safely if the edge IP is malformed and ignores forwarded-for", async () => {
+    mocks.requestHeader.mockImplementation((key: string) =>
+      key === "cf-connecting-ip" ? "bad IP" : key === "x-forwarded-for" ? "1.2.3.4" : undefined,
+    );
+    expect(await createPayment({ data })).toMatchObject({ ok: true });
+    const customer = mocks.customer.mock.calls[0]![0];
+    expect(customer.ip).toBe("0.0.0.0");
+  });
   it("keeps Pix/card unavailable until strong server-side idempotency is configured", async () => {
     mocks.idempotencySecret = "weak";
     const config = await getPaymentConfig({});
