@@ -1,6 +1,9 @@
 import { env } from "./env.server";
 import type { Coupon } from "./coupons";
 
+/** Endereço público do app de afiliadas (só confirma que o cupom existe; não precisa de segredo). Dá para trocar por AFFILIATE_COUPON_URL. */
+const COUPON_URL = "https://vonix-expedicao-facil.lovable.app";
+
 /** Desconto padrão do cupom de afiliada (o app de afiliadas confirma que a pessoa existe e está ativa). */
 export const AFFILIATE_COUPON_PERCENT = 10;
 
@@ -16,12 +19,9 @@ export async function resolveAffiliateCoupon(code: string, now = Date.now()): Pr
   const c = code.trim().toUpperCase();
   const hit = cache.get(c);
   if (hit && hit.until > now) return hit.coupon ?? undefined;
-  const base = env("AFFILIATE_APP_URL");
-  const secret = env("AFFILIATE_SITE_SECRET");
-  if (!base || !secret) return undefined;
+  const base = env("AFFILIATE_COUPON_URL") || COUPON_URL;
   try {
-    const res = await fetch(`${base.replace(/\/$/, "")}/api/public/afiliadas/cupom?code=${encodeURIComponent(c)}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+    const res = await fetch(`${base.replace(/\/+$/, "")}/api/public/afiliadas/cupom?code=${encodeURIComponent(c)}`, {
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return undefined;

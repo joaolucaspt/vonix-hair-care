@@ -15,15 +15,7 @@ describe("cupom de afiliada", () => {
     expect(isAffiliateCouponCode("")).toBe(false);
   });
 
-  it("sem configuração do app de afiliadas, o cupom não vale", async () => {
-    vi.stubEnv("AFFILIATE_APP_URL", "");
-    vi.stubEnv("AFFILIATE_SITE_SECRET", "");
-    expect(await resolveAffiliateCoupon("SEMCONFIG10")).toBeUndefined();
-  });
-
   it("vale 10% quando o app confirma, e não vale quando não confirma", async () => {
-    vi.stubEnv("AFFILIATE_APP_URL", "https://app.example");
-    vi.stubEnv("AFFILIATE_SITE_SECRET", "segredo-de-teste");
     const f = vi.fn(async (url: string) =>
       new Response(JSON.stringify(url.includes("OKAFIL10") ? { ok: true, percent: 10, name: "Maria Silva" } : { ok: false })),
     );
@@ -32,12 +24,10 @@ describe("cupom de afiliada", () => {
     expect(ok?.percent).toBe(10);
     expect(ok?.label).toContain("Maria");
     expect(await resolveAffiliateCoupon("NAOEXISTE10")).toBeUndefined();
-    expect((f.mock.calls[0] as unknown[])[1]).toMatchObject({ headers: { Authorization: "Bearer segredo-de-teste" } });
+    expect(String((f.mock.calls[0] as unknown[])[0])).toContain("/api/public/afiliadas/cupom?code=OKAFIL10");
   });
 
   it("falha de rede nunca dá desconto", async () => {
-    vi.stubEnv("AFFILIATE_APP_URL", "https://app.example");
-    vi.stubEnv("AFFILIATE_SITE_SECRET", "segredo-de-teste");
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("rede"); }));
     expect(await resolveAffiliateCoupon("REDEFALHA10")).toBeUndefined();
   });
