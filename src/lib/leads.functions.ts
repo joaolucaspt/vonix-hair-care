@@ -13,17 +13,27 @@ const leadSchema = z.object({
 /**
  * Cadastro no site: quem se cadastra ganha o cupom de boas-vindas (o cupom em si é entregue no navegador).
  * Aqui só guardamos o contato. Destino: LEAD_WEBHOOK_URL (planilha, Brevo, Zapier, Make...), que recebe um POST JSON.
- * Sem webhook configurado o contato só aparece no log do servidor, então configure o webhook para não perder cadastros.
+ * Só confirma cadastro após o destino aceitar o contato; nunca registra dados pessoais em logs.
  */
 export const registerLead = createServerFn({ method: "POST" })
   .inputValidator(leadSchema)
   .handler(async ({ data }) => {
-    if (data.empresa) return { ok: true as const, saved: false }; // robô: finge que deu certo e descarta
-    const lead = { origem: "cadastro-site", nome: data.nome ?? "", email: data.email, cupom: SIGNUP_COUPON, em: new Date().toISOString() };
+    if (data.empresa)
+      return { ok: false as const, saved: false, message: "Não foi possível concluir o cadastro." };
+    const lead = {
+      origem: "cadastro-site",
+      nome: data.nome ?? "",
+      email: data.email,
+      cupom: SIGNUP_COUPON,
+      em: new Date().toISOString(),
+    };
     const url = env("LEAD_WEBHOOK_URL");
     if (!url) {
-      console.info("[cadastro]", lead.email, lead.nome);
-      return { ok: true as const, saved: false };
+      return {
+        ok: false as const,
+        saved: false,
+        message: "O cadastro está indisponível no momento. Tente novamente mais tarde.",
+      };
     }
     try {
       const r = await fetch(url, {
@@ -34,8 +44,11 @@ export const registerLead = createServerFn({ method: "POST" })
       });
       if (!r.ok) throw new Error(`webhook respondeu ${r.status}`);
       return { ok: true as const, saved: true };
-    } catch (e) {
-      console.error("[cadastro] webhook falhou", e, lead.email);
-      return { ok: true as const, saved: false };
+    } catch {
+      return {
+        ok: false as const,
+        saved: false,
+        message: "Não foi possível salvar seu cadastro. Tente novamente em instantes.",
+      };
     }
   });

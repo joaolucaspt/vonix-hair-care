@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { toItem, track } from "@/lib/analytics";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
 import { OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
@@ -11,6 +13,8 @@ export const Route = createFileRoute("/carrinho")({
       { name: "description", content: "Seu carrinho Vonix Hair." },
       { property: "og:title", content: "Carrinho — Vonix Hair" },
       { property: "og:description", content: "Seu carrinho Vonix Hair." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Cart,
@@ -32,19 +36,34 @@ function Suggestions() {
           const v = p.variants[0];
           const offer = pixPrice(v.price);
           return (
-            <div key={p.slug} className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-3 text-body">
+            <div
+              key={p.slug}
+              className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-3 text-body"
+            >
               <Link to="/produto/$slug" params={{ slug: p.slug }} className="block">
-                <img src={p.images[0]} alt="" className="h-24 w-full rounded-lg bg-card-image object-contain" />
+                <img
+                  src={p.images[0]}
+                  alt=""
+                  className="h-24 w-full rounded-lg bg-card-image object-contain"
+                />
               </Link>
-              <Link to="/produto/$slug" params={{ slug: p.slug }} className="mt-2 font-medium hover:underline">
+              <Link
+                to="/produto/$slug"
+                params={{ slug: p.slug }}
+                className="mt-2 font-medium hover:underline"
+              >
                 {p.name}
               </Link>
               <p className="mt-0.5 line-clamp-2 text-small text-muted-foreground">{p.short}</p>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-small text-muted-foreground line-through">{brl(v.price)}</span>
+                <span className="text-small text-muted-foreground line-through">
+                  {brl(v.price)}
+                </span>
                 <b>{brl(offer)}</b>
               </div>
-              <div className="text-small text-muted-foreground">Economia de {brl(v.price - offer)} neste item</div>
+              <div className="text-small text-muted-foreground">
+                Economia de {brl(v.price - offer)} neste item
+              </div>
               <button
                 onClick={() => c.add(p.slug, v.label, 1, "comp5")}
                 className="mt-3 rounded-full border border-action px-4 py-2 text-small font-medium text-action"
@@ -62,6 +81,15 @@ function Suggestions() {
 function Cart() {
   const c = useCart();
   const hydrated = useHydrated();
+  const seen = useRef("");
+  useEffect(() => {
+    if (!hydrated || !c.lines.length) return;
+    const items = c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units));
+    const key = JSON.stringify(items);
+    if (seen.current === key) return;
+    seen.current = key;
+    track("view_cart", { value: c.netSubtotal, items });
+  }, [hydrated, c.lines, c.netSubtotal]);
   return (
     <Shell>
       <div className="container-site py-10 pb-28 lg:pb-10">
@@ -71,7 +99,12 @@ function Cart() {
         ) : c.lines.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-muted-foreground">Seu carrinho está vazio.</p>
-            <Link to="/loja" className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground">Ver produtos</Link>
+            <Link
+              to="/loja"
+              className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground"
+            >
+              Ver produtos
+            </Link>
           </div>
         ) : (
           <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
@@ -79,28 +112,65 @@ function Cart() {
               <ul className="divide-y divide-border">
                 {c.lines.map((l) => (
                   <li key={l.slug + l.variant + (l.offer ?? "")} className="flex gap-4 py-4">
-                    <img src={l.product.images[0]} alt="" className="h-24 w-24 shrink-0 rounded-lg bg-card-image object-contain" />
+                    <img
+                      src={l.product.images[0]}
+                      alt=""
+                      className="h-24 w-24 shrink-0 rounded-lg bg-card-image object-contain"
+                    />
                     <div className="min-w-0 flex-1">
-                      <Link to="/produto/$slug" params={{ slug: l.slug }} className="font-medium">{l.product.name}</Link>
-                      <div className="text-small text-muted-foreground">{l.variant} · {brl(l.price)}</div>
+                      <Link to="/produto/$slug" params={{ slug: l.slug }} className="font-medium">
+                        {l.product.name}
+                      </Link>
+                      <div className="text-small text-muted-foreground">
+                        {l.variant} · {brl(l.price)}
+                      </div>
                       {l.offer ? (
                         <div className="mt-1 inline-block rounded-full bg-foreground px-2.5 py-0.5 text-small font-medium text-background">
-                          {OFFER_LABEL[l.offer]}{(l.offer === "kit2" || l.offer === "kit3") ? ` · ${l.units} un. no total` : ""}
+                          {OFFER_LABEL[l.offer]}
+                          {l.offer === "kit2" || l.offer === "kit3"
+                            ? ` · ${l.units} un. no total`
+                            : ""}
                         </div>
                       ) : l.pct > 0 ? (
-                        <div className="mt-1 inline-block rounded-full bg-[#eef8f2] px-2.5 py-0.5 text-small font-medium text-[#2c6e55]">{l.pct}% OFF por levar {l.qty} unidades</div>
+                        <div className="mt-1 inline-block rounded-full bg-[#eef8f2] px-2.5 py-0.5 text-small font-medium text-[#2c6e55]">
+                          {l.pct}% OFF por levar {l.qty} unidades
+                        </div>
                       ) : (
-                        <div className="mt-1 text-small text-[#2c6e55]">Leve 2 e ganhe 12% OFF · leve 3 ou mais e ganhe 15% OFF</div>
+                        <div className="mt-1 text-small text-[#2c6e55]">
+                          Leve 2 e ganhe 12% OFF · leve 3 ou mais e ganhe 15% OFF
+                        </div>
                       )}
                       <div className="mt-2 flex items-center gap-2">
-                        <button aria-label="Diminuir" onClick={() => c.setQty(l.slug, l.variant, l.qty - 1, l.offer)} className="rounded-full border border-border p-1.5"><Minus className="h-3 w-3" /></button>
+                        <button
+                          aria-label="Diminuir"
+                          onClick={() => c.setQty(l.slug, l.variant, l.qty - 1, l.offer)}
+                          className="rounded-full border border-border p-1.5"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
                         <span className="w-6 text-center">{l.qty}</span>
-                        <button aria-label="Aumentar" onClick={() => c.setQty(l.slug, l.variant, l.qty + 1, l.offer)} className="rounded-full border border-border p-1.5"><Plus className="h-3 w-3" /></button>
-                        <button aria-label="Remover" onClick={() => c.remove(l.slug, l.variant, l.offer)} className="ml-3 text-muted-foreground"><Trash2 className="h-4 w-4" /></button>
+                        <button
+                          aria-label="Aumentar"
+                          onClick={() => c.setQty(l.slug, l.variant, l.qty + 1, l.offer)}
+                          className="rounded-full border border-border p-1.5"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                        <button
+                          aria-label="Remover"
+                          onClick={() => c.remove(l.slug, l.variant, l.offer)}
+                          className="ml-3 text-muted-foreground"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      {l.net < l.gross && <div className="money text-small text-muted-foreground line-through">{brl(l.gross)}</div>}
+                      {l.net < l.gross && (
+                        <div className="money text-small text-muted-foreground line-through">
+                          {brl(l.gross)}
+                        </div>
+                      )}
                       <div className="money font-semibold">{brl(l.net)}</div>
                     </div>
                   </li>
@@ -111,15 +181,25 @@ function Cart() {
             <aside className="space-y-4">
               <ShippingBar subtotal={c.subtotal} />
               <Summary lines={c.lines} />
-              <Link to="/checkout" className="hidden rounded-full bg-action py-3.5 text-center font-medium text-action-foreground lg:block">Finalizar minha compra</Link>
-              <Link to="/loja" className="block text-center text-body underline">Continuar comprando</Link>
+              <Link
+                to="/checkout"
+                className="hidden rounded-full bg-action py-3.5 text-center font-medium text-action-foreground lg:block"
+              >
+                Finalizar minha compra
+              </Link>
+              <Link to="/loja" className="block text-center text-body underline">
+                Continuar comprando
+              </Link>
             </aside>
           </div>
         )}
       </div>
       {c.lines.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background p-3 lg:hidden">
-          <Link to="/checkout" className="block rounded-full bg-action py-3.5 text-center font-medium text-action-foreground">
+          <Link
+            to="/checkout"
+            className="block rounded-full bg-action py-3.5 text-center font-medium text-action-foreground"
+          >
             Finalizar minha compra
           </Link>
         </div>
