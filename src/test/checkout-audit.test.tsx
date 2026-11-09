@@ -73,7 +73,12 @@ beforeEach(() => {
   mocks.cart.subtotal = variant.price;
   mocks.address.mockResolvedValue(address);
   mocks.quote.mockResolvedValue({ ok: true, options: [option] });
-  mocks.config.mockResolvedValue({ externalId: "test-only", sandbox: true, pixEnabled: true });
+  mocks.config.mockResolvedValue({
+    externalId: "test-only",
+    sandbox: true,
+    pixEnabled: true,
+    cardEnabled: true,
+  });
   mocks.payment.mockResolvedValue({ ok: false, message: "Pagamento mockado" });
   window.gtag = vi.fn();
   window.fbq = vi.fn();
@@ -129,7 +134,9 @@ describe("checkout auditado sem chamadas reais", () => {
     render(<Checkout />);
     const retry = await screen.findByRole("button", { name: "Gerar um novo Pix" });
     expect(retry).toBeEnabled();
-    expect(mocks.status).toHaveBeenCalledWith({ data: { orderId: 2042, statusToken: "signed-read-only-test-token-0000005" } });
+    expect(mocks.status).toHaveBeenCalledWith({
+      data: { orderId: 2042, statusToken: "signed-read-only-test-token-0000005" },
+    });
     fireEvent.click(retry);
     expect(await screen.findByRole("heading", { name: "Finalizar compra" })).toBeInTheDocument();
     expect(sessionStorage.getItem("vonix-pix-verification-v1")).toBeNull();
@@ -145,9 +152,13 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     mocks.status.mockResolvedValue({ ok: true, paid: false, status: "autorizado" });
     render(<Checkout />);
-    expect(await screen.findByRole("heading", { name: "Pagamento em análise" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em análise" }),
+    ).toBeInTheDocument();
     await waitFor(() => expect(mocks.status).toHaveBeenCalled());
-    expect(screen.queryByRole("button", { name: /Tentar novamente após a recusa/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Tentar novamente após a recusa/ }),
+    ).not.toBeInTheDocument();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
   it("restaura o Pix pendente na mesma sessão, sem emitir outra cobrança", async () => {
@@ -204,6 +215,22 @@ describe("checkout auditado sem chamadas reais", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente após a recusa" }));
     expect(await screen.findByRole("heading", { name: "Finalizar compra" })).toBeInTheDocument();
     expect(sessionStorage.getItem("vonix-card-verification-v1")).toBeNull();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("não apresenta cobrança por cartão se apenas o Pix estiver habilitado", async () => {
+    mocks.config.mockResolvedValue({
+      externalId: "",
+      sandbox: false,
+      pixEnabled: true,
+      cardEnabled: false,
+    });
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
+    expect(screen.getByText(/Estamos ativando os pagamentos desta loja/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
   it("cartão e resumo precedem CTA; formulários separados, atributos e 6 parcelas preservados", async () => {

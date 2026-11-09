@@ -62,7 +62,14 @@ type ShipOption = {
   days: number;
   free: boolean;
 };
-type PixResult = { orderId: number; statusToken: string; total: number; emv: string; qrcode: string; expiresAt: string };
+type PixResult = {
+  orderId: number;
+  statusToken: string;
+  total: number;
+  emv: string;
+  qrcode: string;
+  expiresAt: string;
+};
 
 declare global {
   interface Window {
@@ -162,7 +169,9 @@ function PixPanel({
         {left > 0
           ? `Expira em ${mm}:${String(ss).padStart(2, "0")}. `
           : "O prazo do QR Code terminou. Antes de gerar outro Pix, precisamos confirmar o cancelamento deste pedido. "}
-        {left > 0 ? "Aguardando pagamento — esta tela atualiza sozinha." : "A consulta de status continua automaticamente."}
+        {left > 0
+          ? "Aguardando pagamento — esta tela atualiza sozinha."
+          : "A consulta de status continua automaticamente."}
       </p>
     </div>
   );
@@ -204,11 +213,18 @@ function Checkout() {
   const [pixRetryVerified, setPixRetryVerified] = useState<number | null>(null);
   const [cardRetryVerified, setCardRetryVerified] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [cardDone, setCardDone] = useState<{ orderId: number; paid: boolean; statusToken: string; total: number; status: string } | null>(null);
+  const [cardDone, setCardDone] = useState<{
+    orderId: number;
+    paid: boolean;
+    statusToken: string;
+    total: number;
+    status: string;
+  } | null>(null);
   const [cfg, setCfg] = useState<{
     externalId: string;
     sandbox: boolean;
     pixEnabled?: boolean;
+    cardEnabled?: boolean;
   } | null>(null);
   const ip = useRef("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -219,7 +235,9 @@ function Checkout() {
     if (saved) setF((old) => (old.cep ? old : { ...old, cep: saved }));
     getPaymentConfig()
       .then(setCfg)
-      .catch(() => setCfg({ externalId: "", sandbox: true, pixEnabled: false }));
+      .catch(() =>
+        setCfg({ externalId: "", sandbox: true, pixEnabled: false, cardEnabled: false }),
+      );
     // A coupon won on the prize wheel is applied automatically.
     const prize = getPrize();
     if (prize) {
@@ -290,7 +308,9 @@ function Checkout() {
     let cancelled = false;
     setQuoting(true);
     setQuoteErr(null);
-    quoteShipping({ data: { cep: d, items: quoteItems, ...(appliedCode ? { coupon: appliedCode } : {}) } })
+    quoteShipping({
+      data: { cep: d, items: quoteItems, ...(appliedCode ? { coupon: appliedCode } : {}) },
+    })
       .then((r) => {
         if (cancelled) return;
         if (r.ok) {
@@ -377,7 +397,9 @@ function Checkout() {
       if (checking) return;
       checking = true;
       try {
-        const r = await getOrderStatus({ data: { orderId: pix.orderId, statusToken: pix.statusToken } });
+        const r = await getOrderStatus({
+          data: { orderId: pix.orderId, statusToken: pix.statusToken },
+        });
         if (disposed || !r.ok) return;
         if (r.paid) {
           clearPendingPix();
@@ -394,15 +416,24 @@ function Checkout() {
       }
     };
     void check();
-    const timer = setInterval(() => { void check(); }, 5000);
-    return () => { disposed = true; clearInterval(timer); };
+    const timer = setInterval(() => {
+      void check();
+    }, 5000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
   }, [pix, paid]);
 
   // Card authorization and antifraud checks are asynchronous. Poll the same
   // order instead of inviting a second payment while its status is uncertain.
   useEffect(() => {
-    if (!cardDone || cardDone.paid ||
-        (isTerminatedOrder(cardDone.status) && cardRetryVerified === cardDone.orderId)) return;
+    if (
+      !cardDone ||
+      cardDone.paid ||
+      (isTerminatedOrder(cardDone.status) && cardRetryVerified === cardDone.orderId)
+    )
+      return;
     let disposed = false;
     let checking = false;
     const check = async () => {
@@ -416,8 +447,11 @@ function Checkout() {
         if (result.paid) {
           setCardRetryVerified(null);
           clearPendingCard();
-          setCardDone((previous) => previous?.orderId === cardDone.orderId
-            ? { ...previous, paid: true, status: result.status } : previous);
+          setCardDone((previous) =>
+            previous?.orderId === cardDone.orderId
+              ? { ...previous, paid: true, status: result.status }
+              : previous,
+          );
           finishRef.current(cardDone.orderId, cardDone.total);
         } else {
           // Restored sessionStorage may contain a forged or stale status.
@@ -425,8 +459,11 @@ function Checkout() {
           setCardRetryVerified(isTerminatedOrder(result.status) ? cardDone.orderId : null);
           if (result.status !== cardDone.status) {
             savePendingCard({ ...cardDone, status: result.status });
-            setCardDone((previous) => previous?.orderId === cardDone.orderId
-              ? { ...previous, status: result.status } : previous);
+            setCardDone((previous) =>
+              previous?.orderId === cardDone.orderId
+                ? { ...previous, status: result.status }
+                : previous,
+            );
           }
         }
       } catch {
@@ -436,8 +473,13 @@ function Checkout() {
       }
     };
     void check();
-    const timer = setInterval(() => { void check(); }, 5_000);
-    return () => { disposed = true; clearInterval(timer); };
+    const timer = setInterval(() => {
+      void check();
+    }, 5_000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
   }, [cardDone, cardRetryVerified]);
 
   const submitPayment = async (token?: string) => {
@@ -488,7 +530,13 @@ function Checkout() {
         setPix(pixResult);
         window.scrollTo({ top: 0 });
       } else {
-        const cardResult = { orderId: r.orderId, paid: r.paid, statusToken: r.statusToken, total: r.total, status: r.status };
+        const cardResult = {
+          orderId: r.orderId,
+          paid: r.paid,
+          statusToken: r.statusToken,
+          total: r.total,
+          status: r.status,
+        };
         if (r.paid) {
           clearPendingCard();
           finish(r.orderId, r.total);
@@ -510,7 +558,7 @@ function Checkout() {
 
   // Card: Appmax JS tokenizes the card fields; the number never reaches our server.
   useEffect(() => {
-    if (!cfg?.externalId) return;
+    if (!cfg?.externalId || !cfg?.cardEnabled) return;
     const s = document.createElement("script");
     s.src = cfg.sandbox
       ? "https://scripts.sandboxappmax.com.br/appmax.min.js"
@@ -532,7 +580,7 @@ function Checkout() {
     return () => {
       s.remove();
     };
-  }, [cfg?.externalId, cfg?.sandbox]);
+  }, [cfg?.externalId, cfg?.sandbox, cfg?.cardEnabled]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -543,7 +591,8 @@ function Checkout() {
     }
     track("add_payment_info", { payment_type: pay, value: total });
     if (pay === "pix") void submitPayment();
-    else if (!cfg?.externalId) setError("Pagamento por cartão indisponível no momento. Use o Pix.");
+    else if (!cfg?.cardEnabled)
+      setError("Pagamento por cartão indisponível no momento. Use o Pix ou entre em contato.");
     else {
       const cardForm = document.getElementById("card-form");
       if (!(cardForm instanceof HTMLFormElement) || !cardForm.reportValidity()) return;
@@ -588,22 +637,26 @@ function Checkout() {
       <Shell>
         <div className="container-site max-w-xl py-16 text-center" role="status" aria-live="polite">
           <h1 className="font-display text-h1">
-            {declined ? "Pagamento não aprovado" : ended ? "Pedido em revisão" : "Pagamento em análise"}
+            {declined
+              ? "Pagamento não aprovado"
+              : ended
+                ? "Pedido em revisão"
+                : "Pagamento em análise"}
           </h1>
           <p className="mt-3 text-body text-muted-foreground">
             Pedido nº {cardDone.orderId}.
             {ended && !declined
               ? " A situação exige revisão do atendimento. Não crie outro pagamento para este pedido."
               : declined
-              ? " A Appmax informou que este pedido não foi aprovado. Consulte o suporte antes de iniciar uma nova tentativa."
-              : cardDone.status === "autorizado"
-                ? " O banco autorizou o cartão, mas a análise antifraude ainda não terminou."
-                : " Estamos verificando a confirmação junto à Appmax. Este processo pode levar alguns minutos."}
+                ? " A Appmax informou que este pedido não foi aprovado. Consulte o suporte antes de iniciar uma nova tentativa."
+                : cardDone.status === "autorizado"
+                  ? " O banco autorizou o cartão, mas a análise antifraude ainda não terminou."
+                  : " Estamos verificando a confirmação junto à Appmax. Este processo pode levar alguns minutos."}
           </p>
           {!declined ? (
             <p className="mt-4 rounded-lg border border-border bg-muted p-4 text-body">
-              Não efetue outro pagamento sem confirmar a situação deste pedido.
-              A página consulta a Appmax automaticamente.
+              Não efetue outro pagamento sem confirmar a situação deste pedido. A página consulta a
+              Appmax automaticamente.
             </p>
           ) : (
             <button
@@ -620,7 +673,10 @@ function Checkout() {
               Tentar novamente após a recusa
             </button>
           )}
-          <Link to="/conta" className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground">
+          <Link
+            to="/conta"
+            className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground"
+          >
             Acompanhar pelo atendimento
           </Link>
         </div>
@@ -1124,7 +1180,7 @@ function Checkout() {
               {error}
             </p>
           )}
-          {cfg && !cfg.pixEnabled && (
+          {cfg && !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled) && (
             <p role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
               Estamos ativando os pagamentos desta loja. Em breve você poderá finalizar por aqui.
               Para comprar agora,{" "}
@@ -1137,7 +1193,13 @@ function Checkout() {
           <button
             type="submit"
             form="checkout-form"
-            disabled={busy || quoting || !chosen || !cfg || !cfg.pixEnabled}
+            disabled={
+              busy ||
+              quoting ||
+              !chosen ||
+              !cfg ||
+              !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled)
+            }
             className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60"
           >
             {busy

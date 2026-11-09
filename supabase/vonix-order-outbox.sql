@@ -145,3 +145,27 @@ $$;
 
 revoke execute on function public.vonix_reconcile_order_outbox(integer) from public, anon, authenticated;
 grant execute on function public.vonix_reconcile_order_outbox(integer) to service_role;
+
+-- Read-only aggregate for administrators. No customer details, IDs or payloads.
+-- Requires the outbox table and is deliberately inaccessible to browser roles.
+create or replace function public.vonix_order_health_summary()
+returns jsonb language sql stable security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'pending', count(*) filter (where status = 'pending'),
+    'leased', count(*) filter (where status = 'leased'),
+    'completed', count(*) filter (where status = 'completed'),
+    'awaitingReview', count(*) filter (where review_required),
+    'readyToRetry', count(*) filter (where status = 'pending' and next_attempt_at <= now()),
+    'expiredLeases', count(*) filter (where status = 'leased' and claimed_until < now()),
+    'multipleAttempts', count(*) filter (where attempts >= 3 and status <> 'completed'),
+    'completedLast24h', count(*) filter (where status = 'completed' and processed_at >= now() - interval '24 hours'),
+    'oldestPendingMinutes', coalesce(
+      greatest(0, floor(extract(epoch from (now() - min(created_at)
+        filter (where status = 'pending'))) / 60)), 0
+    )
+  ) from public.vonix_order_outbox;
+$$;
+revoke execute on function public.vonix_order_health_summary() from public, anon, authenticated;
+grant execute on function public.vonix_order_health_summary() to service_role;

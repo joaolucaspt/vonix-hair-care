@@ -41,31 +41,57 @@ const cents = (v: number) => Math.round(v * 100);
 
 const couponSchema = z.string().max(30).optional();
 
-async function shippingOptions(cep: string, lines: ReturnType<typeof buildLines>, couponCode?: string) {
+async function shippingOptions(
+  cep: string,
+  lines: ReturnType<typeof buildLines>,
+  couponCode?: string,
+) {
   const quotes = await calculateShipping(
     cep,
     lines.map((l) => ({ id: l.product.slug, unitPrice: l.net / l.units, quantity: l.units })),
   );
   const t = checkoutTotals(lines, "pix");
   const free = t.freeShipping || couponFreeShipping(findCoupon(couponCode), t.gross);
-  return quotes.map((q, k) => ({ ...q, free: free && k === 0, price: free && k === 0 ? 0 : q.price }));
+  return quotes.map((q, k) => ({
+    ...q,
+    free: free && k === 0,
+    price: free && k === 0 ? 0 : q.price,
+  }));
 }
 
 export const quoteShipping = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ cep: cepSchema, items: z.array(itemSchema).min(1).max(40), coupon: couponSchema }))
+  .inputValidator(
+    z.object({ cep: cepSchema, items: z.array(itemSchema).min(1).max(40), coupon: couponSchema }),
+  )
   .handler(async ({ data }) => {
     try {
-      return { ok: true as const, options: await shippingOptions(data.cep, buildLines(data.items), data.coupon) };
+      return {
+        ok: true as const,
+        options: await shippingOptions(data.cep, buildLines(data.items), data.coupon),
+      };
     } catch (e) {
       console.error("[frete]", e);
-      return { ok: false as const, message: "Não foi possível calcular o frete agora. Tente novamente em instantes." };
+      return {
+        ok: false as const,
+        message: "Não foi possível calcular o frete agora. Tente novamente em instantes.",
+      };
     }
   });
 
 export const getPaymentConfig = createServerFn({ method: "GET" }).handler(async () => ({
   externalId: env("APPMAX_EXTERNAL_ID"),
   sandbox: env("APPMAX_ENV") !== "production",
-  pixEnabled: !!env("APPMAX_CLIENT_ID") && !!env("APPMAX_CLIENT_SECRET") && !!env("SUPABASE_URL") && !!env("SUPABASE_SERVICE_ROLE_KEY"),
+  pixEnabled:
+    !!env("APPMAX_CLIENT_ID") &&
+    !!env("APPMAX_CLIENT_SECRET") &&
+    !!env("SUPABASE_URL") &&
+    !!env("SUPABASE_SERVICE_ROLE_KEY"),
+  cardEnabled:
+    !!env("APPMAX_CLIENT_ID") &&
+    !!env("APPMAX_CLIENT_SECRET") &&
+    !!env("APPMAX_EXTERNAL_ID") &&
+    !!env("SUPABASE_URL") &&
+    !!env("SUPABASE_SERVICE_ROLE_KEY"),
 }));
 
 const customerSchema = z.object({
@@ -101,27 +127,54 @@ const paySchema = z.object({
 export const createPayment = createServerFn({ method: "POST" })
   .inputValidator(paySchema)
   .handler(async ({ data }) => {
-    if (!env("APPMAX_CLIENT_ID") || !env("APPMAX_CLIENT_SECRET") || !env("SUPABASE_URL") || !env("SUPABASE_SERVICE_ROLE_KEY")) return { ok: false as const, message: "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora." };
+    if (
+      !env("APPMAX_CLIENT_ID") ||
+      !env("APPMAX_CLIENT_SECRET") ||
+      !env("SUPABASE_URL") ||
+      !env("SUPABASE_SERVICE_ROLE_KEY")
+    )
+      return {
+        ok: false as const,
+        message:
+          "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora.",
+      };
     try {
       // Avoid creating an Appmax customer or order when card tokenization has failed.
       if (data.method === "card" && !data.token) {
-        return { ok: false as const, message: "Não foi possível validar o cartão. Confira os dados e tente de novo." };
+        return {
+          ok: false as const,
+          message: "Não foi possível validar o cartão. Confira os dados e tente de novo.",
+        };
       }
       const lines = buildLines(data.items);
-      const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find((o) => o.id === data.serviceId);
+      const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find(
+        (o) => o.id === data.serviceId,
+      );
       if (!option) return { ok: false as const, message: "Escolha uma opção de entrega válida." };
 
       const coupon = findCoupon(data.coupon);
       const gross = checkoutTotals(lines, "card").gross;
-      if (data.coupon && !coupon) return { ok: false as const, message: "Cupom inválido. Remova o cupom ou confira o código." };
+      if (data.coupon && !coupon)
+        return {
+          ok: false as const,
+          message: "Cupom inválido. Remova o cupom ou confira o código.",
+        };
       if (coupon) {
         const chk = couponCheck(coupon, gross);
         if (!chk.ok) return { ok: false as const, message: chk.reason };
       }
-      const totals = checkoutTotals(lines, data.method === "pix" ? "pix" : "card", couponPercent(coupon, gross));
+      const totals = checkoutTotals(
+        lines,
+        data.method === "pix" ? "pix" : "card",
+        couponPercent(coupon, gross),
+      );
       const document = data.customer.cpf.replace(/\D/g, "");
       const [first = "", ...rest] = data.customer.nome.trim().split(/\s+/);
-      const ip = data.ip || getRequestHeader("cf-connecting-ip") || getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() || "0.0.0.0";
+      const ip =
+        data.ip ||
+        getRequestHeader("cf-connecting-ip") ||
+        getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "0.0.0.0";
 
       const customerId = await appmax.createCustomer({
         first_name: first,
@@ -140,7 +193,14 @@ export const createPayment = createServerFn({ method: "POST" })
           state: data.address.uf.toUpperCase(),
         },
         // Venda pelo link de uma afiliada: a origem fica registrada no pedido (utm_campaign = afiliada-<codigo>).
-        ...(normalizeRef(data.ref) ? { tracking: { utm_source: "afiliada", utm_campaign: refCampaign(normalizeRef(data.ref) as string) } } : {}),
+        ...(normalizeRef(data.ref)
+          ? {
+              tracking: {
+                utm_source: "afiliada",
+                utm_campaign: refCampaign(normalizeRef(data.ref) as string),
+              },
+            }
+          : {}),
       });
 
       const products = lines.map((l) => ({
@@ -161,23 +221,53 @@ export const createPayment = createServerFn({ method: "POST" })
       // Fail closed BEFORE requesting a payment if durable storage is unavailable.
       await saveOrderSnapshot({
         orderId,
-        customer: { name: data.customer.nome.trim(), email: data.customer.email, phone: data.customer.whatsapp.replace(/\D/g, ""), documentNumber: document },
-        address: { street: data.address.rua, number: data.address.numero, complement: data.address.complemento, district: data.address.bairro, city: data.address.cidade, state: data.address.uf.toUpperCase(), postcode: data.address.cep.replace(/\D/g, "") },
-        products: products.map((p) => ({ sku: p.sku, name: p.name, quantity: p.quantity, unitValueCents: p.unit_value })),
+        customer: {
+          name: data.customer.nome.trim(),
+          email: data.customer.email,
+          phone: data.customer.whatsapp.replace(/\D/g, ""),
+          documentNumber: document,
+        },
+        address: {
+          street: data.address.rua,
+          number: data.address.numero,
+          complement: data.address.complemento,
+          district: data.address.bairro,
+          city: data.address.cidade,
+          state: data.address.uf.toUpperCase(),
+          postcode: data.address.cep.replace(/\D/g, ""),
+        },
+        products: products.map((p) => ({
+          sku: p.sku,
+          name: p.name,
+          quantity: p.quantity,
+          unitValueCents: p.unit_value,
+        })),
         shippingValueCents: cents(option.price),
         discountValueCents: cents(totals.pixDiscount) + cents(totals.couponDiscount),
       });
       const total = totals.net + option.price;
       // Venda pelo link de uma afiliada: o app de expedição registra como pendente; só conta comissão depois de paga.
       const ref = normalizeRef(data.ref);
-      if (ref) await notifyAffiliateSale({ orderId, status: "pendente", ref, totalCents: cents(total) });
+      if (ref)
+        await notifyAffiliateSale({ orderId, status: "pendente", ref, totalCents: cents(total) });
 
       if (data.method === "pix") {
         const pix = await appmax.payWithPix(orderId, document);
-        return { ok: true as const, method: "pix" as const, orderId, statusToken: orderStatusToken(orderId), total, pix: { emv: pix.pix_emv, qrcode: pix.pix_qrcode, expiresAt: pix.pix_expiration_date } };
+        return {
+          ok: true as const,
+          method: "pix" as const,
+          orderId,
+          statusToken: orderStatusToken(orderId),
+          total,
+          pix: { emv: pix.pix_emv, qrcode: pix.pix_qrcode, expiresAt: pix.pix_expiration_date },
+        };
       }
 
-      if (!data.token) return { ok: false as const, message: "Não foi possível validar o cartão. Confira os dados e tente de novo." };
+      if (!data.token)
+        return {
+          ok: false as const,
+          message: "Não foi possível validar o cartão. Confira os dados e tente de novo.",
+        };
       // A timeout after submitting a card is NOT proof that payment was declined.
       // Preserve the order reference and check asynchronously, never prompt double charge.
       try {
@@ -190,23 +280,53 @@ export const createPayment = createServerFn({ method: "POST" })
           installments: data.installments ?? 1,
         });
       } catch {
-        return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: false, status: "verificacao_necessaria" };
+        return {
+          ok: true as const,
+          method: "card" as const,
+          orderId,
+          statusToken: orderStatusToken(orderId),
+          total,
+          paid: false,
+          status: "verificacao_necessaria",
+        };
       }
       try {
         const order = await appmax.getOrder(orderId);
         if (ref && appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
-        return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: appmax.isPaid(order), status: order.data.order.status };
+        return {
+          ok: true as const,
+          method: "card" as const,
+          orderId,
+          statusToken: orderStatusToken(orderId),
+          total,
+          paid: appmax.isPaid(order),
+          status: order.data.order.status,
+        };
       } catch {
-        return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: false, status: "aguardando_confirmacao" };
+        return {
+          ok: true as const,
+          method: "card" as const,
+          orderId,
+          statusToken: orderStatusToken(orderId),
+          total,
+          paid: false,
+          status: "aguardando_confirmacao",
+        };
       }
     } catch (e) {
       console.error("[pagamento]", e);
-      return { ok: false as const, message: "Não conseguimos processar o pagamento. Confira os dados ou tente outra forma de pagamento." };
+      return {
+        ok: false as const,
+        message:
+          "Não conseguimos processar o pagamento. Confira os dados ou tente outra forma de pagamento.",
+      };
     }
   });
 
 export const getOrderStatus = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ orderId: z.number().int().positive(), statusToken: z.string().min(30).max(128) }))
+  .inputValidator(
+    z.object({ orderId: z.number().int().positive(), statusToken: z.string().min(30).max(128) }),
+  )
   .handler(async ({ data }) => {
     try {
       if (!validOrderStatusToken(data.orderId, data.statusToken)) return { ok: false as const };

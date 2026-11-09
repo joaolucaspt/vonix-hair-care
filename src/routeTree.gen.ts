@@ -22,6 +22,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
 import { Route as ApiInternalBlingConnectRouteImport } from './routes/api.internal.bling-connect'
+import { Route as ApiInternalOrderHealthRouteImport } from './routes/api.internal.order-health'
 import { Route as ApiInternalOrderWorkerRouteImport } from './routes/api.internal.order-worker'
 import { Route as ApiPublicAppmaxWebhookRouteImport } from './routes/api.public.appmax-webhook'
 import { Route as ApiPublicMetaCatalogRouteImport } from './routes/api.public.meta-catalog'
@@ -92,6 +93,11 @@ const ApiInternalBlingConnectRoute = ApiInternalBlingConnectRouteImport.update({
   path: '/api/internal/bling-connect',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalOrderHealthRoute = ApiInternalOrderHealthRouteImport.update({
+  id: '/api/internal/order-health',
+  path: '/api/internal/order-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalOrderWorkerRoute = ApiInternalOrderWorkerRouteImport.update({
   id: '/api/internal/order-worker',
   path: '/api/internal/order-worker',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
+  '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
   '/api/internal/order-worker': typeof ApiInternalOrderWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
   '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
+  '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
   '/api/internal/order-worker': typeof ApiInternalOrderWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
   '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
+  '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
   '/api/internal/order-worker': typeof ApiInternalOrderWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
   '/api/public/meta-catalog': typeof ApiPublicMetaCatalogRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/internal/bling-connect'
+    | '/api/internal/order-health'
     | '/api/internal/order-worker'
     | '/api/public/appmax-webhook'
     | '/api/public/meta-catalog'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/internal/bling-connect'
+    | '/api/internal/order-health'
     | '/api/internal/order-worker'
     | '/api/public/appmax-webhook'
     | '/api/public/meta-catalog'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/internal/bling-connect'
+    | '/api/internal/order-health'
     | '/api/internal/order-worker'
     | '/api/public/appmax-webhook'
     | '/api/public/meta-catalog'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
   ApiInternalBlingConnectRoute: typeof ApiInternalBlingConnectRoute
+  ApiInternalOrderHealthRoute: typeof ApiInternalOrderHealthRoute
   ApiInternalOrderWorkerRoute: typeof ApiInternalOrderWorkerRoute
   ApiPublicAppmaxWebhookRoute: typeof ApiPublicAppmaxWebhookRoute
   ApiPublicMetaCatalogRoute: typeof ApiPublicMetaCatalogRoute
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalBlingConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/order-health': {
+      id: '/api/internal/order-health'
+      path: '/api/internal/order-health'
+      fullPath: '/api/internal/order-health'
+      preLoaderRoute: typeof ApiInternalOrderHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/order-worker': {
       id: '/api/internal/order-worker'
       path: '/api/internal/order-worker'
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
   ApiInternalBlingConnectRoute: ApiInternalBlingConnectRoute,
+  ApiInternalOrderHealthRoute: ApiInternalOrderHealthRoute,
   ApiInternalOrderWorkerRoute: ApiInternalOrderWorkerRoute,
   ApiPublicAppmaxWebhookRoute: ApiPublicAppmaxWebhookRoute,
   ApiPublicMetaCatalogRoute: ApiPublicMetaCatalogRoute,
