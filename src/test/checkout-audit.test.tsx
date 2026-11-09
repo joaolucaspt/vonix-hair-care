@@ -1,6 +1,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getProduct, lineTotals } from "@/lib/store";
+import { savePendingCard } from "@/lib/pending-card";
+import { savePendingPix } from "@/lib/pending-pix";
 
 const mocks = vi.hoisted(() => ({
   address: vi.fn(),
@@ -98,6 +100,112 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("não permite gerar outro Pix vencido se a Appmax ainda informa pagamento pendente", async () => {
+    savePendingPix({
+      orderId: 2041,
+      statusToken: "signed-read-only-test-token-0000004",
+      total: 154.9,
+      emv: "pix-test-code",
+      qrcode: "dGVzdA==",
+      expiresAt: "2025-01-01 12:00:00",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "pendente" });
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pague com Pix" })).toBeInTheDocument();
+    const retry = screen.getByRole("button", { name: /Verificando o Pix anterior/ });
+    expect(retry).toBeDisabled();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("libera novo Pix somente quando a Appmax confirma cancelamento do anterior", async () => {
+    savePendingPix({
+      orderId: 2042,
+      statusToken: "signed-read-only-test-token-0000005",
+      total: 154.9,
+      emv: "pix-test-code",
+      qrcode: "dGVzdA==",
+      expiresAt: "2025-01-01 12:00:00",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "cancelado" });
+    render(<Checkout />);
+    const retry = await screen.findByRole("button", { name: "Gerar um novo Pix" });
+    expect(retry).toBeEnabled();
+    expect(mocks.status).toHaveBeenCalledWith({ data: { orderId: 2042, statusToken: "signed-read-only-test-token-0000005" } });
+    fireEvent.click(retry);
+    expect(await screen.findByRole("heading", { name: "Finalizar compra" })).toBeInTheDocument();
+    expect(sessionStorage.getItem("vonix-pix-verification-v1")).toBeNull();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("recusa armazenada sem confirmação da Appmax não libera outro cartão", async () => {
+    savePendingCard({
+      orderId: 653,
+      statusToken: "signed-read-only-test-token-0000006",
+      total: 154.9,
+      paid: false,
+      status: "recusado_por_risco",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "autorizado" });
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pagamento em análise" })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.status).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: /Tentar novamente após a recusa/ })).not.toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("restaura o Pix pendente na mesma sessão, sem emitir outra cobrança", async () => {
+    savePendingPix({
+      orderId: 2040,
+      statusToken: "signed-read-only-test-token-0000003",
+      total: 154.9,
+      emv: "pix-test-code",
+      qrcode: "dGVzdA==",
+      expiresAt: "2027-01-01 12:00:00",
+    });
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pague com Pix" })).toBeInTheDocument();
+    expect(screen.getByText(/Pedido nº 2040/)).toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("retoma a mesma análise de cartão após recarregar o checkout, sem nova cobrança", async () => {
+    savePendingCard({
+      orderId: 655,
+      statusToken: "signed-read-only-test-token-0000001",
+      total: 154.9,
+      paid: false,
+      status: "autorizado",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "autorizado" });
+    render(<Checkout />);
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento em análise" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.status).toHaveBeenCalledWith({
+        data: { orderId: 655, statusToken: "signed-read-only-test-token-0000001" },
+      }),
+    );
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("libera outra tentativa somente após recusa definitiva confirmada", async () => {
+    savePendingCard({
+      orderId: 656,
+      statusToken: "signed-read-only-test-token-0000002",
+      total: 154.9,
+      paid: false,
+      status: "recusado_por_risco",
+    });
+    // A client-side status is not enough to unlock another charge: verify with Appmax.
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "recusado_por_risco" });
+    render(<Checkout />);
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento não aprovado" }),
+    ).toBeInTheDocument();
+    expect(mocks.status).toHaveBeenCalledWith({
+      data: { orderId: 656, statusToken: "signed-read-only-test-token-0000002" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tentar novamente após a recusa" }));
+    expect(await screen.findByRole("heading", { name: "Finalizar compra" })).toBeInTheDocument();
+    expect(sessionStorage.getItem("vonix-card-verification-v1")).toBeNull();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
   it("cartão e resumo precedem CTA; formulários separados, atributos e 6 parcelas preservados", async () => {
     const { container } = render(<Checkout />);
     await tick();
@@ -177,6 +285,41 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(await screen.findByText(/Estimativa de frete/)).toBeInTheDocument();
     expect(screen.getByText("Correios PAC")).toBeInTheDocument();
     expect(mocks.quote).toHaveBeenCalledTimes(1);
+  });
+  it("ignora dois callbacks de tokenização simultâneos sem criar duas cobranças", async () => {
+    let onTokenize: ((value: { token: string }) => void) | undefined;
+    window.AppmaxScripts = {
+      init: ({ onTokenize: handler }) => {
+        onTokenize = handler;
+      },
+    };
+    let resolvePayment: ((value: unknown) => void) | undefined;
+    mocks.payment.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePayment = resolve;
+        }),
+    );
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const script = await waitFor(() => {
+      const element = document.querySelector('script[src*="appmax.min.js"]');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.load(script);
+    expect(onTokenize).toBeDefined();
+    await act(async () => {
+      onTokenize?.({ token: "test-token" });
+      onTokenize?.({ token: "test-token" });
+      await Promise.resolve();
+    });
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolvePayment?.({ ok: false, message: "Erro simulado de gateway" });
+      await Promise.resolve();
+    });
   });
   it("cartão em análise fica em acompanhamento, sem sugerir uma segunda cobrança", async () => {
     let onTokenize: ((value: { token: string }) => void) | undefined;
