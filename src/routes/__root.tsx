@@ -20,7 +20,7 @@ import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
 
 // IDs lidos do site publicado; confirmar o ID do Clarity em Configurações > Visão geral do projeto.
 const GA_ID = "G-JW91EQ32F3";
-const CLARITY_ID = "yrgl15vqw9";
+const CLARITY_ID = "zaq09ea2zy"; // projeto "Vonix hair" na conta Clarity da loja
 
 function NotFoundComponent() {
   return (
