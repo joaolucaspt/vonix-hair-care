@@ -1,0 +1,94 @@
+name: Vonix affiliates - verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vonix-affiliates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-and-api:
+    name: Types, tests, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install from committed lockfile
+        run: bun install --frozen-lockfile
+      - name: Run all application tests
+        run: bun run test
+      - name: TypeScript check
+        run: bunx tsc --noEmit
+      - name: Lint affiliate files only
+        run: |
+          bunx eslint \
+            src/lib/affiliate-admin-session.server.ts \
+            src/lib/affiliate-admin-auth.server.ts \
+            src/lib/affiliate-application.ts \
+            src/lib/affiliate-applications.server.ts \
+            src/lib/affiliate-email.ts \
+            src/lib/affiliate-functions.ts \
+            src/lib/affiliate-throttle.server.ts \
+            src/routes/admin.afiliadas.tsx \
+            src/routes/api.internal.affiliate-mail-worker.ts \
+            src/routes/seja-afiliada.tsx \
+            src/test/affiliate-admin-session.test.ts \
+            src/test/affiliate-admin-auth.test.ts \
+            src/test/affiliate-admin-ui.test.tsx \
+            src/test/affiliate-recruitment.test.ts \
+            src/test/affiliate-system.test.ts \
+            src/test/affiliate-throttle.test.ts
+      - name: Build full storefront
+        run: bun run build
+
+  isolated-postgres:
+    name: Isolated PostgreSQL RLS, migration and concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Node for the concurrency fixture
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Execute database QA in disposable container without network
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Synthetic QA credentials; there is no access to any real database.
+          docker run --rm -d --name vonix-affiliates-sql-qa --network none \
+            -e POSTGRES_PASSWORD=qa-disposable-only \
+            -e POSTGRES_DB=vonix_affiliates_qa postgres:16
+          trap 'docker stop vonix-affiliates-sql-qa >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if docker exec vonix-affiliates-sql-qa pg_isready -U postgres -d vonix_affiliates_qa >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          docker exec vonix-affiliates-sql-qa pg_isready -U postgres -d vonix_affiliates_qa
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -c 'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;'
+          docker cp supabase/vonix-affiliate-applications.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-applications.sql
+          docker cp supabase/vonix-affiliate-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-qa.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-applications.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-qa.sql
+          node scripts/qa-affiliate-concurrency.mjs
