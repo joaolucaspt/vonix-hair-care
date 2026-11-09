@@ -5,6 +5,8 @@ afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("aviso da venda da afiliada", () => {
   it("sem configuração não chama ninguém", async () => {
+    vi.stubEnv("AFFILIATE_APP_URL", "");
+    vi.stubEnv("AFFILIATE_SITE_SECRET", "");
     const f = vi.fn(); vi.stubGlobal("fetch", f);
     expect(await notifyAffiliateSale({ orderId: 1, status: "pago" })).toBe(false);
     expect(f).not.toHaveBeenCalled();
