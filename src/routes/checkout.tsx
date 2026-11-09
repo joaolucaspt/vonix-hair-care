@@ -21,6 +21,7 @@ import {
   getSavedCep,
   installments,
   maskCep,
+  missingForFreeShipping,
   saveCep,
   useCart,
   useHydrated,
@@ -43,18 +44,20 @@ export const Route = createFileRoute("/checkout")({
 });
 
 const inp =
-  "h-12 w-full rounded-xl border border-border bg-white px-3.5 text-body outline-none transition focus:border-action focus:ring-2 focus:ring-action/40";
+  "h-11 w-full rounded-lg border border-border bg-white px-3.5 text-body outline-none transition focus:border-action focus:ring-2 focus:ring-action/40";
+
+const tint = "border-emerald-200 bg-emerald-50";
 
 const panel =
-  "space-y-3 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5";
+  "space-y-2 rounded-xl border border-border bg-white p-3.5 sm:p-4";
 
 const StepTitle = ({ n, children }: { n: number; children: React.ReactNode }) => (
-  <legend className="mb-1 flex items-center gap-2 text-name font-semibold">
-    <span className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-small font-semibold text-background">
-      {n}
-    </span>
+  <>
+  <legend className="float-left mb-2 w-full text-body font-bold" data-step={n}>
     {children}
   </legend>
+  <div className="clear-both" />
+  </>
 );
 
 const maskCpf = (v: string) =>
@@ -176,7 +179,46 @@ function PixPanel({
   );
 }
 
+const STEPS = ["Contato", "Entrega", "Pagamento"];
+
+function Drawer({ children, progress, steps }: { children: React.ReactNode; progress: number; steps: boolean[] }) {
+  return (
+    <div className="fixed inset-0 z-[90] flex justify-end bg-black/50 backdrop-blur-[2px]" style={{ animation: "vx-fade .25s ease-out" }} onClick={() => history.back()}>
+      <style>{"@keyframes vx-fade{from{opacity:0}to{opacity:1}}@keyframes vx-slide{from{transform:translateX(100%)}to{transform:none}}"}</style>
+      <div
+        className="flex h-full w-full max-w-[460px] flex-col bg-background shadow-2xl"
+        style={{ animation: "vx-slide .32s cubic-bezier(.22,1,.36,1)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-border bg-background px-4 pb-3 pt-3">
+          <div className="flex items-center justify-between">
+            <b className="flex items-center gap-2 text-name"><Lock className="h-4 w-4 text-emerald-600" aria-hidden="true" /> Compra segura</b>
+            <button type="button" aria-label="Fechar" onClick={() => history.back()} className="grid h-9 w-9 place-items-center rounded-full bg-muted text-xl leading-none">×</button>
+          </div>
+          <div className="mt-3 flex gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+            {STEPS.map((n, k) => (
+              <div key={n} className="flex-1">
+                <div className={`h-1.5 rounded-full transition-all duration-500 ${steps[k] ? "bg-emerald-600" : k === steps.filter(Boolean).length ? "bg-emerald-300" : "bg-border"}`} />
+                <div className={`mt-1 text-[0.7rem] font-semibold ${steps[k] ? "text-emerald-700" : "text-muted-foreground"}`}>{steps[k] ? "✓ " : ""}{n}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function Checkout() {
+  const [lateral, setLateral] = useState(false);
+  useEffect(() => {
+    let flag = false;
+    try {
+      flag = sessionStorage.getItem("vonix-lateral") === "1";
+    } catch { /* sem armazenamento */ }
+    setLateral(flag || new URLSearchParams(location.search).has("lateral"));
+  }, []);
   const c = useCart();
   const hydrated = useHydrated();
   const [f, setF] = useState({
@@ -533,14 +575,21 @@ function Checkout() {
     );
 
   const inst = installments(total);
+  const stepsDone = [!!(f.nome && f.email && f.whatsapp && f.cpf), !!chosen, false];
+  const progress = (stepsDone.filter(Boolean).length + 1) / 3;
 
-  return (
-    <Shell>
-      <div className="container-site grid min-w-0 grid-cols-[minmax(0,1fr)] gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0 space-y-8">
-          <form id="checkout-form" className="min-w-0 space-y-8" onSubmit={onSubmit}>
+  const body = (
+      <div className={lateral ? "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 p-3" : "container-site grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 py-4 lg:gap-8 lg:py-8 lg:grid-cols-[minmax(0,1fr)_380px]"}>
+        <div className="min-w-0 space-y-3">
+          <form id="checkout-form" className="min-w-0 space-y-3" onSubmit={onSubmit}>
             <div>
-              <h1 className="font-display text-h1">Finalizar compra</h1>
+              <h1 className={lateral ? "sr-only" : "font-display text-h2 lg:text-h1"}>Finalizar compra</h1>
+              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-emerald-600 px-3 py-2 text-small font-semibold text-white">
+                <span className="rounded bg-white px-1.5 py-0.5 text-[0.7rem] font-extrabold uppercase text-emerald-700">5% OFF</span>
+                {missingForFreeShipping(gross) > 0
+                  ? `faltam ${brl(missingForFreeShipping(gross))} para ganhar frete grátis`
+                  : "você ganhou frete grátis"}
+              </p>
               {cfg?.sandbox && (
                 <p
                   role="note"
@@ -573,7 +622,8 @@ function Checkout() {
                 autoComplete="email"
                 className={inp}
               />
-              <input
+              <div className="grid grid-cols-2 gap-2">
+<input
                 required
                 inputMode="tel"
                 aria-label="WhatsApp com DDD"
@@ -593,11 +643,13 @@ function Checkout() {
                 onChange={(e) => setF((old) => ({ ...old, cpf: maskCpf(e.target.value) }))}
                 className={inp}
               />
-            </fieldset>
+</div>
+              </fieldset>
 
             <fieldset className={panel}>
               <StepTitle n={2}>Entrega</StepTitle>
-              <input
+              <div className="grid grid-cols-[1.4fr_1fr] gap-2">
+<input
                 required
                 inputMode="numeric"
                 aria-label="CEP"
@@ -611,7 +663,19 @@ function Checkout() {
                 autoComplete="postal-code"
                 className={inp}
               />
-              {cepLoading && (
+<input
+                  ref={numeroRef}
+                  required
+                  inputMode="numeric"
+                  aria-label="Número"
+                  placeholder="Número"
+                  value={f.numero}
+                  onChange={set("numero")}
+                  autoComplete="off"
+                  className={inp}
+                />
+</div>
+{cepLoading && (
                 <p role="status" className="text-body text-muted-foreground">
                   Buscando endereço…
                 </p>
@@ -628,21 +692,19 @@ function Checkout() {
                 value={f.rua}
                 onChange={set("rua")}
                 autoComplete="address-line1"
-                className={inp}
+                className={`${inp} ${f.rua ? tint : ""}`}
               />
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  ref={numeroRef}
-                  required
-                  inputMode="numeric"
-                  aria-label="Número"
-                  placeholder="Número"
-                  value={f.numero}
-                  onChange={set("numero")}
-                  autoComplete="off"
-                  className={inp}
-                />
-                <input
+<div className="grid grid-cols-2 gap-2">
+<input
+                required
+                aria-label="Bairro"
+                placeholder="Bairro"
+                value={f.bairro}
+                onChange={set("bairro")}
+                autoComplete="address-level3"
+                className={`${inp} ${f.bairro ? tint : ""}`}
+              />
+<input
                   aria-label="Complemento"
                   placeholder="Complemento (opcional)"
                   value={f.complemento}
@@ -650,27 +712,18 @@ function Checkout() {
                   autoComplete="address-line2"
                   className={inp}
                 />
-              </div>
-              <input
-                required
-                aria-label="Bairro"
-                placeholder="Bairro"
-                value={f.bairro}
-                onChange={set("bairro")}
-                autoComplete="address-level3"
-                className={inp}
-              />
-              <div className="grid grid-cols-[1fr_80px] gap-3">
-                <input
+</div>
+<div className="grid grid-cols-[1fr_72px] gap-2">
+<input
                   required
                   aria-label="Cidade"
                   placeholder="Cidade"
                   value={f.cidade}
                   onChange={set("cidade")}
                   autoComplete="address-level2"
-                  className={inp}
+                  className={`${inp} ${f.cidade ? tint : ""}`}
                 />
-                <input
+<input
                   required
                   aria-label="UF"
                   placeholder="UF"
@@ -678,9 +731,9 @@ function Checkout() {
                   onChange={set("uf")}
                   maxLength={2}
                   autoComplete="address-level1"
-                  className={inp}
+                  className={`${inp} ${f.uf ? tint : ""}`}
                 />
-              </div>
+</div>
 
               <div className="space-y-2 pt-2" aria-live="polite">
                 {quoting && <p className="text-body text-muted-foreground">Calculando frete…</p>}
@@ -693,7 +746,7 @@ function Checkout() {
                   options.map((o) => (
                     <label
                       key={o.id}
-                      className={`flex items-center justify-between rounded-xl border-2 p-3.5 text-body ${serviceId === o.id ? "border-action bg-card font-medium" : "border-border"}`}
+                      className={`flex items-center justify-between rounded-lg border-2 p-3.5 text-body ${serviceId === o.id ? "border-action bg-card font-medium" : "border-border"}`}
                     >
                       <span className="flex gap-2">
                         <input
@@ -716,7 +769,7 @@ function Checkout() {
             <fieldset className={panel}>
               <StepTitle n={3}>Pagamento</StepTitle>
               <label
-                className={`flex items-center justify-between rounded-xl border-2 p-3.5 text-body ${pay === "pix" ? "border-action bg-card font-medium" : "border-border"}`}
+                className={`flex items-center justify-between rounded-lg border-2 p-3.5 text-body ${pay === "pix" ? "border-action bg-card font-medium" : "border-border"}`}
               >
                 <span className="flex gap-2">
                   <input
@@ -725,12 +778,13 @@ function Checkout() {
                     checked={pay === "pix"}
                     onChange={() => setPay("pix")}
                   />{" "}
-                  Pix · 5% de desconto
+                  Pix{" "}
+                  <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[0.7rem] font-bold uppercase text-white">economize {brl(tPix.pixDiscount)}</span>
                 </span>
                 <b>{brl(tPix.net + shipping)}</b>
               </label>
               <label
-                className={`flex items-center justify-between rounded-xl border-2 p-3.5 text-body ${pay === "card" ? "border-action bg-card font-medium" : "border-border"}`}
+                className={`flex items-center justify-between rounded-lg border-2 p-3.5 text-body ${pay === "card" ? "border-action bg-card font-medium" : "border-border"}`}
               >
                 <span className="flex gap-2">
                   <input
@@ -890,8 +944,9 @@ function Checkout() {
         </div>
 
         <aside
-          className="h-fit min-w-0 space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1"
+          className="h-fit min-w-0 space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5 order-first lg:order-none lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 data-[lateral=true]:!static data-[lateral=true]:!col-start-1 data-[lateral=true]:!row-start-auto"
           aria-label="Resumo do pedido"
+          data-lateral={lateral}
         >
           <ul className="space-y-2 text-body">
             {c.lines.map((l) => (
@@ -1006,6 +1061,6 @@ function Checkout() {
           </p>
         </div>
       </div>
-    </Shell>
   );
+  return lateral ? <Drawer progress={progress} steps={stepsDone}>{body}</Drawer> : <Shell>{body}</Shell>;
 }
