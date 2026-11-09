@@ -11,6 +11,7 @@ import {
   createPayment,
   getOrderStatus,
   getPaymentConfig,
+  lookupCoupon,
   quoteShipping,
 } from "@/lib/checkout.functions";
 import {
@@ -26,7 +27,7 @@ import {
   useCart,
   useHydrated,
 } from "@/lib/store";
-import { couponCheck, couponPercent, findCoupon, getPrize, type Coupon } from "@/lib/coupons";
+import { couponCheck, couponPercent, findCoupon, getPrize, isAffiliateCouponCode, type Coupon } from "@/lib/coupons";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -275,6 +276,20 @@ function Checkout() {
       setCoupon(prize.code);
       setCouponMsg(`Cupom ${prize.code} aplicado: ${prize.label}.`);
     }
+    // Veio pelo link de uma afiliada: o cupom com o nome dela (ex.: MARISSOL10) entra sozinho, se o app de afiliadas confirmar.
+    const ref = getRef();
+    if (ref) {
+      const code = `${ref.toUpperCase()}10`;
+      lookupCoupon({ data: { code } })
+        .then((r) => {
+          if (!r.ok) return;
+          setApplied({ code: r.code, label: r.label, percent: r.percent });
+          setShowCoupon(true);
+          setCoupon(r.code);
+          setCouponMsg(`Cupom ${r.code} aplicado: ${r.label}.`);
+        })
+        .catch(() => undefined);
+    }
   }, []);
 
   const hasLines = c.lines.length > 0;
@@ -376,9 +391,14 @@ function Checkout() {
   const shipping = chosen ? chosen.price : 0;
   const total = t.net + shipping;
 
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     if (!coupon.trim()) return setCouponMsg("Digite um código de cupom.");
-    const found = findCoupon(coupon);
+    let found = findCoupon(coupon);
+    if (!found && isAffiliateCouponCode(coupon)) {
+      setCouponMsg("Conferindo o cupom…");
+      const r = await lookupCoupon({ data: { code: coupon.trim().toUpperCase() } }).catch(() => ({ ok: false as const }));
+      if (r.ok) found = { code: r.code, label: r.label, percent: r.percent };
+    }
     if (!found) return setCouponMsg("Cupom não encontrado. Confira o código.");
     const chk = couponCheck(found, gross);
     setApplied(found);

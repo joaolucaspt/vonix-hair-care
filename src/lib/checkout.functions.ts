@@ -9,7 +9,8 @@ import { pickFreeShipping, pickTwoShipping } from "./shipping-pick";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
-import { couponCheck, couponFreeShipping, couponPercent, findCoupon } from "./coupons";
+import { couponCheck, couponFreeShipping, couponPercent, findCoupon, isAffiliateCouponCode } from "./coupons";
+import { resolveAffiliateCoupon } from "./affiliate-coupon.server";
 
 const itemSchema = z.object({
   slug: z.string().min(1).max(120),
@@ -33,6 +34,17 @@ function buildLines(items: z.infer<typeof itemSchema>[]) {
 const cents = (v: number) => Math.round(v * 100);
 
 const couponSchema = z.string().max(30).optional();
+
+/** Cupom fixo do site ou cupom de afiliada (MARISSOL10), este confirmado no app de afiliadas. */
+const resolveCoupon = async (code?: string) => findCoupon(code) ?? (code && isAffiliateCouponCode(code) ? await resolveAffiliateCoupon(code) : undefined);
+
+/** O checkout pergunta aqui se um cupom de afiliada vale (o cupom fixo é conferido no próprio navegador). */
+export const lookupCoupon = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ code: z.string().min(1).max(30) }))
+  .handler(async ({ data }) => {
+    const c = await resolveCoupon(data.code);
+    return c ? { ok: true as const, code: c.code, label: c.label, percent: c.percent ?? 0 } : { ok: false as const };
+  });
 
 async function shippingOptions(cep: string, lines: ReturnType<typeof buildLines>, couponCode?: string) {
   const quotes = await calculateShipping(
@@ -105,7 +117,7 @@ export const createPayment = createServerFn({ method: "POST" })
       const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find((o) => o.id === data.serviceId);
       if (!option) return { ok: false as const, message: "Escolha uma opção de entrega válida." };
 
-      const coupon = findCoupon(data.coupon);
+      const coupon = await resolveCoupon(data.coupon);
       const gross = checkoutTotals(lines, "card").gross;
       if (data.coupon && !coupon) return { ok: false as const, message: "Cupom inválido. Remova o cupom ou confira o código." };
       if (coupon) {
