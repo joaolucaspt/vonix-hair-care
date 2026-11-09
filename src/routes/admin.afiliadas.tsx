@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { LOGO } from "@/components/site";
+import { AffiliateCommissionSimulator } from "@/components/affiliate-commission-simulator";
 import {
   getAffiliateAdminSession,
   eraseAffiliateApplicationAdmin,
@@ -423,7 +424,7 @@ export function AffiliateAdminPage() {
               autoComplete="one-time-code"
               maxLength={6}
               pattern="[0-9]{6}"
-              placeholder="6 dígitos (se habilitado)"
+              placeholder="6 dígitos obrigatórios"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 tracking-[.3em] outline-none focus:ring-2 focus:ring-[#e8c9c5]"
@@ -554,6 +555,8 @@ export function AffiliateAdminPage() {
                 </button>
               ))}
             </div>
+
+            <AffiliateCommissionSimulator />
 
             <section
               aria-labelledby="affiliate-mail-summary"

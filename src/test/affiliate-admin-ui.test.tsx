@@ -176,6 +176,13 @@ describe("Vonix affiliate private panel", () => {
     expect(screen.queryByText("Exclusão irreversível da candidatura")).not.toBeInTheDocument();
   });
 
+  it("only exposes the commission sandbox after administrator authentication", async () => {
+    server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: false });
+    render(<Page />);
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Laboratório de comissões")).not.toBeInTheDocument();
+  });
+
   it("does not display any applicant data before the session check succeeds", async () => {
     server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
     render(<Page />);

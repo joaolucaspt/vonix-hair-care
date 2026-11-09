@@ -200,6 +200,12 @@ export async function affiliateOperationalReadiness() {
       ),
     },
     {
+      id: "commercial_ledger",
+      label: "Conciliação, comissões e pagamentos reais",
+      // Synthetic simulations must never be advertised as a live ledger.
+      ok: false,
+    },
+    {
       id: "launch",
       label: "Abertura de inscrições habilitada",
       ok: env("AFFILIATE_RECRUITMENT_OPEN") === "true",
