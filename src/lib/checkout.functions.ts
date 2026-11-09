@@ -5,7 +5,7 @@ import * as appmax from "./appmax.server";
 import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
 import { calculateShipping } from "./melhorenvio.server";
-import { pickTwoShipping } from "./shipping-pick";
+import { pickFreeShipping, pickTwoShipping } from "./shipping-pick";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
@@ -41,12 +41,12 @@ async function shippingOptions(cep: string, lines: ReturnType<typeof buildLines>
   );
   const t = checkoutTotals(lines, "pix");
   const free = t.freeShipping || couponFreeShipping(findCoupon(couponCode), t.gross);
-  const picked = pickTwoShipping(quotes);
-  // Frete grátis vale para a opção mais barata (a econômica), como antes.
-  const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
-  const options = picked.map((q) => ({ ...q, free: free && q.id === cheapestId, price: free && q.id === cheapestId ? 0 : q.price }));
-  // Com frete grátis, só a opção grátis aparece: o cliente não precisa escolher entre outras.
-  return free ? options.filter((o) => o.free) : options;
+  if (free) {
+    // Frete grátis: só a opção grátis aparece, de preferência a que entrega em até 3 dias úteis.
+    const chosen = pickFreeShipping(quotes);
+    return chosen ? [{ ...chosen, free: true, price: 0 }] : [];
+  }
+  return pickTwoShipping(quotes).map((q) => ({ ...q, free: false }));
 }
 
 export const quoteShipping = createServerFn({ method: "POST" })
