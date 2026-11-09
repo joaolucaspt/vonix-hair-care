@@ -1,0 +1,9 @@
+src/lib/affiliate-application.ts text eol=lf
+src/lib/affiliate-applications.server.ts text eol=lf
+src/lib/affiliate-email.ts text eol=lf
+src/lib/affiliate-functions.ts text eol=lf
+src/routes/admin.afiliadas.tsx text eol=lf
+src/routes/api.internal.affiliate-mail-worker.ts text eol=lf
+src/routes/seja-afiliada.tsx text eol=lf
+src/test/affiliate-system.test.ts text eol=lf
+src/routeTree.gen.ts text eol=lf
