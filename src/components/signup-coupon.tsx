@@ -2,11 +2,12 @@ import { Link } from "@tanstack/react-router";
 import { Check, Copy, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { track } from "@/lib/analytics";
 import { SIGNUP_COUPON, findCoupon, getPrize, savePrize } from "@/lib/coupons";
 import { registerLead } from "@/lib/leads.functions";
 
-const DONE_KEY = "vonix-cadastro";
+const DONE_KEY = "vonix-cadastro-confirmado-v2";
 const DONE_EVENT = "vonix:cadastro";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -22,7 +23,8 @@ export function SignupCoupon({ dark = false, compact = false }: { dark?: boolean
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
   const [kept, setKept] = useState<string | null>(null);
-  const coupon = findCoupon(SIGNUP_COUPON)!;
+  const coupon = findCoupon(SIGNUP_COUPON);
+  const register = useServerFn(registerLead);
 
   useEffect(() => {
     try {
@@ -38,12 +40,17 @@ export function SignupCoupon({ dark = false, compact = false }: { dark?: boolean
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (state === "sending") return;
+    if (state === "sending" || !coupon) return;
     if (!EMAIL.test(email.trim())) return setError("Digite um e-mail válido, por exemplo nome@email.com.");
     setError(null);
     setState("sending");
     try {
-      await registerLead({ data: { nome: nome.trim() || undefined, email: email.trim(), ...(isca ? { empresa: isca } : {}) } });
+      const result = await register({ data: { ...(nome.trim() ? { nome: nome.trim() } : {}), email: email.trim(), ...(isca ? { empresa: isca } : {}) } });
+      if (!result.ok || !result.saved) {
+        setState("idle");
+        setError("message" in result ? result.message : "Não foi possível confirmar seu cadastro. Tente novamente mais tarde.");
+        return;
+      }
       const have = getPrize();
       if (have && (have.percent ?? 0) >= (coupon.percent ?? 0)) setKept(have.code);
       else savePrize(coupon.code);
@@ -60,6 +67,8 @@ export function SignupCoupon({ dark = false, compact = false }: { dark?: boolean
       setError("Não foi possível fazer o cadastro agora. Tente de novo em instantes.");
     }
   };
+
+  if (!coupon) return null;
 
   const copy = () => {
     navigator.clipboard?.writeText(coupon.code).then(() => toast.success(`Cupom ${coupon.code} copiado`)).catch(() => undefined);

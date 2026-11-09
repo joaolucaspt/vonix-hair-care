@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { Check, Heart, Minus, Plus, Truck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
@@ -8,6 +8,8 @@ import { ProductReviews, reviewsFor } from "@/components/reviews";
 import { ShareButton } from "@/components/share-button";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
+import { useServerFn } from "@tanstack/react-start";
+import { lookupAddress } from "@/lib/address.functions";
 import { quoteShipping } from "@/lib/checkout.functions";
 import { FREE_SHIPPING_ABOVE, WHATSAPP, brl, discountPct, getProduct, SITE_URL, forAudience, getSavedCep, hasFreeShipping, lineTotals, maskCep, pixPrice, products, saveCep, useAudience, useCart, useFavorites, volumePct } from "@/lib/store";
 
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/produto/$slug")({
         { property: "og:url", content: url },
         { property: "og:type", content: "product" },
         { name: "twitter:image", content: images[0] },
+        { name: "twitter:card", content: "summary_large_image" },
       ],
       links: [{ rel: "canonical", href: url }],
       scripts: [
@@ -73,42 +76,61 @@ export const Route = createFileRoute("/produto/$slug")({
   component: ProductPage,
 });
 
-function ShippingCalc({ subtotal, slug, variant, qty }: { subtotal: number; slug: string; variant: string; qty: number }) {
+export function ShippingCalc({ subtotal, slug, variant, qty }: { subtotal: number; slug: string; variant: string; qty: number }) {
   const [cep, setCep] = useState("");
   const [dest, setDest] = useState<{ city: string; uf: string } | null>(null);
   const [opts, setOpts] = useState<{ id: number; name: string; company: string; price: number; days: number; free: boolean }[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const request = useRef(0);
+  const addressLookup = useServerFn(lookupAddress);
+  const shippingLookup = useServerFn(quoteShipping);
+  useEffect(() => {
+    request.current += 1;
+    setOpts([]);
+    setDest(null);
+    setLoading(false);
+    setErr(null);
+  }, [slug, variant, qty]);
+  useEffect(() => () => { request.current += 1; }, []);
   useEffect(() => {
     const saved = getSavedCep();
     if (saved) setCep(saved);
   }, []);
   const calc = async () => {
+    const current = ++request.current;
     const d = cep.replace(/\D/g, "");
+    setDest(null);
+    setOpts([]);
+    setErr(null);
     if (d.length !== 8) {
       setErr("Digite um CEP válido no formato 00000-000.");
-      setDest(null);
       return;
     }
     setLoading(true);
-    setErr(null);
-    try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`).then((x) => x.json());
-      if (r.erro) {
-        setErr("CEP não encontrado.");
-        setDest(null);
-        return;
-      }
-      saveCep(cep);
-      setDest({ city: r.localidade, uf: r.uf });
-      const q = await quoteShipping({ data: { cep: d, items: [{ slug, variant, qty }] } });
-      setOpts(q.ok ? q.options : []);
-      if (!q.ok) setErr(q.message);
-    } catch {
-      setErr("Não foi possível consultar o CEP. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+    saveCep(cep);
+    // Neither request depends on the other; freight survives address outages.
+    await Promise.all([
+      addressLookup({ data: { cep: d } })
+        .then((r) => {
+          if (current !== request.current) return;
+          if (r.ok) setDest({ city: r.address.city, uf: r.address.uf });
+          else setErr(r.message);
+        })
+        .catch(() => {
+          if (current === request.current) setErr("Endereço indisponível. Você pode preenchê-lo manualmente no checkout.");
+        }),
+      shippingLookup({ data: { cep: d, items: [{ slug, variant, qty }] } })
+        .then((q) => {
+          if (current !== request.current) return;
+          setOpts(q.ok ? q.options : []);
+          if (!q.ok) setErr((old) => [old, q.message].filter(Boolean).join(" "));
+        })
+        .catch(() => {
+          if (current === request.current) setErr((old) => [old, "Não foi possível calcular o frete agora. Tente novamente."].filter(Boolean).join(" "));
+        }),
+    ]);
+    if (current === request.current) setLoading(false);
   };
   return (
     <div className="mt-6 rounded-xl border border-border bg-card p-4">
@@ -121,7 +143,11 @@ function ShippingCalc({ subtotal, slug, variant, qty }: { subtotal: number; slug
           inputMode="numeric"
           placeholder="00000-000"
           value={cep}
-          onChange={(e) => setCep(maskCep(e.target.value))}
+          onChange={(e) => {
+            request.current += 1;
+            setCep(maskCep(e.target.value));
+            setDest(null); setOpts([]); setErr(null); setLoading(false);
+          }}
           onKeyDown={(e) => e.key === "Enter" && calc()}
           aria-label="CEP de entrega"
           className="h-11 min-w-0 flex-1 rounded-full border border-border bg-background px-4 text-body"
@@ -131,9 +157,9 @@ function ShippingCalc({ subtotal, slug, variant, qty }: { subtotal: number; slug
         </button>
       </div>
       {err && <p className="mt-2 text-body text-destructive">{err}</p>}
-      {dest && (
+      {(dest || opts.length > 0) && (
         <div className="mt-3 rounded-lg bg-muted p-3 text-body">
-          <p className="text-muted-foreground">Entrega para {dest.city}/{dest.uf}</p>
+          <p className="text-muted-foreground">{dest ? `Entrega para ${dest.city}/${dest.uf}` : `Estimativa de frete para o CEP ${cep}`}</p>
           {hasFreeShipping(subtotal) && <p className="mt-1 font-medium">Frete Grátis — pedido acima de {brl(FREE_SHIPPING_ABOVE)} em produtos (vale mesmo após o desconto do Pix).</p>}
           <ul className="mt-2 space-y-1">
             {opts.map((o) => (

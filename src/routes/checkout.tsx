@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SecuritySeal, Shell } from "@/components/site";
 import { ShippingBar } from "@/components/cart-summary";
+import { useCepAddress } from "@/hooks/use-cep-address";
 import { toItem, track } from "@/lib/analytics";
 import { isValidCpf } from "@/lib/cpf";
 import { getRef } from "@/lib/affiliate-ref";
@@ -91,9 +92,6 @@ function Checkout() {
   const c = useCart();
   const hydrated = useHydrated();
   const [f, setF] = useState({ nome: "", email: "", cpf: "", whatsapp: "", cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", uf: "" });
-  const [cepMsg, setCepMsg] = useState<string | null>(null);
-  const [cepLoading, setCepLoading] = useState(false);
-  const lastCep = useRef("");
   const numeroRef = useRef<HTMLInputElement>(null);
   const [pay, setPay] = useState<"pix" | "card">("pix");
   const [showCoupon, setShowCoupon] = useState(false);
@@ -137,11 +135,23 @@ function Checkout() {
 
   const items = c.lines.map((l) => ({ slug: l.slug, variant: l.variant, qty: l.qty, ...(l.offer ? { offer: l.offer } : {}) }));
   const itemsKey = JSON.stringify(items);
+  const addressFilled = useCallback((address: { street: string; district: string; city: string; uf: string }) => {
+    setF((old) => ({ ...old, rua: address.street, bairro: address.district, cidade: address.city, uf: address.uf }));
+    numeroRef.current?.focus();
+  }, []);
+  const { loading: cepLoading, message: cepMsg } = useCepAddress(f.cep, addressFilled);
 
   // Shipping quote (Melhor Envio) whenever a full CEP or the cart changes.
   useEffect(() => {
     const d = f.cep.replace(/\D/g, "");
-    if (d.length !== 8 || !items.length) return;
+    setOptions([]);
+    setServiceId(null);
+    setQuoteErr(null);
+    if (d.length !== 8 || !items.length) {
+      setQuoting(false);
+      return;
+    }
+    saveCep(f.cep);
     let cancelled = false;
     setQuoting(true);
     setQuoteErr(null);
@@ -172,35 +182,20 @@ function Checkout() {
   const tCard = checkoutTotals(c.lines, "card", pct);
   const couponProblem = applied ? couponCheck(applied, gross) : null;
   const chosen = options.find((o) => o.id === serviceId) ?? null;
+  const shippingEvent = useRef("");
+  useEffect(() => {
+    if (!chosen || quoting) return;
+    const key = JSON.stringify([f.cep.replace(/\D/g, ""), itemsKey, applied?.code, chosen.id, chosen.price]);
+    if (shippingEvent.current === key) return;
+    shippingEvent.current = key;
+    track("add_shipping_info", {
+      shipping_tier: `${chosen.company} ${chosen.name}`,
+      value: c.netSubtotal,
+      items: c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units)),
+    });
+  }, [chosen, quoting, f.cep, itemsKey, applied?.code, c.lines, c.netSubtotal]);
   const shipping = chosen ? chosen.price : 0;
   const total = t.net + shipping;
-
-  const lookup = async (v: string) => {
-    const d = v.replace(/\D/g, "");
-    if (d.length !== 8 || d === lastCep.current) return;
-    lastCep.current = d;
-    setCepLoading(true);
-    setCepMsg(null);
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 6000);
-    try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, { signal: ctrl.signal }).then((x) => x.json());
-      if (r.erro) {
-        setCepMsg("CEP não encontrado. Preencha o endereço manualmente.");
-      } else {
-        setF((old) => ({ ...old, rua: r.logradouro ?? "", bairro: r.bairro ?? "", cidade: r.localidade ?? "", uf: r.uf ?? "" }));
-        saveCep(v);
-        setCepMsg("Endereço preenchido — confira e complete o número.");
-        numeroRef.current?.focus();
-      }
-    } catch {
-      lastCep.current = "";
-      setCepMsg("A consulta do CEP demorou ou falhou. Preencha o endereço manualmente.");
-    } finally {
-      clearTimeout(timer);
-      setCepLoading(false);
-    }
-  };
 
   const applyCoupon = () => {
     if (!coupon.trim()) return setCouponMsg("Digite um código de cupom.");
@@ -307,9 +302,11 @@ function Checkout() {
     if (pay === "pix") void submitPayment();
     else if (!cfg?.externalId) setError("Pagamento por cartão indisponível no momento. Use o Pix.");
     else {
+      const cardForm = document.getElementById("card-form");
+      if (!(cardForm instanceof HTMLFormElement) || !cardForm.reportValidity()) return;
       setBusy(true);
       setError(null);
-      (document.getElementById("card-form") as HTMLFormElement | null)?.requestSubmit();
+      cardForm.requestSubmit();
     }
   };
 
@@ -367,7 +364,8 @@ function Checkout() {
   return (
     <Shell>
       <div className="container-site grid min-w-0 grid-cols-[minmax(0,1fr)] gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <form className="min-w-0 space-y-8" onSubmit={onSubmit}>
+        <div className="min-w-0 space-y-8">
+        <form id="checkout-form" className="min-w-0 space-y-8" onSubmit={onSubmit}>
           <div>
             <h1 className="font-display text-h1">Finalizar compra</h1>
             <p className="mt-2 text-body text-muted-foreground"><b>Compre sem criar uma conta.</b> Login é opcional e não é pedido em nenhuma etapa.</p>
@@ -384,7 +382,7 @@ function Checkout() {
 
           <fieldset className="space-y-3">
             <legend className="mb-1 text-name font-semibold">2. Entrega</legend>
-            <input required inputMode="numeric" aria-label="CEP" placeholder="CEP (00000-000)" value={f.cep} maxLength={9} onChange={(e) => { const m = maskCep(e.target.value); setF((old) => ({ ...old, cep: m })); lookup(m); }} autoComplete="postal-code" className={inp} />
+            <input required inputMode="numeric" aria-label="CEP" placeholder="CEP (00000-000)" value={f.cep} maxLength={9} onChange={(e) => { const m = maskCep(e.target.value); setF((old) => ({ ...old, cep: m })); }} autoComplete="postal-code" className={inp} />
             {cepLoading && <p role="status" className="text-body text-muted-foreground">Buscando endereço…</p>}
             {cepMsg && !cepLoading && <p role="status" className="text-body text-muted-foreground">{cepMsg}</p>}
             <input required aria-label="Rua" placeholder="Rua" value={f.rua} onChange={set("rua")} autoComplete="address-line1" className={inp} />
@@ -439,24 +437,10 @@ function Checkout() {
             )}
           </fieldset>
 
-          {error && <p role="alert" className="rounded-lg border border-destructive p-3 text-body text-destructive">{error}</p>}
-          {cfg && !cfg.pixEnabled && (
-            <p role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
-              Estamos ativando os pagamentos desta loja. Em breve você poderá finalizar por aqui. Para comprar agora, <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">fale com a gente no WhatsApp</a>.
-            </p>
-          )}
-          <button disabled={busy || !chosen || (!!cfg && !cfg.pixEnabled)} className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60">
-            {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${brl(total)} no cartão`}
-          </button>
-          <div className="flex justify-center"><SecuritySeal /></div>
-          {!chosen && <p className="text-center text-body text-muted-foreground">Informe o CEP e escolha a entrega para continuar.</p>}
-          <p className="text-center text-body text-muted-foreground">
-            Precisa de ajuda para finalizar? <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">Fale com a gente no WhatsApp</a>
-          </p>
         </form>
 
         {/* Card fields live in their own form so Appmax JS can tokenize them; the main form triggers it. */}
-        <div className="lg:col-start-1 lg:row-start-2">
+        <div>
           <form id="card-form" data-appmax-checkout hidden={pay !== "card"} className="min-w-0 space-y-3" onSubmit={(e) => e.preventDefault()}>
             <div className="text-name font-semibold">Dados do cartão</div>
             <input form="card-form" required name="card-number" inputMode="numeric" autoComplete="cc-number" placeholder="Número do cartão" value={card.number} onChange={(e) => setCard((o) => ({ ...o, number: e.target.value.replace(/[^\d ]/g, "").slice(0, 23) }))} className={inp} />
@@ -474,8 +458,9 @@ function Checkout() {
           </form>
           <form data-appmax-customer hidden />
         </div>
+        </div>
 
-        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 lg:row-span-2" aria-label="Resumo do pedido">
+        <aside className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 " aria-label="Resumo do pedido">
           <ShippingBar subtotal={c.subtotal} />
           <ul className="space-y-2 text-body">
             {c.lines.map((l) => (
@@ -501,6 +486,24 @@ function Checkout() {
             {pay === "card" && <div className="text-muted-foreground">até 6x de {brl(inst.value)} sem juros{inst.first !== inst.value ? ` (1ª de ${brl(inst.first)})` : ""}</div>}
           </div>
         </aside>
+        <div className="min-w-0 space-y-4 lg:col-start-1">
+          {error && <p role="alert" className="rounded-lg border border-destructive p-3 text-body text-destructive">{error}</p>}
+          {cfg && !cfg.pixEnabled && (
+            <p role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
+              Estamos ativando os pagamentos desta loja. Em breve você poderá finalizar por aqui. Para comprar agora, <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">fale com a gente no WhatsApp</a>.
+            </p>
+          )}
+          <button type="submit" form="checkout-form" disabled={busy || quoting || !chosen || !cfg || !cfg.pixEnabled} className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60">
+            {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${brl(total)} no cartão`}
+          </button>
+          <div className="flex justify-center"><SecuritySeal /></div>
+          {!chosen && <p className="text-center text-body text-muted-foreground">Informe o CEP e escolha a entrega para continuar.</p>}
+          <p className="text-center text-body text-muted-foreground">
+            Precisa de ajuda para finalizar? <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">Fale com a gente no WhatsApp</a>
+          </p>
+        </div>
+
+
       </div>
     </Shell>
   );

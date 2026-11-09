@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { toItem, track } from "@/lib/analytics";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
 import { OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
@@ -11,6 +13,8 @@ export const Route = createFileRoute("/carrinho")({
       { name: "description", content: "Seu carrinho Vonix Hair." },
       { property: "og:title", content: "Carrinho — Vonix Hair" },
       { property: "og:description", content: "Seu carrinho Vonix Hair." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Cart,
@@ -62,6 +66,15 @@ function Suggestions() {
 function Cart() {
   const c = useCart();
   const hydrated = useHydrated();
+  const seen = useRef("");
+  useEffect(() => {
+    if (!hydrated || !c.lines.length) return;
+    const items = c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units));
+    const key = JSON.stringify(items);
+    if (seen.current === key) return;
+    seen.current = key;
+    track("view_cart", { value: c.netSubtotal, items });
+  }, [hydrated, c.lines, c.netSubtotal]);
   return (
     <Shell>
       <div className="container-site py-10 pb-28 lg:pb-10">
