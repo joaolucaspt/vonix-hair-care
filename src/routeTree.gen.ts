@@ -22,6 +22,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
 import { Route as ApiInternalBlingConnectRouteImport } from './routes/api.internal.bling-connect'
+import { Route as ApiInternalMetaRecoveryRouteImport } from './routes/api.internal.meta-recovery'
 import { Route as ApiInternalOrderHealthRouteImport } from './routes/api.internal.order-health'
 import { Route as ApiInternalOrderWorkerRouteImport } from './routes/api.internal.order-worker'
 import { Route as ApiPublicAppmaxWebhookRouteImport } from './routes/api.public.appmax-webhook'
@@ -94,6 +95,11 @@ const ApiInternalBlingConnectRoute = ApiInternalBlingConnectRouteImport.update({
   path: '/api/internal/bling-connect',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalMetaRecoveryRoute = ApiInternalMetaRecoveryRouteImport.update({
+  id: '/api/internal/meta-recovery',
+  path: '/api/internal/meta-recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalOrderHealthRoute = ApiInternalOrderHealthRouteImport.update({
   id: '/api/internal/order-health',
   path: '/api/internal/order-health',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
+  '/api/internal/meta-recovery': typeof ApiInternalMetaRecoveryRoute
   '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
   '/api/internal/order-worker': typeof ApiInternalOrderWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
+  '/api/internal/meta-recovery': typeof ApiInternalMetaRecoveryRoute
   '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
   '/api/internal/order-worker': typeof ApiInternalOrderWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/produto/$slug': typeof ProdutoSlugRoute
   '/api/internal/bling-connect': typeof ApiInternalBlingConnectRoute
+  '/api/internal/meta-recovery': typeof ApiInternalMetaRecoveryRoute
   '/api/internal/order-health': typeof ApiInternalOrderHealthRoute
   '/api/internal/order-worker': typeof ApiInternalOrderWorkerRoute
   '/api/public/appmax-webhook': typeof ApiPublicAppmaxWebhookRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/internal/bling-connect'
+    | '/api/internal/meta-recovery'
     | '/api/internal/order-health'
     | '/api/internal/order-worker'
     | '/api/public/appmax-webhook'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/internal/bling-connect'
+    | '/api/internal/meta-recovery'
     | '/api/internal/order-health'
     | '/api/internal/order-worker'
     | '/api/public/appmax-webhook'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/produto/$slug'
     | '/api/internal/bling-connect'
+    | '/api/internal/meta-recovery'
     | '/api/internal/order-health'
     | '/api/internal/order-worker'
     | '/api/public/appmax-webhook'
@@ -269,6 +281,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
   ApiInternalBlingConnectRoute: typeof ApiInternalBlingConnectRoute
+  ApiInternalMetaRecoveryRoute: typeof ApiInternalMetaRecoveryRoute
   ApiInternalOrderHealthRoute: typeof ApiInternalOrderHealthRoute
   ApiInternalOrderWorkerRoute: typeof ApiInternalOrderWorkerRoute
   ApiPublicAppmaxWebhookRoute: typeof ApiPublicAppmaxWebhookRoute
@@ -370,6 +383,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalBlingConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/meta-recovery': {
+      id: '/api/internal/meta-recovery'
+      path: '/api/internal/meta-recovery'
+      fullPath: '/api/internal/meta-recovery'
+      preLoaderRoute: typeof ApiInternalMetaRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/order-health': {
       id: '/api/internal/order-health'
       path: '/api/internal/order-health'
@@ -429,6 +449,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
   ApiInternalBlingConnectRoute: ApiInternalBlingConnectRoute,
+  ApiInternalMetaRecoveryRoute: ApiInternalMetaRecoveryRoute,
   ApiInternalOrderHealthRoute: ApiInternalOrderHealthRoute,
   ApiInternalOrderWorkerRoute: ApiInternalOrderWorkerRoute,
   ApiPublicAppmaxWebhookRoute: ApiPublicAppmaxWebhookRoute,

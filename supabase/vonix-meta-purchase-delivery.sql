@@ -92,3 +92,75 @@ end;
 $$;
 revoke execute on function public.vonix_ack_meta_purchase(bigint,uuid) from public, anon, authenticated;
 grant execute on function public.vonix_ack_meta_purchase(bigint,uuid) to service_role;
+
+-- Recover paid conversions even if the Bling/order outbox is already completed.
+-- Calls are bounded and time-gated. We query Appmax again before sending Meta.
+alter table public.vonix_meta_purchase_delivery
+  add column if not exists next_check_at timestamptz not null default now();
+create index if not exists vonix_meta_purchase_due
+  on public.vonix_meta_purchase_delivery(status, next_check_at, created_at);
+
+create or replace function public.vonix_meta_recovery_candidates(max_count integer default 3)
+returns table(order_id bigint)
+language plpgsql security definer set search_path = public
+as $$
+declare max_rows integer := least(greatest(coalesce(max_count, 3), 1), 5);
+begin
+  -- Seed a small batch of missing delivery records from our own order outbox.
+  -- A lost webhook or a completed ERP export does not erase this opportunity.
+  insert into public.vonix_meta_purchase_delivery(order_id)
+  select o.order_id
+  from public.vonix_order_outbox o
+  where o.created_at >= now() - interval '6 days'
+    and o.created_at <= now() - interval '2 minutes'
+    and not exists (
+      select 1 from public.vonix_meta_purchase_delivery m
+      where m.order_id = o.order_id
+    )
+  order by o.created_at, o.order_id
+  limit max_rows
+  on conflict on constraint vonix_meta_purchase_delivery_pkey do nothing;
+
+  return query
+  select m.order_id
+  from public.vonix_meta_purchase_delivery m
+  join public.vonix_order_outbox o on o.order_id = m.order_id
+  where o.created_at >= now() - interval '6 days'
+    and o.created_at <= now() - interval '2 minutes'
+    and m.status <> 'sent'
+    and m.next_check_at <= now()
+    and (m.status <> 'leased' or m.claimed_until is null or m.claimed_until < now())
+  order by m.next_check_at, m.created_at, m.order_id
+  limit max_rows;
+end;
+$$;
+revoke execute on function public.vonix_meta_recovery_candidates(integer)
+  from public, anon, authenticated;
+grant execute on function public.vonix_meta_recovery_candidates(integer)
+  to service_role;
+
+-- Defer nonpaid/failed verification without disabling the normal outbox.
+-- No browser role may call this function. No payment mutations occur here.
+create or replace function public.vonix_defer_meta_recovery(
+  p_order_id bigint, p_delay_minutes integer default 60
+)
+returns boolean language plpgsql security definer set search_path = public
+as $$
+declare changed integer;
+begin
+  if p_order_id is null or p_order_id <= 0 or
+     p_delay_minutes is null or p_delay_minutes < 5 or p_delay_minutes > 1440 then
+    raise exception 'invalid recovery deferral';
+  end if;
+  update public.vonix_meta_purchase_delivery
+    set next_check_at = greatest(next_check_at, now() + make_interval(mins => p_delay_minutes)),
+        updated_at = now()
+    where order_id = p_order_id and status <> 'sent';
+  get diagnostics changed = row_count;
+  return changed = 1;
+end;
+$$;
+revoke execute on function public.vonix_defer_meta_recovery(bigint,integer)
+  from public, anon, authenticated;
+grant execute on function public.vonix_defer_meta_recovery(bigint,integer)
+  to service_role;

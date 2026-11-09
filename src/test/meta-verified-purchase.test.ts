@@ -35,7 +35,9 @@ beforeEach(() => {
     discountValueCents: 490,
   });
   vi.stubGlobal("fetch", fetchMock);
-  fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
+  fetchMock.mockResolvedValue(
+    Response.json({ events_received: 1, messages: [], fbtrace_id: "test-only" }),
+  );
 });
 
 describe("Meta CAPI must not count unverified purchases", () => {
@@ -53,6 +55,24 @@ describe("Meta CAPI must not count unverified purchases", () => {
     expect(JSON.stringify(data)).not.toContain("529982");
     expect(req.signal).toBeInstanceOf(AbortSignal);
   });
+  it("uses the merchant-confirmed paid_at time instead of the recovery time when available", async () => {
+    const paidAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const paidOrder = {
+      data: { order: { id: 5501, status: "aprovado" }, payment: { paid_at: paidAt } },
+    };
+    expect(await sendVerifiedPurchase(paidOrder as never)).toBe("sent");
+    const data = JSON.parse(fetchMock.mock.calls[0]![1].body).data[0];
+    expect(data.event_time).toBe(Math.floor(Date.parse(paidAt) / 1000));
+  });
+  it("does not invent a current-day conversion for a payment confirmed too long ago", async () => {
+    const stale = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+    const paidOrder = {
+      data: { order: { id: 5501, status: "aprovado" }, payment: { paid_at: stale } },
+    };
+    expect(await sendVerifiedPurchase(paidOrder as never)).toBe("skipped");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mocks.ack).not.toHaveBeenCalled();
+  });
   it("does not emit server Purchase for antifraud authorization or cancellation", async () => {
     expect(await sendVerifiedPurchase(order("autorizado") as never)).toBe("skipped");
     expect(await sendVerifiedPurchase(order("cancelado") as never)).toBe("skipped");
@@ -64,6 +84,16 @@ describe("Meta CAPI must not count unverified purchases", () => {
     expect(await sendVerifiedPurchase(order("aprovado") as never)).toBe("skipped");
     expect(mocks.claim).toHaveBeenCalledExactlyOnceWith(5501);
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(mocks.ack).not.toHaveBeenCalled();
+  });
+  it("does not mark a delivery sent when Graph returns HTTP 200 but zero accepted events", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ events_received: 0, messages: [] }));
+    expect(await sendVerifiedPurchase(order("integrado") as never)).toBe("failed");
+    expect(mocks.ack).not.toHaveBeenCalled();
+  });
+  it("does not mark a delivery sent on HTTP 200 without a valid Meta acknowledgement", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("invalid body", { status: 200 }));
+    expect(await sendVerifiedPurchase(order("aprovado") as never)).toBe("failed");
     expect(mocks.ack).not.toHaveBeenCalled();
   });
   it("does not acknowledge a failed Meta Graph request as delivered", async () => {

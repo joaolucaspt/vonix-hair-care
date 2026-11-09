@@ -62,3 +62,42 @@ export async function acknowledgeMetaPurchase(orderId: number, token: string): P
   );
   if (!acknowledged) throw new Error("Confirmação Meta não persistida");
 }
+
+/** Small, due-only batches drawn from local order records, including completed ERP orders.
+ * A candidate is not proof of payment; callers MUST recheck Appmax first.
+ */
+export async function dueMetaRecoveryOrders(limit = 3): Promise<number[]> {
+  const count = Number.isFinite(limit) ? Math.max(1, Math.min(Math.trunc(limit), 5)) : 3;
+  const candidates = await rpc(
+    "vonix_meta_recovery_candidates",
+    { max_count: count },
+    z.array(z.object({ order_id: z.number().int().positive().safe() }).strict()).max(5),
+  );
+  const ids = candidates.map((candidate) => candidate.order_id);
+  if (new Set(ids).size !== ids.length) throw new Error("Candidatos Meta duplicados");
+  return ids;
+}
+
+/** Rate-limits verification of unpaid and failed events. Does not change payment state. */
+export async function deferMetaRecovery(orderId: number, delayMinutes: number): Promise<void> {
+  if (
+    !Number.isSafeInteger(orderId) ||
+    orderId <= 0 ||
+    !Number.isSafeInteger(delayMinutes) ||
+    delayMinutes < 5 ||
+    delayMinutes > 1440
+  )
+    throw new Error("Adiamento de recuperação inválido");
+  const changed = await rpc(
+    "vonix_defer_meta_recovery",
+    {
+      p_order_id: orderId,
+      p_delay_minutes: delayMinutes,
+    },
+    z.boolean(),
+  );
+  if (!changed) {
+    // Can occur if another worker delivered the event in the meantime.
+    return;
+  }
+}

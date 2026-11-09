@@ -28,6 +28,8 @@ export type CapiInput = {
   event: string;
   eventId: string;
   url: string;
+  /** Original paid-at Unix time, when the merchant provides a timezone-aware timestamp. */
+  eventTime?: number | undefined;
   fbp?: string | undefined;
   fbc?: string | undefined;
   customData?: Record<string, unknown> | undefined;
@@ -41,6 +43,14 @@ const clean = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max
 export async function sendMetaEvent(input: CapiInput): Promise<"sent" | "skipped" | "failed"> {
   const token = env("META_CAPI_TOKEN");
   if (!token) return "skipped";
+  const now = Math.floor(Date.now() / 1000);
+  if (
+    input.eventTime !== undefined &&
+    (!Number.isSafeInteger(input.eventTime) ||
+      input.eventTime > now + 60 ||
+      input.eventTime < now - 6 * 24 * 3600)
+  )
+    return "skipped";
   if (!CAPI_EVENTS.has(input.event) || !input.eventId) return "skipped";
   // Prefix matching is unsafe: https://vonixhair.com.evil.example is not our site.
   try {
@@ -61,7 +71,7 @@ export async function sendMetaEvent(input: CapiInput): Promise<"sent" | "skipped
     data: [
       {
         event_name: input.event,
-        event_time: Math.floor(Date.now() / 1000),
+        event_time: input.eventTime ?? now,
         event_id: input.eventId,
         event_source_url: input.url,
         action_source: "website",
@@ -85,7 +95,18 @@ export async function sendMetaEvent(input: CapiInput): Promise<"sent" | "skipped
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(4500),
     });
-    return res.ok ? "sent" : "failed";
+    if (!res.ok) return "failed";
+    // HTTP 200 alone is not confirmation that Meta accepted any event.
+    // The documented Graph response includes events_received for this batch.
+    const result = (await res.json().catch(() => null)) as unknown;
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("events_received" in result) ||
+      result.events_received !== 1
+    )
+      return "failed";
+    return "sent";
   } catch {
     return "failed";
   }
@@ -109,12 +130,23 @@ export async function sendVerifiedPurchase(
     );
     const valueCents = subtotalCents + snapshot.shippingValueCents - snapshot.discountValueCents;
     if (!Number.isSafeInteger(valueCents) || valueCents <= 0) return "skipped";
+    const paidAt = order.data.payment?.paid_at;
+    let paidTimestamp: number | undefined;
+    if (typeof paidAt === "string" && /(?:Z|[+-]\d{2}:\d{2})$/i.test(paidAt)) {
+      const parsed = Date.parse(paidAt);
+      // Never re-label a historical purchase as though it happened today.
+      if (!Number.isFinite(parsed)) return "skipped";
+      paidTimestamp = Math.floor(parsed / 1000);
+      const now = Math.floor(Date.now() / 1000);
+      if (paidTimestamp < now - 6 * 24 * 3600 || paidTimestamp > now + 60) return "skipped";
+    }
     // Periodic worker polls do not authorize repeated Purchase sends.
     // A database lease and sent marker guard the provider call.
     const claimToken = await claimMetaPurchase(orderId);
     if (!claimToken) return "skipped";
     const result = await sendMetaEvent({
       event: "Purchase",
+      ...(paidTimestamp !== undefined ? { eventTime: paidTimestamp } : {}),
       eventId: `purchase-${orderId}`,
       url: `${SITE_URL}/checkout`,
       customData: { currency: "BRL", value: valueCents / 100 },

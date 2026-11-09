@@ -7,7 +7,12 @@ vi.mock("@/lib/env.server", () => ({
         ? "server-only-service-key-test"
         : "",
 }));
-import { claimMetaPurchase, acknowledgeMetaPurchase } from "@/lib/meta-purchase-delivery.server";
+import {
+  claimMetaPurchase,
+  acknowledgeMetaPurchase,
+  dueMetaRecoveryOrders,
+  deferMetaRecovery,
+} from "@/lib/meta-purchase-delivery.server";
 
 const token = "11111111-1111-4111-8111-111111111111";
 const network = vi.fn();
@@ -52,6 +57,37 @@ describe("durable Meta Purchase delivery claims", () => {
     );
     network.mockResolvedValueOnce(Response.json(false));
     await expect(acknowledgeMetaPurchase(101, token)).rejects.toThrow("não persistida");
+  });
+
+  it("retrieves only due local order candidates in bounded batches", async () => {
+    network.mockResolvedValueOnce(Response.json([{ order_id: 101 }, { order_id: 102 }]));
+    expect(await dueMetaRecoveryOrders(999)).toEqual([101, 102]);
+    expect(network).toHaveBeenCalledWith(
+      "https://test-db.example/rest/v1/rpc/vonix_meta_recovery_candidates",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ max_count: 5 }),
+      }),
+    );
+  });
+
+  it("rejects duplicate and malformed candidate rows", async () => {
+    network.mockResolvedValueOnce(Response.json([{ order_id: 101 }, { order_id: 101 }]));
+    await expect(dueMetaRecoveryOrders()).rejects.toThrow("duplicados");
+    network.mockResolvedValueOnce(Response.json([{ order_id: -1 }]));
+    await expect(dueMetaRecoveryOrders()).rejects.toThrow();
+  });
+
+  it("defers verification without altering the payment or the ERP outbox", async () => {
+    network.mockResolvedValueOnce(Response.json(true));
+    await deferMetaRecovery(101, 60);
+    expect(network).toHaveBeenCalledWith(
+      "https://test-db.example/rest/v1/rpc/vonix_defer_meta_recovery",
+      expect.objectContaining({
+        body: JSON.stringify({ p_order_id: 101, p_delay_minutes: 60 }),
+      }),
+    );
+    await expect(deferMetaRecovery(101, 0)).rejects.toThrow("Adiamento");
   });
 
   it("fails closed on malformed claims, invalid IDs and storage failures", async () => {
