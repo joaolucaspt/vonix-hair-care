@@ -42,6 +42,9 @@ jobs:
             src/lib/affiliate-email.ts \
             src/lib/affiliate-functions.ts \
             src/lib/affiliate-throttle.server.ts \
+            src/lib/affiliate-wizard.ts \
+            src/lib/affiliate-wizard-crypto.server.ts \
+            src/components/affiliate-wizard.tsx \
             src/routes/admin.afiliadas.tsx \
             src/routes/api.internal.affiliate-mail-worker.ts \
             src/routes/seja-afiliada.tsx \
@@ -50,7 +53,9 @@ jobs:
             src/test/affiliate-admin-ui.test.tsx \
             src/test/affiliate-recruitment.test.ts \
             src/test/affiliate-system.test.ts \
-            src/test/affiliate-throttle.test.ts
+            src/test/affiliate-throttle.test.ts \
+            src/test/affiliate-wizard.test.ts \
+            src/test/affiliate-wizard-ui.test.tsx
       - name: Build full storefront
         run: bun run build
 

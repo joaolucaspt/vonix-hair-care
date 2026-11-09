@@ -94,3 +94,25 @@ A migração SQL agora instala a assinatura de cinco parâmetros da RPC e, caso 
 
 ## Login e quotas por falha
 O login consulta primeiro o bloqueio persistido do IP. **Somente senha/TOTP incorretos consomem o limite de 12 falhas a cada 15 minutos**; logins corretos não aumentam o contador, mas um IP já bloqueado permanece impedido de entrar. Falha da consulta ao banco ou origem incompatível nega acesso. Os novos testes cobrem logins corretos, senha errada, segundo fator errado, IP bloqueado, indisponibilidade do limitador e falha ao criar cookie.
+
+## Questionário de cinco etapas (referência Nuala / Pilea — 09/11/2026)
+
+O formulário `/seja-afiliada` foi ampliado com cinco etapas e um indicador de progresso. A referência pública foi inspecionada via navegador e resposta **pública GET** de configuração: `https://nuala.pilea.app/influencers/cadastro`. Nenhuma candidatura foi enviada ao serviço externo e não foram usados perfis de terceiros. A referência possui validação externa de Instagram que impediu avançar com perfil fictício; as etapas restantes foram obtidas da configuração **pública** de 5 arrays. A interface Vonix é implementação independente, com identidade visual própria.
+
+| Etapa | Perguntas de origem / equivalentes Vonix |
+| --- | --- |
+| **1. Dados pessoais** | Primeiro Nome; Sobrenome; Celular; E-mail; Confirmar e-mail; CPF; CNPJ (opcional); Data de nascimento; Cidade de nascimento; CEP; Cidade; Estado; Logradouro; Bairro; Número; Complemento (opcional); Usuário do Instagram; Usuário do TikTok (opcional); Usuário do X (opcional); Usuário do YouTube (opcional) |
+| **2. Seu conteúdo** | Nicho principal (Lifestyle, Cabelos, Beleza, Moda, Fitness, Viagem, Maternidade, Decoração, Outro); se Outro, qual nicho; seguidores Instagram (até 1 mil, 1–2 mil, 2–5 mil, 5–10 mil, acima de 10 mil); seguidores TikTok (até 1 mil, 1–2 mil, 2–5 mil, não utiliza TikTok) |
+| **3. Complementares** | Possui inscrição municipal? Se sim, qual número? Você tem dependentes? (Somente filhos / Não tenho) |
+| **4. Marca** | Com qual linha de produtos mais se identifica? Adaptado para produtos existentes no catálogo Vonix: Progressiva Fio de Luz, Botox Vonix, Máscara de Reparação Nutri Repair, Combo Cronograma Capilar, Outra linha Vonix. Nome desejado para cupom, terminando em `10`; **é apenas sugestão, não um cupom emitido** |
+| **5. Finalização** | Tipo de cabelo (Liso, Cacheado, Ondulado, Crespo); leitura e aceite dos termos e política de privacidade da Vonix Hair |
+
+**Diferenças deliberadas:** removemos o campo genérico "Novo campo" da referência; "outro nicho" e número de inscrição municipal aparecem somente quando aplicáveis; conferência do Instagram abre o link informado em nova aba, mas **não valida automaticamente titularidade ou número real de seguidores** (requer integração autorizada separada). Não copiamos termos da Nuala nem prometemos comissão ou cupom antes de um regulamento e contratação Vonix.
+
+**Validação:** CPF e CNPJ por dígitos verificadores, nascimento e maioridade, confirmação do e-mail, telefone com DDD, CEP, perfis, faixas de seguidores, nome sugerido do cupom e termos; validação a cada etapa, botão Voltar com preservação do progresso. CEP pode ser consultado opcionalmente via ViaCEP quando inscrições abertas; número, CPF e contatos nunca são enviados a esse serviço. Enquanto fechadas, a página permite **prévia interativa** em desktop/mobile, sem requisições de cadastro, sem persistência de respostas e sem consulta CEP.
+
+**Privacidade e banco:** o servidor deriva identidade do questionário validado, criptografa o questionário completo (AES-256-GCM, IV aleatório, tag de autenticidade) em `questionnaire_encrypted`, e entrega ao painel apenas um resumo operacional sem CPF, CNPJ, nascimento, endereço completo ou telefone. A chave de 32 bytes privada `AFFILIATE_QUESTIONNAIRE_KEY` (64 hex ou base64url) é **obrigatória** para abrir inscrições. Não colocar chave em JavaScript do navegador, Git, documentação ou sistema de logs. Fazer backup seguro e planejar rotação com recriptografia e retenção LGPD antes da coleta real. Um novo deploy **não aplica automaticamente** a migração à base em produção.
+
+**SQL:** a migração `supabase/vonix-affiliate-applications.sql` adiciona a coluna criptografada e torna TikTok/motivação opcionais para o cadastro de cinco etapas, sem apagar inscrições legadas. O serviço de busca envia texto cifrado apenas ao backend com `service_role`; o servidor o retira da resposta administrativa após calcular o resumo. Conferir a base e executar backup/revisão antes de aplicar produção. Não ativar `AFFILIATE_RECRUITMENT_OPEN=true` até banco, chave, MFA, proxy, WAF, Resend e requisitos jurídicos estarem homologados.
+
+**QA:** 165/165 testes locais em 25 arquivos, TypeScript, ESLint e build aprovados; PostgreSQL 16 descartável com migração/RLS/concorrência aprovados; fluxo automatizado **real no navegador desktop e mobile 5/5 etapas** com dados fictícios, zero POST de candidatura em prévia. Nenhuma inscrição real foi recebida/enviada nessa implementação.
