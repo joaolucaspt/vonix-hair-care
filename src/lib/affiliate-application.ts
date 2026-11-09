@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { affiliateWizardSchema } from "./affiliate-wizard";
 
 export const HAIR_TYPES = [
   "Liso",
@@ -82,10 +83,11 @@ export const affiliateApplicationSchema = z
       .trim()
       .max(240)
       .refine(
-        (v) => validSocialProfile(v, "tiktok.com"),
-        "Informe o link de seu perfil do TikTok.",
+        (v) => !v || validSocialProfile(v, "tiktok.com"),
+        "Informe um link válido do TikTok.",
       ),
-    motivation: z.string().trim().min(30).max(3000),
+    motivation: z.string().trim().min(30).max(3000).optional(),
+    wizard: affiliateWizardSchema.optional(),
     privacyAccepted: z.literal(true),
     // Honeypot: must stay empty for humans.
     website: z.string().max(120).optional().default(""),
@@ -105,8 +107,18 @@ export interface AffiliateApplicationRecord {
   hair_type: string;
   email: string;
   instagram_url: string;
-  tiktok_url: string;
-  motivation: string;
+  tiktok_url: string | null;
+  motivation: string | null;
+  questionnaireSummary?: {
+    niche: string;
+    otherNiche: string | null;
+    instagramFollowers: string | null;
+    tiktokFollowers: string;
+    municipalRegistration: string;
+    dependents: string;
+    preferredLine: string;
+    couponSuggestion: string;
+  } | null;
   status: AffiliateStatus;
   created_at: string;
   reviewed_at: string | null;

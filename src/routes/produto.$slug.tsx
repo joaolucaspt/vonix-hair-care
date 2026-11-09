@@ -478,7 +478,7 @@ function ProductPage() {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <button
-                className="rounded-full bg-action py-3.5 font-medium text-action-foreground"
+                className="rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5"
                 onClick={() => {
                   add();
                   nav({ to: "/checkout" });
@@ -487,7 +487,7 @@ function ProductPage() {
                 Comprar agora
               </button>
               <button
-                className="rounded-full border border-foreground py-3.5 font-medium"
+                className="rounded-md border-2 border-foreground py-3.5 font-medium"
                 onClick={() => {
                   add();
                   toast.success("Adicionado ao carrinho");
@@ -547,7 +547,7 @@ function ProductPage() {
           )}
         </div>
         <button
-          className="ml-auto shrink-0 rounded-full bg-action px-6 py-3 text-body font-medium text-action-foreground"
+          className="ml-auto shrink-0 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] px-6 py-3 text-body"
           onClick={() => {
             add();
             nav({ to: "/checkout" });

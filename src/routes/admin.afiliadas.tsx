@@ -67,8 +67,9 @@ const mailLabels: Record<AffiliateMailStatus, string> = {
   incerto: "Envio incerto — conciliar antes de reenviar",
 };
 
-function safeProfileLink(value: string, platform: "instagram" | "tiktok") {
+function safeProfileLink(value: string | null | undefined, platform: "instagram" | "tiktok") {
   try {
+    if (!value) return null;
     const url = new URL(value);
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     if (
@@ -603,10 +604,59 @@ export function AffiliateAdminPage() {
                           Por que deseja participar?
                         </h4>
                         <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#5a4246]">
-                          {app.motivation}
+                          {app.motivation || "Não informado no questionário de cinco etapas."}
                         </p>
                       </div>
                     </div>
+                    {app.questionnaireSummary && (
+                      <section
+                        aria-label="Respostas do questionário"
+                        className="border-t border-[#f3e7e3] bg-[#fffdfb] px-6 py-6"
+                      >
+                        <h4 className="font-display text-2xl text-[#5b343b]">
+                          Perfil da candidatura
+                        </h4>
+                        <p className="mt-1 text-xs text-[#92797e]">
+                          Resumo para triagem. Documentos pessoais e endereço completo permanecem
+                          criptografados e não são exibidos aqui.
+                        </p>
+                        <dl className="mt-5 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                          {(
+                            [
+                              [
+                                "Nicho de conteúdo",
+                                app.questionnaireSummary.otherNiche ||
+                                  app.questionnaireSummary.niche,
+                              ],
+                              [
+                                "Seguidores no Instagram",
+                                app.questionnaireSummary.instagramFollowers || "Não informado",
+                              ],
+                              ["Seguidores no TikTok", app.questionnaireSummary.tiktokFollowers],
+                              [
+                                "Inscrição municipal",
+                                app.questionnaireSummary.municipalRegistration === "sim"
+                                  ? "Sim"
+                                  : "Não",
+                              ],
+                              ["Dependentes", app.questionnaireSummary.dependents],
+                              ["Linha preferida", app.questionnaireSummary.preferredLine],
+                              [
+                                "Nome sugerido para cupom",
+                                app.questionnaireSummary.couponSuggestion,
+                              ],
+                            ] as const
+                          ).map(([label, answer]) => (
+                            <div key={label}>
+                              <dt className="text-xs font-semibold text-[#96777c]">{label}</dt>
+                              <dd className="mt-1 break-words font-semibold text-[#5b4148]">
+                                {answer}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </section>
+                    )}
                     {app.status === "pendente" ? (
                       <div className="flex flex-wrap gap-3 border-t border-[#f3e7e3] bg-[#fffaf7] px-6 py-5">
                         <button

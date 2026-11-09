@@ -19,3 +19,9 @@ src/test/affiliate-admin-ui.test.tsx text eol=lf
 
 src/lib/affiliate-admin-auth.server.ts text eol=lf
 src/test/affiliate-admin-auth.test.ts text eol=lf
+
+src/lib/affiliate-wizard.ts text eol=lf
+src/lib/affiliate-wizard-crypto.server.ts text eol=lf
+src/components/affiliate-wizard.tsx text eol=lf
+src/test/affiliate-wizard.test.ts text eol=lf
+src/test/affiliate-wizard-ui.test.tsx text eol=lf

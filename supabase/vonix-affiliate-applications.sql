@@ -10,8 +10,11 @@ create table if not exists public.vonix_affiliate_applications (
   hair_type text not null check (hair_type in ('Liso', 'Ondulado', 'Cacheado', 'Crespo', 'Misto / em transição', 'Outro')),
   email text not null unique check (email = lower(trim(email))),
   instagram_url text not null,
-  tiktok_url text not null,
-  motivation text not null check (length(trim(motivation)) between 30 and 3000),
+  tiktok_url text,
+  motivation text check (motivation is null or length(trim(motivation)) between 30 and 3000),
+  -- Complete five-stage questionnaire is encrypted server-side with AES-256-GCM.
+  -- No CPF, CNPJ, phone or full address is stored in plaintext.
+  questionnaire_encrypted text,
   consent_at timestamptz not null,
   status text not null default 'pendente' check (status in ('pendente', 'aprovada', 'recusada')),
   created_at timestamptz not null default now(),
@@ -21,6 +24,13 @@ create table if not exists public.vonix_affiliate_applications (
     or (status <> 'pendente' and reviewed_at is not null)
   )
 );
+-- Additive upgrade for databases created from the previous one-page questionnaire.
+alter table public.vonix_affiliate_applications
+  add column if not exists questionnaire_encrypted text;
+alter table public.vonix_affiliate_applications
+  alter column tiktok_url drop not null,
+  alter column motivation drop not null;
+
 create index if not exists vonix_affiliate_status_created_idx
   on public.vonix_affiliate_applications (status, created_at desc, id desc);
 
@@ -124,7 +134,8 @@ begin
   return (
     with filtered as (
       select a.id, a.full_name, a.age, a.city, a.state, a.hair_type, a.email,
-             a.instagram_url, a.tiktok_url, a.motivation, a.status, a.created_at, a.reviewed_at
+             a.instagram_url, a.tiktok_url, a.motivation, a.questionnaire_encrypted,
+             a.status, a.created_at, a.reviewed_at
       from public.vonix_affiliate_applications a
       where (a.status = p_status or (p_status = 'todas' and a.status <> 'pendente'))
         and (p_mail_status is null or exists (
@@ -155,6 +166,7 @@ begin
           'instagram_url', p.instagram_url,
           'tiktok_url', p.tiktok_url,
           'motivation', p.motivation,
+          'questionnaire_encrypted', p.questionnaire_encrypted,
           'status', p.status,
           'created_at', p.created_at,
           'reviewed_at', p.reviewed_at,

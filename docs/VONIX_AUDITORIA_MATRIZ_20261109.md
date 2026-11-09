@@ -50,6 +50,8 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N11 | Média | Banner da home tinha setas 36 px e indicadores clicáveis de ~12 px | Áreas de toque ampliadas, indicador com `aria-pressed` e foco visível; **320/390/1366 px validados no browser** |
 | N12 | Alta | Feed Meta informa `in stock` para produtos sem estoque verificado | 43/43 anúncios estruturados assim no feed público; reconciliação com estoque físico por SKU é pré-requisito, sem mudança automática de status |
 | N13 | Informativo | Integração de catálogo Meta poderia ter IDs, valores ou URLs divergentes | GET público e parser CSV: **43/43 IDs, preços, links e imagens corretos**, sem itens desconhecidos; recibo em `VONIX_PUBLIC_META_FEED_AUDIT_20261109.json` |
+| N14 | Alta | Novo checkout verde da `main` verificava `cfg.pixEnabled` para habilitar o botão até quando o método escolhido era cartão | Merge preserva layout sticky verde e SDK protegido; CTA valida método escolhido e SDK do cartão; teste com Pix desabilitado/cartão habilitado PASS |
+| N15 | Média | Atualizações de produto na `main` poderiam ser perdidas ao resolver o conflito do JSON | Merge preserva nome “Botox Vonix sem formol”, fotos recentes, todos os preços e variantes da `main`; reaplica somente as 43 descrições de frete corrigidas |
 
 ## Evidências e validações técnicas
 
@@ -58,7 +60,7 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 - HTTP públicos: `/sitemap.xml` com 43 URLs de produto (200), `/robots.txt` (200), rota inexistente personalizada (404).
 - Prévia local isolada: 390×844 e 1366×768; home, produto, carrinho e checkout; 8 HTTP 200; scrollWidth igual à viewport; nenhuma exceção JS ou imagem quebrada detectada nos cenários acessados. Teste adicional dos botões do banner 320/390/1366 px: 44 px/seta, 40 px/indicador, sem overflow, avanço funcional, sem erro JS. **Não valida responsividade em todos os aparelhos**.
 - Fluxo público verificado no Chrome headless com cliques até checkout e cotação de CEP público; **sem criar Pix, pedido ou cartão**.
-- Testes unitários novos: preço e transportadoras, promoções/cupom, frete sem cotação, fallback HTTP 500 e revisão de código.
+- Testes unitários novos: preço e transportadoras, promoções/cupom, frete sem cotação, fallback HTTP 500 e verificação do método de pagamento habilitado. Após integrar a `main` mais recente: **373/373 testes aprovados em 50 arquivos**, TypeScript/build/ESLint direcionado PASS. Nenhuma mudança manual em afiliadas; diff em arquivos de afiliadas contra a `main` atualizada é zero.
 
 ## Bloqueios de homologação — não apagar/“dar como concluídos”
 

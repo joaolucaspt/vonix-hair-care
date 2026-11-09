@@ -13,7 +13,7 @@
 
 ## Evidência automatizada (não simular saída)
 
-- **Vitest completo:** 361/361 PASS, 48 arquivos. Registro de execução em 09/11 (13:06, horário São Paulo), saída de CLI `TEST_EXIT=0`.
+- **Vitest completo pós-integração:** 373/373 PASS, 50 arquivos. Execução 09/11 às 13:25 (horário São Paulo), saída de CLI `TEST_EXIT=0`. A suíte anterior à integração teve 361/361 PASS (48 arquivos).
 - **TypeScript** `npx tsc --noEmit`: PASS.
 - **Build** `npm run build`: PASS, artefatos Nitro criados localmente, **não publicados**.
 - **ESLint** dos TS/TSX alterados com regra Prettier de legado desabilitada: PASS. `git diff --check`: PASS.
@@ -33,4 +33,4 @@ Consultar **todos os 20 itens** e achados N01–N13 em `docs/VONIX_AUDITORIA_MAT
 
 O resultado comercial (“por que não vende?”) **não** é demonstrado somente com visitas, cliques, preços batendo e Pix habilitado. Analisar taxas por etapa em sessões e conciliar pedidos efetivamente aprovados são pré-requisitos para afirmar causa ou sucesso.
 
-**Próximo passo de integração:** preservar a branch auditada, publicar somente o commit do PR #26 no GitHub, conferir CI, sem merge/deploy antes de homologação externa.
+**Integração com a `main` atualizada em 09/11:** merge local incorporou o commit `b9c3bc3` sem editar funcionalidades de afiliadas. Dois conflitos em arquivos do e-commerce foram resolvidos: `products.json` preservou o nome atual “Botox Vonix sem formol”, as imagens mais recentes e todos os preços da `main`, conservando 43 descrições honestas de frete; `checkout.tsx` preservou o layout verde/sticky da `main`, o SDK seguro da auditoria e corrigiu o `disabled` do CTA para verificar Pix/cartão conforme o método escolhido. Comparação de arquivos de afiliadas contra a `main` atualizada: **0 diferenças**. Teste isolado do cenário cartão disponível/Pix indisponível: PASS. Validação visual repetida em 390×844 e 1366×768: oito telas, nenhuma falha. **Só publicar o commit de integração no PR #26, não mesclar/deploy em produção antes da homologação externa.**

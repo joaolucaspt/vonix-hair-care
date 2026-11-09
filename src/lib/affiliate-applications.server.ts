@@ -9,6 +9,12 @@ import {
 } from "./affiliate-application";
 import { affiliateDecisionEmail } from "./affiliate-email";
 import { affiliateTrustedIpHeaderValid } from "./affiliate-throttle.server";
+import { ageFromBirthDate, instagramProfileUrl, tiktokProfileUrl } from "./affiliate-wizard";
+import {
+  affiliateQuestionnaireEncryptionReady,
+  affiliateWizardSummary,
+  encryptAffiliateWizard,
+} from "./affiliate-wizard-crypto.server";
 
 function supabase() {
   const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
@@ -47,6 +53,7 @@ export function affiliateRecruitmentOpen(): boolean {
     key &&
     env("AFFILIATE_TRAFFIC_PEPPER").length >= 32 &&
     affiliateTrustedIpHeaderValid() &&
+    affiliateQuestionnaireEncryptionReady() &&
     env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
     env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32 &&
     (process.env["NODE_ENV"] !== "production" || /^[A-Z2-7]{32,128}$/i.test(otp)) &&
@@ -90,21 +97,41 @@ function normalizedProfile(raw: string) {
 export async function createAffiliateApplication(raw: AffiliateApplicationInput) {
   const data = affiliateApplicationSchema.parse(raw);
   if (data.website) return { ok: true as const }; // blind honeypot
+  // For five-stage applications, the validated answers are authoritative.
+  // The legacy scalar fields cannot override identity or social accounts.
+  const wizard = data.wizard;
+  const record = wizard
+    ? {
+        full_name: wizard.firstName + " " + wizard.lastName,
+        age: ageFromBirthDate(wizard.birthDate),
+        city: wizard.city,
+        state: wizard.state,
+        hair_type: wizard.hairType,
+        email: wizard.email.trim().toLowerCase(),
+        instagram_url: normalizedProfile(instagramProfileUrl(wizard.instagramUsername)),
+        tiktok_url: wizard.tiktokUsername
+          ? normalizedProfile(tiktokProfileUrl(wizard.tiktokUsername))
+          : null,
+        motivation: data.motivation ?? null,
+        questionnaire_encrypted: encryptAffiliateWizard(wizard),
+        consent_at: new Date().toISOString(),
+      }
+    : {
+        full_name: data.fullName,
+        age: data.age,
+        city: data.city,
+        state: data.state,
+        hair_type: data.hairType,
+        email: data.email,
+        instagram_url: normalizedProfile(data.instagram),
+        tiktok_url: data.tiktok ? normalizedProfile(data.tiktok) : null,
+        motivation: data.motivation ?? null,
+        consent_at: new Date().toISOString(),
+      };
   const response = await requestSupabase("vonix_affiliate_applications", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      full_name: data.fullName,
-      age: data.age,
-      city: data.city,
-      state: data.state,
-      hair_type: data.hairType,
-      email: data.email,
-      instagram_url: normalizedProfile(data.instagram),
-      tiktok_url: normalizedProfile(data.tiktok),
-      motivation: data.motivation,
-      consent_at: new Date().toISOString(),
-    }),
+    body: JSON.stringify(record),
   });
   // A duplicate e-mail/profile gets the same public response to prevent account enumeration.
   if (response.status === 409) return { ok: true as const };
@@ -167,8 +194,20 @@ export async function listAffiliateApplications(input: {
   ) {
     throw new Error("Formato inválido da consulta de inscrições.");
   }
+  // RPC is service-role-only. Never return encrypted or unmasked identity data to
+  // the browser, even when the admin interface is authorized.
+  const applications = result.applications.map((value) => {
+    const rec = value as AffiliateApplicationRecord & {
+      questionnaire_encrypted?: string | null;
+    };
+    const { questionnaire_encrypted, ...publicFields } = rec;
+    return {
+      ...publicFields,
+      questionnaireSummary: affiliateWizardSummary(questionnaire_encrypted),
+    };
+  });
   return {
-    applications: result.applications as AffiliateApplicationRecord[],
+    applications,
     total: result.total,
     stats: {
       pendente: Number(raw?.pendente ?? 0),

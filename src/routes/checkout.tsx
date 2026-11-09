@@ -9,6 +9,7 @@ import {
 } from "@/lib/pending-card";
 import { clearPendingPix, restorePendingPix, savePendingPix } from "@/lib/pending-pix";
 import { isTerminatedOrder } from "@/lib/order-events";
+import { Lock } from "lucide-react";
 import { SecuritySeal, Shell } from "@/components/site";
 import { ShippingBar } from "@/components/cart-summary";
 import { useCepAddress } from "@/hooks/use-cep-address";
@@ -50,7 +51,20 @@ export const Route = createFileRoute("/checkout")({
   component: Checkout,
 });
 
-const inp = "h-11 w-full rounded-lg border border-border bg-background px-3 text-body";
+const inp =
+  "h-12 w-full rounded-xl border border-border bg-white px-3.5 text-body outline-none transition focus:border-action focus:ring-2 focus:ring-action/40";
+
+const panel =
+  "space-y-3 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5";
+
+const StepTitle = ({ n, children }: { n: number; children: React.ReactNode }) => (
+  <legend className="mb-1 flex items-center gap-2 text-name font-semibold">
+    <span className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-small font-semibold text-background">
+      {n}
+    </span>
+    {children}
+  </legend>
+);
 
 const maskCpf = (v: string) =>
   v
@@ -834,8 +848,8 @@ function Checkout() {
               )}
             </div>
 
-            <fieldset className="space-y-3">
-              <legend className="mb-1 text-name font-semibold">1. Contato</legend>
+            <fieldset className={panel}>
+              <StepTitle n={1}>Contato</StepTitle>
               <input
                 required
                 aria-label="Nome completo"
@@ -878,8 +892,8 @@ function Checkout() {
               />
             </fieldset>
 
-            <fieldset className="space-y-3">
-              <legend className="mb-1 text-name font-semibold">2. Entrega</legend>
+            <fieldset className={panel}>
+              <StepTitle n={2}>Entrega</StepTitle>
               <input
                 required
                 inputMode="numeric"
@@ -976,7 +990,7 @@ function Checkout() {
                   options.map((o) => (
                     <label
                       key={o.id}
-                      className={`flex items-center justify-between rounded-lg border p-3 text-body ${serviceId === o.id ? "border-action bg-card font-medium" : "border-border"}`}
+                      className={`flex items-center justify-between rounded-xl border-2 p-3.5 text-body ${serviceId === o.id ? "border-action bg-card font-medium" : "border-border"}`}
                     >
                       <span className="flex gap-2">
                         <input
@@ -996,10 +1010,10 @@ function Checkout() {
               </div>
             </fieldset>
 
-            <fieldset className="space-y-3">
-              <legend className="mb-1 text-name font-semibold">3. Pagamento</legend>
+            <fieldset className={panel}>
+              <StepTitle n={3}>Pagamento</StepTitle>
               <label
-                className={`flex items-center justify-between rounded-lg border p-3 text-body ${pay === "pix" ? "border-action bg-card font-medium" : "border-border"}`}
+                className={`flex items-center justify-between rounded-xl border-2 p-3.5 text-body ${pay === "pix" ? "border-action bg-card font-medium" : "border-border"}`}
               >
                 <span className="flex gap-2">
                   <input
@@ -1013,7 +1027,7 @@ function Checkout() {
                 <b>{brl(tPix.net + shipping)}</b>
               </label>
               <label
-                className={`flex items-center justify-between rounded-lg border p-3 text-body ${pay === "card" ? "border-action bg-card font-medium" : "border-border"}`}
+                className={`flex items-center justify-between rounded-xl border-2 p-3.5 text-body ${pay === "card" ? "border-action bg-card font-medium" : "border-border"}`}
               >
                 <span className="flex gap-2">
                   <input
@@ -1089,7 +1103,7 @@ function Checkout() {
               id="card-form"
               data-appmax-checkout
               hidden={pay !== "card"}
-              className="min-w-0 space-y-3"
+              className={`min-w-0 ${panel}`}
               onSubmit={(e) => e.preventDefault()}
             >
               <div className="text-name font-semibold">Dados do cartão</div>
@@ -1181,7 +1195,7 @@ function Checkout() {
         </div>
 
         <aside
-          className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 "
+          className="h-fit min-w-0 space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1"
           aria-label="Resumo do pedido"
         >
           <ul className="space-y-2 text-body">
@@ -1278,25 +1292,33 @@ function Checkout() {
               )}
             </div>
           )}
-          <button
-            type="submit"
-            form="checkout-form"
-            disabled={
-              busy ||
-              quoting ||
-              !chosen ||
-              !cfg ||
-              !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled) ||
-              (pay === "card" && cardSdkState !== "ready")
-            }
-            className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60"
-          >
-            {busy
-              ? "Processando…"
-              : pay === "pix"
-                ? `Gerar Pix · ${brl(total)}`
-                : `Pagar ${brl(total)} no cartão`}
-          </button>
+          <div className="sticky bottom-0 z-20 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+            {!chosen && !quoting && (
+              <p className="text-center text-small text-muted-foreground">
+                Digite o CEP para liberar o pagamento
+              </p>
+            )}
+            <button
+              type="submit"
+              form="checkout-form"
+              disabled={
+                busy ||
+                quoting ||
+                !chosen ||
+                !cfg ||
+                !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled) ||
+                (pay === "card" && cardSdkState !== "ready")
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-4 text-name disabled:cursor-not-allowed disabled:bg-emerald-200 disabled:text-emerald-900/60 disabled:shadow-none"
+            >
+              <Lock className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
+              {busy
+                ? "Processando…"
+                : pay === "pix"
+                  ? `Gerar Pix · ${brl(total)}`
+                  : `Pagar ${brl(total)} no cartão`}
+            </button>
+          </div>
           <div className="flex justify-center">
             <SecuritySeal />
           </div>

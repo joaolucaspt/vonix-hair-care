@@ -344,6 +344,30 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
+  it("habilita cartão quando só cartão está disponível, sem depender da configuração Pix", async () => {
+    mocks.config.mockResolvedValue({
+      externalId: "test-only",
+      sandbox: true,
+      pixEnabled: false,
+      cardEnabled: true,
+    });
+    window.AppmaxScripts = { init: vi.fn() };
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const sdk = await waitFor(() => {
+      const element = document.querySelector('script[src*="appmax.min.js"]');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
+    fireEvent.load(sdk);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeEnabled());
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ }).className).toContain("bg-emerald-600");
+    fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
   it("cartão e resumo precedem CTA; formulários separados, atributos e 6 parcelas preservados", async () => {
     const { container } = render(<Checkout />);
     await tick();

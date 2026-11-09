@@ -9,7 +9,6 @@ import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
 import { useVisitorSummary } from "@/lib/review-summary";
 import { PaymentLogos } from "@/components/payment-logos";
-import { SignupCoupon } from "@/components/signup-coupon";
 import { toItem, track } from "@/lib/analytics";
 import {
   FREE_SHIPPING_ABOVE,
@@ -111,8 +110,8 @@ export function PaymentMethods({ dark = false }: { dark?: boolean }) {
 /** Security seal: only facts that hold (HTTPS on the host, payment processed by Appmax, card tokenized in the browser). No third-party certification is claimed. */
 export function SecuritySeal({ dark = false }: { dark?: boolean }) {
   return (
-    <div role="group" aria-label="Compra segura" className={`inline-flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${dark ? "border-marquee-foreground/35 text-marquee-foreground" : "border-border bg-white text-foreground"}`}>
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-action text-action-foreground">
+    <div role="group" aria-label="Compra segura" className={`inline-flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${dark ? "border-marquee-foreground/35 text-marquee-foreground" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`}>
+      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${dark ? "bg-action text-action-foreground" : "bg-emerald-600 text-white"}`}>
         <ShieldCheck className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
       </span>
       <span className="leading-tight">
@@ -360,9 +359,6 @@ function Footer() {
         <span>Até 6x sem juros no cartão</span>
         <span>Frete grátis acima de R$ 150 em produtos</span>
       </div>
-      <div className="container-site border-b border-marquee-foreground/15 py-6">
-        <div className="mx-auto max-w-xl"><SignupCoupon dark compact /></div>
-      </div>
       <div className="container-site grid gap-8 py-8 text-body sm:grid-cols-4">
         <div>
           <div className="mb-4"><GoldLogo className="h-14" /></div>
@@ -444,6 +440,8 @@ export function PriceBlock({ price, compare, big, offer = false }: { price: numb
  * Real average rating (from src/data/reviews.json): gold stars filled in proportion to the score, plus the number.
  * A product with no reviews yet shows the five empty stars, never an invented score.
  */
+const NO_STARS = new Set(["botox-vonix"]);
+
 export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; big?: boolean; hideEmpty?: boolean }) {
   const list = reviewsFor(slug);
   const sold = soldFor(slug);
@@ -461,7 +459,9 @@ export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; 
     </span>
   );
   // Nos cards, produto sem nota não mostra as cinco estrelas vazias (parecem "ninguém gostou"); fica só o número de vendidos.
-  const showStars = count > 0 || !hideEmpty;
+  // Produtos em que a loja prefere não exibir a nota em estrelas (só o número de vendidos).
+  const noRating = NO_STARS.has(slug);
+  const showStars = !noRating && (count > 0 || !hideEmpty);
   return (
     <div className="flex min-h-[1.25rem] items-center gap-2 text-small" role="img" aria-label={count ? `Nota ${label} de 5` : "Ainda sem avaliações"}>
       {showStars && (
@@ -474,7 +474,7 @@ export function Stars({ slug, big = false, hideEmpty = false }: { slug: string; 
           )}
         </span>
       )}
-      {count > 0 && <b className="text-body">{label}</b>}
+      {count > 0 && !noRating && <b className="text-body">{label}</b>}
       {sold > 0 && <span className="text-muted-foreground">{showStars ? "· " : ""}{sold} {sold === 1 ? "vendido" : "vendidos"}</span>}
     </div>
   );

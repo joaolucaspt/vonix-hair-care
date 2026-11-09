@@ -186,7 +186,7 @@ function Cart() {
               <Summary lines={c.lines} />
               <Link
                 to="/checkout"
-                className="hidden rounded-full bg-action py-3.5 text-center font-medium text-action-foreground lg:block"
+                className="hidden rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5 text-center lg:block"
               >
                 Finalizar minha compra
               </Link>
@@ -201,7 +201,7 @@ function Cart() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background p-3 lg:hidden">
           <Link
             to="/checkout"
-            className="block rounded-full bg-action py-3.5 text-center font-medium text-action-foreground"
+            className="block rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5 text-center"
           >
             Finalizar minha compra
           </Link>
