@@ -15,6 +15,7 @@ vi.mock("@/lib/env.server", () => ({
 import {
   checkoutFingerprint,
   claimCheckoutIntent,
+  lookupExistingCheckoutIntent,
   advanceCheckoutIntent,
   finalizeCheckoutIntent,
 } from "@/lib/checkout-idempotency.server";
@@ -99,6 +100,63 @@ describe("HMAC checkout fingerprint", () => {
 });
 
 describe("durable intent storage contract", () => {
+  it("consulta um fingerprint com GET e credencial privada sem reservar novo pedido", async () => {
+    const fingerprint = checkoutFingerprint(input);
+    mockFetch.mockResolvedValueOnce(
+      Response.json([
+        {
+          phase: "submitted",
+          order_id: 1510,
+          updated_at: new Date().toISOString(),
+        },
+      ]),
+    );
+    const intent = await lookupExistingCheckoutIntent(fingerprint);
+    expect(intent).toMatchObject({ phase: "submitted", orderId: 1510 });
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url, init] = mockFetch.mock.calls[0]!;
+    expect(url).toContain("/rest/v1/vonix_checkout_intents?");
+    expect(url).toContain("fingerprint=eq." + fingerprint);
+    expect(url).toContain("select=phase,order_id,updated_at");
+    expect(init.method).toBe("GET");
+    expect(init.headers).toMatchObject({
+      apikey: "service-role-mock-for-tests",
+      Authorization: "Bearer service-role-mock-for-tests",
+      "cache-control": "no-store",
+    });
+    expect(init).not.toHaveProperty("body");
+    expect(JSON.stringify([url, init])).not.toContain(input.document);
+  });
+  it("retorna null sem reserva quando não há registro para recuperação", async () => {
+    mockFetch.mockResolvedValueOnce(Response.json([]));
+    expect(await lookupExistingCheckoutIntent(checkoutFingerprint(input))).toBeNull();
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockFetch.mock.calls[0]![1].method).toBe("GET");
+  });
+  it("rejeita linhas malformadas, repetidas e falha de permissão sem inferir pedido", async () => {
+    const fp = checkoutFingerprint(input);
+    mockFetch.mockResolvedValueOnce(
+      Response.json([
+        {
+          phase: "charging",
+          order_id: -1,
+          updated_at: "2026-11-09T20:00:00Z",
+        },
+      ]),
+    );
+    await expect(lookupExistingCheckoutIntent(fp)).rejects.toThrow();
+    mockFetch.mockResolvedValueOnce(
+      Response.json([
+        { phase: "submitted", order_id: 1510, updated_at: "2026-11-09T20:00:00Z" },
+        { phase: "submitted", order_id: 1511, updated_at: "2026-11-09T20:00:00Z" },
+      ]),
+    );
+    await expect(lookupExistingCheckoutIntent(fp)).rejects.toThrow();
+    mockFetch.mockResolvedValueOnce(new Response("access denied", { status: 403 }));
+    await expect(lookupExistingCheckoutIntent(fp)).rejects.toThrow("Intent read HTTP 403");
+    await expect(lookupExistingCheckoutIntent("invalid")).rejects.toThrow("Impressão");
+  });
+
   it("claims an attempt and never exposes the claim token on duplicates", async () => {
     mockFetch
       .mockResolvedValueOnce(

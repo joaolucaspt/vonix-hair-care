@@ -54,6 +54,44 @@ const intentSchema = z
   .strict();
 export type CheckoutIntent = z.infer<typeof intentSchema>;
 
+const storedIntentSchema = z
+  .array(
+    z
+      .object({
+        phase: intentSchema.shape.phase,
+        order_id: z.number().int().positive().safe().nullable(),
+        updated_at: z.string().min(1).max(80),
+      })
+      .strict(),
+  )
+  .max(1);
+
+/** Read-only recovery: it must NEVER reserve a new purchase or unlock a charge.
+ * This table is already SELECT-granted to the service role by the checkout SQL.
+ * No CPF, card data or customer address crosses the DB boundary.
+ */
+export async function lookupExistingCheckoutIntent(fingerprint: string): Promise<{
+  phase: CheckoutIntent["phase"];
+  orderId: number | null;
+  updatedAt: string;
+} | null> {
+  if (!/^[a-f0-9]{64}$/.test(fingerprint)) throw new Error("Impressão da compra inválida");
+  const { url, key } = connection();
+  const response = await fetch(
+    `${url}/rest/v1/vonix_checkout_intents?fingerprint=eq.${fingerprint}&select=phase,order_id,updated_at&limit=1`,
+    {
+      method: "GET",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "cache-control": "no-store" },
+      signal: AbortSignal.timeout(4500),
+    },
+  );
+  if (!response.ok) throw new Error(`Intent read HTTP ${response.status}`);
+  const record = storedIntentSchema.parse(await response.json())[0];
+  return record
+    ? { phase: record.phase, orderId: record.order_id, updatedAt: record.updated_at }
+    : null;
+}
+
 function connection() {
   const url = env("SUPABASE_URL");
   const key = env("SUPABASE_SERVICE_ROLE_KEY");

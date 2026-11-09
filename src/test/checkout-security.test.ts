@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   saveSnapshot: vi.fn(),
   loadSnapshot: vi.fn(),
   claimIntent: vi.fn(),
+  lookupIntent: vi.fn(),
   advanceIntent: vi.fn(),
   finalizeIntent: vi.fn(),
   validStatus: vi.fn(() => false),
@@ -37,6 +38,7 @@ vi.mock("@/lib/env.server", () => ({
 vi.mock("@/lib/checkout-idempotency.server", async (load) => ({
   ...(await load<Record<string, unknown>>()),
   claimCheckoutIntent: mocks.claimIntent,
+  lookupExistingCheckoutIntent: mocks.lookupIntent,
   advanceCheckoutIntent: mocks.advanceIntent,
   finalizeCheckoutIntent: mocks.finalizeIntent,
 }));
@@ -100,6 +102,7 @@ beforeEach(() => {
   mocks.createOrder.mockResolvedValue(654);
   mocks.saveSnapshot.mockResolvedValue(undefined);
   mocks.loadSnapshot.mockImplementation(async () => mocks.saveSnapshot.mock.calls[0]?.[0]);
+  mocks.lookupIntent.mockResolvedValue(null);
   mocks.claimIntent.mockResolvedValue({
     claimed: true,
     phase: "reserved",
@@ -123,6 +126,12 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("rejeita total informado que ficou defasado", async () => {
+    const result = await createPayment({ data: { ...data, quotedTotalCents: 100 } });
+    expect(result).toMatchObject({ ok: false, retrySafe: true });
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+  });
   it("marca falha ambígua do backend como insegura para uma nova cobrança", async () => {
     mocks.claimIntent.mockRejectedValueOnce(new Error("storage temporarily unavailable"));
     const answer = await createPayment({ data });
@@ -134,9 +143,16 @@ describe("server authoritative checkout", () => {
   it("rejeita Plex fora de estoque antes de consultar frete ou pagamento", async () => {
     const unavailable = { slug: "plex-vonix", variant: "1000ml", qty: 1 };
     const quote = await quoteShipping({ data: { cep: data.address.cep, items: [unavailable] } });
-    expect(quote).toMatchObject({ ok: false, message: expect.stringMatching(/produto ou desconto do carrinho/) });
+    expect(quote).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/produto ou desconto do carrinho/),
+    });
     const payment = await createPayment({ data: { ...data, items: [unavailable] } });
-    expect(payment).toMatchObject({ ok: false, retrySafe: true, message: expect.stringMatching(/Revise a sacola/) });
+    expect(payment).toMatchObject({
+      ok: false,
+      retrySafe: true,
+      message: expect.stringMatching(/Revise a sacola/),
+    });
     expect(mocks.shipping).not.toHaveBeenCalled();
     expect(mocks.claimIntent).not.toHaveBeenCalled();
     expect(mocks.customer).not.toHaveBeenCalled();
@@ -158,7 +174,10 @@ describe("server authoritative checkout", () => {
     const forged = { slug: "botox-vonix", variant: "1Kg", qty: 1, offer: "comp5" as const };
     const shipping = await quoteShipping({ data: { cep: data.address.cep, items: [forged] } });
     const payment = await createPayment({ data: { ...data, items: [forged] } });
-    expect(shipping).toMatchObject({ ok: false, message: expect.stringMatching(/Revise a sacola/) });
+    expect(shipping).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/Revise a sacola/),
+    });
     expect(payment).toMatchObject({ ok: false, retrySafe: true });
     expect(mocks.shipping).not.toHaveBeenCalled();
     expect(mocks.claimIntent).not.toHaveBeenCalled();
@@ -174,14 +193,18 @@ describe("server authoritative checkout", () => {
       policyVersion: "v1",
       recordedAt: expect.any(String),
     });
-    expect(new Date(record.marketingConsent.recordedAt).toISOString()).toBe(record.marketingConsent.recordedAt);
+    expect(new Date(record.marketingConsent.recordedAt).toISOString()).toBe(
+      record.marketingConsent.recordedAt,
+    );
     expect(mocks.pix).toHaveBeenCalledOnce();
   });
   it("records rejection when consent is missing or false without blocking the payment", async () => {
     const answer = await createPayment({ data });
     expect(answer).toMatchObject({ ok: true });
     expect(mocks.saveSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({ marketingConsent: expect.objectContaining({ accepted: false, policyVersion: "v1" }) }),
+      expect.objectContaining({
+        marketingConsent: expect.objectContaining({ accepted: false, policyVersion: "v1" }),
+      }),
     );
     expect(mocks.pix).toHaveBeenCalledOnce();
   });
@@ -341,6 +364,112 @@ describe("server authoritative checkout", () => {
       expect.objectContaining({ orderId: 654, shippingValueCents: 0 }),
     );
   });
+  it("recupera o pedido ORIGINAL mesmo quando a cotação de frete cai depois do primeiro Pix", async () => {
+    const first = await createPayment({ data });
+    expect(first).toMatchObject({ ok: true, method: "pix", orderId: 654 });
+    mocks.shipping.mockRejectedValueOnce(new Error("transportadora indisponível"));
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "submitted",
+      orderId: 654,
+      updatedAt: new Date().toISOString(),
+    });
+    const replay = await createPayment({ data });
+    expect(replay).toMatchObject({
+      ok: true,
+      method: "verification",
+      orderId: 654,
+      total: first.ok ? first.total : undefined,
+      paid: false,
+    });
+    expect(mocks.lookupIntent).toHaveBeenCalledOnce();
+    expect(mocks.lookupIntent.mock.calls[0]![0]).toMatch(/^[a-f0-9]{64}$/);
+    expect(mocks.claimIntent).toHaveBeenCalledOnce();
+    expect(mocks.customer).toHaveBeenCalledOnce();
+    expect(mocks.createOrder).toHaveBeenCalledOnce();
+    expect(mocks.pix).toHaveBeenCalledOnce();
+  });
+  it("responde erro seguro quando frete cai em compra nova, sem criar reserva de pagamento", async () => {
+    mocks.shipping.mockRejectedValueOnce(new Error("carrier offline"));
+    const response = await createPayment({ data });
+    expect(response).toMatchObject({ ok: false, retrySafe: true });
+    expect(response.message).toMatch(/entrega agora/);
+    expect(mocks.lookupIntent).toHaveBeenCalledOnce();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("recupera pedido existente quando a transportadora removeu a opção selecionada", async () => {
+    const first = await createPayment({ data });
+    expect(first).toMatchObject({ ok: true, orderId: 654 });
+    mocks.shipping.mockResolvedValueOnce([
+      { id: 12, name: "Outra", company: "Correios", price: 79, days: 9 },
+    ]);
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "charging",
+      orderId: 654,
+      updatedAt: new Date().toISOString(),
+    });
+    const replay = await createPayment({ data });
+    expect(replay).toMatchObject({ ok: true, method: "verification", orderId: 654 });
+    expect(mocks.claimIntent).toHaveBeenCalledOnce();
+    expect(mocks.pix).toHaveBeenCalledOnce();
+  });
+  it("recupera pedido reservado mesmo se o comprador alterou o cupom para um código expirado", async () => {
+    await createPayment({ data });
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "submitted",
+      orderId: 654,
+      updatedAt: new Date().toISOString(),
+    });
+    const replay = await createPayment({ data: { ...data, coupon: "CUPOM-INVALIDO" } });
+    expect(replay).toMatchObject({ ok: true, method: "verification", orderId: 654 });
+    expect(mocks.claimIntent).toHaveBeenCalledOnce();
+    expect(mocks.pix).toHaveBeenCalledOnce();
+  });
+  it("não mascara um novo pagamento com um pedido cancelado ou encerrado há mais de 24 horas", async () => {
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "cancelled",
+      orderId: 654,
+      updatedAt: new Date().toISOString(),
+    });
+    expect(await createPayment({ data: { ...data, serviceId: 999 } })).toMatchObject({
+      ok: false,
+      retrySafe: true,
+    });
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "completed",
+      orderId: 654,
+      updatedAt: new Date(Date.now() - 25 * 3600_000).toISOString(),
+    });
+    expect(await createPayment({ data: { ...data, serviceId: 999 } })).toMatchObject({
+      ok: false,
+      retrySafe: true,
+    });
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+  });
+  it("nunca cria cobrança nem mostra valor quando a recuperação só encontra reserva sem pedido", async () => {
+    mocks.shipping.mockRejectedValueOnce(new Error("carrier offline"));
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "creating_order",
+      orderId: null,
+      updatedAt: new Date().toISOString(),
+    });
+    const response = await createPayment({ data });
+    expect(response).toMatchObject({ ok: false, retrySafe: false });
+    expect(response).not.toHaveProperty("total");
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+  it("falha fechado se banco de recuperação não responde durante queda da transportadora", async () => {
+    mocks.shipping.mockRejectedValueOnce(new Error("carrier offline"));
+    mocks.lookupIntent.mockRejectedValueOnce(new Error("database offline"));
+    const response = await createPayment({ data });
+    expect(response).toMatchObject({ ok: false, retrySafe: false });
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
   it("blocks a second identical attempt before creating another Appmax customer/order/payment", async () => {
     const first = await createPayment({ data });
     expect(first).toMatchObject({ ok: true, method: "pix", orderId: 654 });
@@ -392,21 +521,31 @@ describe("server authoritative checkout", () => {
     expect(first).toMatchObject({ ok: true, method: "pix", orderId: 654 });
     const snapshot = mocks.saveSnapshot.mock.calls[0]![0];
     const originalCents =
-      snapshot.products.reduce((total: number, x: { unitValueCents: number; quantity: number }) =>
-        total + x.unitValueCents * x.quantity, 0) +
-      snapshot.shippingValueCents - snapshot.discountValueCents;
+      snapshot.products.reduce(
+        (total: number, x: { unitValueCents: number; quantity: number }) =>
+          total + x.unitValueCents * x.quantity,
+        0,
+      ) +
+      snapshot.shippingValueCents -
+      snapshot.discountValueCents;
     mocks.shipping.mockResolvedValue([
       { id: 42, name: "Nova tarifa", company: "Correios", price: 59.95, days: 7 },
     ]);
     mocks.claimIntent.mockResolvedValueOnce({
-      claimed: false, phase: "submitted", orderId: 654, claimToken: null,
+      claimed: false,
+      phase: "submitted",
+      orderId: 654,
+      claimToken: null,
     });
     const replay = await createPayment({
       data: { ...data, items: [small], method: "card", token: "synthetic-card-token" },
     });
     expect(replay).toMatchObject({
-      ok: true, method: "verification", orderId: 654,
-      total: originalCents / 100, paid: false,
+      ok: true,
+      method: "verification",
+      orderId: 654,
+      total: originalCents / 100,
+      paid: false,
     });
     expect(mocks.loadSnapshot).toHaveBeenCalledExactlyOnceWith(654);
     expect(mocks.customer).toHaveBeenCalledOnce();
@@ -417,7 +556,10 @@ describe("server authoritative checkout", () => {
   it("não inventa total nem permite nova cobrança se snapshot original estiver indisponível", async () => {
     await createPayment({ data });
     mocks.claimIntent.mockResolvedValueOnce({
-      claimed: false, phase: "submitted", orderId: 654, claimToken: null,
+      claimed: false,
+      phase: "submitted",
+      orderId: 654,
+      claimToken: null,
     });
     mocks.loadSnapshot.mockRejectedValueOnce(new Error("synthetic database unavailable"));
     const replay = await createPayment({ data });
@@ -430,10 +572,14 @@ describe("server authoritative checkout", () => {
   it("não usa snapshot de outro pedido para anunciar total de compra", async () => {
     await createPayment({ data });
     mocks.claimIntent.mockResolvedValueOnce({
-      claimed: false, phase: "submitted", orderId: 654, claimToken: null,
+      claimed: false,
+      phase: "submitted",
+      orderId: 654,
+      claimToken: null,
     });
     mocks.loadSnapshot.mockResolvedValueOnce({
-      ...mocks.saveSnapshot.mock.calls[0]![0], orderId: 777,
+      ...mocks.saveSnapshot.mock.calls[0]![0],
+      orderId: 777,
     });
     const replay = await createPayment({ data });
     expect(replay).toMatchObject({ ok: false, retrySafe: false });

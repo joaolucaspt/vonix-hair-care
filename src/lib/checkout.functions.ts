@@ -10,6 +10,7 @@ import { loadOrderSnapshot, saveOrderSnapshot, snapshotTotalCents } from "./orde
 import {
   checkoutFingerprint,
   claimCheckoutIntent,
+  lookupExistingCheckoutIntent,
   advanceCheckoutIntent,
   finalizeCheckoutIntent,
 } from "./checkout-idempotency.server";
@@ -32,7 +33,9 @@ const cepSchema = z.string().regex(/^\d{5}-?\d{3}$/);
 function buildLines(items: z.infer<typeof itemSchema>[]) {
   // Validate that complement discounts are among recommendations for the other items.
   const baseProducts = items.filter((i) => i.offer !== "comp5").map((i) => i.slug);
-  const eligible = new Set(baseProducts.length ? complementsFor(baseProducts).map((p) => p.slug) : []);
+  const eligible = new Set(
+    baseProducts.length ? complementsFor(baseProducts).map((p) => p.slug) : [],
+  );
   if (items.some((i) => i.offer === "comp5" && !eligible.has(i.slug))) {
     throw new Error("Complemento promocional indisponível para este carrinho");
   }
@@ -148,6 +151,8 @@ const paySchema = z.object({
   address: addressSchema,
   items: z.array(itemSchema).min(1).max(40),
   serviceId: z.number().int(),
+  // The amount the buyer actually reviewed. Optional for older checkout clients.
+  quotedTotalCents: z.number().int().nonnegative().safe().optional(),
   coupon: couponSchema,
   ref: z.string().max(30).optional(),
   method: z.enum(["pix", "card"]),
@@ -156,6 +161,55 @@ const paySchema = z.object({
   installments: z.number().int().min(1).max(6).optional(),
   marketingConsent: z.boolean().optional(),
 });
+
+/** Only the original immutable order snapshot can describe a previously
+ * reserved payment. Never create a charge to recover a status reference.
+ */
+async function recoverPreviouslyReservedOrder(orderId: number | null) {
+  if (!orderId)
+    return {
+      ok: false as const,
+      retrySafe: false as const,
+      message:
+        "Já existe uma tentativa de compra em verificação. Não tente pagar novamente; consulte o atendimento.",
+    };
+  try {
+    const snapshot = await loadOrderSnapshot(orderId);
+    if (snapshot.orderId !== orderId) throw new Error("Snapshot de outro pedido");
+    const amountCents = snapshotTotalCents(snapshot);
+    return {
+      ok: true as const,
+      method: "verification" as const,
+      orderId,
+      statusToken: orderStatusToken(orderId),
+      total: amountCents / 100,
+      paid: false as const,
+      status: "aguardando_confirmacao" as const,
+    };
+  } catch {
+    return {
+      ok: false as const,
+      retrySafe: false as const,
+      message:
+        "Já existe uma tentativa de compra em verificação. Consulte o atendimento antes de tentar pagar novamente.",
+    };
+  }
+}
+
+/** This is called ONLY when today's quote/coupon is unavailable.
+ * The existing SQL already grants service_role SELECT on this table.
+ * 'cancelled' and 'completed >24h' may be legitimately purchased again,
+ * so a stale read cannot block a new attempt without proof of an active one.
+ */
+async function recoverWithoutNewQuote(fingerprint: string) {
+  const existing = await lookupExistingCheckoutIntent(fingerprint);
+  if (!existing || existing.phase === "cancelled") return null;
+  if (existing.phase === "completed") {
+    const timestamp = Date.parse(existing.updatedAt);
+    if (Number.isFinite(timestamp) && timestamp < Date.now() - 24 * 60 * 60 * 1000) return null;
+  }
+  return recoverPreviouslyReservedOrder(existing.orderId);
+}
 
 export const createPayment = createServerFn({ method: "POST" })
   .inputValidator(paySchema)
@@ -194,36 +248,9 @@ export const createPayment = createServerFn({ method: "POST" })
       return { ok: false as const, retrySafe: true as const, message: staleCartMessage };
     }
     try {
-      const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find(
-        (o) => o.id === data.serviceId,
-      );
-      if (!option) return { ok: false as const, message: "Escolha uma opção de entrega válida." };
-
-      const coupon = findCoupon(data.coupon);
-      const gross = checkoutTotals(lines, "card").gross;
-      if (data.coupon && !coupon)
-        return {
-          ok: false as const,
-          message: "Cupom inválido. Remova o cupom ou confira o código.",
-        };
-      if (coupon) {
-        const chk = couponCheck(coupon, gross);
-        if (!chk.ok) return { ok: false as const, message: chk.reason };
-      }
-      const totals = checkoutTotals(
-        lines,
-        data.method === "pix" ? "pix" : "card",
-        couponPercent(coupon, gross),
-      );
       const document = data.customer.cpf.replace(/\D/g, "");
-      const [first = "", ...rest] = data.customer.nome.trim().split(/\s+/);
-      // Antifraud IP must never come from a browser field or arbitrary
-      // X-Forwarded-For; only trust the IP set by our Cloudflare edge.
-      const edgeIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
-      const ip = isIP(edgeIp) ? edgeIp : "0.0.0.0";
-
-      // Reserve this server-priced shopping intent atomically BEFORE external
-      // customer, order or payment calls. A second browser/device cannot charge it.
+      // Derive the same server-only HMAC for read-only recovery and
+      // later atomic reservation (independent of shipping and coupon).
       const fingerprint = checkoutFingerprint({
         document,
         address: {
@@ -240,39 +267,79 @@ export const createPayment = createServerFn({ method: "POST" })
           quantity: l.units,
         })),
       });
-      const intent = await claimCheckoutIntent(fingerprint);
-      if (!intent.claimed) {
-        if (intent.orderId) {
-          // The original attempt can have a different coupon, method or
-          // shipping quote now. Never display today's quote as the old charge.
-          let originalCents: number;
-          try {
-            const snapshot = await loadOrderSnapshot(intent.orderId);
-            if (snapshot.orderId !== intent.orderId) throw new Error("Snapshot de outro pedido");
-            originalCents = snapshotTotalCents(snapshot);
-          } catch {
-            return {
-              ok: false as const,
-              retrySafe: false as const,
-              message: "Já existe uma tentativa de compra em verificação. Consulte o atendimento antes de tentar pagar novamente.",
-            };
-          }
-          return {
-            ok: true as const,
-            method: "verification" as const,
-            orderId: intent.orderId,
-            statusToken: orderStatusToken(intent.orderId),
-            total: originalCents / 100,
-            paid: false,
-            status: "aguardando_confirmacao",
-          };
-        }
+      // Quote failures must not hide a previously reserved payment.
+      // Recovery only reads a server-only HMAC record and never reserves an intent.
+      let options: Awaited<ReturnType<typeof shippingOptions>>;
+      try {
+        options = await shippingOptions(data.address.cep, lines, data.coupon);
+      } catch {
+        const previous = await recoverWithoutNewQuote(fingerprint);
+        if (previous) return previous;
         return {
           ok: false as const,
+          retrySafe: true as const,
           message:
-            "Já existe uma tentativa de compra em verificação. Não tente pagar novamente; entre em contato com o atendimento para confirmar o pedido.",
+            "Não foi possível consultar a entrega agora. Aguarde e faça uma nova cotação de frete.",
         };
       }
+      const option = options.find((o) => o.id === data.serviceId);
+      if (!option) {
+        const previous = await recoverWithoutNewQuote(fingerprint);
+        if (previous) return previous;
+        return {
+          ok: false as const,
+          retrySafe: true as const,
+          message: "Escolha uma opção de entrega válida.",
+        };
+      }
+      const coupon = findCoupon(data.coupon);
+      const gross = checkoutTotals(lines, "card").gross;
+      if (data.coupon && !coupon) {
+        const previous = await recoverWithoutNewQuote(fingerprint);
+        if (previous) return previous;
+        return {
+          ok: false as const,
+          retrySafe: true as const,
+          message: "Cupom inválido. Remova o cupom ou confira o código.",
+        };
+      }
+      if (coupon) {
+        const chk = couponCheck(coupon, gross);
+        if (!chk.ok) {
+          const previous = await recoverWithoutNewQuote(fingerprint);
+          if (previous) return previous;
+          return { ok: false as const, retrySafe: true as const, message: chk.reason };
+        }
+      }
+      const totals = checkoutTotals(
+        lines,
+        data.method === "pix" ? "pix" : "card",
+        couponPercent(coupon, gross),
+      );
+      // Do not charge a higher or different amount than the buyer confirmed.
+      // Old clients without a displayed total remain backward-compatible.
+      if (
+        data.quotedTotalCents !== undefined &&
+        data.quotedTotalCents !== cents(totals.net + option.price)
+      ) {
+        const previous = await recoverWithoutNewQuote(fingerprint);
+        if (previous) return previous;
+        return {
+          ok: false as const,
+          retrySafe: true as const,
+          message:
+            "O total da compra mudou desde a cotação. Confira o frete e o valor atualizado antes de pagar.",
+        };
+      }
+      const [first = "", ...rest] = data.customer.nome.trim().split(/\s+/);
+      // Antifraud IP must never come from a browser field or arbitrary
+      // X-Forwarded-For; only trust the IP set by our Cloudflare edge.
+      const edgeIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
+      const ip = isIP(edgeIp) ? edgeIp : "0.0.0.0";
+
+      // Only the fenced claim can authorize a new payment.
+      const intent = await claimCheckoutIntent(fingerprint);
+      if (!intent.claimed) return recoverPreviouslyReservedOrder(intent.orderId);
       const claimToken = intent.claimToken!;
       // Fence the intent BEFORE the first external side effect.
       // A timeout after this point is ambiguous; it must NEVER be retried blindly.

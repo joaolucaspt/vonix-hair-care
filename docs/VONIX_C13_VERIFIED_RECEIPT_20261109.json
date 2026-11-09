@@ -1,0 +1,90 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "pr": 26,
+  "base": "d109722d0aff3f2232ad569bac91ebc209d1de48",
+  "findings": [
+    "N52 quote outage hides an existing order",
+    "N53 changed shipping service or invalid coupon hides original intent"
+  ],
+  "implementation": {
+    "readOnlyLookup": true,
+    "table": "vonix_checkout_intents",
+    "method": "GET",
+    "filter": "server-only HMAC-SHA256 fingerprint",
+    "auth": "service_role (no browser exposure)",
+    "newSqlMigration": false,
+    "newPaymentAttemptDuringRecovery": false,
+    "priceSource": "persisted original snapshot",
+    "cancelledOrCompletedOlderThan24hNotBlocked": true
+  },
+  "verified": {
+    "vitest": {
+      "passed": 524,
+      "total": 524,
+      "files": 64,
+      "exit": 0
+    },
+    "focused": {
+      "passed": 60,
+      "files": 3,
+      "exit": 0
+    },
+    "typescript": 0,
+    "eslintTargeted": 0,
+    "build": 0,
+    "ssr": {
+      "passed": 42,
+      "failed": 0,
+      "outOfStock404": [
+        "plex-vonix"
+      ],
+      "physicalStockValidated": false
+    },
+    "chrome": {
+      "viewportWidths": [
+        320,
+        390,
+        1366
+      ],
+      "productHTTP": 200,
+      "cartHTTP": 200,
+      "cartPersistedAll": true,
+      "horizontalOverflow": false,
+      "pageErrors": 0,
+      "externalRequestsIntercepted": true,
+      "coldHydrationObservation": "initial 320px cold dev run had lost click, confirmed rerun with hydrated app passed; production behavior unverified"
+    }
+  },
+  "permissions": {
+    "noAffiliateCodeEdited": true,
+    "noRealPayment": true,
+    "noRealDatabaseWrites": true,
+    "noRealMetaTraffic": true,
+    "noDeployment": true,
+    "noMergeToMain": true
+  },
+  "remaining": [
+    "Supabase staging table grants, RLS and read-only GET",
+    "Appmax actual sandbox payment and paid_at format",
+    "Bling SKU, inventory, weight/dimensions reconciliation",
+    "LGPD Purchase late consent withdrawal",
+    "WAF/distributed rate limiting",
+    "paid order conversion validation",
+    "production build cold-load usability QA",
+    "N54 reconcile new buy drawer and checkout/PDP main conflicts; preserve concurrent local work"
+  ],
+  "upstreamIntegration": {
+    "status": "blocked",
+    "mainAtAudit": "6ce6952",
+    "filesWithMergeConflicts": [
+      "src/routes/checkout.tsx",
+      "src/routes/produto.$slug.tsx"
+    ],
+    "concurrentLocalFile": "src/routes/checkout.tsx",
+    "localFilePreserved": true,
+    "newBuyDrawerValidated": false,
+    "reason": "Main changed checkout/PDP after C13 test; unsafe to overwrite concurrent local change"
+  }
+}

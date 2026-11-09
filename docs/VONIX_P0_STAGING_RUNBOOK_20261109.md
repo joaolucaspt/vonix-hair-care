@@ -48,3 +48,13 @@ A `main` mudou o identificador público GA4 para `G-J8TYLB425K` no commit `8c8bf
 **Supabase staging:** executar um fluxo 100% fictício e isolado em que a segunda tentativa altera método Pix/cartão, cupom e frete depois de o pedido inicial ser criado. Verificar se o retorno de acompanhamento usa o snapshot persistido original, não a nova cotação. Simular snapshot ausente, valor zero/overflow, ID divergente e indisponibilidade da rede; sem novo customer/order/Pix/card e com orientação de contato. A migração SQL C5/C8 e os backups permanecem procedimentos separados com aceite operacional.
 
 **Privacidade:** Purchase continua dependendo do snapshot de consentimento v1. A propagação de revogação posterior ao pedido para o backend não foi implementada; continua exigindo autorização, ledger e revisão LGPD. Não divulgar cumprimento integral antes disso.
+
+### Auditoria C13 — leitura de idempotência durante indisponibilidade de frete
+
+Em Supabase **staging isolado**, aplicar/revisar a SQL já existente que concede `SELECT` somente para `service_role` em `vonix_checkout_intents`. Simular resposta GET PostgREST com `fingerprint=eq.<HMAC>&select=phase,order_id,updated_at&limit=1`. Verificar **403/sem privilégios** para `anon`/`authenticated`, **nenhum insert/update** durante leitura e nenhum CPF, endereço, token ou número de cartão em URL/body de banco. Testar indisponibilidade do Melhor Envio e cupom/serviço antigo sobre pedido fictício já registrado: checkout só deve devolver `verification` com total do snapshot e ID assinado; sem pedido/snapshot, bloquear cobrança. Repetir com `cancelled`, `completed` de 25 horas e concorrência. Não executar essas consultas em produção sem autorização operacional.
+
+**QA adicional:** testar toque imediato no CTA durante carregamento frio compilado de produção com Chrome emulado em 320 px, CPU lenta e rede limitada. A falha foi vista apenas no Vite frio; a página hidratada passou, não havendo evidência suficiente para afirmar defeito em produção.
+
+### N54 — nova gaveta Comprar agora da main: integração bloqueada
+
+A main `6ce6952` alterou `src/components/buy-drawer.tsx`, checkout e PDP. O merge com a auditoria tem conflitos nestas duas páginas e há edição local não commitada em checkout de outra sessão. Não executar reset/clean/checkout/stash nem forçar resolução. Integrar conscientemente a nova gaveta à máquina de estados C12/C13, proteção de double charge, consentimento, Pix/cartão, frete/cupom e acessibilidade; comparar checkout local antes de qualquer write e manter o PR aberto enquanto não houver validação completa.

@@ -164,3 +164,14 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N51 | Defesa | Complemento de endereço omitido nos mocks não reproduzia default do schema real | Normalização explícita `complemento ?? ""` ao criar cliente/snapshot, e teste com snapshot compatível; sem afirmar falha em produção |
 
 **C11–C12:** **495/495 testes Vitest PASS em 63 arquivos**, TS/ESLint direcionado/build PASS e SSR **42/42**, Plex 404. Evidências em `docs/VONIX_AUDITORIA_CONTINUIDADE_C12_20261109.md` e `docs/VONIX_C12_VERIFIED_RECEIPT_20261109.json`. **Appmax sandbox, Supabase staging, Bling, revogação LGPD tardia, rate limit e receita real permanecem pendentes.**
+
+## Auditoria C13 — recuperação segura quando a cotação muda (09/11)
+
+| ID | Prioridade | Achado | Correção e prova |
+| --- | --- | --- | --- |
+| N52 | Alta | Frete indisponível escondia um pedido já reservado, pois checkout consultava transportadora antes da idempotência | Em falha de cotação, fazer GET somente leitura por fingerprint HMAC, recuperar snapshot e apresentar acompanhamento original; sem pedido existente, retorno seguro sem nova reserva. Vitest 524/524 |
+| N53 | Alta | Mudança/retirada da opção de frete ou cupom expirado impedia consultar o pedido anterior | Fallback exclusivo para registro de idempotência preexistente; valor original do snapshot. Recusas seguras se não houver pedido/snapshot; cancelados e concluídos há mais de 24 h não ficam presos |
+
+**C13:** 524/524 testes em 64 arquivos, TypeScript/ESLint/build PASS, SSR 42/42 e Chrome responsivo 320/390/1366 px após hidratação. Primeiro teste em Vite frio 320 px perdeu clique, não reproduzido após hidratação; produção não avaliada sob CPU/rede lenta. **Sem SQL nova nem pagamentos reais.** Recibo: `docs/VONIX_C13_VERIFIED_RECEIPT_20261109.json`. Homologar SELECT service_role e RLS no Supabase staging; restantes P0 preservados.
+
+| N54 | Bloqueio de integração, aberto | Após testes C13, `origin/main` avançou para `6ce6952` com gaveta Comprar agora/checkout compacto e merge-tree apontou conflitos em checkout/PDP. Uma alteração local de checkout por outra sessão também está não commitada | **Não resolvido**: preservar worktree e commits anteriores; reconciliar checkout/PDP/buy-drawer com segurança sem descartar trabalho local; repetir QA e CI antes de merge/deploy |
