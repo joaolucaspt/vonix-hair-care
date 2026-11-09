@@ -11,6 +11,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("@/components/site", () => ({ Shell: ({ children }: { children: React.ReactNode }) => <>{children}</>, SecuritySeal: () => null }));
 vi.mock("@/components/cart-summary", () => ({ ShippingBar: () => null, Summary: () => null }));
+vi.mock("@/components/reviews", () => ({ ProductReviews: () => null, reviewsFor: () => [] }));
 vi.mock("@/lib/address.functions", () => ({ lookupAddress: mocks.address }));
 vi.mock("@/lib/checkout.functions", () => ({ quoteShipping: mocks.quote, getPaymentConfig: mocks.config, createPayment: mocks.payment, getOrderStatus: mocks.status }));
 vi.mock("@/lib/store", async (importOriginal) => ({ ...(await importOriginal<Record<string, unknown>>()), useCart: () => mocks.cart, useHydrated: () => true }));
@@ -39,7 +40,7 @@ afterEach(() => { cleanup(); delete window.gtag; delete window.fbq; delete windo
 const fill = async () => {
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
   await screen.findByText(/Correios PAC/);
-  for (const [label, value] of [["Nome completo", "Pessoa Teste"], ["E-mail", "teste@example.com"], ["WhatsApp com DDD", "31999999999"], ["CPF", "52998224725"], ["Número", "10"]]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  for (const [label, value] of [["Nome completo", "Pessoa Teste"], ["E-mail", "teste@example.com"], ["WhatsApp com DDD", "31999999999"], ["CPF", "52998224725"], ["Número", "10"]] as const) fireEvent.change(screen.getByLabelText(label), { target: { value } });
 };
 
 describe("checkout auditado sem chamadas reais", () => {
@@ -47,8 +48,9 @@ describe("checkout auditado sem chamadas reais", () => {
     const { container } = render(<Checkout />); await tick(); await fill();
     fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
     const card = container.querySelector("#card-form");
+    if (!card) throw new Error("Formulário de cartão ausente");
     const cta = screen.getByRole("button", { name: /Pagar .* no cartão/ });
-    expect(card?.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByTestId("summary").compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(container.querySelector("form form")).toBeNull();
     expect(card).toHaveAttribute("data-appmax-checkout");
@@ -76,7 +78,7 @@ describe("checkout auditado sem chamadas reais", () => {
   it("frete funciona sem endereço; dados manuais permitem continuar", async () => {
     mocks.address.mockRejectedValue(new Error("timeout"));
     render(<Checkout />); await fill();
-    for (const [label, value] of [["Rua", "Rua manual"], ["Bairro", "Centro"], ["Cidade", "BH"], ["UF", "MG"]]) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    for (const [label, value] of [["Rua", "Rua manual"], ["Bairro", "Centro"], ["Cidade", "BH"], ["UF", "MG"]] as const) fireEvent.change(screen.getByLabelText(label), { target: { value } });
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
     expect(await screen.findByText(/Preencha manualmente; o frete/)).toBeInTheDocument();
   });
@@ -104,14 +106,17 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(mocks.quote).toHaveBeenCalledTimes(1);
   });
   it("view_cart e add_shipping_info sem duplicatas ou dados pessoais", async () => {
+    const gtag = window.gtag;
+    const fbq = window.fbq;
+    if (!gtag || !fbq) throw new Error("Mocks de eventos ausentes");
     const cart = render(<Cart />); cart.rerender(<Cart />);
-    expect(vi.mocked(window.gtag).mock.calls.filter((c) => c[1] === "view_cart")).toHaveLength(1);
+    expect(vi.mocked(gtag).mock.calls.filter((c) => c[1] === "view_cart")).toHaveLength(1);
     cart.unmount();
     const checkout = render(<Checkout />); await fill(); checkout.rerender(<Checkout />);
-    const events = vi.mocked(window.gtag).mock.calls.filter((c) => c[1] === "add_shipping_info");
+    const events = vi.mocked(gtag).mock.calls.filter((c) => c[1] === "add_shipping_info");
     expect(events).toHaveLength(1);
     expect(events[0]?.[2]).toMatchObject({ shipping_tier: "Correios PAC", currency: "BRL", value: 154.9 });
     expect(Object.keys(events[0]?.[2] as object).sort()).toEqual(["currency", "items", "shipping_tier", "value"]);
-    expect(vi.mocked(window.fbq).mock.calls.some((c) => c[1] === "Purchase")).toBe(false);
+    expect(vi.mocked(fbq).mock.calls.some((c) => c[1] === "Purchase")).toBe(false);
   });
 });
