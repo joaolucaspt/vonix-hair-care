@@ -217,6 +217,10 @@ export function AffiliateAdminPage() {
     const sessionId = sessionVersion.current;
     const isCurrent = () =>
       requestId === loadVersion.current && sessionId === sessionVersion.current;
+    // Clear old applicant cards immediately when a different page/filter
+    // begins loading; never display an outdated result as the current one.
+    setApplications([]);
+    setTotal(0);
     setLoading(true);
     setPendingDecision(null);
     setError("");

@@ -592,6 +592,43 @@ describe("Notificações", () => {
   });
 });
 
+describe("Validação da fila privada antes de enviar comunicações", () => {
+  const validClaim = {
+    mail_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    application_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    recipient: "maria@example.com",
+    decision: "aprovada",
+    attempt: 1,
+  };
+  beforeEach(() => {
+    process.env["RESEND_API_KEY"] = "synthetic-resend-test-key";
+    process.env["AFFILIATE_FROM_EMAIL"] = "afiliadas@example.invalid";
+  });
+
+  it("não envia e-mails quando o RPC retorna destinatário, identificador ou tipo inválido", async () => {
+    for (const malformed of [
+      { ...validClaim, recipient: "not-an-email" },
+      { ...validClaim, decision: "desconhecida" },
+      { ...validClaim, mail_id: "../invalid-mail-id" },
+      { ...validClaim, attempt: 0 },
+      { ...validClaim, attempt: "1" },
+    ]) {
+      const mock = vi.fn().mockResolvedValue(Response.json([malformed]));
+      vi.stubGlobal("fetch", mock);
+      await expect(processAffiliateEmails(1)).rejects.toThrow();
+      expect(mock).toHaveBeenCalledOnce();
+      expect(String(mock.mock.calls[0]![0])).toContain("claim_mail");
+    }
+  });
+
+  it("recusa um retorno do RPC não limitado a uma única notificação reservada", async () => {
+    const mock = vi.fn().mockResolvedValue(Response.json([validClaim, validClaim]));
+    vi.stubGlobal("fetch", mock);
+    await expect(processAffiliateEmails(1)).rejects.toThrow();
+    expect(mock).toHaveBeenCalledOnce();
+  });
+});
+
 describe("Tratamento de resultados ambíguos do Resend", () => {
   const claimed = {
     mail_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",

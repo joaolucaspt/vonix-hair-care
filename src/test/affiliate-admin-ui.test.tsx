@@ -75,6 +75,23 @@ afterEach(() => {
 });
 
 describe("Vonix affiliate private panel", () => {
+  it("does not show stale applicant data while changing search filters", async () => {
+    let finish!: (value: ReturnType<typeof list>) => void;
+    server.getAffiliateApplications.mockResolvedValueOnce(list()).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Aprovadas/i }));
+    expect(screen.getByText("Carregando inscrições...")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(screen.queryByText("secret-candidate@example.invalid")).not.toBeInTheDocument();
+    await act(async () => finish(list([])));
+    expect(screen.getByText("Nenhuma inscrição encontrada")).toBeInTheDocument();
+  });
+
   it("does not restore candidate PII from a request that resolves after logout", async () => {
     let resolveStale!: (value: ReturnType<typeof list>) => void;
     const stale = new Promise<ReturnType<typeof list>>((resolve) => {
