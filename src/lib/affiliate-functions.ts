@@ -162,6 +162,8 @@ export const getAffiliateRetentionPreview = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
       return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    if (!(await affiliateRateLimitAllowed("admin")))
+      return { ok: false as const, reason: "Acesso temporariamente indisponível." };
     try {
       const result = await previewAffiliateRetention(data.pendingDays, data.rejectedDays);
       return { ok: true as const, ...result };
