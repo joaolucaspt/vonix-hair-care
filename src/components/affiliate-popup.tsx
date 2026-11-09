@@ -1,7 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Check, Copy, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getRef } from "@/lib/affiliate-ref";
+import { captureRef, getRef } from "@/lib/affiliate-ref";
 import { lookupCoupon } from "@/lib/checkout.functions";
 import { track } from "@/lib/analytics";
 
@@ -19,6 +19,7 @@ export function AffiliatePopup() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    captureRef(window.location.search);
     const ref = getRef();
     if (!ref || info) return;
     try {
@@ -29,6 +30,7 @@ export function AffiliatePopup() {
     let alive = true;
     lookupCoupon({ data: { code: `${ref.toUpperCase()}10` } })
       .then((r) => {
+        if (alive && !r.ok) console.warn("[afiliada]", (r as { why?: string }).why);
         if (!alive || !r.ok) return;
         const name = /\(cupom da (.+)\)$/.exec(r.label)?.[1] ?? "";
         setInfo({ code: r.code, percent: r.percent, name });

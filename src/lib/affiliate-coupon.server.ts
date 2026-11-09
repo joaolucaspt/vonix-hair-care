@@ -15,6 +15,8 @@ const TTL_NO = 60_000;
  * Cupom da afiliada (ex.: MARISSOL10): só vale se o app de afiliadas confirmar. Sem configuração ou com falha de rede,
  * o cupom NÃO vale (nunca dá desconto sem confirmar), e a compra segue normal sem ele.
  */
+export let lastAffiliateLookupError = "";
+
 export async function resolveAffiliateCoupon(code: string, now = Date.now()): Promise<Coupon | undefined> {
   const c = code.trim().toUpperCase();
   const hit = cache.get(c);
@@ -24,7 +26,10 @@ export async function resolveAffiliateCoupon(code: string, now = Date.now()): Pr
     const res = await fetch(`${base.replace(/\/+$/, "")}/api/public/afiliadas/cupom?code=${encodeURIComponent(c)}`, {
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) return undefined;
+    if (!res.ok) {
+      lastAffiliateLookupError = `http ${res.status}`;
+      return undefined;
+    }
     const j = (await res.json()) as { ok?: boolean; percent?: number; name?: string };
     if (!j.ok) {
       cache.set(c, { until: now + TTL_NO, coupon: null });
@@ -39,6 +44,7 @@ export async function resolveAffiliateCoupon(code: string, now = Date.now()): Pr
     cache.set(c, { until: now + TTL_OK, coupon });
     return coupon;
   } catch (e) {
+    lastAffiliateLookupError = `erro ${e instanceof Error ? e.message : String(e)}`;
     console.error("[cupom-afiliada]", e);
     return undefined;
   }

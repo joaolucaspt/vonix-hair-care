@@ -10,7 +10,7 @@ import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
 import { couponCheck, couponFreeShipping, couponPercent, findCoupon, isAffiliateCouponCode } from "./coupons";
-import { resolveAffiliateCoupon } from "./affiliate-coupon.server";
+import { lastAffiliateLookupError, resolveAffiliateCoupon } from "./affiliate-coupon.server";
 
 const itemSchema = z.object({
   slug: z.string().min(1).max(120),
@@ -43,7 +43,7 @@ export const lookupCoupon = createServerFn({ method: "POST" })
   .inputValidator(z.object({ code: z.string().min(1).max(40) }))
   .handler(async ({ data }) => {
     const c = await resolveCoupon(data.code);
-    return c ? { ok: true as const, code: c.code, label: c.label, percent: c.percent ?? 0 } : { ok: false as const };
+    return c ? { ok: true as const, code: c.code, label: c.label, percent: c.percent ?? 0 } : { ok: false as const, why: lastAffiliateLookupError };
   });
 
 async function shippingOptions(cep: string, lines: ReturnType<typeof buildLines>, couponCode?: string) {
