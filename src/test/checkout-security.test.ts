@@ -117,6 +117,14 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("marca falha ambígua do backend como insegura para uma nova cobrança", async () => {
+    mocks.claimIntent.mockRejectedValueOnce(new Error("storage temporarily unavailable"));
+    const answer = await createPayment({ data });
+    expect(answer).toMatchObject({ ok: false, retrySafe: false });
+    expect(answer.message).toMatch(/antes de tentar pagar novamente/);
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
   it("records explicit marketing acceptance before calling a payment method", async () => {
     const answer = await createPayment({ data: { ...data, marketingConsent: true } });
     expect(answer).toMatchObject({ ok: true });

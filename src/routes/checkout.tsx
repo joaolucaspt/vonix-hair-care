@@ -8,6 +8,7 @@ import {
   type PendingCard,
 } from "@/lib/pending-card";
 import { clearPendingPix, restorePendingPix, savePendingPix } from "@/lib/pending-pix";
+import { rememberPaymentAttempt, recoverUncertainPayment, clearUncertainPayment } from "@/lib/uncertain-payment";
 import { isTerminatedOrder } from "@/lib/order-events";
 import { Lock } from "lucide-react";
 import { SecuritySeal, Shell } from "@/components/site";
@@ -239,6 +240,7 @@ function Checkout() {
   const [cardRetryVerified, setCardRetryVerified] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [cardDone, setCardDone] = useState<PendingCard | null>(null);
+  const [paymentRecoveryRequired, setPaymentRecoveryRequired] = useState(false);
   const [cfg, setCfg] = useState<{
     externalId: string;
     sandbox: boolean;
@@ -278,6 +280,11 @@ function Checkout() {
   }, []);
 
   const hasLines = c.lines.length > 0;
+  // Recover uncertain payment attempts after reload; the marker has no customer PII.
+  useEffect(() => {
+    if (recoverUncertainPayment()) setPaymentRecoveryRequired(true);
+  }, []);
+
   // A disabled method can stop conversion before the buyer ever clicks Pay.
   // Record availability without sending customer, address or card fields.
   useEffect(() => {
@@ -532,7 +539,7 @@ function Checkout() {
       setError("Escolha a forma de entrega.");
       return;
     }
-    if (paymentInFlight.current || cardDone) return;
+    if (paymentInFlight.current || cardDone || paymentRecoveryRequired) return;
     if (pay === "card" && cardSdkState !== "ready") {
       setError("A validação segura do cartão não está pronta. Recarregue a validação ou escolha Pix.");
       return;
@@ -540,6 +547,9 @@ function Checkout() {
     paymentInFlight.current = true;
     setBusy(true);
     setError(null);
+    // The request might reach Appmax even when the browser never sees a response.
+    // Persist a tab-local guard BEFORE transmitting any payment data.
+    rememberPaymentAttempt(pay);
     try {
       const r = await createPayment({
         data: {
@@ -566,6 +576,12 @@ function Checkout() {
       });
       if (!r.ok) {
         track("checkout_error", { step: "payment", reason: "gateway_or_validation", payment_type: pay });
+        if ("retrySafe" in r && r.retrySafe === false) {
+          setPaymentRecoveryRequired(true);
+        } else {
+          // Explicit rejection before payment is not a pending charge.
+          clearUncertainPayment();
+        }
         setError(r.message);
         return;
       }
@@ -580,6 +596,7 @@ function Checkout() {
         };
         savePendingPix(pixResult);
         setPix(pixResult);
+        clearUncertainPayment();
         window.scrollTo({ top: 0 });
       } else {
         const cardResult = pendingPaymentFromResponse(r);
@@ -591,10 +608,12 @@ function Checkout() {
           if (isTerminatedOrder(cardResult.status)) setCardRetryVerified(cardResult.orderId);
         }
         setCardDone(cardResult);
+        clearUncertainPayment();
       }
     } catch {
       track("checkout_error", { step: "payment", reason: "network_or_server", payment_type: pay });
-      setError("Não conseguimos processar agora. Tente novamente em instantes.");
+      setPaymentRecoveryRequired(true);
+      setError("Não foi possível confirmar a resposta do pagamento. Não tente pagar novamente antes de consultar o atendimento.");
     } finally {
       paymentInFlight.current = false;
       setBusy(false);
@@ -808,6 +827,30 @@ function Checkout() {
             className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground"
           >
             Continuar comprando
+          </Link>
+        </div>
+      </Shell>
+    );
+
+  if (paymentRecoveryRequired)
+    return (
+      <Shell>
+        <div className="container-site max-w-xl py-16 text-center" role="status" aria-live="polite">
+          <h1 className="font-display text-h1">Pagamento em verificação</h1>
+          <p className="mt-4 text-body text-muted-foreground">
+            A conexão foi interrompida ou a confirmação não chegou ao navegador. Isso não significa
+            que o pagamento foi recusado. Para evitar uma cobrança duplicada, não tente gerar outro
+            Pix ou pagar com outro cartão antes de consultar a situação do pedido.
+          </p>
+          <p className="mt-4 rounded-lg border border-border bg-muted p-4 text-body">
+            Nenhuma nova cobrança será iniciada automaticamente nesta aba. O atendimento pode ajudar
+            a localizar sua tentativa pelo contato informado na compra.
+          </p>
+          <Link
+            to="/conta"
+            className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground"
+          >
+            Consultar atendimento
           </Link>
         </div>
       </Shell>

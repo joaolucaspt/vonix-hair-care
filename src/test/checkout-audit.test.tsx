@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getProduct, lineTotals } from "@/lib/store";
 import { savePendingCard } from "@/lib/pending-card";
 import { savePendingPix } from "@/lib/pending-pix";
+import { UNCERTAIN_PAYMENT_KEY } from "@/lib/uncertain-payment";
 import { TRACKING_CONSENT_KEY } from "@/lib/tracking-consent";
 
 const mocks = vi.hoisted(() => ({
@@ -123,6 +124,68 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("perda da resposta do gateway impede nova tentativa e persiste guarda após recarregar", async () => {
+    mocks.payment.mockRejectedValueOnce(new Error("simulated connection lost after submission"));
+    const checkout = render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(await screen.findByRole("heading", { name: "Pagamento em verificação" })).toBeInTheDocument();
+    expect(screen.getByText(/não tente gerar outro Pix ou pagar com outro cartão/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Gerar Pix/ })).not.toBeInTheDocument();
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+    const marker = sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY);
+    expect(marker).toContain('"method":"pix"');
+    expect(marker).not.toContain("52998224725");
+    expect(marker).not.toContain("teste@example.com");
+    checkout.unmount();
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pagamento em verificação" })).toBeInTheDocument();
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+  });
+
+  it("marca tentativa como pendente antes de enviar dados e remove o bloqueio após negativa segura", async () => {
+    let reply: ((value: unknown) => void) | undefined;
+    mocks.payment.mockImplementationOnce(
+      () => new Promise((resolve) => { reply = resolve; }),
+    );
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    await waitFor(() => expect(mocks.payment).toHaveBeenCalledTimes(1));
+    expect(sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY)).toContain('"method":"pix"');
+    await act(async () => {
+      reply?.({ ok: false, message: "Dados inválidos antes da cobrança" });
+    });
+    expect(await screen.findByText("Dados inválidos antes da cobrança")).toBeInTheDocument();
+    expect(sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY)).toBeNull();
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
+  });
+
+  it("erro ambíguo explícito do servidor bloqueia nova cobrança mesmo com HTTP 200", async () => {
+    mocks.payment.mockResolvedValueOnce({
+      ok: false,
+      retrySafe: false,
+      message: "Não foi possível confirmar a tentativa de compra.",
+    });
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(await screen.findByRole("heading", { name: "Pagamento em verificação" })).toBeInTheDocument();
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY)).toContain('"method":"pix"');
+  });
+
+  it("validação negada antes da cobrança libera correção de dados sem manter guarda", async () => {
+    mocks.payment.mockResolvedValueOnce({ ok: false, message: "Cupom inválido" });
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(await screen.findByText("Cupom inválido")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Pagamento em verificação" })).not.toBeInTheDocument();
+    expect(sessionStorage.getItem(UNCERTAIN_PAYMENT_KEY)).toBeNull();
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
+  });
+
   it("permite solicitar Pix com cookies opcionais recusados sem disparar analytics", async () => {
     localStorage.setItem(TRACKING_CONSENT_KEY, "rejected");
     const gtag = window.gtag;

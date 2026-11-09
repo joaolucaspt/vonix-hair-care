@@ -1,0 +1,67 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "pr": 26,
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "startingCommit": "5c4808690b04e35692070e9ce1bb484e0c6cb151",
+  "regression": {
+    "vitest": {
+      "tests": 429,
+      "passed": 429,
+      "files": 58,
+      "exit": 0
+    },
+    "typeScript": {
+      "exit": 0
+    },
+    "eslintTargeted": {
+      "exit": 0
+    },
+    "productionBuild": {
+      "exit": 0
+    },
+    "ssrProducts": {
+      "count": 43,
+      "passed": 43,
+      "failed": 0,
+      "exit": 0
+    },
+    "browserResponsive": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "passed": true,
+      "exit": 0,
+      "localOnly": true
+    },
+    "browserCart": {
+      "passed": true,
+      "exit": 0,
+      "localOnly": true
+    }
+  },
+  "fixes": [
+    "Do not invite reattempt after ambiguous gateway network failure",
+    "Store only payment method and timestamp in tab-scoped sessionStorage before request",
+    "Preserve a no-retry verification screen on reload within marker TTL",
+    "Server marks ambiguous checkout failures retrySafe:false",
+    "Explicit validation failures and acknowledged payment responses clear uncertainty marker",
+    "No customer PII, cards, tokens, orders or shipping stored in uncertainty marker"
+  ],
+  "caveats": [
+    "Not real Appmax sandbox or production payment validation",
+    "Blocked sessionStorage and separate tabs require server-side idempotency",
+    "No order ID means support must independently verify payment status",
+    "Other P0 gates continue pending per staging runbook"
+  ],
+  "protected": {
+    "affiliateCodeEdited": false,
+    "realPayments": false,
+    "productionSql": false,
+    "productionDeployment": false,
+    "mergeToMain": false
+  }
+}

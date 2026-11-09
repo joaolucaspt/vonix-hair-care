@@ -434,6 +434,7 @@ export const createPayment = createServerFn({ method: "POST" })
         ok: false as const,
         message:
           "Não foi possível confirmar a tentativa de compra. Para evitar cobrança duplicada, consulte o atendimento antes de tentar pagar novamente.",
+        retrySafe: false as const,
       };
     }
   });

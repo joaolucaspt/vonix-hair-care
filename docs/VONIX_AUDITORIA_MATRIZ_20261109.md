@@ -74,6 +74,13 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N30 | Média | Checkout prometia envio de confirmação por e-mail/WhatsApp sem evidência de automação transacional homologada | Telas de Pix e cartão agora orientam guardar número do pedido e consultar acompanhamento/atendimento; regressão em teste. |
 | N31 | Alta, ainda pendente | Revogação de cookies após a criação do pedido não é automaticamente propagada ao snapshot server-side | Risco documentado; depende de ledger e endpoint autenticado, validação de identidade, bases legais e staging. Não declarar conformidade LGPD integral. |
 
+| N32 | Alta | Perda da resposta HTTP de pagamento mostrava “Tente novamente” apesar de cobrança poder ter sido iniciada | Cliente vê “Pagamento em verificação”, sem CTA para segunda cobrança, com mensagem segura e atendimento; o backend marca sua falha ambígua como `retrySafe:false`. |
+| N33 | Alta | Atualizar a aba enquanto `createPayment` estava pendente poderia apagar o estado da tentativa e convidar outra compra | `sessionStorage` recebe apenas método e horário **antes** da requisição, preserva bloqueio local temporário, sem PII; erro conhecido seguro limpa o marcador. Idempotência de backend continua necessária para outras abas e dispositivos. |
+
+## Recibo C6 (09/11)
+
+Os testes C6 incluem perda de resposta, retorno ambíguo, tentativa durante a requisição, refresh, expiração e armazenamento bloqueado. A validação final e o status remoto são documentados em `docs/VONIX_AUDITORIA_CONTINUIDADE_C6_20261109.md` e no recibo C6. **Sem homologação de cobranças reais.**
+
 ## Recibo C5 (09/11)
 
 Compra continua independente de marketing; o snapshot versiona aceite opcional e a Meta só recebe Purchase aprovado com opt-in. **421 testes iniciais PASS, PostgreSQL 16 real descartável PASS**. Suite final e CI devem ser verificados depois das últimas edições. Ver `docs/VONIX_AUDITORIA_CONTINUIDADE_C5_20261109.md` e `docs/VONIX_P0_STAGING_RUNBOOK_20261109.md`.
