@@ -8,6 +8,7 @@ const keys = [
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "AFFILIATE_TRAFFIC_PEPPER",
+  "AFFILIATE_TRUSTED_IP_HEADER",
   "AFFILIATE_ADMIN_PASSWORD",
   "AFFILIATE_ADMIN_SESSION_SECRET",
   "AFFILIATE_ADMIN_TOTP_SECRET",
@@ -25,6 +26,7 @@ beforeEach(() => {
     AFFILIATE_SUPABASE_URL: "https://example.supabase.co",
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: "test-only-key",
     AFFILIATE_TRAFFIC_PEPPER: "unit-test-hmac-pepper-longer-than-32-chars",
+    AFFILIATE_TRUSTED_IP_HEADER: "cf-connecting-ip",
     AFFILIATE_ADMIN_PASSWORD: "unit-test-long-enough-password",
     AFFILIATE_ADMIN_SESSION_SECRET: "unit-test-session-key-longer-than-32-characters",
     AFFILIATE_ADMIN_TOTP_SECRET: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
@@ -58,6 +60,17 @@ describe("Public affiliate launch gate", () => {
     process.env["SUPABASE_SERVICE_ROLE_KEY"] = "wrong-other-database-key";
     expect(affiliateRecruitmentOpen()).toBe(false);
   });
+  it("requires an explicit trusted proxy header before opening registration", () => {
+    process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
+    expect(affiliateRecruitmentOpen()).toBe(true);
+    delete process.env["AFFILIATE_TRUSTED_IP_HEADER"];
+    expect(affiliateRecruitmentOpen()).toBe(false);
+    process.env["AFFILIATE_TRUSTED_IP_HEADER"] = "accept-anything";
+    expect(affiliateRecruitmentOpen()).toBe(false);
+    process.env["AFFILIATE_TRUSTED_IP_HEADER"] = "x-real-ip";
+    expect(affiliateRecruitmentOpen()).toBe(true);
+  });
+
   it("requires MFA before public launch in production", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
     delete process.env["AFFILIATE_ADMIN_TOTP_SECRET"];

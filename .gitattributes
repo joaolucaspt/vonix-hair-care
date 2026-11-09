@@ -13,3 +13,6 @@ src/test/affiliate-throttle.test.ts text eol=lf
 src/test/affiliate-recruitment.test.ts text eol=lf
 scripts/qa-affiliate-concurrency.mjs text eol=lf
 src/routeTree.gen.ts text eol=lf
+
+src/test/affiliate-admin-ui.test.tsx text eol=lf
+.github/workflows/vonix-affiliates.yml text eol=lf

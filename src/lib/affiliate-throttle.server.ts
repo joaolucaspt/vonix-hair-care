@@ -17,11 +17,20 @@ export function affiliateIpDigest(
 }
 
 /** Only trust headers set/overwritten by the reverse proxy, never an arbitrary client-selected IP. */
+export function affiliateTrustedIpHeaderValid(): boolean {
+  return ["cf-connecting-ip", "x-real-ip", "x-forwarded-for"].includes(
+    env("AFFILIATE_TRUSTED_IP_HEADER"),
+  );
+}
+
+/**
+ * Explicit edge configuration is mandatory: any client can forge forwarded headers
+ * unless the selected reverse proxy strips and overwrites them at ingress.
+ */
 function trustedClientIp(): string | undefined {
-  const forwarded = getRequestHeader("cf-connecting-ip");
-  if (forwarded) return forwarded.trim();
   const trusted = env("AFFILIATE_TRUSTED_IP_HEADER");
-  if (trusted === "x-real-ip") return getRequestHeader("x-real-ip");
+  if (trusted === "cf-connecting-ip") return getRequestHeader("cf-connecting-ip")?.trim();
+  if (trusted === "x-real-ip") return getRequestHeader("x-real-ip")?.trim();
   if (trusted === "x-forwarded-for")
     return getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim();
   return undefined;

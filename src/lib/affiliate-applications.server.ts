@@ -8,6 +8,7 @@ import {
   type AffiliateStatus,
 } from "./affiliate-application";
 import { affiliateDecisionEmail } from "./affiliate-email";
+import { affiliateTrustedIpHeaderValid } from "./affiliate-throttle.server";
 
 function supabase() {
   const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
@@ -45,6 +46,7 @@ export function affiliateRecruitmentOpen(): boolean {
     url &&
     key &&
     env("AFFILIATE_TRAFFIC_PEPPER").length >= 32 &&
+    affiliateTrustedIpHeaderValid() &&
     env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
     env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32 &&
     (process.env["NODE_ENV"] !== "production" || /^[A-Z2-7]{32,128}$/i.test(otp)) &&

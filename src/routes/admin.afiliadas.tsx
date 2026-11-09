@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -77,7 +77,7 @@ function safeProfileLink(value: string, platform: "instagram" | "tiktok") {
   }
 }
 
-function AffiliateAdminPage() {
+export function AffiliateAdminPage() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
@@ -105,16 +105,37 @@ function AffiliateAdminPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  // Versions prevent any in-flight list or decision from restoring private data after logout.
+  const sessionVersion = useRef(0);
+  const loadVersion = useRef(0);
+
+  function clearPrivateData() {
+    setApplications([]);
+    setStats({ pendente: 0, aprovada: 0, recusada: 0 });
+    setMailStats({ pendente: 0, processando: 0, enviado: 0, falhou: 0, incerto: 0 });
+    setTotal(0);
+    setWorkingId(null);
+    setNotice("");
+  }
+
   async function load(nextStatus = status, nextPage = page, nextSearch = search) {
+    const requestId = ++loadVersion.current;
+    const sessionId = sessionVersion.current;
+    const isCurrent = () =>
+      requestId === loadVersion.current && sessionId === sessionVersion.current;
     setLoading(true);
     setError("");
     try {
       const response = await getAffiliateApplications({
         data: { status: nextStatus, page: nextPage, search: nextSearch || undefined },
       });
+      if (!isCurrent()) return;
       if (!response.ok) {
         setError(response.reason);
-        if (response.reason.includes("Acesso negado")) setAuthorized(false);
+        if (response.reason.includes("Acesso negado")) {
+          setAuthorized(false);
+          clearPrivateData();
+        }
         return;
       }
       setAuthorized(true);
@@ -126,14 +147,16 @@ function AffiliateAdminPage() {
       setMailStats(response.mailStats);
       setTotal(response.total);
     } catch {
-      setError("Não foi possível carregar os dados. Tente novamente.");
+      if (isCurrent()) setError("Não foi possível carregar os dados. Tente novamente.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }
 
   useEffect(() => {
     let active = true;
+    const sessionRef = sessionVersion;
+    const loadRef = loadVersion;
     void getAffiliateAdminSession()
       .then(async (session) => {
         if (active && session.authenticated) await load("pendente", 0, "");
@@ -144,6 +167,9 @@ function AffiliateAdminPage() {
       });
     return () => {
       active = false;
+      // Invalidate work started by the initial session check when leaving this screen.
+      sessionRef.current++;
+      loadRef.current++;
     };
     // Session status is checked only on initial mount, not on each filter change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,35 +197,41 @@ function AffiliateAdminPage() {
   }
 
   async function signOut() {
+    if (loading && !authorized) return;
+    // Clear sensitive information immediately, not after a network round-trip.
+    sessionVersion.current++;
+    loadVersion.current++;
+    setAuthorized(false);
+    setPassword("");
+    setOtp("");
+    clearPrivateData();
     setLoading(true);
     setError("");
     try {
       const result = await logoutAffiliateAdmin();
       if (!result.ok) {
-        setError("Não foi possível encerrar a sessão. Tente novamente.");
-        return;
+        setError(
+          "Não foi possível confirmar a saída. Feche esta aba; a sessão expira em até 2 horas.",
+        );
       }
-      setPassword("");
-      setOtp("");
-      setAuthorized(false);
-      setApplications([]);
-      setMailStats({ pendente: 0, processando: 0, enviado: 0, falhou: 0, incerto: 0 });
-      setError("");
-      setNotice("");
     } catch {
-      setError("Não foi possível encerrar a sessão. Tente novamente.");
+      setError(
+        "Não foi possível confirmar a saída. Feche esta aba; a sessão expira em até 2 horas.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
   async function decide(app: AffiliateApplicationRecord, decision: "aprovada" | "recusada") {
-    if (workingId || app.status !== "pendente") return;
+    if (workingId || app.status !== "pendente" || !authorized) return;
+    const sessionId = sessionVersion.current;
     setWorkingId(app.id);
     setError("");
     setNotice("");
     try {
       const result = await reviewAffiliateApplication({ data: { id: app.id, decision } });
+      if (sessionVersion.current !== sessionId) return;
       if (!result.ok) {
         setError(result.reason);
       } else {
@@ -212,9 +244,12 @@ function AffiliateAdminPage() {
       }
       await load(status, page, search);
     } catch {
-      setError("Não foi possível concluir a decisão. Confira o status antes de tentar novamente.");
+      if (sessionVersion.current === sessionId)
+        setError(
+          "Não foi possível concluir a decisão. Confira o status antes de tentar novamente.",
+        );
     } finally {
-      setWorkingId(null);
+      if (sessionVersion.current === sessionId) setWorkingId(null);
     }
   }
 
@@ -237,6 +272,7 @@ function AffiliateAdminPage() {
             {authorized && (
               <button
                 onClick={() => void signOut()}
+                disabled={loading && !authorized}
                 className="rounded-full border border-[#dcc7c9] px-5 py-2 text-sm font-semibold hover:bg-[#faf2f2]"
               >
                 Sair
