@@ -28,23 +28,23 @@ const valid = {
 };
 
 const original = {
-  url: process.env["SUPABASE_URL"],
-  key: process.env["SUPABASE_SERVICE_ROLE_KEY"],
+  url: process.env["AFFILIATE_SUPABASE_URL"],
+  key: process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
   password: process.env["AFFILIATE_ADMIN_PASSWORD"],
   resend: process.env["RESEND_API_KEY"],
   from: process.env["AFFILIATE_FROM_EMAIL"],
 };
 beforeEach(() => {
-  process.env["SUPABASE_URL"] = "https://example.supabase.co";
-  process.env["SUPABASE_SERVICE_ROLE_KEY"] = "example-test-service-key";
+  process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+  process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "example-test-service-key";
   process.env["AFFILIATE_ADMIN_PASSWORD"] = "a-long-test-password-for-team";
   delete process.env["RESEND_API_KEY"];
   delete process.env["AFFILIATE_FROM_EMAIL"];
 });
 afterEach(() => {
   for (const [name, old] of Object.entries({
-    SUPABASE_URL: original.url,
-    SUPABASE_SERVICE_ROLE_KEY: original.key,
+    AFFILIATE_SUPABASE_URL: original.url,
+    AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: original.key,
     AFFILIATE_ADMIN_PASSWORD: original.password,
     RESEND_API_KEY: original.resend,
     AFFILIATE_FROM_EMAIL: original.from,

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type HTMLInputTypeAttribute } from "react";
+import { useEffect, useRef, useState, type FormEvent, type HTMLInputTypeAttribute } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -214,8 +214,34 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
   const [sent, setSent] = useState(false);
   const [zipLoading, setZipLoading] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const navigated = useRef(false);
+  const pendingFieldFocus = useRef<WizardKey | null>(null);
+  const zipLookupId = useRef(0);
+
+  // Focus after React has rendered the destination stage, not the old heading.
+  useEffect(() => {
+    if (!navigated.current) return;
+    const fieldToFocus = pendingFieldFocus.current;
+    pendingFieldFocus.current = null;
+    const target = fieldToFocus ? document.getElementById("wizard-" + fieldToFocus) : null;
+    if (target) target.focus();
+    else heading.current?.focus();
+    heading.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [step]);
+
+  useEffect(
+    () => () => {
+      zipLookupId.current += 1;
+    },
+    [],
+  );
 
   function update(key: WizardKey, value: string | boolean) {
+    if (key === "postalCode") {
+      // Stale asynchronous lookups must not overwrite a manually changed address.
+      zipLookupId.current += 1;
+      setZipLoading(false);
+    }
     setValues((old) => ({ ...old, [key]: value }));
     setErrors((old) => ({ ...old, [key]: "" }));
     setMessage("");
@@ -257,15 +283,18 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
     />
   );
   function moveTo(next: number) {
+    navigated.current = true;
+    zipLookupId.current += 1;
+    setZipLoading(false);
     setStep(next);
     setErrors({});
     setMessage("");
-    heading.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }
 
   async function lookupPostalCode() {
     const zip = onlyDigits(value("postalCode"));
     if (preview || zip.length !== 8 || zipLoading) return;
+    const requestId = ++zipLookupId.current;
     setZipLoading(true);
     try {
       // Public Brazilian postal code lookup; never sends CPF/name/email or address number.
@@ -281,17 +310,22 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
         bairro?: string;
       };
       if (data.erro) return;
-      setValues((old) => ({
-        ...old,
-        city: old.city || data.localidade || "",
-        state: old.state || data.uf || "",
-        street: old.street || data.logradouro || "",
-        district: old.district || data.bairro || "",
-      }));
+      setValues((old) => {
+        if (requestId !== zipLookupId.current || onlyDigits(String(old.postalCode)) !== zip) {
+          return old;
+        }
+        return {
+          ...old,
+          city: old.city || data.localidade || "",
+          state: old.state || data.uf || "",
+          street: old.street || data.logradouro || "",
+          district: old.district || data.bairro || "",
+        };
+      });
     } catch {
       // Postal-code lookup is optional: manual entry remains available.
     } finally {
-      setZipLoading(false);
+      if (requestId === zipLookupId.current) setZipLoading(false);
     }
   }
 
@@ -314,7 +348,10 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
       const targetStep = WIZARD_STEPS.findIndex(
         (_, index) => stepErrors(index, values)[key] !== undefined,
       );
-      if (targetStep >= 0) moveTo(targetStep);
+      if (targetStep >= 0) {
+        pendingFieldFocus.current = key as WizardKey;
+        moveTo(targetStep);
+      }
       setErrors({ [key]: issue?.message ?? "Revise este campo." });
       return;
     }

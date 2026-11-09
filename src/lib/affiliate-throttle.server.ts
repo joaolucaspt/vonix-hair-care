@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { isIP } from "node:net";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { env } from "./env.server";
+import { affiliateDatabaseConfig } from "./affiliate-database.server";
 
 export type AffiliateRateScope = "submit" | "admin";
 
@@ -42,20 +43,13 @@ async function affiliateRateRequest(
   rpc: "consume_rate_limit" | "rate_limit_allowed",
 ): Promise<boolean> {
   const digest = affiliateIpDigest(trustedClientIp(), scope, env("AFFILIATE_TRAFFIC_PEPPER"));
-  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
-  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-  if (Boolean(dedicatedUrl) !== Boolean(dedicatedKey)) return false;
-  const url = dedicatedUrl || env("SUPABASE_URL");
-  const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
-  if (!digest || !url || !key) return false;
+  const config = affiliateDatabaseConfig();
+  if (!digest || !config) return false;
   try {
-    const response = await fetch(url.replace(/\/$/, "") + "/rest/v1/rpc/vonix_affiliate_" + rpc, {
+    const response = await fetch(config.url + "/rest/v1/rpc/vonix_affiliate_" + rpc, {
       method: "POST",
-      headers: {
-        apikey: key,
-        authorization: "Bearer " + key,
-        "content-type": "application/json",
-      },
+      headers: config.headers,
+      redirect: "error",
       body: JSON.stringify({ p_scope: scope, p_fingerprint: digest }),
       signal: AbortSignal.timeout(4500),
     });

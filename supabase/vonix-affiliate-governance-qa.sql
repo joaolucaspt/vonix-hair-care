@@ -93,6 +93,12 @@ $qa$;
 reset role;
 do $roles$
 begin
+  if not exists (
+    select 1 from pg_indexes where schemaname='public'
+      and indexname='vonix_affiliate_audit_events_application_id_idx'
+  ) then
+    raise exception 'Audit foreign-key index was not created';
+  end if;
   if has_table_privilege('anon','public.vonix_affiliate_audit_events','SELECT')
      or has_table_privilege('authenticated','public.vonix_affiliate_audit_events','INSERT')
      or has_function_privilege('anon','public.vonix_affiliate_erase(uuid,text,text)','EXECUTE')

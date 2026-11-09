@@ -9,6 +9,7 @@ const server = vi.hoisted(() => ({
   reviewAffiliateApplication: vi.fn(),
   eraseAffiliateApplicationAdmin: vi.fn(),
   getAffiliateOperationalReadiness: vi.fn(),
+  getAffiliateRetentionPreview: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-functions", () => server);
@@ -60,6 +61,12 @@ beforeEach(() => {
     checks: [{ id: "migration", label: "Migração de governança atestada", ok: false }],
   });
   server.getAffiliateApplications.mockResolvedValue(list());
+  server.getAffiliateRetentionPreview.mockResolvedValue({
+    ok: true,
+    pendingEligible: 5,
+    rejectedEligible: 9,
+    executedDeletions: 0,
+  });
 });
 
 afterEach(() => cleanup());
@@ -152,6 +159,78 @@ describe("Vonix affiliate private panel", () => {
     expect(server.getAffiliateOperationalReadiness).toHaveBeenCalledOnce();
   });
 
+  it("shows only aggregate, read-only retention counts to authenticated administrators", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    expect(server.getAffiliateRetentionPreview).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/Pendentes há pelo menos/i), {
+      target: { value: "120" },
+    });
+    fireEvent.change(screen.getByLabelText(/Recusadas há pelo menos/i), {
+      target: { value: "240" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+    await waitFor(() =>
+      expect(server.getAffiliateRetentionPreview).toHaveBeenCalledWith({
+        data: { pendingDays: 120, rejectedDays: 240 },
+      }),
+    );
+    expect(await screen.findByText("5")).toBeInTheDocument();
+    expect(screen.getByText("9")).toBeInTheDocument();
+    expect(screen.getByText(/Exclusões executadas por esta consulta: 0/)).toBeInTheDocument();
+    expect(server.eraseAffiliateApplicationAdmin).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Pendentes há pelo menos/i), {
+      target: { value: "121" },
+    });
+    expect(screen.queryByText(/Exclusões executadas por esta consulta: 0/)).not.toBeInTheDocument();
+  });
+
+  it("does not restore a stale retention preview after administrator logout", async () => {
+    let finish!: (value: {
+      ok: true;
+      pendingEligible: number;
+      rejectedEligible: number;
+      executedDeletions: number;
+    }) => void;
+    const delayed = new Promise<{
+      ok: true;
+      pendingEligible: number;
+      rejectedEligible: number;
+      executedDeletions: number;
+    }>((resolve) => {
+      finish = resolve;
+    });
+    server.getAffiliateRetentionPreview.mockReturnValueOnce(delayed);
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+    await waitFor(() => expect(server.getAffiliateRetentionPreview).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    await act(async () => {
+      finish({ ok: true, pendingEligible: 42, rejectedEligible: 11, executedDeletions: 0 });
+    });
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Prévia de retenção LGPD")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Exclusões executadas por esta consulta/)).not.toBeInTheDocument();
+  });
+
+  it("does not link untrusted social profiles supplied by stored applications", async () => {
+    server.getAffiliateApplications.mockResolvedValueOnce(
+      list([
+        {
+          ...candidate,
+          instagram_url: "https://someone:password@instagram.com/qa",
+          tiktok_url: "https://tiktok.com/@qa?redirect=https://evil.invalid",
+        },
+      ]),
+    );
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Instagram/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /TikTok/i })).not.toBeInTheDocument();
+  });
+
   it("requires exact email confirmation before a candidate can be erased", async () => {
     render(<Page />);
     expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
@@ -182,5 +261,6 @@ describe("Vonix affiliate private panel", () => {
     expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
     expect(server.getAffiliateApplications).not.toHaveBeenCalled();
     expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prévia de retenção LGPD")).not.toBeInTheDocument();
   });
 });

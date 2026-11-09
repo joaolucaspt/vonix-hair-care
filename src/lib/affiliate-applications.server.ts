@@ -2,6 +2,10 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { env } from "./env.server";
 import {
+  affiliateDatabaseConfig,
+  requireAffiliateDatabaseConfig,
+} from "./affiliate-database.server";
+import {
   affiliateApplicationSchema,
   type AffiliateApplicationInput,
   type AffiliateApplicationRecord,
@@ -16,26 +20,6 @@ import {
   encryptAffiliateWizard,
 } from "./affiliate-wizard-crypto.server";
 
-function supabase() {
-  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
-  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-  if (Boolean(dedicatedUrl) !== Boolean(dedicatedKey)) {
-    throw new Error("Banco dedicado de afiliadas parcialmente configurado.");
-  }
-  const url = dedicatedUrl || env("SUPABASE_URL");
-  const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Banco de inscrições não configurado.");
-  return {
-    url: url.replace(/\/$/, ""),
-    headers: {
-      apikey: key,
-      authorization: "Bearer " + key,
-      "content-type": "application/json",
-      "cache-control": "no-store",
-    },
-  };
-}
-
 /**
  * Publishing the source must never advertise an open signup before infrastructure
  * has been configured and independently tested by an operator.
@@ -47,24 +31,17 @@ export function affiliateRecruitmentOpen(): boolean {
   if (env("AFFILIATE_GOVERNANCE_MIGRATED") !== "true") return false;
   if (env("AFFILIATE_PRIVACY_POLICY_APPROVED") !== "true") return false;
   if (env("AFFILIATE_PROVIDER_VERIFIED") !== "true") return false;
-  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
-  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-  if (Boolean(dedicatedUrl) !== Boolean(dedicatedKey)) return false;
-  const url = dedicatedUrl || env("SUPABASE_URL");
-  const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
+  if (!affiliateDatabaseConfig()) return false;
   const otp = env("AFFILIATE_ADMIN_TOTP_SECRET").replace(/\s/g, "");
   return Boolean(
-    url &&
-    key &&
     env("AFFILIATE_TRAFFIC_PEPPER").length >= 32 &&
     affiliateTrustedIpHeaderValid() &&
     affiliateQuestionnaireEncryptionReady() &&
     env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
     env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32 &&
-    (process.env["NODE_ENV"] !== "production" || /^[A-Z2-7]{32,128}$/i.test(otp)) &&
-    env("AFFILIATE_WORKER_SECRET").length >= 24 &&
-    env("RESEND_API_KEY") &&
-    env("AFFILIATE_FROM_EMAIL"),
+    /^[A-Z2-7]{32,128}$/i.test(otp),
+    // Email notifications are optional for receiving applications. A missing
+    // Resend sender never authorizes sending or relaxes PII security checks.
   );
 }
 
@@ -81,10 +58,12 @@ export function affiliateAdminAuthorized(password: string) {
 }
 
 async function requestSupabase(route: string, init?: RequestInit) {
-  const config = supabase();
+  const config = requireAffiliateDatabaseConfig();
   const response = await fetch(config.url + "/rest/v1/" + route, {
     ...init,
     headers: { ...config.headers, ...init?.headers },
+    // Do not follow unexpected redirects with privileged credentials.
+    redirect: "error",
     signal: AbortSignal.timeout(8000),
   });
   return response;
@@ -145,14 +124,13 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
 }
 
 export async function affiliateOperationalReadiness() {
-  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
-  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-  const dbConfigured = Boolean(
-    (dedicatedUrl && dedicatedKey) ||
-    (!dedicatedUrl && !dedicatedKey && env("SUPABASE_URL") && env("SUPABASE_SERVICE_ROLE_KEY")),
-  );
+  const dbConfigured = Boolean(affiliateDatabaseConfig());
   const checks = [
-    { id: "database", label: "Credenciais do banco no servidor", ok: dbConfigured },
+    {
+      id: "database",
+      label: "Banco dedicado de inscrições configurado no servidor",
+      ok: dbConfigured,
+    },
     {
       id: "migration",
       label: "Migração de governança atestada",
@@ -165,7 +143,7 @@ export async function affiliateOperationalReadiness() {
     },
     {
       id: "provider",
-      label: "Provedor e proxy homologados",
+      label: "Hospedagem e proxy homologados",
       ok: env("AFFILIATE_PROVIDER_VERIFIED") === "true",
     },
     {
@@ -192,7 +170,7 @@ export async function affiliateOperationalReadiness() {
     },
     {
       id: "resend",
-      label: "Envio de e-mails configurado",
+      label: "Notificações por e-mail (opcional para inscrições)",
       ok: Boolean(
         env("RESEND_API_KEY") &&
         env("AFFILIATE_FROM_EMAIL") &&

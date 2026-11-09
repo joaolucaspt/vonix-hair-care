@@ -25,7 +25,12 @@ type Phase = "ready" | "spinning" | "won";
 
 export function PrizeWheel() {
   const path = useLocation().pathname;
-  const hidden = path === "/carrinho" || path === "/checkout" || path === "/conta" || path === "/auth";
+  const hidden =
+    path === "/carrinho" ||
+    path === "/checkout" ||
+    path === "/conta" ||
+    path === "/auth" ||
+    path.startsWith("/produto/");
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("ready");
   const [accepted, setAccepted] = useState(false);

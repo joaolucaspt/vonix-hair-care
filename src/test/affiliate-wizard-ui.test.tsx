@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({ submit: vi.fn() }));
@@ -24,7 +24,10 @@ function next() {
 beforeEach(() => {
   vi.resetAllMocks();
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("Vonix five-stage browser wizard", () => {
   it("requires step one personal data and validates identity before advancing", () => {
@@ -86,5 +89,130 @@ describe("Vonix five-stage browser wizard", () => {
     expect((document.getElementById("wizard-couponSuggestion") as HTMLInputElement).value).toBe(
       "MARINA10",
     );
+  });
+
+  it("focuses the newly rendered stage heading on navigation", async () => {
+    render(<AffiliateWizard preview />);
+    field("firstName", "Marina");
+    field("lastName", "Exemplo");
+    field("phone", "31999999999");
+    field("email", "marina@example.com");
+    field("emailConfirmation", "marina@example.com");
+    field("cpf", "52998224725");
+    field("birthDate", "1998-09-14");
+    field("birthCity", "Belo Horizonte");
+    field("postalCode", "30110012");
+    field("city", "Belo Horizonte");
+    field("state", "MG");
+    field("street", "Rua da Bahia");
+    field("district", "Centro");
+    field("number", "150");
+    field("instagramUsername", "marina.exemplo");
+    next();
+    expect(screen.getByText("Passo 2 de 5")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Seu conteúdo" })).toHaveFocus(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Dados pessoais" })).toHaveFocus(),
+    );
+  });
+
+  it("discards a postal-code lookup response after the user changes the CEP", async () => {
+    let answer: ((value: Response) => void) | undefined;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AffiliateWizard />);
+    field("postalCode", "30110012");
+    fireEvent.blur(document.getElementById("wizard-postalCode")!);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("30110012"),
+      expect.objectContaining({ signal: expect.anything() }),
+    );
+    field("postalCode", "31200000");
+    await act(async () => {
+      answer?.(
+        Response.json({
+          localidade: "Cidade Antiga",
+          uf: "MG",
+          logradouro: "Rua Antiga",
+          bairro: "Bairro Antigo",
+        }),
+      );
+    });
+    expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-postalCode") as HTMLInputElement).value).toBe(
+      "31200-000",
+    );
+  });
+
+  it("enviará somente uma candidatura validada quando o cadastro for autorizado", async () => {
+    let complete: ((value: { ok: true }) => void) | undefined;
+    api.submit.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    render(<AffiliateWizard />);
+
+    field("firstName", "Marina");
+    field("lastName", "Exemplo");
+    field("phone", "31999999999");
+    field("email", "marina@example.com");
+    field("emailConfirmation", "marina@example.com");
+    field("cpf", "52998224725");
+    field("birthDate", "1998-09-14");
+    field("birthCity", "Belo Horizonte");
+    field("postalCode", "30110012");
+    field("city", "Belo Horizonte");
+    field("state", "MG");
+    field("street", "Rua da Bahia");
+    field("district", "Centro");
+    field("number", "150");
+    field("instagramUsername", "marina.exemplo");
+    next();
+
+    field("niche", "Lifestyle");
+    field("tiktokFollowers", "Não utilizo TikTok");
+    next();
+    field("municipalRegistration", "nao");
+    field("dependents", "Não tenho");
+    next();
+    field("preferredLine", "Botox Vonix");
+    field("couponSuggestion", "MARINA10");
+    next();
+    field("hairType", "Cacheado");
+    fireEvent.click(document.getElementById("wizard-termsAccepted")!);
+    const send = screen.getByRole("button", { name: /Enviar candidatura/i });
+    fireEvent.click(send);
+    expect(api.submit).toHaveBeenCalledTimes(1);
+    expect(api.submit).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        fullName: "Marina Exemplo",
+        email: "marina@example.com",
+        privacyAccepted: true,
+        wizard: expect.objectContaining({
+          couponSuggestion: "MARINA10",
+          preferredLine: "Botox Vonix",
+        }),
+      }),
+    });
+    expect(send).toBeDisabled();
+    fireEvent.click(send);
+    expect(api.submit).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      complete?.({ ok: true });
+    });
+    expect(screen.getByText("Candidatura recebida!")).toBeInTheDocument();
+    expect(screen.queryByText("Passo 5 de 5")).not.toBeInTheDocument();
   });
 });

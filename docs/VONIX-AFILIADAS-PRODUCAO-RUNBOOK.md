@@ -1,6 +1,9 @@
 # Vonix Hair — operação final do programa de candidaturas
 
 **Estado de segurança:** formulário de cinco etapas publicado, mas **inscrições fechadas por padrão**.
+**Escopo ativo:** exclusivamente candidatura, triagem e proteção dos dados enviados.
+Cupons, métricas, vendas e comissões pertencem a outro aplicativo e não devem
+ser adicionados a este projeto.
 Este documento é para operadores autorizados. Não contém chaves ou URLs de banco.
 A liberação de candidaturas **não** significa que cupons individuais, atribuição de
 vendas, cálculo ou pagamento de comissões já estejam implementados.
@@ -16,13 +19,20 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
   de email, motivo e bloqueio durante mensagens em processamento.
 - Trilha técnica de decisões e exclusões sem PII direta, preservada após apagar a candidata.
   Atenção: a senha compartilhada **não identifica individualmente** qual membro da equipe agiu.
-- Prévia de retenção de inscrições pendentes/recusadas; **não apaga ninguém**.
+- Prévia de retenção de inscrições pendentes/recusadas pelo painel privado
+  (**Preparação / Prévia de retenção LGPD**), com intervalos de 30 a 3.650 dias
+  e apenas contadores agregados. **Não apaga ninguém**. A prévia é sujeita a
+  sessão administrativa, validação de origem e limitador de acesso por IP;
+  resultados de requisições anteriores não voltam a aparecer após logout.
 - Testes sintéticos SQL/RLS, concorrência e CI sem rede externa de banco.
 
 ## 2. Procedimento de preparação do banco
 
-1. Identificar a instância Supabase autorizada para o módulo de candidaturas. Pode ser
-   dedicada; **não substituir** as variáveis ou chaves de checkout da loja.
+1. Identificar a instância Supabase **dedicada** ao módulo de candidaturas.
+   O cadastro **nunca reutiliza** `SUPABASE_URL` ou
+   `SUPABASE_SERVICE_ROLE_KEY` do checkout. A ausência de
+   `AFFILIATE_SUPABASE_URL` e `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY`
+   mantém tanto o formulário quanto a consulta administrativa indisponíveis.
 2. Fazer backup/restauração de teste, revisar permissões e responsável pela base.
 3. Aplicar, **nesta ordem**, em ambiente de homologação:
    `supabase/vonix-affiliate-applications.sql`;
@@ -45,24 +55,26 @@ commits, GitHub issues ou telas públicas. Não acessar/alterar os segredos de c
 
 | Variável | Finalidade |
 | --- | --- |
-| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | Par dedicado opcional, preferível à reutilização das credenciais da loja |
+| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | **Obrigatórias** para o módulo de inscrições; apenas no servidor, sem fallback para checkout |
 | `AFFILIATE_ADMIN_PASSWORD` | Senha de equipe (mínimo 16 caracteres); planejar identidades individuais antes de escalar |
 | `AFFILIATE_ADMIN_SESSION_SECRET` | Assinatura da sessão (mínimo 32 caracteres, separada da senha) |
-| `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 do autenticador em produção |
+| `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 TOTP obrigatória para login e abertura em qualquer ambiente, mesmo sem `NODE_ENV` |
 | `AFFILIATE_TRAFFIC_PEPPER` | Segredo de pseudonimização de IP (mínimo 32 caracteres) |
 | `AFFILIATE_TRUSTED_IP_HEADER` | Um de `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for`; **testar a borda** |
 | `AFFILIATE_QUESTIONNAIRE_KEY` | Chave privada de **32 bytes** (64 caracteres hex ou base64url); backup seguro separado |
-| `AFFILIATE_WORKER_SECRET` | Autorização do worker (mínimo 24 caracteres) |
-| `RESEND_API_KEY`, `AFFILIATE_FROM_EMAIL` | Envio de e-mails e remetente verificado |
+| `AFFILIATE_WORKER_SECRET` | Autorização do worker (mínimo 24 caracteres), **opcional para receber inscrições** |
+| `RESEND_API_KEY`, `AFFILIATE_FROM_EMAIL` | Notificações de decisões, **opcionais para receber inscrições**; sem elas, e-mails não são enviados |
 | `AFFILIATE_GOVERNANCE_MIGRATED` | `true` só após migração e testes na base correta |
 | `AFFILIATE_PRIVACY_POLICY_APPROVED` | `true` só após aprovação do aviso de privacidade e política de retenção |
-| `AFFILIATE_PROVIDER_VERIFIED` | `true` só após validação externa de domínio, Resend, proxy e worker |
-| `AFFILIATE_RECRUITMENT_OPEN` | **Última chave a ativar**; `true` somente após todas as etapas |
+| `AFFILIATE_PROVIDER_VERIFIED` | `true` só após validar hospedagem, domínio HTTPS e proxy confiável; não atesta Resend nem envio de e-mails |
+| `AFFILIATE_RECRUITMENT_OPEN` | **Última chave a ativar**; `true` só após testes do cadastro, banco, criptografia, proxy e aprovação LGPD |
 
 No computador do operador ou no ambiente de homologação, executar
 `node scripts/check-affiliate-readiness.mjs`. O script apenas lê variáveis
 já presentes no processo e **não imprime segredos**. Ele verifica presença e
 formato aproximado; NÃO valida migração real, posse de domínio ou conformidade jurídica.
+O script separa os bloqueios de abertura dos alertas **opcionais** de
+Resend/worker. Ter e-mails desligados não bloqueia o formulário.
 
 ## 4. Fluxos de homologação obrigatórios
 
@@ -72,6 +84,9 @@ formato aproximado; NÃO valida migração real, posse de domínio ou conformida
 - Verificar no banco que os campos completos de endereço e documento existem apenas
   em `questionnaire_encrypted`, nunca no log ou na resposta do navegador.
 - Validar login/TOTP, origem, sessão, bloqueio por IP e logout com chamadas concorrentes.
+  O servidor **não** permite bypass de TOTP quando `NODE_ENV` está ausente ou incorreto;
+  sessões de domínio HTTPS usam cookie `__Host-`/`Secure` no login e no logout.
+  Apenas localhost HTTP explicitamente em modo `development` ou `test` aceita cookie local de desenvolvimento.
 - Validar decisão atômica, apenas um e-mail enfileirado por candidatura, Resend sandbox
   com domínio permitido, falhas 401/429/500, timeout e situação `incerto`.
 - Homologar o `POST /api/internal/affiliate-mail-worker` com agendador autorizado.
@@ -81,16 +96,26 @@ formato aproximado; NÃO valida migração real, posse de domínio ou conformida
   email exato no painel, executar exclusão, consultar registro técnico e verificar
   que dados, fila e ciphertext desapareceram. E-mail já enviado ao Resend requer
   procedimentos adicionais de privacidade junto ao provedor.
-- Aprovar formalmente prazo de retenção de pendentes e recusadas; usar o RPC
-  `vonix_affiliate_retention_preview` para estimar o impacto antes da exclusão.
-  Não definir prazos arbitrários: alinhar com obrigações comerciais e legais.
+- Aprovar formalmente os prazos de retenção de pendentes e recusadas. No painel,
+  consultar a **prévia LGPD** com os intervalos definidos na política aprovada.
+  A prévia chama `vonix_affiliate_retention_preview` e retorna só quantidades;
+  não remove registros e não inclui candidaturas aprovadas. Alterar os prazos
+  invalida a prévia anterior. Não definir prazos arbitrários: alinhar com
+  obrigações comerciais e legais. A exclusão de um titular continua separada,
+  exigindo verificação de identidade, e-mail confirmado e motivo.
 
 ## 5. Limitações que exigem decisões humanas e serviços externos
 
-- Banco de produção real, backups, domínio de email, credenciais e agendador ainda
-  precisam ser confirmados pelo respectivo operador/fornecedor.
-- Regulamento comercial de comissão, produtos, cupons, atribuição, estornos e pagamentos
-  precisa ser aprovado. O formulário coleta uma **sugestão de cupom**, não o cria.
+- Banco de candidaturas dedicado, credenciais privadas no servidor, backup,
+  domínio HTTPS e proxy ainda precisam ser confirmados pelo operador/fornecedor.
+  O projeto Supabase já provisionado não equivale à conexão ativa no Lovable.
+  A checagem de disponibilidade e o recebimento falham de forma restritiva
+  até existir a configuração dedicada.
+  Resend, remetente e agendador são opcionais para o **recebimento**,
+  mas necessários antes de enviar qualquer e-mail de decisão.
+- O cadastro não cria cupons nem integra com métricas de vendas ou comissões.
+  A sugestão de cupom informada no formulário é apenas uma resposta de triagem.
+  O aplicativo de métricas é separado e não faz parte deste escopo.
 - Política LGPD, controlador, contato, base legal, retenção e descarte precisam
   de revisão apropriada antes de solicitar documentos pessoais em produção.
 - A autenticação compartilhada não é identidade individual por funcionário;
@@ -103,3 +128,12 @@ formato aproximado; NÃO valida migração real, posse de domínio ou conformida
 cada etapa, os testes reais passam e `AFFILIATE_RECRUITMENT_OPEN=true` é ativado
 intencionalmente. Não afirmar que está em produção com recebimento de candidaturas
 com base apenas em build/CI verde.
+
+## 6. Migração experimental anterior (fora do escopo)
+
+Em 09/11/2026 foi instalada na base Supabase dedicada uma migração isolada de
+**laboratório de vendas**. Por decisão do proprietário, esse recurso foi removido
+do painel e do código ativo e **não participa do fluxo de candidaturas**. As duas
+tabelas históricas `vonix_affiliate_sandbox_orders` e
+`vonix_affiliate_sandbox_events` permanecem vazias e sem acessos públicos.
+Não apagá-las em produção por automação ou sem revisão de backup e impacto.

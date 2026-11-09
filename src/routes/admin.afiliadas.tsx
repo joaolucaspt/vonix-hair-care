@@ -17,6 +17,7 @@ import {
   eraseAffiliateApplicationAdmin,
   getAffiliateApplications,
   getAffiliateOperationalReadiness,
+  getAffiliateRetentionPreview,
   loginAffiliateAdmin,
   logoutAffiliateAdmin,
   reviewAffiliateApplication,
@@ -76,9 +77,19 @@ function safeProfileLink(value: string | null | undefined, platform: "instagram"
     const host = url.hostname.toLowerCase().replace(/^www\./, "");
     if (
       url.protocol !== "https:" ||
-      host !== (platform === "instagram" ? "instagram.com" : "tiktok.com")
+      host !== (platform === "instagram" ? "instagram.com" : "tiktok.com") ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.port
     )
       return null;
+    const validPath =
+      platform === "instagram"
+        ? /^\/[A-Za-z0-9._]{1,30}\/?$/.test(url.pathname)
+        : /^\/@[A-Za-z0-9._]{2,30}\/?$/.test(url.pathname);
+    if (!validPath) return null;
     return url.href;
   } catch {
     return null;
@@ -120,6 +131,15 @@ export function AffiliateAdminPage() {
     governanceResponding: boolean;
     recruitmentOpen: boolean;
   } | null>(null);
+  const [retentionPendingDays, setRetentionPendingDays] = useState(90);
+  const [retentionRejectedDays, setRetentionRejectedDays] = useState(180);
+  const [retentionBusy, setRetentionBusy] = useState(false);
+  const [retentionError, setRetentionError] = useState("");
+  const [retentionResult, setRetentionResult] = useState<{
+    pendingEligible: number;
+    rejectedEligible: number;
+    executedDeletions: number;
+  } | null>(null);
   const [erasureEmail, setErasureEmail] = useState("");
   const [erasureReason, setErasureReason] = useState<
     "solicitacao_titular" | "retencao" | "correcao"
@@ -144,6 +164,9 @@ export function AffiliateAdminPage() {
     setErasureId(null);
     setErasureEmail("");
     setReadiness(null);
+    setRetentionBusy(false);
+    setRetentionError("");
+    setRetentionResult(null);
   }
 
   async function load(
@@ -344,6 +367,48 @@ export function AffiliateAdminPage() {
     }
   }
 
+  async function inspectRetention(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!authorized || retentionBusy) return;
+    if (
+      !Number.isInteger(retentionPendingDays) ||
+      retentionPendingDays < 30 ||
+      retentionPendingDays > 3650 ||
+      !Number.isInteger(retentionRejectedDays) ||
+      retentionRejectedDays < 30 ||
+      retentionRejectedDays > 3650
+    ) {
+      setRetentionError("Informe prazos inteiros entre 30 e 3.650 dias.");
+      setRetentionResult(null);
+      return;
+    }
+
+    const sessionId = sessionVersion.current;
+    setRetentionBusy(true);
+    setRetentionError("");
+    setRetentionResult(null);
+    try {
+      const response = await getAffiliateRetentionPreview({
+        data: { pendingDays: retentionPendingDays, rejectedDays: retentionRejectedDays },
+      });
+      if (sessionId !== sessionVersion.current) return;
+      if (!response.ok) {
+        setRetentionError(response.reason);
+        return;
+      }
+      setRetentionResult({
+        pendingEligible: response.pendingEligible,
+        rejectedEligible: response.rejectedEligible,
+        executedDeletions: response.executedDeletions,
+      });
+    } catch {
+      if (sessionId === sessionVersion.current)
+        setRetentionError("Não foi possível consultar a prévia de retenção.");
+    } finally {
+      if (sessionId === sessionVersion.current) setRetentionBusy(false);
+    }
+  }
+
   async function applySearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await load(status, 0, searchText.trim());
@@ -423,7 +488,7 @@ export function AffiliateAdminPage() {
               autoComplete="one-time-code"
               maxLength={6}
               pattern="[0-9]{6}"
-              placeholder="6 dígitos (se habilitado)"
+              placeholder="6 dígitos obrigatórios"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 tracking-[.3em] outline-none focus:ring-2 focus:ring-[#e8c9c5]"
@@ -517,6 +582,100 @@ export function AffiliateAdminPage() {
                 </div>
               )}
             </section>
+            <section
+              aria-labelledby="affiliate-retention-title"
+              className="mb-6 rounded-[1.5rem] border border-[#e8dcd8] bg-white p-5 sm:p-6"
+            >
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-[#8f5361]" aria-hidden="true" />
+                <div>
+                  <h2 id="affiliate-retention-title" className="font-display text-2xl">
+                    Prévia de retenção LGPD
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[#806a6c]">
+                    Consulte apenas quantidades de inscrições antigas para revisão pela equipe. Esta
+                    consulta não mostra CPF, endereço ou e-mail e não executa exclusões. Os prazos
+                    são exemplos de planejamento, não uma política aprovada.
+                  </p>
+                </div>
+              </div>
+              <form
+                onSubmit={(event) => void inspectRetention(event)}
+                className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+              >
+                <label htmlFor="retention-pending" className="text-sm font-semibold text-[#654c52]">
+                  Pendentes há pelo menos (dias)
+                  <input
+                    id="retention-pending"
+                    type="number"
+                    min={30}
+                    max={3650}
+                    step={1}
+                    required
+                    value={retentionPendingDays}
+                    onChange={(event) => {
+                      setRetentionPendingDays(Number(event.target.value));
+                      setRetentionResult(null);
+                    }}
+                    className="mt-2 min-h-11 w-full rounded-xl border border-[#dbc3c7] bg-white px-4 text-base"
+                  />
+                </label>
+                <label
+                  htmlFor="retention-rejected"
+                  className="text-sm font-semibold text-[#654c52]"
+                >
+                  Recusadas há pelo menos (dias)
+                  <input
+                    id="retention-rejected"
+                    type="number"
+                    min={30}
+                    max={3650}
+                    step={1}
+                    required
+                    value={retentionRejectedDays}
+                    onChange={(event) => {
+                      setRetentionRejectedDays(Number(event.target.value));
+                      setRetentionResult(null);
+                    }}
+                    className="mt-2 min-h-11 w-full rounded-xl border border-[#dbc3c7] bg-white px-4 text-base"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={retentionBusy}
+                  className="min-h-11 rounded-full border border-[#d6b6be] px-5 text-sm font-semibold text-[#733e4a] disabled:opacity-50"
+                >
+                  {retentionBusy ? "Consultando..." : "Consultar prévia"}
+                </button>
+              </form>
+              {retentionError && (
+                <p role="alert" className="mt-3 text-sm text-red-700">
+                  {retentionError}
+                </p>
+              )}
+              {retentionResult && (
+                <div role="status" className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#f0e3df] bg-[#fffaf8] p-4">
+                    <p className="text-xs text-[#806a6c]">Candidaturas pendentes para revisão</p>
+                    <p className="mt-2 font-display text-3xl text-[#633e49]">
+                      {retentionResult.pendingEligible}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[#f0e3df] bg-[#fffaf8] p-4">
+                    <p className="text-xs text-[#806a6c]">Candidaturas recusadas para revisão</p>
+                    <p className="mt-2 font-display text-3xl text-[#633e49]">
+                      {retentionResult.rejectedEligible}
+                    </p>
+                  </div>
+                  <p className="text-xs leading-relaxed text-[#806a6c] sm:col-span-2">
+                    Exclusões executadas por esta consulta: {retentionResult.executedDeletions}.
+                    Nenhuma candidatura aprovada é incluída nesta prévia. Qualquer exclusão exige
+                    análise jurídica, confirmação do titular e ação individual autorizada.
+                  </p>
+                </div>
+              )}
+            </section>
+
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {STATUS.map((item) => (
                 <button
