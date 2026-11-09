@@ -13,6 +13,11 @@ create table if not exists public.vonix_affiliate_audit_events (
 );
 create index if not exists vonix_affiliate_audit_events_created_idx
   on public.vonix_affiliate_audit_events (created_at desc);
+-- Speeds up FK lookups when erasing a candidate; deployed separately on
+-- 2026-11-09 as vonix_affiliate_audit_fk_index in the dedicated Supabase.
+create index if not exists vonix_affiliate_audit_events_application_id_idx
+  on public.vonix_affiliate_audit_events (application_id)
+  where application_id is not null;
 alter table public.vonix_affiliate_audit_events enable row level security;
 revoke all on public.vonix_affiliate_audit_events from public, anon, authenticated;
 grant select, insert on public.vonix_affiliate_audit_events to service_role;
