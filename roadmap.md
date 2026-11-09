@@ -1,4 +1,5 @@
-- [ ] Miniaturas reais no resumo do checkout, sem alterar o carrinho.
-- [ ] Relevância profissional por famílias, preservando ordenação manual.
-- [ ] Faixa de ambientes abaixo da busca, sem seletores duplicados.
-- [ ] Checagem focada no celular e desktop.
+- [ ] Corrigir consulta de CEP no servidor e independência do frete, com testes mockados.
+- [ ] Posicionar cartão antes do CTA, validar formulários e regressão Pix.
+- [ ] Instrumentar view_cart e add_shipping_info sem dados pessoais ou duplicação.
+- [ ] Remover falso sucesso do cadastro, com testes mockados.
+- [ ] Validar testes, lint e prévia; documentar resultados e reversão sem publicar.
