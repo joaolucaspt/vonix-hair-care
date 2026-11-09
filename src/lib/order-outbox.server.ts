@@ -1,5 +1,5 @@
 import { env } from "./env.server";
-import { getOrder, isPaid, isReadyForFulfillment } from "./appmax.server";
+import { assertAppmaxOrder, getOrder, isPaid, isReadyForFulfillment } from "./appmax.server";
 import { blingEnabled, sendPaidOrder } from "./bling.server";
 import { loadOrderSnapshot } from "./order-snapshot.server";
 import { isTerminatedOrder } from "./order-events";
@@ -117,6 +117,9 @@ export async function processOrderOutbox(limit = 3): Promise<WorkerSummary> {
   for (const { order_id: id, claim_token: token } of rows) {
     try {
       const order = await getOrder(id); // never trust unsigned webhook status
+      // Defense in depth: an inconsistent gateway response cannot authorize
+      // fulfillment or payment finalization for another local order.
+      assertAppmaxOrder(order, id);
       // Reconcile the duplicate-payment guard even if the buyer never returns
       // to the checkout. ERP failures should not hide an Appmax-confirmed status.
       if (isPaid(order)) {

@@ -13,6 +13,14 @@ vi.mock("@/lib/env.server", () => ({
 }));
 vi.mock("@/lib/appmax.server", () => ({
   getOrder: mocks.getOrder,
+  assertAppmaxOrder: (o: { data?: { order?: { id?: number; status?: string } } }, id: number) => {
+    if (
+      o?.data?.order?.id !== id ||
+      typeof o?.data?.order?.status !== "string" ||
+      !o.data.order.status.trim()
+    )
+      throw new Error("Appmax retornou pedido incompatível");
+  },
   isReadyForFulfillment: (o: { data: { order: { status: string } } }) =>
     o.data.order.status === "integrado",
   isPaid: (o: { data: { order: { status: string } } }) =>
@@ -94,6 +102,31 @@ describe("durable Appmax outbox", () => {
     expect(mocks.loadOrderSnapshot).toHaveBeenCalledWith(12);
     expect(mocks.sendPaidOrder).toHaveBeenCalledWith(expect.objectContaining({ orderId: 12 }));
   });
+  it("does not export or mark paid when Appmax returns another order ID", async () => {
+    mocks.getOrder.mockResolvedValue({ data: { order: { id: 999, status: "integrado" } } });
+    const result = await processOrderOutbox(1);
+    expect(result).toMatchObject({ claimed: 1, exported: 0, failed: 1 });
+    expect(mocks.sendPaidOrder).not.toHaveBeenCalled();
+    expect(mocks.finalizeIntent).not.toHaveBeenCalled();
+    expect(mocks.metaPurchase).not.toHaveBeenCalled();
+    expect(mocks.loadOrderSnapshot).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("order_id=eq.12"),
+      expect.objectContaining({
+        method: "PATCH",
+        body: expect.stringContaining('"status":"pending"'),
+      }),
+    );
+  });
+
+  it("does not export if Appmax omits the order status", async () => {
+    mocks.getOrder.mockResolvedValue({ data: { order: { id: 12 } } });
+    const result = await processOrderOutbox(1);
+    expect(result.failed).toBe(1);
+    expect(mocks.sendPaidOrder).not.toHaveBeenCalled();
+    expect(mocks.metaPurchase).not.toHaveBeenCalled();
+  });
+
   it("never exports an order merely authorized for antifraud", async () => {
     mocks.getOrder.mockResolvedValue({ data: { order: { id: 12, status: "autorizado" } } });
     const result = await processOrderOutbox(1);

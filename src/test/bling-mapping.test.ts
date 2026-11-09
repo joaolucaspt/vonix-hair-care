@@ -94,6 +94,70 @@ describe("Bling ERP sales from checkout snapshots", () => {
       ),
     ).toHaveLength(0);
   });
+  it("refuses export when a filtered deduplication reply contains an unrelated store order", async () => {
+    network.mockImplementation(async (url: string, init: RequestInit) => {
+      if (init.method === "GET" && url.includes("/pedidos/vendas?"))
+        return Response.json({ data: [{ numeroLoja: "other-store-778" }] });
+      throw Error("Unexpected attempted order creation");
+    });
+    await expect(sendPaidOrder(snapshot)).rejects.toThrow("outra referência");
+    expect(
+      network.mock.calls.filter(
+        ([url, init]) => String(url).endsWith("/pedidos/vendas") && init.method === "POST",
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("does not treat a malformed HTTP 200 create reply as a confirmed ERP export", async () => {
+    network.mockImplementation(async (url: string, init: RequestInit) => {
+      if (init.method === "GET" && url.includes("/pedidos/vendas?"))
+        return Response.json({ data: [] });
+      if (init.method === "POST" && url.endsWith("/pedidos/vendas"))
+        return Response.json({ data: {} });
+      if (url.includes("/oauth/token"))
+        return Response.json({
+          access_token: "test",
+          refresh_token: "refresh-test",
+          expires_in: 300,
+        });
+      throw Error("Unexpected test call");
+    });
+    await expect(sendPaidOrder(snapshot)).rejects.toThrow("não confirmou o ID");
+    expect(
+      network.mock.calls.filter(
+        ([url, init]) => String(url).endsWith("/pedidos/vendas") && init.method === "POST",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("recovers a previous ambiguous POST using store-number lookup instead of posting again", async () => {
+    let lookupCount = 0;
+    network.mockImplementation(async (url: string, init: RequestInit) => {
+      if (init.method === "GET" && url.includes("/pedidos/vendas?")) {
+        lookupCount++;
+        return Response.json({
+          data: lookupCount === 1 ? [] : [{ numeroLoja: "4513" }],
+        });
+      }
+      if (init.method === "POST" && url.endsWith("/pedidos/vendas"))
+        return Response.json({ data: { id: null } });
+      if (url.includes("/oauth/token"))
+        return Response.json({
+          access_token: "test",
+          refresh_token: "refresh-test",
+          expires_in: 300,
+        });
+      throw Error("Unexpected provider URL");
+    });
+    await expect(sendPaidOrder(snapshot)).rejects.toThrow("não confirmou o ID");
+    expect(await sendPaidOrder(snapshot)).toBe("ja enviado");
+    expect(
+      network.mock.calls.filter(
+        ([url, init]) => String(url).endsWith("/pedidos/vendas") && init.method === "POST",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("fails closed if deduplication reply omits the store reference", async () => {
     network.mockImplementation(async (url: string, init: RequestInit) => {
       if (init.method === "GET" && url.includes("/pedidos/vendas?"))
