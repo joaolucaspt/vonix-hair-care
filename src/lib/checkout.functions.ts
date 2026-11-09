@@ -44,7 +44,9 @@ async function shippingOptions(cep: string, lines: ReturnType<typeof buildLines>
   const picked = pickTwoShipping(quotes);
   // Frete grátis vale para a opção mais barata (a econômica), como antes.
   const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
-  return picked.map((q) => ({ ...q, free: free && q.id === cheapestId, price: free && q.id === cheapestId ? 0 : q.price }));
+  const options = picked.map((q) => ({ ...q, free: free && q.id === cheapestId, price: free && q.id === cheapestId ? 0 : q.price }));
+  // Com frete grátis, só a opção grátis aparece: o cliente não precisa escolher entre outras.
+  return free ? options.filter((o) => o.free) : options;
 }
 
 export const quoteShipping = createServerFn({ method: "POST" })
