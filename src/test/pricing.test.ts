@@ -11,14 +11,14 @@ describe("ambiente e preços dos cards", () => {
   it("Fio de Luz no salão não tem 5% profissional: preço de catálogo, Pix normal e promoção de kits", () => {
     const p = getProduct("progressiva-fio-de-luz");
     if (!p) throw new Error("Produto obrigatório ausente");
-    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 174.9, pix: 166.16, parcels: { count: 6, value: 29.15, first: 29.15 } });
-    expect(cardPricing(p, "casa").price).toBe(174.9);
+    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 191.9, pix: 182.31, parcels: { count: 6, value: 31.98, first: 32 } });
+    expect(cardPricing(p, "casa").price).toBe(191.9);
   });
   it("kits prontos também têm a promoção de levar 2 ou 3, sem 5% extra, no salão e em casa", () => {
     const p = getProduct("kit-banana-e-mel");
     if (!p) throw new Error("Produto obrigatório ausente");
-    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 154.9, pix: 147.16 });
-    expect(cardPricing(p, "casa")).toMatchObject({ professional: true, price: 154.9, pix: 147.16 });
+    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 169.9, pix: 161.41 });
+    expect(cardPricing(p, "casa")).toMatchObject({ professional: true, price: 169.9, pix: 161.41 });
   });
   it("todo produto do site tem a promoção de levar mais de um, em qualquer área", () => {
     for (const a of ["casa", "salao", null] as const)
@@ -50,8 +50,8 @@ describe("ambiente e preços dos cards", () => {
 describe("regras comerciais", () => {
   it("catálogo tem 43 produtos", () => expect(products.length).toBe(43));
   it("preço já inclui +15 uma vez", () => {
-    expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(174.9);
-    expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([74.9, 194.9]);
+    expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(191.9);
+    expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([81.9, 213.9]);
   });
   it("frete grátis somente acima de 150", () => {
     expect(hasFreeShipping(150)).toBe(false);
