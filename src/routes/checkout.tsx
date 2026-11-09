@@ -730,9 +730,6 @@ function Checkout() {
           <form id="checkout-form" className="min-w-0 space-y-8" onSubmit={onSubmit}>
             <div>
               <h1 className="font-display text-h1">Finalizar compra</h1>
-              <p className="mt-2 text-body text-muted-foreground">
-                <b>Compre sem criar uma conta.</b> Login é opcional e não é pedido em nenhuma etapa.
-              </p>
               {cfg?.sandbox && (
                 <p
                   role="note"
@@ -779,7 +776,7 @@ function Checkout() {
                 required
                 inputMode="numeric"
                 aria-label="CPF"
-                placeholder="CPF (necessário para emissão da nota fiscal)"
+                placeholder="CPF"
                 value={f.cpf}
                 maxLength={14}
                 onChange={(e) => setF((old) => ({ ...old, cpf: maskCpf(e.target.value) }))}
@@ -875,16 +872,10 @@ function Checkout() {
               </div>
 
               <div className="space-y-2 pt-2" aria-live="polite">
-                <div className="text-body font-medium">Forma de entrega</div>
                 {quoting && <p className="text-body text-muted-foreground">Calculando frete…</p>}
                 {quoteErr && !quoting && (
                   <p role="alert" className="text-body text-destructive">
                     {quoteErr}
-                  </p>
-                )}
-                {!quoting && !quoteErr && !options.length && (
-                  <p className="text-body text-muted-foreground">
-                    Informe o CEP para ver as opções de entrega.
                   </p>
                 )}
                 {!quoting &&
@@ -923,7 +914,7 @@ function Checkout() {
                     checked={pay === "pix"}
                     onChange={() => setPay("pix")}
                   />{" "}
-                  Pix (5% de desconto nos itens sem outra oferta)
+                  Pix · 5% de desconto
                 </span>
                 <b>{brl(tPix.net + shipping)}</b>
               </label>
@@ -937,7 +928,7 @@ function Checkout() {
                     checked={pay === "card"}
                     onChange={() => setPay("card")}
                   />{" "}
-                  Cartão de crédito — até 6x sem juros
+                  Cartão de crédito · até 6x sem juros
                 </span>
                 <b>{brl(tCard.net + shipping)}</b>
               </label>
@@ -1091,7 +1082,6 @@ function Checkout() {
           className="min-w-0 space-y-4 lg:col-start-2 lg:row-start-1 "
           aria-label="Resumo do pedido"
         >
-          <ShippingBar subtotal={c.subtotal} />
           <ul className="space-y-2 text-body">
             {c.lines.map((l) => (
               <li
@@ -1108,17 +1098,6 @@ function Checkout() {
                 <span className="min-w-0 break-words">
                   {l.units}× {l.product.name}{" "}
                   <span className="text-muted-foreground">({l.variant})</span>
-                  {l.offer && (
-                    <span className="block text-small text-muted-foreground">
-                      {OFFER_LABEL[l.offer]}
-                      {l.offer !== "comp5" ? ` · ${l.qty} combo(s)` : ""}
-                    </span>
-                  )}
-                  {!l.offer && l.pct > 0 && (
-                    <span className="block text-small text-muted-foreground">
-                      Desconto por quantidade · {l.pct}% OFF
-                    </span>
-                  )}
                 </span>
                 <span className="whitespace-nowrap font-medium">{brl(l.net)}</span>
               </li>
@@ -1143,14 +1122,9 @@ function Checkout() {
             )}
             {t.pixDiscount > 0 && (
               <div className="flex justify-between">
-                <span>Desconto Pix (5% nos itens sem oferta)</span>
+                <span>Desconto Pix</span>
                 <span>− {brl(t.pixDiscount)}</span>
               </div>
-            )}
-            {t.hasOffers && (
-              <p className="text-small text-muted-foreground">
-                Ofertas não cumulativas no mesmo item.
-              </p>
             )}
             <div className="flex justify-between">
               <span>Frete</span>
@@ -1211,15 +1185,10 @@ function Checkout() {
           <div className="flex justify-center">
             <SecuritySeal />
           </div>
-          {!chosen && (
-            <p className="text-center text-body text-muted-foreground">
-              Informe o CEP e escolha a entrega para continuar.
-            </p>
-          )}
           <p className="text-center text-body text-muted-foreground">
-            Precisa de ajuda para finalizar?{" "}
+            Dúvidas?{" "}
             <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">
-              Fale com a gente no WhatsApp
+              Fale no WhatsApp
             </a>
           </p>
         </div>

@@ -13,6 +13,7 @@ import {
   finalizeCheckoutIntent,
 } from "./checkout-idempotency.server";
 import { calculateShipping } from "./melhorenvio.server";
+import { pickTwoShipping } from "./shipping-pick";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, complementsFor, getProduct, lineTotals, type Offer } from "./store";
@@ -58,10 +59,13 @@ async function shippingOptions(
   );
   const t = checkoutTotals(lines, "pix");
   const free = t.freeShipping || couponFreeShipping(findCoupon(couponCode), t.gross);
-  return quotes.map((q, k) => ({
+  const picked = pickTwoShipping(quotes);
+  // Preserve the latest main: fastest and cheapest freight choices.
+  const cheapestId = [...picked].sort((a, b) => a.price - b.price)[0]?.id;
+  return picked.map((q) => ({
     ...q,
-    free: free && k === 0,
-    price: free && k === 0 ? 0 : q.price,
+    free: free && q.id === cheapestId,
+    price: free && q.id === cheapestId ? 0 : q.price,
   }));
 }
 

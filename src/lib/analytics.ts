@@ -58,6 +58,28 @@ export function metaParams(params: Record<string, unknown>) {
   };
 }
 
+const cookie = (name: string) =>
+  document.cookie.split("; ").find((c) => c.startsWith(`${name}=`))?.slice(name.length + 1);
+
+/** Envia o mesmo evento à API de Conversões (via servidor) com o mesmo eventID do pixel, para a Meta deduplicar. */
+function sendServerEvent(event: string, eventId: string, customData: Record<string, unknown>) {
+  const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+  const body = JSON.stringify({
+    event,
+    eventId,
+    url: window.location.href,
+    fbp: cookie("_fbp"),
+    fbc: cookie("_fbc") ?? (fbclid ? `fb.1.${Date.now()}.${fbclid}` : undefined),
+    customData,
+  });
+  void fetch("/api/public/meta-event", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => undefined);
+}
+
 /** GA4 recommended e-commerce events; the same names show up as smart events in Clarity and, when set up, in the Meta Pixel. */
 export function track(event: string, params: Record<string, unknown> = {}) {
   if (typeof window === "undefined") return;
@@ -67,7 +89,9 @@ export function track(event: string, params: Record<string, unknown> = {}) {
     const metaEvent = META_EVENTS[event];
     if (metaEvent && window.fbq) {
       const eventID = `${event}-${params["transaction_id"] ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`;
-      window.fbq("track", metaEvent, metaParams(params), { eventID });
+      const customData = metaParams(params);
+      window.fbq("track", metaEvent, customData, { eventID });
+      sendServerEvent(metaEvent, eventID, customData);
     }
   } catch {
     /* tracking must never break the store */
