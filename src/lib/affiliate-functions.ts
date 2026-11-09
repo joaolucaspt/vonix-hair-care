@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
+import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
 import {
   affiliateAdminAuthorized,
   createAffiliateApplication,
@@ -12,6 +13,12 @@ import {
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
   .inputValidator(affiliateApplicationSchema)
   .handler(async ({ data }) => {
+    if (!(await consumeAffiliateRateLimit("submit"))) {
+      return {
+        ok: false as const,
+        reason: "Muitas tentativas ou serviço temporariamente indisponível. Tente mais tarde.",
+      };
+    }
     try {
       return await createAffiliateApplication(data);
     } catch {
@@ -32,7 +39,14 @@ export const getAffiliateApplications = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!affiliateAdminAuthorized(data.password)) {
+      await consumeAffiliateRateLimit("admin");
       return { ok: false as const, reason: "Acesso negado ou painel não configurado." };
+    }
+    if (!(await affiliateRateLimitAllowed("admin"))) {
+      return {
+        ok: false as const,
+        reason: "Acesso temporariamente indisponível. Tente mais tarde.",
+      };
     }
     try {
       const list = await listAffiliateApplications(data);
@@ -54,7 +68,14 @@ export const reviewAffiliateApplication = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     if (!affiliateAdminAuthorized(data.password)) {
+      await consumeAffiliateRateLimit("admin");
       return { ok: false as const, reason: "Acesso negado." };
+    }
+    if (!(await affiliateRateLimitAllowed("admin"))) {
+      return {
+        ok: false as const,
+        reason: "Acesso temporariamente indisponível. Tente mais tarde.",
+      };
     }
     try {
       const updated = await decideAffiliateApplication(data.id, data.decision);

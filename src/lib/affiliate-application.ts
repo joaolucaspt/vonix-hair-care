@@ -45,11 +45,17 @@ function validSocialProfile(value: string, host: "instagram.com" | "tiktok.com")
     const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
     if (url.protocol !== "https:" || hostname !== host || url.username || url.password)
       return false;
-    const parts = url.pathname.split("/").filter(Boolean);
-    if (parts.length !== 1) return false;
-    return host === "instagram.com"
-      ? /^[a-zA-Z0-9._]{1,30}$/.test(parts[0]!)
-      : /^@[a-zA-Z0-9._]{2,30}$/.test(parts[0]!);
+    // Exact profile paths only: reject //, extra segments and content links.
+    if (host === "instagram.com") {
+      const match = url.pathname.match(/^\/([a-zA-Z0-9._]{1,30})\/?$/);
+      return (
+        !!match &&
+        !["p", "reel", "reels", "explore", "stories", "accounts", "direct"].includes(
+          match[1]!.toLowerCase(),
+        )
+      );
+    }
+    return /^\/@[a-zA-Z0-9._]{2,30}\/?$/.test(url.pathname);
   } catch {
     return false;
   }

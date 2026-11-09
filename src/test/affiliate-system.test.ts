@@ -80,6 +80,24 @@ describe("Inscrição de afiliadas", () => {
       false,
     );
     expect(affiliateApplicationSchema.safeParse({ ...valid, email: "" }).success).toBe(false);
+    expect(
+      affiliateApplicationSchema.safeParse({
+        ...valid,
+        instagram: "https://instagram.com/maria////",
+      }).success,
+    ).toBe(false);
+    expect(
+      affiliateApplicationSchema.safeParse({ ...valid, instagram: "https://instagram.com/p" })
+        .success,
+    ).toBe(false);
+    expect(
+      affiliateApplicationSchema.safeParse({ ...valid, instagram: "https://instagram.com/stories" })
+        .success,
+    ).toBe(false);
+    expect(
+      affiliateApplicationSchema.safeParse({ ...valid, tiktok: "https://tiktok.com//@maria" })
+        .success,
+    ).toBe(false);
   });
   it("salva no banco com status padrão e normaliza links", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
@@ -91,18 +109,17 @@ describe("Inscrição de afiliadas", () => {
     expect(String(url)).toContain("/rest/v1/vonix_affiliate_applications");
     const payload = JSON.parse(init.body);
     expect(payload.email).toBe("maria@example.com");
-    expect(payload.instagram_url).toBe("https://www.instagram.com/maria.cachos");
-    expect(payload.tiktok_url).toBe("https://www.tiktok.com/@maria.cachos");
+    expect(payload.instagram_url).toBe("https://instagram.com/maria.cachos");
+    expect(payload.tiktok_url).toBe("https://tiktok.com/@maria.cachos");
     expect(payload.status).toBeUndefined();
   });
-  it("evita cadastro duplicado sem sobrescrever a decisão anterior", async () => {
+  it("evita cadastro duplicado sem revelar se o endereço existe", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: "23505" }), { status: 409 })),
     );
     expect(await createAffiliateApplication(affiliateApplicationSchema.parse(valid))).toEqual({
-      ok: false,
-      reason: "Esta inscrição já foi recebida.",
+      ok: true,
     });
   });
   it("honeypot não persiste dados de robôs", async () => {
@@ -136,13 +153,13 @@ describe("Acesso e decisões", () => {
     expect(mock).toHaveBeenCalledTimes(2);
     expect(mock.mock.calls[0]![0]).toContain("rpc/vonix_affiliate_decide");
   });
-  it("paginação por status, busca e estatísticas sem carregar todas as candidatas", async () => {
+  it("busca e-mails completos com pontuação através de RPC parametrizada", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify([{ id: "a", full_name: "Maria" }]), {
-          status: 200,
-          headers: { "content-range": "0-0/245" },
+        Response.json({
+          total: 245,
+          applications: [{ id: "a", full_name: "Maria" }],
         }),
       )
       .mockResolvedValueOnce(Response.json({ pendente: 245, aprovada: 12, recusada: 9 }));
@@ -150,12 +167,17 @@ describe("Acesso e decisões", () => {
     const result = await listAffiliateApplications({
       status: "pendente",
       page: 2,
-      search: "Maria",
+      search: "maria.souza@example.com",
     });
     expect(result.total).toBe(245);
     expect(result.stats).toEqual({ pendente: 245, aprovada: 12, recusada: 9 });
-    expect(String(fetchMock.mock.calls[0]![0])).toContain("offset=80");
-    expect(String(fetchMock.mock.calls[0]![0])).toContain("status=eq.pendente");
+    expect(fetchMock.mock.calls[0]![0]).toContain("rpc/vonix_affiliate_search");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1].body))).toEqual({
+      p_status: "pendente",
+      p_query: "maria.souza@example.com",
+      p_offset: 80,
+      p_limit: 40,
+    });
   });
 });
 
@@ -237,5 +259,77 @@ describe("Notificações", () => {
     vi.stubGlobal("fetch", fetchMock);
     expect(await processAffiliateEmails(1)).toEqual({ sent: 0, failed: 1, configured: true });
     expect(JSON.parse(String(fetchMock.mock.calls[2]![1].body)).p_success).toBe(false);
+  });
+});
+
+describe("Tratamento de resultados ambíguos do Resend", () => {
+  const claimed = {
+    mail_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    application_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    recipient: "maria@example.com",
+    decision: "aprovada",
+    attempt: 1,
+  };
+  beforeEach(() => {
+    process.env["RESEND_API_KEY"] = "test-resend-key";
+    process.env["AFFILIATE_FROM_EMAIL"] = "Vonix Hair <afiliados@example.com>";
+  });
+  it("registra timeout como incerto; não como e-mail enviado", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json([claimed]))
+      .mockRejectedValueOnce(new Error("timeout após aceite"))
+      .mockResolvedValueOnce(Response.json(true));
+    vi.stubGlobal("fetch", mock);
+    expect(await processAffiliateEmails(1)).toEqual({ sent: 0, failed: 1, configured: true });
+    const finish = JSON.parse(String(mock.mock.calls[2]![1].body));
+    expect(finish).toMatchObject({ p_success: false, p_unknown: true, p_permanent: false });
+  });
+  it("HTTP 409 de idempotência exige conciliação, sem reenviar automaticamente", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json([claimed]))
+      .mockResolvedValueOnce(new Response("conflicting idempotency", { status: 409 }))
+      .mockResolvedValueOnce(Response.json(true));
+    vi.stubGlobal("fetch", mock);
+    expect(await processAffiliateEmails(1)).toMatchObject({ sent: 0, failed: 1 });
+    const finish = JSON.parse(String(mock.mock.calls[2]![1].body));
+    expect(finish).toMatchObject({ p_success: false, p_unknown: true, p_permanent: true });
+  });
+  it("erro 401 do provedor é falha definitiva, não timeout", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json([claimed]))
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(Response.json(true));
+    vi.stubGlobal("fetch", mock);
+    expect(await processAffiliateEmails(1)).toMatchObject({ sent: 0, failed: 1 });
+    expect(JSON.parse(String(mock.mock.calls[2]![1].body))).toMatchObject({
+      p_success: false,
+      p_unknown: false,
+      p_permanent: true,
+    });
+  });
+  it("HTTP 200 sem identificador não pode ser classificado como entregue", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json([claimed]))
+      .mockResolvedValueOnce(Response.json({}))
+      .mockResolvedValueOnce(Response.json(true));
+    vi.stubGlobal("fetch", mock);
+    expect(await processAffiliateEmails(1)).toMatchObject({ sent: 0, failed: 1 });
+    expect(JSON.parse(String(mock.mock.calls[2]![1].body))).toMatchObject({
+      p_success: false,
+      p_unknown: true,
+    });
+  });
+  it("não confirma sucesso se a persistência da conclusão falhar", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json([claimed]))
+      .mockResolvedValueOnce(Response.json({ id: "resend-real-id" }))
+      .mockResolvedValueOnce(Response.json(false));
+    vi.stubGlobal("fetch", mock);
+    await expect(processAffiliateEmails(1)).rejects.toThrow(/claim changed/i);
   });
 });

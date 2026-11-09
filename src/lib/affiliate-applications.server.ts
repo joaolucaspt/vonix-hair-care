@@ -10,8 +10,13 @@ import {
 import { affiliateDecisionEmail } from "./affiliate-email";
 
 function supabase() {
-  const url = env("SUPABASE_URL");
-  const key = env("SUPABASE_SERVICE_ROLE_KEY");
+  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
+  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
+  if (Boolean(dedicatedUrl) !== Boolean(dedicatedKey)) {
+    throw new Error("Banco dedicado de afiliadas parcialmente configurado.");
+  }
+  const url = dedicatedUrl || env("SUPABASE_URL");
+  const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) throw new Error("Banco de inscrições não configurado.");
   return {
     url: url.replace(/\/$/, ""),
@@ -48,7 +53,11 @@ async function requestSupabase(route: string, init?: RequestInit) {
 
 function normalizedProfile(raw: string) {
   const parsed = new URL(raw);
-  return parsed.origin.toLowerCase() + parsed.pathname.replace(/\/$/, "").toLowerCase();
+  return (
+    "https://" +
+    parsed.hostname.toLowerCase().replace(/^www\./, "") +
+    parsed.pathname.replace(/\/$/, "").toLowerCase()
+  );
 }
 
 export async function createAffiliateApplication(raw: AffiliateApplicationInput) {
@@ -70,8 +79,8 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
       consent_at: new Date().toISOString(),
     }),
   });
-  if (response.status === 409)
-    return { ok: false as const, reason: "Esta inscrição já foi recebida." };
+  // A duplicate e-mail/profile gets the same public response to prevent account enumeration.
+  if (response.status === 409) return { ok: true as const };
   if (!response.ok) throw new Error("Falha ao salvar inscrição: HTTP " + response.status);
   return { ok: true as const };
 }
@@ -91,34 +100,31 @@ export async function listAffiliateApplications(input: {
 }): Promise<AffiliateList> {
   const status = validStatus.parse(input.status);
   const page = z.number().int().min(0).max(50000).parse(input.page);
-  const q = (input.search ?? "")
+  const q = z
+    .string()
     .trim()
-    .replace(/[%_*(),.]/g, "")
-    .slice(0, 70);
-  const query = new URLSearchParams({
-    select:
-      "id,full_name,age,city,state,hair_type,email,instagram_url,tiktok_url,motivation,status,created_at,reviewed_at,vonix_affiliate_mail_outbox(status,sent_at)",
-    status: "eq." + status,
-    order: "created_at.desc,id.desc",
-    limit: "40",
-    offset: String(page * 40),
-  });
-  if (q.length > 0) query.set("or", "(full_name.ilike.*" + q + "*,email.ilike.*" + q + "*)");
+    .max(70)
+    .parse(input.search ?? "");
   const [rows, totals] = await Promise.all([
-    requestSupabase("vonix_affiliate_applications?" + query.toString(), {
-      headers: { Prefer: "count=exact" },
+    requestSupabase("rpc/vonix_affiliate_search", {
+      method: "POST",
+      body: JSON.stringify({ p_status: status, p_query: q, p_offset: page * 40, p_limit: 40 }),
     }),
     requestSupabase("rpc/vonix_affiliate_stats", { method: "POST", body: "{}" }),
   ]);
   if (!rows.ok || !totals.ok) throw new Error("Consulta de inscrições indisponível.");
-  const applications = (await rows.json()) as AffiliateApplicationRecord[];
+  const result = (await rows.json()) as { total?: unknown; applications?: unknown };
   const raw = (await totals.json()) as Partial<Record<AffiliateStatus, number>> | null;
-  const range = rows.headers.get("content-range");
-  const totalPart = range?.split("/")[1] ?? "0";
-  const total = totalPart === "*" ? applications.length : Number(totalPart);
+  if (
+    !Array.isArray(result?.applications) ||
+    typeof result?.total !== "number" ||
+    result.total < 0
+  ) {
+    throw new Error("Formato inválido da consulta de inscrições.");
+  }
   return {
-    applications,
-    total: Number.isFinite(total) ? total : applications.length,
+    applications: result.applications as AffiliateApplicationRecord[],
+    total: result.total,
     stats: {
       pendente: Number(raw?.pendente ?? 0),
       aprovada: Number(raw?.aprovada ?? 0),
@@ -157,7 +163,13 @@ async function claimAffiliateMail(id?: string): Promise<ClaimedMail | null> {
   return results[0] ?? null;
 }
 
-async function finishAffiliateMail(mail: ClaimedMail, success: boolean, providerId: string | null) {
+async function finishAffiliateMail(
+  mail: ClaimedMail,
+  success: boolean,
+  providerId: string | null,
+  unknown = false,
+  permanent = false,
+) {
   const response = await requestSupabase("rpc/vonix_affiliate_finish_mail", {
     method: "POST",
     body: JSON.stringify({
@@ -165,6 +177,8 @@ async function finishAffiliateMail(mail: ClaimedMail, success: boolean, provider
       p_attempt: mail.attempt,
       p_success: success,
       p_provider_id: providerId,
+      p_unknown: unknown,
+      p_permanent: permanent,
     }),
   });
   if (!response.ok) throw new Error("Falha ao registrar resultado de e-mail.");
@@ -184,6 +198,8 @@ export async function processAffiliateEmails(limit = 5, applicationId?: string) 
     const message = affiliateDecisionEmail(mail.decision);
     let successful = false;
     let providerId: string | null = null;
+    let unknown = false;
+    let permanent = false;
     try {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -201,14 +217,25 @@ export async function processAffiliateEmails(limit = 5, applicationId?: string) 
         signal: AbortSignal.timeout(10000),
       });
       if (response.ok) {
-        const data = (await response.json()) as { id?: string };
-        providerId = data.id ?? null;
-        successful = true;
+        const data = (await response.json()) as { id?: unknown };
+        // HTTP 200 without a provider receipt is ambiguous; don't mark sent.
+        if (typeof data.id === "string" && data.id.length > 0) {
+          providerId = data.id;
+          successful = true;
+        } else {
+          unknown = true;
+        }
+      } else {
+        // 409 can mean a concurrent idempotent request or conflicting content.
+        unknown = response.status === 409 || response.status >= 500;
+        permanent = [400, 401, 403, 404, 409, 422].includes(response.status);
       }
     } catch {
-      // The same immutable idempotency key is used for retries within 20 hours.
+      // A timeout may happen AFTER the provider accepted the message.
+      unknown = true;
     }
-    await finishAffiliateMail(mail, successful, providerId);
+    const recorded = await finishAffiliateMail(mail, successful, providerId, unknown, permanent);
+    if (!recorded) throw new Error("Email claim changed before status could be persisted.");
     if (successful) sent++;
     else failed++;
     // Avoid reclaiming the same candidate in the same run after a transient failure.
