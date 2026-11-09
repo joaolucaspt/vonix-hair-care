@@ -347,7 +347,7 @@ function ProductPage() {
                         role="radio"
                         aria-checked={on}
                         onClick={() => setQty(o.n)}
-                        className={`relative flex items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition-all sm:flex-col sm:items-start sm:gap-1.5 sm:p-4 ${on ? "border-[#c9992f] bg-[#fff8e8] shadow-[0_6px_18px_-8px_rgba(201,153,47,0.6)]" : "border-border bg-white hover:border-[#c9992f]/60"}`}
+                        className={`relative flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition-all sm:flex-col sm:items-start sm:gap-1.5 sm:p-4 ${on ? "border-[#c9992f] bg-[#fff8e8] shadow-[0_6px_18px_-8px_rgba(201,153,47,0.6)]" : "border-border bg-white hover:border-[#c9992f]/60"}`}
                       >
                         {best && (
                           <span className="absolute -top-2.5 right-3 rounded-full bg-[#7a5a2e] px-2.5 py-0.5 text-small font-semibold text-white">
@@ -369,7 +369,7 @@ function ProductPage() {
                           </span>
                         </span>
                         <span className="text-right sm:w-full sm:text-left">
-                          <span className="money block text-h2 font-semibold leading-tight">
+                          <span className="money block text-name font-semibold leading-tight">
                             {brl(t.net)}
                           </span>
                           {pct > 0 ? (
