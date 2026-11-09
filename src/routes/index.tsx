@@ -39,9 +39,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Vonix Hair — Cosméticos Capilares Profissionais" },
-      { name: "description", content: "Progressivas, botox, máscaras e combos Vonix Hair. Até 6x sem juros e frete grátis acima de R$ 150,00." },
+      { name: "description", content: "Cosméticos Vonix Hair: progressivas, botox, máscaras e combos. Até 6x sem juros; frete grátis acima de R$ 150 conforme cotação do CEP." },
       { property: "og:title", content: "Vonix Hair — Cosméticos Capilares Profissionais" },
-      { property: "og:description", content: "Até 6x sem juros e frete grátis acima de R$ 150,00." },
+      { property: "og:description", content: "Até 6x sem juros e frete grátis acima de R$ 150, conforme a cotação do CEP." },
       { property: "og:url", content: SITE_URL },
       { property: "og:image", content: `${SITE_URL}/og-vonix.jpg` },
       { name: "twitter:image", content: `${SITE_URL}/og-vonix.jpg` },

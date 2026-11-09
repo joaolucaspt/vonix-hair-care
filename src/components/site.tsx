@@ -57,7 +57,7 @@ function GoldLogo({ className = "h-12" }: { className?: string }) {
 
 const MARQUEE = [
   `ATÉ ${MAX_DISCOUNT}% OFF EM PRODUTOS SELECIONADOS`,
-  "FRETE GRÁTIS ACIMA DE R$ 150 EM PRODUTOS, ANTES DOS DESCONTOS",
+  "FRETE GRÁTIS ACIMA DE R$ 150 EM PRODUTOS, SUJEITO À COTAÇÃO DO CEP",
   "PARCELAMENTO EM ATÉ 6X SEM JUROS",
   "5% NO PIX EM ITENS SEM OUTRA OFERTA",
 ];
@@ -125,9 +125,9 @@ export function SecuritySeal({ dark = false }: { dark?: boolean }) {
 /** Reassurance strip: only conditions the store already advertises. */
 export function Benefits() {
   const items = [
-    { Icon: Truck, title: "Frete grátis", text: `acima de R$ ${FREE_SHIPPING_ABOVE} em produtos` },
+    { Icon: Truck, title: "Frete por CEP", text: `grátis acima de R$ ${FREE_SHIPPING_ABOVE}, conforme cotação` },
     { Icon: CreditCard, title: "Até 6x sem juros", text: "no cartão de crédito" },
-    { Icon: QrCode, title: "5% OFF no Pix", text: "pagamento à vista" },
+    { Icon: QrCode, title: "Até 5% no Pix", text: "somente itens sem outra oferta" },
     { Icon: ShieldCheck, title: "Compra segura", text: "seus dados protegidos" },
   ];
   return (
@@ -242,11 +242,11 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </div>
       <header className="sticky top-0 z-40 border-b border-border bg-background">
-        <div className="container-site grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2 lg:flex lg:items-start lg:gap-4 lg:py-2">
-          <button className="-m-2 justify-self-start p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
+        <div className="container-site grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-2 lg:flex lg:items-start lg:gap-4 lg:py-2">
+          <button className="grid h-11 w-11 place-items-center justify-self-start" aria-label="Abrir menu" onClick={() => setOpen(true)}>
             <Menu className="h-6 w-6" />
           </button>
-          <Link to="/" className="shrink-0">
+          <Link to="/" className="flex h-11 shrink-0 items-center justify-self-center">
             <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-8 w-auto sm:h-11" />
           </Link>
           <div className={`mx-auto min-w-0 w-full max-w-xl flex-col items-center gap-1.5 ${isCheckout ? "hidden" : "hidden lg:flex"}`}>
@@ -254,14 +254,14 @@ export function Shell({ children }: { children: ReactNode }) {
             <SearchBox />
             <AudienceChoice />
           </div>
-          <div className="ml-auto flex items-center justify-self-end gap-2 text-body sm:gap-4">
-            <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
+          <div className="ml-auto flex items-center justify-self-end gap-1 text-body sm:gap-3">
+            <Link to="/favoritos" aria-label="Favoritos" className="grid h-11 w-11 place-items-center">
               <Heart className="h-5 w-5" />
             </Link>
-            <Link to="/conta" aria-label="Acompanhar pedido" className="flex items-center gap-1 text-small sm:text-body">
+            <Link to="/conta" aria-label="Acompanhar pedido" className="flex min-h-11 min-w-11 items-center justify-center gap-1 px-1 text-small sm:text-body">
               <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="max-[359px]:hidden">Pedidos</span>
             </Link>
-            <Link to="/carrinho" aria-label="Carrinho" className="relative -m-2 p-2">
+            <Link to="/carrinho" aria-label="Carrinho" className="relative grid h-11 w-11 place-items-center">
               <ShoppingCart className="h-5 w-5" />
               {count > 0 && (
                 <span className="absolute -right-0 -top-0 grid h-4 min-w-4 place-items-center rounded-full bg-foreground px-1 text-small text-background">
@@ -327,7 +327,7 @@ export function Shell({ children }: { children: ReactNode }) {
       )}
       {path !== "/" && (
         <div className="container-site pt-3">
-          <button type="button" onClick={() => router.history.back()} aria-label="Voltar" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-small transition-colors hover:bg-muted">
+          <button type="button" onClick={() => router.history.back()} aria-label="Voltar" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2.5 text-small transition-colors hover:bg-muted">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
           </button>
         </div>
@@ -357,7 +357,7 @@ function Footer() {
         <span>Entrega para todo o Brasil</span>
         <span>Compra com conexão protegida</span>
         <span>Até 6x sem juros no cartão</span>
-        <span>Frete grátis acima de R$ 150 em produtos</span>
+        <span>Frete grátis acima de R$ 150 em produtos, sujeito ao CEP</span>
       </div>
       <div className="container-site grid gap-8 py-8 text-body sm:grid-cols-4">
         <div>
@@ -366,14 +366,14 @@ function Footer() {
             Cosméticos capilares profissionais, com entrega para todo o Brasil.
           </p>
         </div>
-        <div className="flex flex-col gap-1 [&_a]:py-1.5">
+        <div className="flex flex-col gap-1 [&_a]:py-3.5">
           <h4 className="mb-2 font-semibold">Comprar</h4>
           <Link to="/loja">Todos os Produtos</Link>
           <Link to="/loja" search={{ tiposProduto: "Combos" }}>Combos</Link>
           <Link to="/loja" search={{ tiposProduto: "Finalizadores" }}>Finalizadores</Link>
           <Link to="/loja" search={{ necessidades: "Hidratação" }}>Hidratação</Link>
         </div>
-        <div className="flex flex-col gap-1 [&_a]:py-1.5">
+        <div className="flex flex-col gap-1 [&_a]:py-3.5">
           <h4 className="mb-2 font-semibold">Ajuda</h4>
           <Link to="/$page" params={{ page: "sobre" }}>Sobre a Vonix Hair</Link>
           <Link to="/conta">Meus pedidos</Link>
@@ -400,7 +400,7 @@ function Footer() {
       </div>
       <div className="container-site flex flex-wrap justify-between gap-3 border-t border-marquee-foreground/15 py-5 text-small opacity-80">
         <span>© 2026 Vonix Hair. Todos os direitos reservados.</span>
-        <div className="flex flex-wrap gap-x-4 gap-y-0 [&_a]:py-2">
+        <div className="flex flex-wrap gap-x-4 gap-y-0 [&_a]:py-3.5">
           <Link to="/$page" params={{ page: "politica-de-privacidade" }}>Política de Privacidade</Link>
           <Link to="/$page" params={{ page: "termos-de-uso" }}>Termos de Uso</Link>
           <Link to="/$page" params={{ page: "politica-de-trocas-e-devolucoes" }}>Política de Troca e Devoluções</Link>
@@ -490,7 +490,7 @@ export function ProductCard({ p }: { p: Product }) {
   const par = installments(pricing.price);
   // Products with a single size are added straight to the bag; the rest open the product page to choose.
   const bag = () => {
-    if (p.variants.length > 1 || pricing.professional) {
+    if (p.variants.length > 1) {
       nav({ to: "/produto/$slug", params: { slug: p.slug } });
       return;
     }
@@ -509,8 +509,9 @@ export function ProductCard({ p }: { p: Product }) {
         )}
         <button
           aria-label="Favoritar"
+          aria-pressed={fav.has(p.slug)}
           onClick={() => fav.toggle(p.slug)}
-          className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-background"
+          className="absolute right-2 top-2 z-10 grid h-11 w-11 place-items-center rounded-full bg-background shadow-sm focus-visible:outline-2"
         >
           <Heart className={`h-4 w-4 ${fav.has(p.slug) ? "fill-foreground" : ""}`} />
         </button>
@@ -521,7 +522,7 @@ export function ProductCard({ p }: { p: Product }) {
       <div className="mt-2 flex min-h-[22px] flex-wrap items-center gap-1">
         {hasFreeShipping(pricing.price) && (
           <span className="inline-flex items-center gap-1 rounded-md bg-action px-1.5 py-0.5 text-small font-semibold tracking-wide text-action-foreground">
-            <Truck className="h-3 w-3" aria-hidden="true" /> FRETE GRÁTIS
+            <Truck className="h-3 w-3" aria-hidden="true" /> FRETE GRÁTIS POR CEP
           </span>
         )}
         {pricing.professional && (
@@ -541,8 +542,8 @@ export function ProductCard({ p }: { p: Product }) {
         <button
           type="button"
           onClick={bag}
-          aria-label={p.variants.length > 1 || pricing.professional ? `Escolher opções de ${p.name}` : `Adicionar ${p.name} à sacola`}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-sm transition-transform active:scale-95 md:h-11 md:w-11"
+          aria-label={p.variants.length > 1 ? `Escolher opções de ${p.name}` : `Adicionar ${p.name} à sacola`}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-sm transition-transform active:scale-95"
         >
           <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
         </button>
@@ -588,7 +589,7 @@ function ProductCarousel({ items }: { items: Product[] }) {
 
   const go = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.9, behavior: "smooth" });
   const goTo = (i: number) => ref.current?.scrollTo({ left: i * ref.current.clientWidth, behavior: "smooth" });
-  const btn = "grid h-9 w-9 place-items-center rounded-lg border border-[#7a5a2e] bg-white text-[#7a5a2e] transition-opacity disabled:opacity-30";
+  const btn = "grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-[#7a5a2e] bg-white text-[#7a5a2e] transition-opacity focus-visible:outline-2 disabled:opacity-30";
 
   return (
     <div>
@@ -603,11 +604,11 @@ function ProductCarousel({ items }: { items: Product[] }) {
         ))}
       </div>
       {pages > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-3">
+        <div className="mt-3 flex items-center justify-center gap-1">
           <button type="button" aria-label="Anterior" disabled={page === 0} onClick={() => go(-1)} className={btn}>
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-4" role="tablist" aria-label="Páginas">
+          <div className="flex min-w-0 items-center gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Páginas">
             {Array.from({ length: pages }, (_, i) => (
               <button
                 key={i}
@@ -616,8 +617,10 @@ function ProductCarousel({ items }: { items: Product[] }) {
                 aria-selected={i === page}
                 aria-label={`Página ${i + 1}`}
                 onClick={() => goTo(i)}
-                className={`relative h-2 rounded-full transition-all before:absolute before:-inset-2 before:content-[''] ${i === page ? "w-6 bg-[#7a5a2e]" : "w-2 bg-[oklch(0.8_0.01_85)]"}`}
-              />
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1"
+              >
+                <span aria-hidden="true" className={`h-2 rounded-full transition-all ${i === page ? "w-6 bg-[#7a5a2e]" : "w-2 bg-[oklch(0.8_0.01_85)]"}`} />
+              </button>
             ))}
           </div>
           <button type="button" aria-label="Próximo" disabled={page === pages - 1} onClick={() => go(1)} className={btn}>

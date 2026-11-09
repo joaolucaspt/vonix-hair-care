@@ -1,0 +1,73 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "date": "2026-11-09",
+  "localBaseBeforeMainSync": "67af4a5",
+  "validated": {
+    "vitest": {
+      "passed": 393,
+      "total": 393,
+      "files": 56,
+      "exit": 0
+    },
+    "typescript": {
+      "exit": 0
+    },
+    "build": {
+      "exit": 0
+    },
+    "eslintTargeted": {
+      "exit": 0
+    },
+    "ssr": {
+      "productsChecked": 43,
+      "passed": 43,
+      "broken": 0,
+      "canonical": true,
+      "jsonldPrice": true,
+      "og": true,
+      "sitemapProducts": 43,
+      "unknownPageStatus": 404
+    },
+    "chrome": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "routes": [
+        "/",
+        "/loja",
+        "/produto/kit-banana-e-mel"
+      ],
+      "cartScenario": true,
+      "checks": 10,
+      "failures": 0,
+      "exit": 0
+    },
+    "storageFallback": {
+      "browserReproductionFixed": true
+    },
+    "trackingPreview": {
+      "ga4LoadedOutsideProd": false,
+      "clarityLoadedOutsideProd": false
+    }
+  },
+  "limitations": [
+    "No operational SKU stock verification",
+    "No real Appmax payment or refund verification",
+    "No live Bling inventory/order reconciliation",
+    "No production deployment or paid-order attribution verification",
+    "Browser validation does not cover every assistive technology, network or device",
+    "C3 checks predate integration of new upstream main commit 4dffd38; re-verify after merge"
+  ],
+  "protected": [
+    "affiliate code and configuration",
+    "live database",
+    "secrets",
+    "orders and payments in production",
+    "production deployment"
+  ]
+}

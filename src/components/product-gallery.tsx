@@ -101,10 +101,10 @@ export function ProductGallery({ images, name, cards = [] }: { images: string[];
         </span>
         {n > 1 && (
           <>
-            <button type="button" aria-label="Imagem anterior" onClick={(e) => { e.stopPropagation(); go(-1); }} className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background/90 shadow">
+            <button type="button" aria-label="Imagem anterior" onClick={(e) => { e.stopPropagation(); go(-1); }} className="absolute left-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-background/90 shadow focus-visible:outline-2">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <button type="button" aria-label="Próxima imagem" onClick={(e) => { e.stopPropagation(); go(1); }} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background/90 shadow">
+            <button type="button" aria-label="Próxima imagem" onClick={(e) => { e.stopPropagation(); go(1); }} className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-background/90 shadow focus-visible:outline-2">
               <ChevronRight className="h-5 w-5" />
             </button>
             <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-foreground/80 px-2.5 py-1 text-small text-background">{i + 1}/{n}</span>

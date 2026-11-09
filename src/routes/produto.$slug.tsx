@@ -51,7 +51,7 @@ export const Route = createFileRoute("/produto/$slug")({
     // Prévia no WhatsApp/Facebook e Google exigem endereço completo da imagem.
     const images = p.images.map((src) => (src.startsWith("http") ? src : `${SITE_URL}${src}`));
     const url = `${SITE_URL}/produto/${p.slug}`;
-    const description = `${p.short || p.name} Até 6x sem juros, 5% OFF no Pix e frete grátis acima de R$ ${FREE_SHIPPING_ABOVE.toFixed(0)}. Vonix Hair.`;
+    const description = `${p.name} na Vonix Hair. Até 6x sem juros, até 5% no Pix em itens sem outra oferta. Frete grátis acima de R$ ${FREE_SHIPPING_ABOVE.toFixed(0)} sujeito à cotação do CEP.`;
     const rated = reviewsFor(p.slug);
     return {
       meta: [
@@ -281,7 +281,7 @@ function ProductPage() {
   const unitPrice = sel.net / sel.units;
   useEffect(() => {
     track("view_item", { value: v.price, items: [toItem(p, v.label, v.price)] });
-  }, [p.slug]);
+  }, [p, v.label, v.price]);
   const add = () => {
     cart.add(p.slug, v.label, qty);
     track("add_to_cart", {
@@ -471,7 +471,7 @@ function ProductPage() {
               <button
                 aria-label="Favoritar"
                 onClick={() => fav.toggle(p.slug)}
-                className="rounded-full border border-border p-3"
+                className="grid h-11 w-11 place-items-center rounded-full border border-border"
               >
                 <Heart className={`h-4 w-4 ${fav.has(p.slug) ? "fill-foreground" : ""}`} />
               </button>
@@ -506,7 +506,7 @@ function ProductPage() {
             <ul className="mt-4 space-y-1 text-body text-muted-foreground">
               <li>
                 Frete grátis em compras acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos
-                descontos
+                descontos, sujeito à cotação do CEP
               </li>
               <li>
                 <Link

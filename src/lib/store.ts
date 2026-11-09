@@ -48,9 +48,22 @@ export function installments(total: number, n = MAX_INSTALLMENTS) {
 export const hasFreeShipping = (subtotal: number) => subtotal > FREE_SHIPPING_ABOVE;
 
 const CEP_KEY = "vonix-cep";
-export const getSavedCep = () => (typeof window === "undefined" ? "" : (localStorage.getItem(CEP_KEY) ?? ""));
+export const getSavedCep = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(CEP_KEY) ?? "";
+  } catch {
+    // Optional cache: blocked storage must not crash checkout initialization.
+    return "";
+  }
+};
 export const saveCep = (cep: string) => {
-  if (typeof window !== "undefined") localStorage.setItem(CEP_KEY, cep);
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CEP_KEY, cep);
+  } catch {
+    // The entered CEP stays in the form even when the cache is unavailable.
+  }
 };
 export const maskCep = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 8);
@@ -172,7 +185,12 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
     set: (fn: (s: T) => T) => {
       load();
       state = fn(state);
-      storage().setItem(key, JSON.stringify(state));
+      try {
+        storage().setItem(key, JSON.stringify(state));
+      } catch {
+        // Private/blocked/full storage must not prevent cart updates in this tab.
+        // A reload cannot restore an in-memory-only cart.
+      }
       subs.forEach((f) => f());
     },
     sub: (f: () => void) => {

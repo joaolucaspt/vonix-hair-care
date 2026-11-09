@@ -132,13 +132,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           ],
         }),
       },
-      { src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, async: true },
       {
-        children: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`,
+        // GA4 só carrega no domínio público — previews não devem contaminar vendas ou sessões.
+        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)}) {
+          window.dataLayer=window.dataLayer||[];
+          window.gtag=function(){window.dataLayer.push(arguments);};
+          window.gtag("js",new Date());
+          window.gtag("config","${GA_ID}");
+          var gaScript=document.createElement("script");
+          gaScript.async=true;
+          gaScript.src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}";
+          document.head.appendChild(gaScript);
+        }`,
       },
       {
-        // Clarity só carrega depois da página abrir, para não competir com o conteúdo.
-        children: `window.addEventListener('load',function(){setTimeout(function(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY_ID}");},3000)});`,
+        // Clarity usa o mesmo isolamento por origem e carrega após a página.
+        children: `if (window.location.origin === ${JSON.stringify(SITE_URL)}) {
+          window.addEventListener("load",function(){setTimeout(function(){
+            (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a]||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window,document,"clarity","script","${CLARITY_ID}");
+          },3000)});
+        }`,
       },
       {
         // A prévia da Lovable não deve gerar eventos de produção.

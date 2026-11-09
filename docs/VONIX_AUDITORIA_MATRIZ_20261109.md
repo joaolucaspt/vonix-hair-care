@@ -57,6 +57,15 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 | N17 | Alta | Nova prioridade de frete grátis rápido não usava a validação defensiva anterior das cotações | Integração seleciona serviço em até 3 dias apenas entre cotações válidas; na ausência mantém prazo real da opção disponível, testando também opção rápida inválida |
 | N18 | Média | Um depoimento em vídeo tinha quase 12 MB | Transcodificado com duração/resolução preservadas e SSIM 0,984; entrega passou a 6,25 MB (47,7% menor), com teste de orçamento de mídia |
 
+| N19 | Alta | Navegador com armazenamento local bloqueado podia abortar a adição de produtos ao carrinho | Reproduzido no Chrome (erro `Storage denied`, carrinho vazio). Estado em memória com `setItem` protegido e cache do CEP opcional; regressões e navegação SPA confirmadas. Recarregar sem armazenamento ainda perde os itens. |
+| N20 | Alta | Preview/localhost carregava GA4 e Clarity da operação, podendo contaminar o funil | Duas requisições reproduzidas, bloqueadas no teste, e eliminadas. GA4/Clarity inicializam apenas no domínio canônico; teste de origem PROD/preview PASS. Consentimento LGPD ainda pendente. |
+| N21 | Média | Anúncios de Pix/frete e SEO/política divergiam das restrições comerciais | Copy de homepage, vitrine, PDP, informações institucionais, meta/OG e política: até 5% no Pix em itens elegíveis, frete grátis condicionado ao CEP. |
+| N22 | Média | Botões pequenos 8/32/36 px persistiam na home/loja/PDP | Ampliados favoritos, conta/carrinho, carrossel, galeria e compartilhar. 9 verificações em Chrome 320/390/1366 px sem overflow, controles testados menores que 40/44 px ou exceções JS. Auditoria completa de acessibilidade ainda aberta. |
+| N23 | Média | Mudança de variante na PDP não atualizava evento `view_item` | Efeito agora considera variante/preço; Chrome verificou primeiro `250ml` e depois `1L` no kit-cachos. |
+| N24 | Informativo | Revisão de 43 produtos deve ser repetível, não baseada em inspeção manual desconectada | `scripts/audit-ssr-storefront-c3.mjs` e recibo JSON: 43/43 HTTP 200, SEO canonical/OG, preço JSON-LD, imagens, política de promoções; sitemap 43, 404 correto. Sem inferir estoque real. |
+
+| N25 | Média | Botão da sacola nos cards obrigava abrir a página do produto mesmo quando só havia uma variante | 39/43 itens com uma opção agora usam adição direta com `add_to_cart`; 4 itens multivariantes ainda exigem escolha. Três testes específicos e navegação Chrome com produto em carrinho aprovados. |
+
 ## Evidências e validações técnicas
 
 - Varredura pública sem efeitos externos: `scripts/audit-public-catalog.mjs --live`, recibo `docs/VONIX_PUBLIC_CATALOG_AUDIT_20261109.json`.

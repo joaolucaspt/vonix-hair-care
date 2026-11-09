@@ -78,7 +78,7 @@ export function ShareButton({
         onClick={press}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`inline-flex items-center gap-2 rounded-full border border-border bg-white font-medium text-foreground transition-colors hover:border-foreground ${compact ? "px-3 py-1.5 text-small" : "px-4 py-2 text-body"}`}
+        className={`inline-flex items-center gap-2 rounded-full border border-border bg-white font-medium text-foreground transition-colors hover:border-foreground ${compact ? "min-h-11 px-3 py-2.5 text-small" : "min-h-11 px-4 py-2.5 text-body"}`}
       >
         <Share2 className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} aria-hidden="true" /> {label}
       </button>
