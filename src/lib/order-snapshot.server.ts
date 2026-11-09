@@ -44,6 +44,20 @@ export const orderSnapshotSchema = z
 
 export type OrderSnapshot = z.infer<typeof orderSnapshotSchema>;
 
+/** Exact original checkout amount (cents), never a fresh re-quote.
+ * The snapshot is authoritative only after it passes the server-side schema.
+ */
+export function snapshotTotalCents(input: OrderSnapshot): number {
+  const snapshot = orderSnapshotSchema.parse(input);
+  const subtotal = snapshot.products.reduce(
+    (sum, p) => sum + p.unitValueCents * p.quantity, 0,
+  );
+  const total = subtotal + snapshot.shippingValueCents - snapshot.discountValueCents;
+  if (!Number.isSafeInteger(total) || total <= 0)
+    throw new Error("Valor original do pedido inválido");
+  return total;
+}
+
 function connection() {
   const url = env("SUPABASE_URL");
   const key = env("SUPABASE_SERVICE_ROLE_KEY");

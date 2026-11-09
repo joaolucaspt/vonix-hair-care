@@ -1,8 +1,9 @@
 import { META_PIXEL_ID } from "@/lib/analytics";
 import { env } from "@/lib/env.server";
 import { SITE_URL } from "@/lib/store";
-import { loadOrderSnapshot } from "@/lib/order-snapshot.server";
+import { loadOrderSnapshot, snapshotTotalCents } from "@/lib/order-snapshot.server";
 import { isPaid, type AppmaxOrder } from "@/lib/appmax.server";
+import { paidEventTimestamp } from "@/lib/paid-event-time";
 import { claimMetaPurchase, acknowledgeMetaPurchase } from "@/lib/meta-purchase-delivery.server";
 
 /** Eventos que o site já envia pelo pixel e que também vão pelo servidor (mesmo eventID = deduplicação). */
@@ -128,29 +129,17 @@ export async function sendVerifiedPurchase(
     // Legacy snapshots have no consent record and must never create a Meta Purchase.
     if (snapshot.marketingConsent?.accepted !== true || snapshot.marketingConsent.policyVersion !== "v1")
       return "skipped";
-    const subtotalCents = snapshot.products.reduce(
-      (total, p) => total + p.unitValueCents * p.quantity,
-      0,
-    );
-    const valueCents = subtotalCents + snapshot.shippingValueCents - snapshot.discountValueCents;
-    if (!Number.isSafeInteger(valueCents) || valueCents <= 0) return "skipped";
-    const paidAt = order.data.payment?.paid_at;
-    let paidTimestamp: number | undefined;
-    if (typeof paidAt === "string" && /(?:Z|[+-]\d{2}:\d{2})$/i.test(paidAt)) {
-      const parsed = Date.parse(paidAt);
-      // Never re-label a historical purchase as though it happened today.
-      if (!Number.isFinite(parsed)) return "skipped";
-      paidTimestamp = Math.floor(parsed / 1000);
-      const now = Math.floor(Date.now() / 1000);
-      if (paidTimestamp < now - 6 * 24 * 3600 || paidTimestamp > now + 60) return "skipped";
-    }
+    const valueCents = snapshotTotalCents(snapshot);
+    // Never relabel a historical purchase as a conversion at recovery time.
+    const paidTimestamp = paidEventTimestamp(order.data.payment?.paid_at);
+    if (paidTimestamp === null) return "skipped";
     // Periodic worker polls do not authorize repeated Purchase sends.
     // A database lease and sent marker guard the provider call.
     const claimToken = await claimMetaPurchase(orderId);
     if (!claimToken) return "skipped";
     const result = await sendMetaEvent({
       event: "Purchase",
-      ...(paidTimestamp !== undefined ? { eventTime: paidTimestamp } : {}),
+      eventTime: paidTimestamp,
       eventId: `purchase-${orderId}`,
       url: `${SITE_URL}/checkout`,
       customData: { currency: "BRL", value: valueCents / 100 },

@@ -1,0 +1,66 @@
+{
+  "project": "vonix-hair-care",
+  "date": "2026-11-09",
+  "scope": "ecommerce-only",
+  "pr": 26,
+  "base": "d0e64db016687c8b23210811ba28e663fa2552f6",
+  "issues": [
+    "N48 Purchase uses recovery time when paid_at missing",
+    "N49 missing or malformed paid_at causes repeated worker lookup",
+    "N50 duplicate intent displays re-quoted amount instead of original charge",
+    "N51 defensive optional address complement normalization"
+  ],
+  "evidence": {
+    "vitest": {
+      "passed": 495,
+      "total": 495,
+      "files": 63,
+      "exit": 0
+    },
+    "focused": {
+      "passed": 72,
+      "files": 5,
+      "exit": 0
+    },
+    "typescript": 0,
+    "eslintTargeted": 0,
+    "build": 0,
+    "ssr": {
+      "passed": 42,
+      "failed": 0,
+      "excluded": {
+        "plex-vonix": 404
+      },
+      "inventoryPhysicallyVerified": false
+    }
+  },
+  "protection": {
+    "metaWithoutTime": "not sent; no claim",
+    "metaWithTime": "timezone-aware and within max six day window; original event time used",
+    "metaRecoverMissing": "defer 60 minutes",
+    "metaRecoverInvalid": "defer 1440 minutes",
+    "duplicateOrder": "original server snapshot price, no new charge",
+    "missingSnapshot": "retrySafe false, no fictional amount",
+    "orderIdMismatch": "retrySafe false",
+    "originalAmount": "integer cents; reject invalid/overflow",
+    "affiliateFilesModified": false,
+    "realPayments": false,
+    "externalAnalyticsSent": false,
+    "realDatabaseWrites": false,
+    "mainMerged": false,
+    "deployed": false
+  },
+  "pendingExternal": [
+    "confirm Appmax paid_at format in sandbox",
+    "verify original snapshot and replay in staging",
+    "apply SQL/RLS and test Supabase backups",
+    "Bling stock/weights reconciliation",
+    "LGPD late revocation and CAPI authorization",
+    "edge WAF and distributed rate limit",
+    "paid order funnel and GA4 property verification"
+  ],
+  "remoteCi": {
+    "status": "pending on new head",
+    "doNotClaimSuccessBeforeGitHub": true
+  }
+}

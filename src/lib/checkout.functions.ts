@@ -6,7 +6,7 @@ import * as appmax from "./appmax.server";
 import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
 import { orderStatusToken, validOrderStatusToken } from "./order-status-token.server";
-import { saveOrderSnapshot } from "./order-snapshot.server";
+import { loadOrderSnapshot, saveOrderSnapshot, snapshotTotalCents } from "./order-snapshot.server";
 import {
   checkoutFingerprint,
   claimCheckoutIntent,
@@ -243,14 +243,26 @@ export const createPayment = createServerFn({ method: "POST" })
       const intent = await claimCheckoutIntent(fingerprint);
       if (!intent.claimed) {
         if (intent.orderId) {
-          // The original browser may have lost the response after creating
-          // the order. Only follow its existing status; NEVER submit again.
+          // The original attempt can have a different coupon, method or
+          // shipping quote now. Never display today's quote as the old charge.
+          let originalCents: number;
+          try {
+            const snapshot = await loadOrderSnapshot(intent.orderId);
+            if (snapshot.orderId !== intent.orderId) throw new Error("Snapshot de outro pedido");
+            originalCents = snapshotTotalCents(snapshot);
+          } catch {
+            return {
+              ok: false as const,
+              retrySafe: false as const,
+              message: "Já existe uma tentativa de compra em verificação. Consulte o atendimento antes de tentar pagar novamente.",
+            };
+          }
           return {
             ok: true as const,
             method: "verification" as const,
             orderId: intent.orderId,
             statusToken: orderStatusToken(intent.orderId),
-            total: totals.net + option.price,
+            total: originalCents / 100,
             paid: false,
             status: "aguardando_confirmacao",
           };
@@ -277,7 +289,7 @@ export const createPayment = createServerFn({ method: "POST" })
           postcode: data.address.cep.replace(/\D/g, ""),
           street: data.address.rua,
           number: data.address.numero,
-          complement: data.address.complemento,
+          complement: data.address.complemento ?? "",
           district: data.address.bairro,
           city: data.address.cidade,
           state: data.address.uf.toUpperCase(),
@@ -321,7 +333,7 @@ export const createPayment = createServerFn({ method: "POST" })
         address: {
           street: data.address.rua,
           number: data.address.numero,
-          complement: data.address.complemento,
+          complement: data.address.complemento ?? "",
           district: data.address.bairro,
           city: data.address.cidade,
           state: data.address.uf.toUpperCase(),

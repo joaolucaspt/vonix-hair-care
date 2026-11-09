@@ -2,6 +2,7 @@ import { env } from "./env.server";
 import { getOrder, isPaid } from "./appmax.server";
 import { isTerminatedOrder } from "./order-events";
 import { sendVerifiedPurchase } from "./meta-capi.server";
+import { paidEventTimestamp } from "./paid-event-time";
 import { dueMetaRecoveryOrders, deferMetaRecovery } from "./meta-purchase-delivery.server";
 
 export type MetaRecoverySummary = {
@@ -38,6 +39,18 @@ export async function recoverMetaPurchases(limit = 3): Promise<MetaRecoverySumma
         // Cancelled/refunded orders are rechecked less frequently, rather than
         // being misreported as purchases. Unresolved antifraud needs a shorter retry.
         await deferMetaRecovery(id, isTerminatedOrder(order.data.order.status) ? 1440 : 60);
+        summary.deferred++;
+        continue;
+      }
+      // Appmax can confirm a status without the timestamp of that payment.
+      // Do not invent a fresh conversion time or poll this order on every run.
+      const paidAt = order.data.payment?.paid_at;
+      if (paidEventTimestamp(paidAt) === null) {
+        // A missing timestamp may become available after Appmax finalizes the
+        // payment. A permanently invalid/expired timestamp is checked daily,
+        // not on every scheduled worker pass.
+        const delayMinutes = typeof paidAt === "string" && paidAt.trim() ? 1440 : 60;
+        await deferMetaRecovery(id, delayMinutes);
         summary.deferred++;
         continue;
       }

@@ -10,7 +10,10 @@ vi.mock("@/lib/env.server", () => ({
 }));
 vi.mock("@/lib/analytics", () => ({ META_PIXEL_ID: "12345" }));
 vi.mock("@/lib/store", () => ({ SITE_URL: "https://vonixhair.com" }));
-vi.mock("@/lib/order-snapshot.server", () => ({ loadOrderSnapshot: mocks.snapshot }));
+vi.mock("@/lib/order-snapshot.server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/order-snapshot.server")>()),
+  loadOrderSnapshot: mocks.snapshot,
+}));
 vi.mock("@/lib/meta-purchase-delivery.server", () => ({
   claimMetaPurchase: mocks.claim,
   acknowledgeMetaPurchase: mocks.ack,
@@ -21,7 +24,9 @@ vi.mock("@/lib/appmax.server", () => ({
 }));
 import { sendMetaEvent, sendVerifiedPurchase } from "@/lib/meta-capi.server";
 
-const order = (status: string) => ({ data: { order: { id: 5501, status } } });
+const order = (status: string) => ({
+  data: { order: { id: 5501, status }, payment: { paid_at: new Date().toISOString() } },
+});
 const fetchMock = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
@@ -30,7 +35,18 @@ beforeEach(() => {
   mocks.ack.mockResolvedValue(undefined);
   mocks.snapshot.mockResolvedValue({
     orderId: 5501,
-    products: [{ sku: "test-product", unitValueCents: 15490, quantity: 1 }],
+    customer: {
+      name: "Synthetic Buyer",
+      email: "synthetic@example.test",
+      phone: "31988887777",
+      documentNumber: "52998224725",
+    },
+    address: {
+      street: "Rua Teste", number: "12", complement: "",
+      district: "Centro", city: "Belo Horizonte", state: "MG",
+      postcode: "30140010",
+    },
+    products: [{ sku: "test-product", name: "Produto sintético", unitValueCents: 15490, quantity: 1 }],
     shippingValueCents: 1200,
     discountValueCents: 490,
     marketingConsent: { accepted: true, policyVersion: "v1", recordedAt: "2026-11-09T15:00:00.000Z" },
@@ -98,6 +114,20 @@ describe("Meta CAPI must not count unverified purchases", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("refuses a paid Purchase without a merchant-confirmed paid_at, before claiming delivery", async () => {
+    const missing = { data: { order: { id: 5501, status: "aprovado" } } };
+    expect(await sendVerifiedPurchase(missing as never)).toBe("skipped");
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("rejects a local-time paid_at with no offset instead of inventing today's attribution", async () => {
+    const withoutOffset = {
+      data: { order: { id: 5501, status: "integrado" }, payment: { paid_at: "2026-11-09T12:30:00" } },
+    };
+    expect(await sendVerifiedPurchase(withoutOffset as never)).toBe("skipped");
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it("uses the merchant-confirmed paid_at time instead of the recovery time when available", async () => {
     const paidAt = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const paidOrder = {

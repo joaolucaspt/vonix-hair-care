@@ -25,7 +25,10 @@ vi.mock("@/lib/order-events", () => ({
 vi.mock("@/lib/meta-capi.server", () => ({ sendVerifiedPurchase: mocks.send }));
 import { recoverMetaPurchases } from "@/lib/meta-purchase-recovery.server";
 
-const order = (id: number, status: string) => ({ data: { order: { id, status } } });
+const testPaidAt = new Date().toISOString();
+const order = (id: number, status: string) => ({
+  data: { order: { id, status }, payment: { paid_at: testPaidAt } },
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -86,6 +89,21 @@ describe("Meta paid purchase reconciliation runs independently of ERP fulfillmen
       failed: 1,
     });
     expect(mocks.defer).toHaveBeenCalledExactlyOnceWith(12, 15);
+  });
+  it("does not send or claim Purchase with no Appmax payment timestamp; defers polling", async () => {
+    mocks.getOrder.mockResolvedValue({ data: { order: { id: 12, status: "aprovado" } } });
+    expect(await recoverMetaPurchases()).toMatchObject({ sent: 0, deferred: 1, failed: 0 });
+    expect(mocks.defer).toHaveBeenCalledExactlyOnceWith(12, 60);
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
+  it("does not send or claim Purchase with an old/invalid timestamp", async () => {
+    const old = new Date(Date.now() - 9 * 24 * 3600_000).toISOString();
+    mocks.getOrder.mockResolvedValue({
+      data: { order: { id: 12, status: "aprovado" }, payment: { paid_at: old } },
+    });
+    expect(await recoverMetaPurchases()).toMatchObject({ sent: 0, deferred: 1 });
+    expect(mocks.defer).toHaveBeenCalledExactlyOnceWith(12, 1440);
+    expect(mocks.send).not.toHaveBeenCalled();
   });
   it("does not re-send events already delivered or leased to another worker", async () => {
     mocks.send.mockResolvedValue("skipped");

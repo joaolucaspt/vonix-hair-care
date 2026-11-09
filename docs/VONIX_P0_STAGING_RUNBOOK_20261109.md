@@ -40,3 +40,11 @@ Exigir responsáveis do negócio, jurídico, pagamentos, ERP, dados e operaçõe
 ### Auditoria C10 — identificar propriedade GA4 e consentimento
 
 A `main` mudou o identificador público GA4 para `G-J8TYLB425K` no commit `8c8bf6b`. O PR incorpora o ID vigente preservando bloqueios de GA4, Clarity e Meta antes de aceite. Em staging ou revisão jurídica, confirmar que este ID pertence à propriedade GA4 autorizada da loja, revisar consentimento/revogação tardia e comparar contagens agregadas (sem PII) antes de qualquer deploy. Não instalar tag duplicada de GA4 via painel, Lovable, GTM ou script direto sem novo teste de consentimento. Os checks locais não provam que o ID recebe dados reais da conta correta.
+
+### Portas C11–C12 — confirmação de tempo e valor original
+
+**Appmax sandbox:** simular resposta paga com `data.payment.paid_at` em ISO contendo fuso. Verificar se o contrato real retorna esse campo em Pix e cartão, e se o horário representa liquidação/aprovação; sem essa evidência, o CAPI Purchase é deliberadamente omitido em vez de inventar data. Simular paid_at faltante, vencido, inválido, horário futuro e recuperação com retardo de 60 min/24 h.
+
+**Supabase staging:** executar um fluxo 100% fictício e isolado em que a segunda tentativa altera método Pix/cartão, cupom e frete depois de o pedido inicial ser criado. Verificar se o retorno de acompanhamento usa o snapshot persistido original, não a nova cotação. Simular snapshot ausente, valor zero/overflow, ID divergente e indisponibilidade da rede; sem novo customer/order/Pix/card e com orientação de contato. A migração SQL C5/C8 e os backups permanecem procedimentos separados com aceite operacional.
+
+**Privacidade:** Purchase continua dependendo do snapshot de consentimento v1. A propagação de revogação posterior ao pedido para o backend não foi implementada; continua exigindo autorização, ledger e revisão LGPD. Não divulgar cumprimento integral antes disso.

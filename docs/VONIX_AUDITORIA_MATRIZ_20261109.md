@@ -153,3 +153,14 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N47 | Alta | Versão atual da `main` tinha inicialização GA4/Clarity/Pixel sem a guarda de opt-in do PR; risco de regressão de privacidade | Merge manteve `__vonixMarketingAllowed`, restrição a domínio canônico e `consent:true` no PageView; teste impede tags externas estáticas incondicionais. **Não publicado: main operacional continua dependendo do merge/homologação** |
 
 **Recibo C10:** **482/482 testes em 62 arquivos**, TypeScript/ESLint/build PASS, SSR **42/42**, Chrome com rede externa interceptada: zero tags sem consentimento e GA4 `G-J8TYLB425K` + Clarity/Pixel + PageView após aceitação. Arquivos `docs/VONIX_AUDITORIA_CONTINUIDADE_C10_20261109.md` e `docs/VONIX_C10_VERIFIED_RECEIPT_20261109.json`. Verificar ainda propriedade real do GA4 e requisitos P0; sem deploy.
+
+## Auditoria C11–C12 — verdade temporal e financeira (09/11)
+
+| ID | Prioridade | Problema | Correção verificada |
+| --- | --- | --- | --- |
+| N48 | Alta | Purchase podia usar o horário do worker como horário da compra quando Appmax não informava `paid_at` | Exigir ISO com fuso, dentro de seis dias e com instante verificável; sem dado confiável, não enviar Purchase ou criar claim. Testes UTC, fuso -03:00, hora local, ausência, datas antigas/futuras |
+| N49 | Média | Recovery consultava pedidos sem `paid_at` a cada execução, sem informação nova | Adiamento de 60 min para campo ausente e 24 h para valor inválido/antigo; ERP e estado financeiro inalterados |
+| N50 | Alta | Recuperação de pedido idempotente mostrava nova cotação/cupom/frete como se fosse o total original da compra | Ler snapshot financeiro persistido, conferir ID e calcular centavos exatos. Se falhar, não anunciar valor nem liberar nova cobrança. Testes alterando frete e Pix/cartão, snapshot ausente, de outro pedido, zero/overflow |
+| N51 | Defesa | Complemento de endereço omitido nos mocks não reproduzia default do schema real | Normalização explícita `complemento ?? ""` ao criar cliente/snapshot, e teste com snapshot compatível; sem afirmar falha em produção |
+
+**C11–C12:** **495/495 testes Vitest PASS em 63 arquivos**, TS/ESLint direcionado/build PASS e SSR **42/42**, Plex 404. Evidências em `docs/VONIX_AUDITORIA_CONTINUIDADE_C12_20261109.md` e `docs/VONIX_C12_VERIFIED_RECEIPT_20261109.json`. **Appmax sandbox, Supabase staging, Bling, revogação LGPD tardia, rate limit e receita real permanecem pendentes.**

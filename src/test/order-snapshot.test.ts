@@ -7,7 +7,7 @@ vi.mock("@/lib/env.server", () => ({
         ? "service-role-unit-test-only"
         : "",
 }));
-import { loadOrderSnapshot, saveOrderSnapshot } from "@/lib/order-snapshot.server";
+import { loadOrderSnapshot, saveOrderSnapshot, snapshotTotalCents } from "@/lib/order-snapshot.server";
 const snapshot = {
   orderId: 3501,
   customer: {
@@ -39,6 +39,22 @@ beforeEach(() => {
 });
 
 describe("durable server-side Appmax order snapshots", () => {
+  it("calcula o total original em centavos a partir do snapshot imutável", () => {
+    expect(snapshotTotalCents(snapshot)).toBe(15490 - 774);
+    expect(snapshotTotalCents({
+      ...snapshot, shippingValueCents: 1250, discountValueCents: 490,
+    })).toBe(15490 + 1250 - 490);
+  });
+  it("rejeita subtotal inconsistente, zero e overflow sem estimar valores", () => {
+    expect(() => snapshotTotalCents({ ...snapshot, discountValueCents: 15490 })).toThrow();
+    expect(() => snapshotTotalCents({ ...snapshot, discountValueCents: 15491 })).toThrow();
+    expect(() => snapshotTotalCents({
+      ...snapshot,
+      products: [
+        { sku: "fake", name: "synthetic", quantity: 99, unitValueCents: Number.MAX_SAFE_INTEGER },
+      ],
+    })).toThrow();
+  });
   it("persists server-priced products and destination before collecting payment", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 201 }));
     await saveOrderSnapshot(snapshot);
