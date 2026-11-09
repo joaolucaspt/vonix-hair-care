@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-09",
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "startingCommit": "8a611b8d7511c8a0138109819147aaa1ee4bac2c",
+  "tests": {
+    "vitest": {
+      "passed": 445,
+      "total": 445,
+      "files": 59,
+      "exit": 0
+    },
+    "typeScript": 0,
+    "lintTargeted": 0,
+    "build": 0,
+    "ssr": {
+      "passed": 43,
+      "failed": 0,
+      "stockConfirmed": false
+    }
+  },
+  "browser": {
+    "case": "tampered pending-card paid:true",
+    "viewports": [
+      320,
+      390,
+      1366
+    ],
+    "http200All": true,
+    "shownStatus": "Pagamento em análise",
+    "approvedWithoutServer": false,
+    "paymentCtaShown": false,
+    "signedTokenInHtml": false,
+    "jsErrors": 0,
+    "horizontalOverflow": false,
+    "externalRequestsBlocked": true
+  },
+  "postgres": {
+    "version": 16,
+    "database": "vonix_synthetic",
+    "network": "none",
+    "temporaryData": true,
+    "run1": "assertion-format mismatch, no SQL functional failure",
+    "run2": "PASS",
+    "fingerprints": [
+      "synthetic a repeated 64",
+      "synthetic b repeated 64"
+    ],
+    "orderIds": [
+      1234,
+      1235
+    ],
+    "privilegesChecked": true,
+    "searchPathRestricted": true,
+    "duplicateClaimDenied": true,
+    "completedRetryUnder24hDenied": true,
+    "retryAfter24hAllowed": true,
+    "cancelledRetryAllowed": true,
+    "transactionRolledBack": true,
+    "containerRemoved": true
+  },
+  "ciAutomation": { "workflow": ".github/workflows/vonix-ci.yml", "job": "checkout-postgres-qa", "isolatedNetwork": true, "tmpfs": true, "remoteVerification": "pending at commit time" },
+  "changedScope": [
+    "server-verified payment status presentation",
+    "checkout restoration guard",
+    "status request deduplication per tab",
+    "SECURITY DEFINER sql search path",
+    "synthetic postgres QA"
+  ],
+  "protected": {
+    "affiliateCodeModified": false,
+    "realPayment": false,
+    "realDatabaseWrites": false,
+    "externalEvents": false,
+    "productionDeploy": false,
+    "mergedToMain": false
+  },
+  "pendingExternal": [
+    "Appmax sandbox payment states and reconciliation",
+    "Supabase staging backup/migration/RLS",
+    "Bling and SKU inventory",
+    "Meta late consent revocation and legal review",
+    "edge WAF/rate limiting",
+    "real paid order funnel"
+  ]
+}

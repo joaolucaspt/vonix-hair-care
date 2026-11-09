@@ -272,7 +272,10 @@ function Checkout() {
   // Reattach a pending authorization after a refresh without recharging.
   useEffect(() => {
     const pending = restorePendingCard();
-    if (pending && !pending.paid) setCardDone(pending);
+    // Never trust paid=true from tab storage: it can be edited by the buyer.
+    // Resume the same order without permitting any new charge, and require a
+    // fresh authenticated status response before displaying "paid".
+    if (pending) setCardDone({ ...pending, paid: false });
     else {
       const pendingPix = restorePendingPix();
       if (pendingPix) setPix(pendingPix);

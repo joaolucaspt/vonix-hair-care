@@ -280,6 +280,43 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(screen.getByText(/Pedido nº 2040/)).toBeInTheDocument();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
+  it("sessão adulterada paid:true não libera outro checkout nem comprova pagamento", async () => {
+    savePendingCard({
+      orderId: 765,
+      statusToken: "signed-read-only-test-token-0000010",
+      total: 154.9,
+      paid: true,
+      status: "aprovado",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "autorizado" });
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pagamento em análise" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Pagamento aprovado!" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Gerar Pix/ })).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.status).toHaveBeenCalledWith({
+      data: { orderId: 765, statusToken: "signed-read-only-test-token-0000010" },
+    }));
+    expect(mocks.payment).not.toHaveBeenCalled();
+    expect(mocks.cart.clear).not.toHaveBeenCalled();
+  });
+  it("cartão pago em sessão só é confirmado após status autenticado", async () => {
+    savePendingCard({
+      orderId: 766,
+      statusToken: "signed-read-only-test-token-0000011",
+      total: 154.9,
+      paid: true,
+      status: "aprovado",
+    });
+    let resolveStatus: ((data: { ok: true; paid: boolean; status: string }) => void) | undefined;
+    mocks.status.mockImplementationOnce(() => new Promise((resolve) => { resolveStatus = resolve; }));
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pagamento em análise" })).toBeInTheDocument();
+    expect(mocks.cart.clear).not.toHaveBeenCalled();
+    await act(async () => { resolveStatus?.({ ok: true, paid: true, status: "aprovado" }); });
+    expect(await screen.findByRole("heading", { name: "Pagamento aprovado!" })).toBeInTheDocument();
+    expect(mocks.cart.clear).toHaveBeenCalledTimes(1);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
   it("retoma a mesma análise de cartão após recarregar o checkout, sem nova cobrança", async () => {
     savePendingCard({
       orderId: 655,

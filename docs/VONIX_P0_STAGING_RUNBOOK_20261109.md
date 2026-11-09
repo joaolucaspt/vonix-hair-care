@@ -17,7 +17,7 @@
 | Dados de consentimento | Revisão LGPD, registro/versionamento, retirada de consentimento antes da compra e **após compra pendente**, retenção e prova de aceite | Nenhum evento opcional sem base legal; revogação propagada ao servidor antes de eventos futuros |
 | Meta CAPI | Opt-in/opt-out sintéticos em staging, evento Purchase só após Appmax aprovado, deduplicação com Pixel e Graph confirmado | Sem Purchase falso ou repetido; pedido sem aceite não gera eventos nem recuperação recorrente |
 
-**As SQLs de produção não devem ser executadas automaticamente.** A alteração C5 em `supabase/vonix-meta-purchase-delivery.sql` muda funções para exigir consentimento antes de reservar ou selecionar Purchase, mas **precisa ser aplicada/validada em staging** para produzir efeito no banco. Não fazer migração somente porque o PR passou.
+**As SQLs de produção não devem ser executadas automaticamente.** A alteração C5 em `supabase/vonix-meta-purchase-delivery.sql` muda funções para exigir consentimento antes de reservar ou selecionar Purchase, mas **precisa ser aplicada/validada em staging** para produzir efeito no banco. Não fazer migração somente porque o PR passou. A atualização C8 de `supabase/vonix-checkout-idempotency.sql` endurece `search_path` das três funções `SECURITY DEFINER`; o roteiro sintético reproduzível está em `scripts/qa-checkout-idempotency-hardened.sql`. **Testes sintéticos não substituem aplicação e validação em staging com backup.**
 
 ## Validação sintética que já pode ser reproduzida sem contas reais
 

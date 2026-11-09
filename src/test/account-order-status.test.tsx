@@ -64,6 +64,44 @@ describe("Meus pedidos sem cadastro e sem cobranças", () => {
     expect(mocks.status).not.toHaveBeenCalled();
   });
 
+  it("não anuncia pagamento aprovado por flag paid:true adulterada na sessão", async () => {
+    savePendingCard({ ...pendingCard(712), paid: true, status: "aprovado" });
+    render(<Account />);
+    expect(await screen.findByText("Pedido nº 712")).toBeInTheDocument();
+    expect(screen.queryByText(/Pagamento confirmado pela Appmax/)).not.toBeInTheDocument();
+    expect(screen.getByText(/status ainda precisa ser consultado/)).toBeInTheDocument();
+    expect(mocks.status).not.toHaveBeenCalled();
+
+    mocks.status.mockResolvedValueOnce({ ok: true, paid: false, status: "aguardando_confirmacao" });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar pedido 712" }));
+    expect(await screen.findByText(/Pagamento ainda não confirmado/)).toBeInTheDocument();
+    expect(screen.queryByText(/Pagamento confirmado pela Appmax/)).not.toBeInTheDocument();
+
+    mocks.status.mockResolvedValueOnce({ ok: true, paid: true, status: "aprovado" });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar pedido 712" }));
+    expect(await screen.findByText(/Pagamento confirmado pela Appmax/)).toBeInTheDocument();
+    expect(mocks.status).toHaveBeenCalledTimes(2);
+  });
+
+  it("não envia consultas concorrentes ao clicar duas vezes durante resposta pendente", async () => {
+    savePendingCard(pendingCard(714));
+    let finish: ((result: { ok: boolean; paid: boolean; status: string }) => void) | undefined;
+    mocks.status.mockImplementationOnce(
+      () => new Promise((resolve) => { finish = resolve; }),
+    );
+    render(<Account />);
+    const button = await screen.findByRole("button", { name: "Consultar pedido 714" });
+    act(() => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+    expect(mocks.status).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+    await act(async () => { finish?.({ ok: true, paid: false, status: "pendente" }); });
+    expect(await screen.findByText(/Pagamento ainda não confirmado/)).toBeInTheDocument();
+    expect(button).toBeEnabled();
+  });
+
   it("mostra pagamento aprovado somente após resposta autenticada", async () => {
     savePendingPix({
       orderId: 702, statusToken: token, total: 120, emv: "mock-qr", qrcode: "mock-image", expiresAt: "2099-01-01T00:00:00Z",

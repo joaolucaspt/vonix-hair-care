@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Page, Shell } from "@/components/site";
 import { WHATSAPP } from "@/lib/store";
 import { getOrderStatus } from "@/lib/checkout.functions";
@@ -39,7 +39,8 @@ function localOrders(): LocalOrder[] {
       statusToken: card.statusToken,
       method: card.verificationOnly ? "Não confirmado" : "Cartão",
       checking: false,
-      result: card.paid ? "paid" : null,
+      // SessionStorage is untrusted: only getOrderStatus can confirm payment.
+      result: null,
       error: false,
     });
   }
@@ -59,13 +60,16 @@ function localOrders(): LocalOrder[] {
 function Conta() {
   const getStatus = useServerFn(getOrderStatus);
   const [orders, setOrders] = useState<LocalOrder[]>([]);
+  const checkingIds = useRef(new Set<number>());
 
   // Session data is intentionally read only after hydration. Never place the
   // signed status capability into URLs, analytics, page metadata or rendered HTML.
   useEffect(() => setOrders(localOrders()), []);
 
   const check = async (order: LocalOrder) => {
-    if (order.checking) return;
+    // Ref lock prevents rapid double clicks from issuing parallel status RPCs.
+    if (order.checking || checkingIds.current.has(order.orderId)) return;
+    checkingIds.current.add(order.orderId);
     setOrders((current) =>
       current.map((o) => o.orderId === order.orderId ? { ...o, checking: true, error: false } : o),
     );
@@ -84,6 +88,8 @@ function Conta() {
       setOrders((current) =>
         current.map((o) => o.orderId === order.orderId ? { ...o, checking: false, error: true, result: null } : o),
       );
+    } finally {
+      checkingIds.current.delete(order.orderId);
     }
   };
 

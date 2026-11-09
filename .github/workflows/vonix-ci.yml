@@ -33,3 +33,40 @@ jobs:
         run: bunx tsc --noEmit
       - name: Build sem publicação
         run: bun run build
+
+  checkout-postgres-qa:
+    name: Isolated PostgreSQL checkout deduplication
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Synthetic checkout idempotency and SQL privilege checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          # No production services, remote DB, user secrets or opened ports.
+          # tmpfs and --network none ensure synthetic data remains disposable.
+          name=vonix-checkout-sql-qa
+          trap 'docker stop "$name" >/dev/null 2>&1 || true' EXIT
+          docker run --rm -d --name "$name" --network none \
+            --tmpfs /var/lib/postgresql/data:rw \
+            -e POSTGRES_PASSWORD=synthetic-qa-only \
+            -e POSTGRES_DB=vonix_synthetic postgres:16
+          for attempt in $(seq 1 30); do
+            if docker exec "$name" pg_isready -U postgres -d vonix_synthetic >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          docker exec "$name" pg_isready -U postgres -d vonix_synthetic
+          docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_synthetic \
+            -c 'CREATE ROLE service_role NOLOGIN; CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN;'
+          docker cp supabase/vonix-checkout-idempotency.sql "$name:/tmp/checkout.sql"
+          docker cp scripts/qa-checkout-idempotency-hardened.sql "$name:/tmp/test.sql"
+          docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_synthetic \
+            -f /tmp/checkout.sql
+          docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_synthetic \
+            -f /tmp/test.sql

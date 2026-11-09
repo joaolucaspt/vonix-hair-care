@@ -22,7 +22,7 @@ grant select, insert, update on public.vonix_checkout_intents to service_role;
 -- fingerprint; a genuine unrelated fingerprint is unaffected.
 create or replace function public.vonix_checkout_claim(p_fingerprint text)
 returns jsonb language plpgsql security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   current_intent public.vonix_checkout_intents%rowtype;
@@ -72,7 +72,7 @@ create or replace function public.vonix_checkout_advance(
   p_fingerprint text, p_token uuid, p_expected text, p_next text, p_order_id bigint default null
 )
 returns boolean language plpgsql security definer
-set search_path = public
+set search_path = ''
 as $$
 declare changed integer;
 begin
@@ -99,7 +99,7 @@ grant execute on function public.vonix_checkout_advance(text,uuid,text,text,bigi
 -- Only backend code that ALREADY verified authenticated Appmax status calls this.
 -- Do not trust unsigned webhook status or a client's browser state.
 create or replace function public.vonix_checkout_finalize(p_order_id bigint, p_outcome text)
-returns boolean language plpgsql security definer set search_path = public
+returns boolean language plpgsql security definer set search_path = ''
 as $$
 declare changed integer;
 begin
