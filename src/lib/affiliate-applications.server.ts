@@ -42,6 +42,11 @@ function supabase() {
  */
 export function affiliateRecruitmentOpen(): boolean {
   if (env("AFFILIATE_RECRUITMENT_OPEN") !== "true") return false;
+  // Explicit operator attestations prevent opening PII collection before
+  // the real DB migration and legally reviewed privacy terms are approved.
+  if (env("AFFILIATE_GOVERNANCE_MIGRATED") !== "true") return false;
+  if (env("AFFILIATE_PRIVACY_POLICY_APPROVED") !== "true") return false;
+  if (env("AFFILIATE_PROVIDER_VERIFIED") !== "true") return false;
   const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
   const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
   if (Boolean(dedicatedUrl) !== Boolean(dedicatedKey)) return false;
@@ -139,6 +144,93 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
   return { ok: true as const };
 }
 
+export async function affiliateOperationalReadiness() {
+  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
+  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
+  const dbConfigured = Boolean(
+    (dedicatedUrl && dedicatedKey) ||
+    (!dedicatedUrl && !dedicatedKey && env("SUPABASE_URL") && env("SUPABASE_SERVICE_ROLE_KEY")),
+  );
+  const checks = [
+    { id: "database", label: "Credenciais do banco no servidor", ok: dbConfigured },
+    {
+      id: "migration",
+      label: "Migração de governança atestada",
+      ok: env("AFFILIATE_GOVERNANCE_MIGRATED") === "true",
+    },
+    {
+      id: "privacy",
+      label: "Política de privacidade aprovada",
+      ok: env("AFFILIATE_PRIVACY_POLICY_APPROVED") === "true",
+    },
+    {
+      id: "provider",
+      label: "Provedor e proxy homologados",
+      ok: env("AFFILIATE_PROVIDER_VERIFIED") === "true",
+    },
+    {
+      id: "admin",
+      label: "Senha e sessão administrativas",
+      ok:
+        env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
+        env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32,
+    },
+    {
+      id: "totp",
+      label: "Autenticador de dois fatores",
+      ok: /^[A-Z2-7]{32,128}$/i.test(env("AFFILIATE_ADMIN_TOTP_SECRET")),
+    },
+    {
+      id: "proxy",
+      label: "Proxy confiável configurado",
+      ok: affiliateTrustedIpHeaderValid() && env("AFFILIATE_TRAFFIC_PEPPER").length >= 32,
+    },
+    {
+      id: "encryption",
+      label: "Criptografia de dados pessoais",
+      ok: affiliateQuestionnaireEncryptionReady(),
+    },
+    {
+      id: "resend",
+      label: "Envio de e-mails configurado",
+      ok: Boolean(
+        env("RESEND_API_KEY") &&
+        env("AFFILIATE_FROM_EMAIL") &&
+        env("AFFILIATE_WORKER_SECRET").length >= 24,
+      ),
+    },
+    {
+      id: "launch",
+      label: "Abertura de inscrições habilitada",
+      ok: env("AFFILIATE_RECRUITMENT_OPEN") === "true",
+    },
+  ];
+  let databaseResponding = false;
+  let governanceResponding = false;
+  if (dbConfigured) {
+    try {
+      const [stats, governance] = await Promise.all([
+        requestSupabase("rpc/vonix_affiliate_stats", { method: "POST", body: "{}" }),
+        requestSupabase("rpc/vonix_affiliate_retention_preview", {
+          method: "POST",
+          body: JSON.stringify({ p_pending_days: 90, p_rejected_days: 180 }),
+        }),
+      ]);
+      databaseResponding = stats.ok;
+      governanceResponding = governance.ok;
+    } catch {
+      // Never expose URLs, provider response bodies, tokens or database details.
+    }
+  }
+  return {
+    recruitmentOpen: affiliateRecruitmentOpen(),
+    checks,
+    databaseResponding,
+    governanceResponding,
+    providerDeliveryVerifiedByThisCheck: false,
+  };
+}
+
 export type AffiliateListStatus = AffiliateStatus | "todas";
 export type AffiliateMailStatus = "pendente" | "processando" | "enviado" | "falhou" | "incerto";
 
@@ -234,6 +326,50 @@ export async function decideAffiliateApplication(id: string, decision: "aprovada
   });
   if (!response.ok) throw new Error("Não foi possível registrar a decisão.");
   return (await response.json()) === true;
+}
+
+export const affiliateErasureReasons = ["solicitacao_titular", "retencao", "correcao"] as const;
+export type AffiliateErasureReason = (typeof affiliateErasureReasons)[number];
+
+/**
+ * Restricted deletion of verified applicant records. The database transaction
+ * cancels all unclaimed email messages, strips ciphertext, and records a
+ * non-identifying audit event; an in-flight send blocks the deletion.
+ */
+export async function eraseAffiliateApplication(
+  id: string,
+  confirmedEmail: string,
+  reason: AffiliateErasureReason,
+): Promise<boolean> {
+  const parsedId = z.string().uuid().parse(id);
+  const email = z.string().trim().toLowerCase().email().max(180).parse(confirmedEmail);
+  const parsedReason = z.enum(affiliateErasureReasons).parse(reason);
+  const response = await requestSupabase("rpc/vonix_affiliate_erase", {
+    method: "POST",
+    body: JSON.stringify({
+      p_id: parsedId,
+      p_confirmation_email: email,
+      p_reason: parsedReason,
+    }),
+  });
+  if (!response.ok) throw new Error("Exclusão não disponível.");
+  return (await response.json()) === true;
+}
+
+export async function previewAffiliateRetention(pendingDays: number, rejectedDays: number) {
+  const pending = z.number().int().min(30).max(3650).parse(pendingDays);
+  const rejected = z.number().int().min(30).max(3650).parse(rejectedDays);
+  const response = await requestSupabase("rpc/vonix_affiliate_retention_preview", {
+    method: "POST",
+    body: JSON.stringify({ p_pending_days: pending, p_rejected_days: rejected }),
+  });
+  if (!response.ok) throw new Error("Prévia de retenção não disponível.");
+  const result = (await response.json()) as Record<string, unknown>;
+  return {
+    pendingEligible: Number(result["pending_eligible"] ?? 0),
+    rejectedEligible: Number(result["rejected_eligible"] ?? 0),
+    executedDeletions: 0,
+  };
 }
 
 type ClaimedMail = {
