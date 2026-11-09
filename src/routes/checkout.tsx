@@ -985,7 +985,7 @@ function Checkout() {
               type="submit"
               form="checkout-form"
               disabled={busy || quoting || !chosen || !cfg || !cfg.pixEnabled}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#f4c552] to-[#d9a22b] py-4 text-name font-bold text-[#2a1d05] shadow-[0_12px_26px_-12px_rgba(217,162,43,0.95)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:from-[#ece1c8] disabled:to-[#e3d5b3] disabled:text-[#7a6a45] disabled:shadow-none"
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-4 text-name disabled:cursor-not-allowed disabled:bg-emerald-200 disabled:text-emerald-900/60 disabled:shadow-none"
             >
               <Lock className="h-5 w-5" strokeWidth={2.2} aria-hidden="true" />
               {busy
