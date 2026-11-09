@@ -58,6 +58,7 @@ const fixture = {
 const original = {
   secret: process.env["AFFILIATE_QUESTIONNAIRE_KEY"],
   url: process.env["AFFILIATE_SUPABASE_URL"],
+  ref: process.env["AFFILIATE_SUPABASE_PROJECT_REF"],
   key: process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
 };
 beforeEach(() => {
@@ -65,13 +66,15 @@ beforeEach(() => {
     "0123456789abcdef0123456789abcdef",
     "utf8",
   ).toString("base64url");
-  process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+  process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+  process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
   process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "fake-unit-test-service-role";
 });
 afterEach(() => {
   for (const [key, value] of Object.entries({
     AFFILIATE_QUESTIONNAIRE_KEY: original.secret,
     AFFILIATE_SUPABASE_URL: original.url,
+    AFFILIATE_SUPABASE_PROJECT_REF: original.ref,
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: original.key,
   })) {
     if (value === undefined) delete process.env[key];
