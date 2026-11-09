@@ -144,7 +144,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: `if (window.location.origin === ${JSON.stringify(SITE_URL)} && !window.fbq) {
           !function(f,b,e,v,n,t,s){n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
           fbq('init','${META_PIXEL_ID}');
-          fbq('track','PageView');
+          var pvId='PageView-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+          fbq('track','PageView',{},{eventID:pvId});
+          setTimeout(function(){try{
+            var ck=function(n){var m=document.cookie.split('; ').filter(function(c){return c.indexOf(n+'=')===0})[0];return m?m.slice(n.length+1):undefined};
+            var fc=new URLSearchParams(location.search).get('fbclid');
+            fetch('/api/public/meta-event',{method:'POST',headers:{'content-type':'application/json'},keepalive:true,
+              body:JSON.stringify({event:'PageView',eventId:pvId,url:location.href,fbp:ck('_fbp'),fbc:ck('_fbc')||(fc?'fb.1.'+Date.now()+'.'+fc:undefined)})}).catch(function(){});
+          }catch(e){}},1500);
         }`,
       },
     ],
