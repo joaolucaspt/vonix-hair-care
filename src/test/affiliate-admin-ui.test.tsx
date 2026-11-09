@@ -200,6 +200,10 @@ describe("Vonix affiliate private panel", () => {
     );
     expect(await screen.findByText("5")).toBeInTheDocument();
     expect(screen.getByText("9")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Critérios desta consulta: pendentes há pelo menos 120/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/recusadas há pelo menos 240 dias/)).toBeInTheDocument();
     expect(screen.getByText(/Exclusões executadas por esta consulta: 0/)).toBeInTheDocument();
     expect(server.eraseAffiliateApplicationAdmin).not.toHaveBeenCalled();
 
@@ -276,6 +280,198 @@ describe("Vonix affiliate private panel", () => {
       }),
     );
     expect(screen.queryByText("Exclusão irreversível da candidatura")).not.toBeInTheDocument();
+  });
+
+  it("discards an outdated retention result after editing the intervals", async () => {
+    let finishOld!: (value: {
+      ok: true;
+      pendingEligible: number;
+      rejectedEligible: number;
+      executedDeletions: number;
+    }) => void;
+    server.getAffiliateRetentionPreview
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishOld = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: true,
+        pendingEligible: 77,
+        rejectedEligible: 88,
+        executedDeletions: 0,
+      });
+
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+    await waitFor(() => expect(server.getAffiliateRetentionPreview).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText(/Pendentes há pelo menos/i), {
+      target: { value: "120" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+    await waitFor(() =>
+      expect(server.getAffiliateRetentionPreview).toHaveBeenLastCalledWith({
+        data: { pendingDays: 120, rejectedDays: 180 },
+      }),
+    );
+    expect(await screen.findByText("77")).toBeInTheDocument();
+
+    await act(async () => {
+      finishOld({ ok: true, pendingEligible: 999, rejectedEligible: 999, executedDeletions: 0 });
+    });
+    expect(screen.queryByText("999")).not.toBeInTheDocument();
+    expect(screen.getByText("77")).toBeInTheDocument();
+    expect(screen.getByText("88")).toBeInTheDocument();
+  });
+
+  it("does not display a stale retention error after changing the selected days", async () => {
+    let finish!: (value: { ok: false; reason: string }) => void;
+    server.getAffiliateRetentionPreview.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+    await waitFor(() => expect(server.getAffiliateRetentionPreview).toHaveBeenCalledOnce());
+    fireEvent.change(screen.getByLabelText(/Recusadas há pelo menos/i), {
+      target: { value: "215" },
+    });
+    await act(async () => {
+      finish({ ok: false, reason: "Erro de consulta anterior" });
+    });
+    expect(screen.queryByText("Erro de consulta anterior")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Exclusões executadas por esta consulta/)).not.toBeInTheDocument();
+  });
+
+  it("prevents duplicate private readiness probes and hides stale responses on logout", async () => {
+    let finish!: (value: {
+      ok: true;
+      recruitmentOpen: boolean;
+      databaseResponding: boolean;
+      governanceResponding: boolean;
+      checks: Array<{ id: string; label: string; ok: boolean }>;
+    }) => void;
+    server.getAffiliateOperationalReadiness.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verificar preparação" }));
+    const busy = screen.getByRole("button", { name: "Verificando preparação..." });
+    expect(busy).toBeDisabled();
+    fireEvent.click(busy);
+    expect(server.getAffiliateOperationalReadiness).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    await act(async () => {
+      finish({
+        ok: true,
+        recruitmentOpen: false,
+        databaseResponding: true,
+        governanceResponding: true,
+        checks: [{ id: "secret", label: "Informação privada atrasada", ok: true }],
+      });
+    });
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Informação privada atrasada")).not.toBeInTheDocument();
+  });
+
+  it("clears private data on expired session from readiness and retention endpoints", async () => {
+    server.getAffiliateOperationalReadiness.mockResolvedValueOnce({
+      ok: false,
+      reason: "Acesso negado. Faça login novamente.",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verificar preparação" }));
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(screen.getByText("Sua sessão expirou. Faça login novamente.")).toBeInTheDocument();
+  });
+
+  it("clears private data when a retention preview returns access denied", async () => {
+    server.getAffiliateRetentionPreview.mockResolvedValueOnce({
+      ok: false,
+      reason: "Acesso negado. Faça login novamente.",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("secret-candidate@example.invalid")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prévia de retenção LGPD")).not.toBeInTheDocument();
+  });
+
+  it("clears private data and avoids refetch after an expired decision", async () => {
+    server.reviewAffiliateApplication.mockResolvedValueOnce({
+      ok: false,
+      reason: "Acesso negado. Faça login novamente.",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "APROVAR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aprovação" }));
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears private data after access is denied on candidate erasure", async () => {
+    server.eraseAffiliateApplicationAdmin.mockResolvedValueOnce({
+      ok: false,
+      reason: "Acesso negado. Faça login novamente.",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Exclusão de dados/i }));
+    fireEvent.change(screen.getByLabelText(/Confirme digitando o e-mail da candidata/i), {
+      target: { value: candidate.email },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar exclusão definitiva/i }));
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
+  });
+
+  it("revalidates the cookie on tab focus and hides candidates when it expires", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: false });
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.getByText("Sua sessão expirou. Faça login novamente.")).toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    expect(screen.queryByText("secret-candidate@example.invalid")).not.toBeInTheDocument();
+  });
+
+  it("ignores a delayed focus check after the administrator signs out", async () => {
+    let finish!: (value: { authenticated: boolean }) => void;
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    server.getAffiliateAdminSession.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(server.getAffiliateAdminSession).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    await act(async () => {
+      finish({ authenticated: false });
+    });
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Sua sessão expirou. Faça login novamente.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
   });
 
   it("does not display any applicant data before the session check succeeds", async () => {
