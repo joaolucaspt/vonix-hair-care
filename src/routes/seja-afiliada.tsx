@@ -13,12 +13,12 @@ export const Route = createFileRoute("/seja-afiliada")({
       {
         name: "description",
         content:
-          "Inscreva-se para participar da seleção de afiliadas Vonix Hair. Conte sua história, compartilhe suas redes e faça parte dessa oportunidade.",
+          "Conheça a inscrição para afiliadas Vonix Hair, o formulário de cinco etapas e como funciona a seleção de candidaturas.",
       },
       { property: "og:title", content: "Seja um afiliado Vonix Hair" },
       {
         property: "og:description",
-        content: "Sua paixão por cabelos pode fazer parte da nossa história. Envie sua inscrição.",
+        content: "Conheça o cadastro de cinco etapas para a seleção de afiliadas Vonix Hair.",
       },
       { name: "robots", content: "index,follow" },
     ],
@@ -106,10 +106,10 @@ function AffiliateApplicationPage() {
                 <div className="flex gap-4">
                   <Sparkles className="mt-1 h-7 w-7 shrink-0 text-[#e6bca7]" />
                   <div>
-                    <h2 className="text-lg font-semibold">Oportunidade de comissão</h2>
+                    <h2 className="text-lg font-semibold">Conte sua história</h2>
                     <p className="mt-1 text-sm leading-relaxed text-[#eddbd3]">
-                      Afiliadas aprovadas poderão divulgar produtos e obter comissões conforme as
-                      regras do programa.
+                      Nossa inscrição tem cinco etapas para você apresentar seu perfil e sua conexão
+                      com a Vonix Hair. A equipe avaliará cada candidatura.
                     </p>
                   </div>
                 </div>
