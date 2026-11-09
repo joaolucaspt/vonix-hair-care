@@ -91,6 +91,22 @@ afterEach(() => {
   delete window.clarity;
   delete window.AppmaxScripts;
 });
+const fillCard = () => {
+  for (const [name, value] of [
+    ["card-number", "4111 1111 1111 1111"],
+    ["card-holder-name", "PESSOA TESTE"],
+    ["exp-month", "12"],
+    ["exp-year", "2030"],
+    ["cvv", "123"],
+  ]) {
+    const input = document.querySelector<HTMLInputElement>('[name="' + name + '"]');
+    if (!input) throw new Error("Campo " + name + " ausente");
+    fireEvent.change(input, { target: { value } });
+  }
+  const cardForm = document.getElementById("card-form") as HTMLFormElement;
+  vi.spyOn(cardForm, "requestSubmit").mockImplementation(() => undefined);
+  fireEvent.click(screen.getByRole("button", { name: /Pagar .* no cartão/ }));
+};
 const fill = async () => {
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
   await screen.findByText(/Correios PAC/);
@@ -215,6 +231,65 @@ describe("checkout auditado sem chamadas reais", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tentar novamente após a recusa" }));
     expect(await screen.findByRole("heading", { name: "Finalizar compra" })).toBeInTheDocument();
     expect(sessionStorage.getItem("vonix-card-verification-v1")).toBeNull();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("falha ao carregar o script de cartão sem prender o cliente, permite recarregar e preserva Pix", async () => {
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const getScript = async () => waitFor(() => {
+      const script = document.querySelector('script[src*="appmax.min.js"]');
+      expect(script).not.toBeNull();
+      return script!;
+    });
+    const script = await getScript();
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
+    fireEvent.error(script);
+    expect(await screen.findByText(/Não foi possível carregar a validação segura do cartão/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
+    expect(mocks.payment).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Recarregar validação" }));
+    window.AppmaxScripts = { init: vi.fn() };
+    const retryScript = await getScript();
+    fireEvent.load(retryScript);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
+    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
+  });
+  it("script carregado sem API Appmax não habilita cobrança por cartão", async () => {
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    const script = await waitFor(() => {
+      const element = document.querySelector('script[src*="appmax.min.js"]');
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    fireEvent.load(script);
+    expect(await screen.findByText(/Não foi possível carregar a validação segura do cartão/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+  it("registra métodos indisponíveis no funil sem dados pessoais", async () => {
+    mocks.config.mockResolvedValue({
+      externalId: "",
+      sandbox: false,
+      pixEnabled: false,
+      cardEnabled: false,
+    });
+    render(<Checkout />);
+    await waitFor(() =>
+      expect(window.gtag).toHaveBeenCalledWith("event", "checkout_error", {
+        currency: "BRL",
+        step: "payment_config",
+        reason: "pix_unavailable",
+      }),
+    );
+    expect(window.gtag).toHaveBeenCalledWith("event", "checkout_error", {
+      currency: "BRL",
+      step: "payment_config",
+      reason: "card_unavailable",
+    });
     expect(mocks.payment).not.toHaveBeenCalled();
   });
   it("não apresenta cobrança por cartão se apenas o Pix estiver habilitado", async () => {
@@ -346,6 +421,9 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     fireEvent.load(script);
     expect(onTokenize).toBeDefined();
+    onTokenize?.({ token: "unsolicited" });
+    expect(mocks.payment).not.toHaveBeenCalled();
+    fillCard();
     await act(async () => {
       onTokenize?.({ token: "test-token" });
       onTokenize?.({ token: "test-token" });
@@ -386,6 +464,7 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     fireEvent.load(script);
     expect(onTokenize).toBeDefined();
+    fillCard();
     await act(async () => {
       onTokenize?.({ token: "token-test" });
     });
@@ -425,6 +504,7 @@ describe("checkout auditado sem chamadas reais", () => {
       return element!;
     });
     fireEvent.load(script);
+    fillCard();
     await act(async () => {
       onTokenize?.({ token: "test-token" });
     });

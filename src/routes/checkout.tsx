@@ -212,7 +212,11 @@ function Checkout() {
   const [card, setCard] = useState({ number: "", holder: "", month: "", year: "", cvv: "" });
   const [parcels, setParcels] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [cardSdkState, setCardSdkState] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [cardSdkRetry, setCardSdkRetry] = useState(0);
   const paymentInFlight = useRef(false);
+  const cardTokenizationPending = useRef(false);
+  const cardTokenizationTimer = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pix, setPix] = useState<PixResult | null>(null);
   const [paid, setPaid] = useState(false);
@@ -259,6 +263,15 @@ function Checkout() {
   }, []);
 
   const hasLines = c.lines.length > 0;
+  // A disabled method can stop conversion before the buyer ever clicks Pay.
+  // Record availability without sending customer, address or card fields.
+  useEffect(() => {
+    if (!cfg || !hasLines) return;
+    if (!cfg.pixEnabled)
+      track("checkout_error", { step: "payment_config", reason: "pix_unavailable" });
+    if (!cfg.cardEnabled)
+      track("checkout_error", { step: "payment_config", reason: "card_unavailable" });
+  }, [cfg, hasLines]);
   const beginCheckoutTracked = useRef(false);
   useEffect(() => {
     if (hasLines && !beginCheckoutTracked.current) {
@@ -314,6 +327,7 @@ function Checkout() {
       .then((r) => {
         if (cancelled) return;
         if (r.ok) {
+          if (!r.options.length) track("checkout_error", { step: "shipping", reason: "no_options" });
           setOptions(r.options);
           setServiceId((cur) =>
             r.options.some((o) => o.id === cur) ? cur : (r.options[0]?.id ?? null),
@@ -326,12 +340,14 @@ function Checkout() {
           setOptions([]);
           setServiceId(null);
           setQuoteErr(r.message);
+          track("checkout_error", { step: "shipping", reason: "quote_rejected" });
         }
       })
-      .catch(
-        () =>
-          !cancelled && setQuoteErr("Não foi possível calcular o frete agora. Tente novamente."),
-      )
+      .catch(() => {
+        if (cancelled) return;
+        setQuoteErr("Não foi possível calcular o frete agora. Tente novamente.");
+        track("checkout_error", { step: "shipping", reason: "network_or_server" });
+      })
       .finally(() => !cancelled && setQuoting(false));
     return () => {
       cancelled = true;
@@ -490,6 +506,10 @@ function Checkout() {
       return;
     }
     if (paymentInFlight.current || cardDone) return;
+    if (pay === "card" && cardSdkState !== "ready") {
+      setError("A validação segura do cartão não está pronta. Recarregue a validação ou escolha Pix.");
+      return;
+    }
     paymentInFlight.current = true;
     setBusy(true);
     setError(null);
@@ -516,6 +536,7 @@ function Checkout() {
         },
       });
       if (!r.ok) {
+        track("checkout_error", { step: "payment", reason: "gateway_or_validation", payment_type: pay });
         setError(r.message);
         return;
       }
@@ -543,6 +564,7 @@ function Checkout() {
         setCardDone(cardResult);
       }
     } catch {
+      track("checkout_error", { step: "payment", reason: "network_or_server", payment_type: pay });
       setError("Não conseguimos processar agora. Tente novamente em instantes.");
     } finally {
       paymentInFlight.current = false;
@@ -552,33 +574,79 @@ function Checkout() {
   const submitPaymentRef = useRef(submitPayment);
   submitPaymentRef.current = submitPayment;
 
-  // Card: Appmax JS tokenizes the card fields; the number never reaches our server.
+  // Tokenization is a separate step: never charge if its SDK did not respond to this submit.
   useEffect(() => {
     if (!cfg?.externalId || !cfg?.cardEnabled) return;
+    let active = true;
+    setCardSdkState("loading");
     const s = document.createElement("script");
     s.src = cfg.sandbox
       ? "https://scripts.sandboxappmax.com.br/appmax.min.js"
       : "https://scripts.appmax.com.br/appmax.min.js";
     s.async = true;
-    s.onload = () =>
-      window.AppmaxScripts?.init({
-        externalId: cfg.externalId,
-        onTokenize: ({ token }) => void submitPaymentRef.current(token),
-        onError: () => {
-          setBusy(false);
-          setError("Não foi possível validar o cartão. Confira os dados e tente de novo.");
-        },
-      });
+    const clearTokenTimer = () => {
+      if (cardTokenizationTimer.current !== null) window.clearTimeout(cardTokenizationTimer.current);
+      cardTokenizationTimer.current = null;
+    };
+    const loadTimer = window.setTimeout(() => {
+      if (!active) return;
+      setCardSdkState("failed");
+      track("checkout_error", { step: "card_sdk", reason: "load_timeout" });
+      s.remove();
+    }, 15000);
+    s.onerror = () => {
+      if (!active) return;
+      window.clearTimeout(loadTimer);
+      setCardSdkState("failed");
+      track("checkout_error", { step: "card_sdk", reason: "load_error" });
+    };
+    s.onload = () => {
+      if (!active) return;
+      window.clearTimeout(loadTimer);
+      if (typeof window.AppmaxScripts?.init !== "function") {
+        setCardSdkState("failed");
+        track("checkout_error", { step: "card_sdk", reason: "missing_api" });
+        return;
+      }
+      try {
+        window.AppmaxScripts.init({
+          externalId: cfg.externalId,
+          onTokenize: ({ token }) => {
+            if (!active || !cardTokenizationPending.current) return;
+            cardTokenizationPending.current = false;
+            clearTokenTimer();
+            void submitPaymentRef.current(token);
+          },
+          onError: () => {
+            if (!active || !cardTokenizationPending.current) return;
+            cardTokenizationPending.current = false;
+            clearTokenTimer();
+            setBusy(false);
+            setError("Não foi possível validar o cartão. Confira os dados e tente de novo.");
+            track("checkout_error", { step: "card_sdk", reason: "tokenization_failed" });
+          },
+        });
+        setCardSdkState("ready");
+      } catch {
+        setCardSdkState("failed");
+        track("checkout_error", { step: "card_sdk", reason: "init_failed" });
+      }
+    };
     document.body.appendChild(s);
     return () => {
+      active = false;
+      window.clearTimeout(loadTimer);
+      cardTokenizationPending.current = false;
+      clearTokenTimer();
       s.remove();
     };
-  }, [cfg?.externalId, cfg?.sandbox, cfg?.cardEnabled]);
+  }, [cfg?.externalId, cfg?.sandbox, cfg?.cardEnabled, cardSdkRetry]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || cardDone || paymentInFlight.current) return;
     if (!isValidCpf(f.cpf)) {
+      track("checkout_error", { step: "customer", reason: "invalid_cpf" });
       setError("CPF inválido. Confira os números.");
       return;
     }
@@ -586,11 +654,22 @@ function Checkout() {
     if (pay === "pix") void submitPayment();
     else if (!cfg?.cardEnabled)
       setError("Pagamento por cartão indisponível no momento. Use o Pix ou entre em contato.");
+    else if (cardSdkState !== "ready")
+      setError("A validação segura do cartão ainda não carregou. Recarregue a validação ou escolha Pix.");
     else {
       const cardForm = document.getElementById("card-form");
       if (!(cardForm instanceof HTMLFormElement) || !cardForm.reportValidity()) return;
+      cardTokenizationPending.current = true;
       setBusy(true);
       setError(null);
+      cardTokenizationTimer.current = window.setTimeout(() => {
+        if (!cardTokenizationPending.current) return;
+        cardTokenizationPending.current = false;
+        cardTokenizationTimer.current = null;
+        setBusy(false);
+        setError("A validação do cartão não respondeu. Nenhuma cobrança foi solicitada. Tente novamente ou escolha Pix.");
+        track("checkout_error", { step: "card_sdk", reason: "tokenization_timeout" });
+      }, 18000);
       cardForm.requestSubmit();
     }
   };
@@ -1167,6 +1246,18 @@ function Checkout() {
               .
             </p>
           )}
+          {pay === "card" && cfg?.cardEnabled && cardSdkState !== "ready" && (
+            <div role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
+              {cardSdkState === "failed"
+                ? "Não foi possível carregar a validação segura do cartão. Você também pode pagar por Pix."
+                : "Carregando validação segura do cartão…"}
+              {cardSdkState === "failed" && (
+                <button type="button" className="ml-2 underline" onClick={() => setCardSdkRetry((n) => n + 1)}>
+                  Recarregar validação
+                </button>
+              )}
+            </div>
+          )}
           <button
             type="submit"
             form="checkout-form"
@@ -1175,7 +1266,8 @@ function Checkout() {
               quoting ||
               !chosen ||
               !cfg ||
-              !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled)
+              !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled) ||
+              (pay === "card" && cardSdkState !== "ready")
             }
             className="w-full rounded-full bg-action py-3.5 font-medium text-action-foreground disabled:opacity-60"
           >
