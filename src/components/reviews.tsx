@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import raw from "@/data/reviews.json";
 import { ReviewForm } from "@/components/review-form";
 import { listReviews } from "@/lib/reviews.functions";
@@ -26,15 +26,46 @@ export const reviewsFor = (slug: string) => reviews.filter((r) => r.slug === slu
 const month = (d: string) =>
   new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "");
 
+/** Fica verdadeiro quando o elemento chega a `rootMargin` da tela; sem IntersectionObserver, já no primeiro efeito. */
+function useNearScreen(rootMargin = "400px") {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    if (near) return;
+    const el = ref.current;
+    if (typeof IntersectionObserver === "undefined" || !el) {
+      setNear(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setNear(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near, rootMargin]);
+  return { ref, near };
+}
+
 export function ReviewCard({ r }: { r: Review }) {
   const name = getProduct(r.slug)?.name ?? "um produto da Vonix Hair";
+  const { ref, near } = useNearScreen();
   return (
     <figure className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card">
-      {r.media?.type === "video" && (
-        <video controls playsInline preload="none" poster={r.media.poster} className="aspect-[3/4] w-full bg-black object-cover">
-          <source src={r.media.src} type="video/mp4" />
-        </video>
-      )}
+      {r.media?.type === "video" &&
+        (near ? (
+          <video controls playsInline preload="none" poster={r.media.poster} className="aspect-[3/4] w-full bg-black object-cover">
+            <source src={r.media.src} type="video/mp4" />
+          </video>
+        ) : (
+          // Caixa preta com a mesma proporção até o cartão chegar perto da tela.
+          <div ref={ref} aria-hidden="true" className="aspect-[3/4] w-full bg-black" />
+        ))}
       {r.media?.type === "image" && (
         <img src={r.media.src} alt={`Resultado enviado por ${r.author}`} loading="lazy" className="aspect-[3/4] w-full object-cover" />
       )}

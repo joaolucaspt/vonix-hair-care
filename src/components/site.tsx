@@ -160,7 +160,7 @@ function SocialLinks() {
   );
 }
 
-function SearchBox({ onDone }: { onDone?: () => void }) {
+function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; autoFocus?: boolean }) {
   const nav = useNavigate();
   const [q, setQ] = useState("");
   return (
@@ -177,6 +177,7 @@ function SearchBox({ onDone }: { onDone?: () => void }) {
         onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar produtos, combos, tratamentos..."
         aria-label="Buscar"
+        autoFocus={autoFocus}
         className="h-11 w-full rounded-full border border-border bg-background px-4 pr-10 text-body outline-none focus:border-foreground"
       />
       <button aria-label="Buscar" className="absolute right-0 top-0 grid h-11 w-11 place-items-center">
@@ -231,6 +232,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const path = useLocation().pathname;
   const router = useRouter();
   const hideWhatsApp = path === "/carrinho" || path === "/checkout";
+  const isProduct = path.startsWith("/produto/");
+  const isCheckout = path === "/checkout";
+  const [searchOpen, setSearchOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       <div className="overflow-hidden bg-marquee py-2.5 text-small font-medium tracking-wide text-marquee-foreground">
@@ -242,24 +246,46 @@ export function Shell({ children }: { children: ReactNode }) {
       </div>
       <header className="sticky top-0 z-40 border-b border-border bg-background">
         <div className="container-site grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2 lg:flex lg:items-start lg:gap-4 lg:py-2">
-          <button className="-m-2 justify-self-start p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
-            <Menu className="h-6 w-6" />
-          </button>
+          {isCheckout ? (
+            // No checkout o topo é mínimo: o espaço do menu fica reservado para o logo continuar centralizado.
+            <span aria-hidden="true" className="h-6 w-6 justify-self-start lg:hidden" />
+          ) : (
+            <button className="-m-2 justify-self-start p-2" aria-label="Abrir menu" onClick={() => setOpen(true)}>
+              <Menu className="h-6 w-6" />
+            </button>
+          )}
           <Link to="/" className="shrink-0">
             <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-8 w-auto sm:h-11" />
           </Link>
-          <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
-            <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
-            <SearchBox />
-            <AudienceChoice />
-          </div>
+          {!isCheckout && (
+            <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
+              <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
+              <SearchBox />
+              <AudienceChoice />
+            </div>
+          )}
           <div className="ml-auto flex items-center justify-self-end gap-2 text-body sm:gap-4">
-            <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
-              <Heart className="h-5 w-5" />
-            </Link>
-            <Link to="/conta" aria-label="Entrar" className="flex items-center gap-1 text-small sm:text-body">
-              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="max-[359px]:hidden">Entrar</span>
-            </Link>
+            {isProduct && (
+              <button
+                type="button"
+                aria-label="Buscar"
+                aria-expanded={searchOpen}
+                onClick={() => setSearchOpen((v) => !v)}
+                className="-m-2 p-2 lg:hidden"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            )}
+            {!isCheckout && (
+              <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
+                <Heart className="h-5 w-5" />
+              </Link>
+            )}
+            {!isCheckout && (
+              <Link to="/conta" aria-label="Entrar" className="flex items-center gap-1 text-small sm:text-body">
+                <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="max-[359px]:hidden">Entrar</span>
+              </Link>
+            )}
             <Link to="/carrinho" aria-label="Carrinho" className="relative -m-2 p-2">
               <ShoppingCart className="h-5 w-5" />
               {count > 0 && (
@@ -270,20 +296,33 @@ export function Shell({ children }: { children: ReactNode }) {
             </Link>
           </div>
         </div>
-        <div className="container-site space-y-2 pb-3 lg:hidden">
-          <p className="whitespace-nowrap text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
-          <SearchBox />
-          <AudienceChoice />
-        </div>
-        <nav aria-label="Categorias" className="hidden border-t border-border lg:block">
-          <div className="container-site flex justify-center gap-x-10 py-3 text-small font-medium uppercase tracking-[0.18em]">
-            {NAV.map((n) => (
-              <Link key={n.label} to="/loja" search={n.search} className="shrink-0 whitespace-nowrap border-b border-transparent pb-0.5 transition-colors hover:border-foreground">
-                {n.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
+        {isProduct ? (
+          // Página de produto no celular: só a busca, e só depois de tocar na lupa.
+          searchOpen && (
+            <div className="container-site pb-3 lg:hidden">
+              <SearchBox autoFocus onDone={() => setSearchOpen(false)} />
+            </div>
+          )
+        ) : (
+          !isCheckout && (
+            <div className="container-site space-y-2 pb-3 lg:hidden">
+              <p className="whitespace-nowrap text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
+              <SearchBox />
+              <AudienceChoice />
+            </div>
+          )
+        )}
+        {!isCheckout && (
+          <nav aria-label="Categorias" className="hidden border-t border-border lg:block">
+            <div className="container-site flex justify-center gap-x-10 py-3 text-small font-medium uppercase tracking-[0.18em]">
+              {NAV.map((n) => (
+                <Link key={n.label} to="/loja" search={n.search} className="shrink-0 whitespace-nowrap border-b border-transparent pb-0.5 transition-colors hover:border-foreground">
+                  {n.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </header>
       {open && (
         <div className="fixed inset-0 z-50 bg-foreground/50" onClick={() => setOpen(false)}>
@@ -340,7 +379,7 @@ export function Shell({ children }: { children: ReactNode }) {
           target="_blank"
           rel="noreferrer"
           aria-label="Falar no WhatsApp"
-          className={`fixed right-5 z-40 grid ${path.startsWith("/produto/") ? "bottom-24 lg:bottom-5" : "bottom-5"} h-14 w-14 place-items-center rounded-full bg-whatsapp text-whatsapp-foreground shadow-lg`}
+          className={`fixed right-5 z-40 grid ${isProduct ? "bottom-24 max-lg:hidden lg:bottom-5" : "bottom-5"} h-14 w-14 place-items-center rounded-full bg-whatsapp text-whatsapp-foreground shadow-lg`}
         >
           <WhatsAppIcon className="h-8 w-8" />
         </a>
