@@ -19,7 +19,11 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
   de email, motivo e bloqueio durante mensagens em processamento.
 - Trilha técnica de decisões e exclusões sem PII direta, preservada após apagar a candidata.
   Atenção: a senha compartilhada **não identifica individualmente** qual membro da equipe agiu.
-- Prévia de retenção de inscrições pendentes/recusadas; **não apaga ninguém**.
+- Prévia de retenção de inscrições pendentes/recusadas pelo painel privado
+  (**Preparação / Prévia de retenção LGPD**), com intervalos de 30 a 3.650 dias
+  e apenas contadores agregados. **Não apaga ninguém**. A prévia é sujeita a
+  sessão administrativa, validação de origem e limitador de acesso por IP;
+  resultados de requisições anteriores não voltam a aparecer após logout.
 - Testes sintéticos SQL/RLS, concorrência e CI sem rede externa de banco.
 
 ## 2. Procedimento de preparação do banco
@@ -92,9 +96,13 @@ Resend/worker. Ter e-mails desligados não bloqueia o formulário.
   email exato no painel, executar exclusão, consultar registro técnico e verificar
   que dados, fila e ciphertext desapareceram. E-mail já enviado ao Resend requer
   procedimentos adicionais de privacidade junto ao provedor.
-- Aprovar formalmente prazo de retenção de pendentes e recusadas; usar o RPC
-  `vonix_affiliate_retention_preview` para estimar o impacto antes da exclusão.
-  Não definir prazos arbitrários: alinhar com obrigações comerciais e legais.
+- Aprovar formalmente os prazos de retenção de pendentes e recusadas. No painel,
+  consultar a **prévia LGPD** com os intervalos definidos na política aprovada.
+  A prévia chama `vonix_affiliate_retention_preview` e retorna só quantidades;
+  não remove registros e não inclui candidaturas aprovadas. Alterar os prazos
+  invalida a prévia anterior. Não definir prazos arbitrários: alinhar com
+  obrigações comerciais e legais. A exclusão de um titular continua separada,
+  exigindo verificação de identidade, e-mail confirmado e motivo.
 
 ## 5. Limitações que exigem decisões humanas e serviços externos
 
