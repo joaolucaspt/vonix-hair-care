@@ -3,8 +3,11 @@ import { affiliateApplicationSchema } from "@/lib/affiliate-application";
 import { affiliateDecisionEmail } from "@/lib/affiliate-email";
 import {
   affiliateAdminAuthorized,
+  affiliateOperationalReadiness,
   createAffiliateApplication,
   decideAffiliateApplication,
+  eraseAffiliateApplication,
+  previewAffiliateRetention,
   listAffiliateApplications,
   processAffiliateEmails,
 } from "@/lib/affiliate-applications.server";
@@ -242,6 +245,82 @@ describe("Acesso e decisões", () => {
       p_limit: 40,
       p_mail_status: "incerto",
     });
+  });
+});
+
+describe("Diagnóstico de preparação sem segredos", () => {
+  it("mostra apenas indicadores e resultados de consultas de leitura", async () => {
+    process.env["AFFILIATE_GOVERNANCE_MIGRATED"] = "false";
+    const fake = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fake);
+    const result = await affiliateOperationalReadiness();
+    expect(result.recruitmentOpen).toBe(false);
+    expect(result.checks.some((c) => c.id === "migration" && !c.ok)).toBe(true);
+    expect(result.databaseResponding).toBe(true);
+    expect(result.governanceResponding).toBe(true);
+    const printed = JSON.stringify(result);
+    expect(printed).not.toContain("example-test-service-key");
+    expect(printed).not.toContain("a-long-test-password-for-team");
+    expect(fake).toHaveBeenCalledTimes(2);
+    delete process.env["AFFILIATE_GOVERNANCE_MIGRATED"];
+  });
+});
+
+describe("Exclusão LGPD e prévia de retenção", () => {
+  it("confirma o endereço e restringe os motivos, sem enviar PII ao retorno", async () => {
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(true))
+      .mockResolvedValueOnce(Response.json(false));
+    vi.stubGlobal("fetch", mock);
+    const uuid = "00000000-0000-4000-8000-000000000000";
+    expect(
+      await eraseAffiliateApplication(uuid, " MARIA@EXAMPLE.COM ", "solicitacao_titular"),
+    ).toBe(true);
+    const [url, req] = mock.mock.calls[0]!;
+    expect(String(url)).toContain("/rpc/vonix_affiliate_erase");
+    expect(JSON.parse(String(req.body))).toEqual({
+      p_id: uuid,
+      p_confirmation_email: "maria@example.com",
+      p_reason: "solicitacao_titular",
+    });
+    expect(await eraseAffiliateApplication(uuid, "maria@example.com", "correcao")).toBe(false);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
+  it("não aceita motivos fora do catálogo nem e-mails inválidos", async () => {
+    const mock = vi.fn();
+    vi.stubGlobal("fetch", mock);
+    const uuid = "00000000-0000-4000-8000-000000000000";
+    await expect(
+      eraseAffiliateApplication(uuid, "wrong-email", "solicitacao_titular"),
+    ).rejects.toThrow();
+    await expect(
+      eraseAffiliateApplication(uuid, "valid@example.com", "irrelevante" as "correcao"),
+    ).rejects.toThrow();
+    expect(mock).not.toHaveBeenCalled();
+  });
+
+  it("retorna apenas totais estimados, sem executar exclusões", async () => {
+    const mock = vi.fn().mockResolvedValue(
+      Response.json({
+        pending_eligible: 5,
+        rejected_eligible: 9,
+        executed_deletions: 0,
+      }),
+    );
+    vi.stubGlobal("fetch", mock);
+    expect(await previewAffiliateRetention(90, 180)).toEqual({
+      pendingEligible: 5,
+      rejectedEligible: 9,
+      executedDeletions: 0,
+    });
+    expect(JSON.parse(String(mock.mock.calls[0]![1].body))).toEqual({
+      p_pending_days: 90,
+      p_rejected_days: 180,
+    });
+    await expect(previewAffiliateRetention(2, 180)).rejects.toThrow();
+    expect(mock).toHaveBeenCalledTimes(1);
   });
 });
 

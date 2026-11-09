@@ -5,10 +5,13 @@
   "pr": 26,
   "date": "2026-11-09",
   "localBaseBeforeMainSync": "67af4a5",
+  "mergedUpstreamMain": "4dffd38",
+  "postMergeRevalidated": true,
+  "officialClarityProjectId": "zaq09ea2zy",
   "validated": {
     "vitest": {
-      "passed": 393,
-      "total": 393,
+      "passed": 400,
+      "total": 400,
       "files": 56,
       "exit": 0
     },
@@ -61,7 +64,7 @@
     "No live Bling inventory/order reconciliation",
     "No production deployment or paid-order attribution verification",
     "Browser validation does not cover every assistive technology, network or device",
-    "C3 checks predate integration of new upstream main commit 4dffd38; re-verify after merge"
+    "Updated checks were repeated after integrating upstream main 4dffd38; remote CI must be confirmed for the resulting commit"
   ],
   "protected": [
     "affiliate code and configuration",

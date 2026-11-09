@@ -92,8 +92,14 @@ jobs:
             -c 'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;'
           docker cp supabase/vonix-affiliate-applications.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-applications.sql
           docker cp supabase/vonix-affiliate-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-qa.sql
+          docker cp supabase/vonix-affiliate-governance.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance.sql
+          docker cp supabase/vonix-affiliate-governance-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance-qa.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-applications.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-qa.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-governance.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-governance-qa.sql
           node scripts/qa-affiliate-concurrency.mjs

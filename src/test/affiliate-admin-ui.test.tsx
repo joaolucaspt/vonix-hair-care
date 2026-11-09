@@ -7,6 +7,8 @@ const server = vi.hoisted(() => ({
   loginAffiliateAdmin: vi.fn(),
   logoutAffiliateAdmin: vi.fn(),
   reviewAffiliateApplication: vi.fn(),
+  eraseAffiliateApplicationAdmin: vi.fn(),
+  getAffiliateOperationalReadiness: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-functions", () => server);
@@ -49,6 +51,14 @@ beforeEach(() => {
   server.getAffiliateAdminSession.mockResolvedValue({ authenticated: true });
   server.logoutAffiliateAdmin.mockResolvedValue({ ok: true });
   server.loginAffiliateAdmin.mockResolvedValue({ ok: true });
+  server.eraseAffiliateApplicationAdmin.mockResolvedValue({ ok: true });
+  server.getAffiliateOperationalReadiness.mockResolvedValue({
+    ok: true,
+    recruitmentOpen: false,
+    databaseResponding: true,
+    governanceResponding: false,
+    checks: [{ id: "migration", label: "Migração de governança atestada", ok: false }],
+  });
   server.getAffiliateApplications.mockResolvedValue(list());
 });
 
@@ -131,6 +141,39 @@ describe("Vonix affiliate private panel", () => {
       }),
     );
     expect(uncertain).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("mostra o diagnóstico privado sem expor segredos", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verificar preparação" }));
+    expect(await screen.findByText("Migração de governança atestada")).toBeInTheDocument();
+    expect(screen.getByText("As inscrições permanecem bloqueadas.")).toBeInTheDocument();
+    expect(server.getAffiliateOperationalReadiness).toHaveBeenCalledOnce();
+  });
+
+  it("requires exact email confirmation before a candidate can be erased", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Exclusão de dados/i }));
+    const destructive = screen.getByRole("button", { name: /Confirmar exclusão definitiva/i });
+    expect(destructive).toBeDisabled();
+    const confirmation = screen.getByLabelText(/Confirme digitando o e-mail da candidata/i);
+    fireEvent.change(confirmation, { target: { value: "wrong@example.com" } });
+    expect(destructive).toBeDisabled();
+    fireEvent.change(confirmation, { target: { value: "secret-candidate@example.invalid" } });
+    expect(destructive).toBeEnabled();
+    fireEvent.click(destructive);
+    await waitFor(() =>
+      expect(server.eraseAffiliateApplicationAdmin).toHaveBeenCalledWith({
+        data: {
+          id: candidate.id,
+          emailConfirmation: candidate.email,
+          reason: "solicitacao_titular",
+        },
+      }),
+    );
+    expect(screen.queryByText("Exclusão irreversível da candidatura")).not.toBeInTheDocument();
   });
 
   it("does not display any applicant data before the session check succeeds", async () => {

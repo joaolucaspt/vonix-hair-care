@@ -42,9 +42,13 @@ O botão da vitrine antes enviava à página do produto também os itens com **u
 ## Verificações e homologação
 
 - **Antes das mudanças finais de toque:** suíte completa Vitest **390/390 PASS em 55 arquivos**, TypeScript PASS, ESLint direcionado PASS e build Nitro/Vite PASS (09/11).
-- **Após os ajustes de toque e carrinho rápido:** suíte completa **393/393 testes aprovados em 56 arquivos**; TypeScript `EXIT=0`; build Nitro/Vite `EXIT=0`; ESLint direcionado `EXIT=0`; script de preflight SSR **43/43 páginas aprovadas**. Navegação Chrome de 320/390/1366 px mais adição ao carrinho: `BROWSER_EXIT=0`, sem casos reprovados pelos critérios testados. A execução no GitHub do novo commit ainda exige confirmação após o push.
+- **Antes de sincronizar a `main`:** 393/393 testes aprovados em 56 arquivos, TypeScript, build e lint direcionado PASS; 43/43 páginas SSR e 10 verificações de Chrome sem falhas. **Depois de integrar a `main` em `4dffd38`: 400/400 testes aprovados em 56 arquivos**, `TSC_EXIT=0`, `BUILD_EXIT=0`, `ESLINT_EXIT=0`, `SSR_EXIT=0` (43/43 produtos) e `BROWSER_EXIT=0` (10 cenários incluindo carrinho, 320/390/1366 px). O novo ID do Clarity `zaq09ea2zy` foi confirmado pelo teste de origem. A execução no GitHub do novo commit ainda exige confirmação após o push.
 - Não alterar arquivos de afiliadas. Comparar explicitamente com a `main` e conferir HEAD remoto antes de fazer push.
 - PR #26 continua sujeito à homologação operacional P0. CI aprovado para commit anterior `67af4a5`, não reutilizar aprovação para o novo commit até o GitHub confirmar os checks.
+
+## Integração de base atualizada e isolamento do sistema de afiliadas
+
+Em 09/11 a `main` avançou de `06f15b6` para `4dffd38` com o PR #30 de governança de afiliadas e a correção oficial do projeto Microsoft Clarity da loja. A integração foi feita com `git merge --no-ff --no-commit`, sem conflitos e preservando o conteúdo da `main` em arquivos de afiliadas. A única adaptação específica da auditoria foi a expectativa do ID de Clarity no teste do e-commerce. Nenhum arquivo de afiliadas foi editado manualmente; documentação e status desses módulos pertencem ao outro projeto. Criado checkpoint anterior à integração em `backup/vonix-pr26-pre-main-4dffd38-c3-20261109`.
 
 ## Pendências para não perder no próximo ciclo
 

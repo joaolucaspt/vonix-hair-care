@@ -3,6 +3,9 @@ import { affiliateRecruitmentOpen } from "@/lib/affiliate-applications.server";
 
 const keys = [
   "AFFILIATE_RECRUITMENT_OPEN",
+  "AFFILIATE_GOVERNANCE_MIGRATED",
+  "AFFILIATE_PRIVACY_POLICY_APPROVED",
+  "AFFILIATE_PROVIDER_VERIFIED",
   "AFFILIATE_SUPABASE_URL",
   "AFFILIATE_SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_URL",
@@ -24,6 +27,9 @@ beforeEach(() => {
   for (const key of keys) original[key] = process.env[key];
   for (const key of keys) delete process.env[key];
   Object.assign(process.env, {
+    AFFILIATE_GOVERNANCE_MIGRATED: "true",
+    AFFILIATE_PRIVACY_POLICY_APPROVED: "true",
+    AFFILIATE_PROVIDER_VERIFIED: "true",
     AFFILIATE_SUPABASE_URL: "https://example.supabase.co",
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: "test-only-key",
     AFFILIATE_TRAFFIC_PEPPER: "unit-test-hmac-pepper-longer-than-32-chars",
@@ -83,6 +89,21 @@ describe("Public affiliate launch gate", () => {
     process.env["AFFILIATE_QUESTIONNAIRE_KEY"] = "short-unsafe-key";
     expect(affiliateRecruitmentOpen()).toBe(false);
   });
+  it("refuses PII collection without explicit legal, migration, and provider approvals", () => {
+    process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
+    expect(affiliateRecruitmentOpen()).toBe(true);
+    for (const setting of [
+      "AFFILIATE_GOVERNANCE_MIGRATED",
+      "AFFILIATE_PRIVACY_POLICY_APPROVED",
+      "AFFILIATE_PROVIDER_VERIFIED",
+    ]) {
+      delete process.env[setting];
+      expect(affiliateRecruitmentOpen()).toBe(false);
+      process.env[setting] = "true";
+      expect(affiliateRecruitmentOpen()).toBe(true);
+    }
+  });
+
   it("requires MFA before public launch in production", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
     delete process.env["AFFILIATE_ADMIN_TOTP_SECRET"];

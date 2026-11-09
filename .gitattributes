@@ -25,3 +25,7 @@ src/lib/affiliate-wizard-crypto.server.ts text eol=lf
 src/components/affiliate-wizard.tsx text eol=lf
 src/test/affiliate-wizard.test.ts text eol=lf
 src/test/affiliate-wizard-ui.test.tsx text eol=lf
+supabase/vonix-affiliate-governance.sql text eol=lf
+supabase/vonix-affiliate-governance-qa.sql text eol=lf
+scripts/check-affiliate-readiness.mjs text eol=lf
+docs/VONIX-AFILIADAS-PRODUCAO-RUNBOOK.md text eol=lf

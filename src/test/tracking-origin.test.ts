@@ -48,7 +48,7 @@ describe("rastreamento de produção isolado de localhost e prévias", () => {
   it("mantém bootstrap de GA4 e Clarity no domínio real", () => {
     const r = simulatePageOrigin("https://vonixhair.com");
     expect(r.externalScripts).toContain("https://www.googletagmanager.com/gtag/js?id=G-JW91EQ32F3");
-    expect(r.externalScripts).toContain("https://www.clarity.ms/tag/yrgl15vqw9");
+    expect(r.externalScripts).toContain("https://www.clarity.ms/tag/zaq09ea2zy");
     expect(typeof r.windowObj["gtag"]).toBe("function");
     expect(typeof r.windowObj["clarity"]).toBe("function");
     expect(r.dataLayer.length).toBe(2);
