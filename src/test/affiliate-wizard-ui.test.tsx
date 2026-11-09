@@ -193,7 +193,11 @@ describe("Vonix five-stage browser wizard", () => {
     field("hairType", "Cacheado");
     fireEvent.click(document.getElementById("wizard-termsAccepted")!);
     const send = screen.getByRole("button", { name: /Enviar candidatura/i });
-    fireEvent.click(send);
+    // Submit twice inside a single React batch before disabled state is rendered.
+    act(() => {
+      fireEvent.submit(send.closest("form")!);
+      fireEvent.submit(send.closest("form")!);
+    });
     expect(api.submit).toHaveBeenCalledTimes(1);
     expect(api.submit).toHaveBeenCalledWith({
       data: expect.objectContaining({

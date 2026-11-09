@@ -132,12 +132,39 @@ export function tiktokProfileUrl(value: string): string {
   return value.trim() ? "https://www.tiktok.com/@" + normaliseUsername(value) : "";
 }
 
+const RESERVED_INSTAGRAM_ROUTES = new Set([
+  "p",
+  "reel",
+  "reels",
+  "explore",
+  "stories",
+  "accounts",
+  "direct",
+]);
+
+export function validInstagramUsername(value: string): boolean {
+  const username = normaliseUsername(value);
+  return (
+    /^[A-Za-z0-9._]{1,30}$/.test(username) && !RESERVED_INSTAGRAM_ROUTES.has(username.toLowerCase())
+  );
+}
+
 const username = z
   .string()
   .trim()
   .min(1, "Informe seu usuário.")
-  .max(30)
-  .refine((v) => /^@?[A-Za-z0-9._]{1,30}$/.test(v), "Informe um usuário válido.");
+  .max(31)
+  .refine(validInstagramUsername, "Informe um usuário válido do Instagram.");
+
+const optionalTiktokUsername = z
+  .string()
+  .trim()
+  .max(31)
+  .refine(
+    (value) => !value || /^@?[A-Za-z0-9._]{2,30}$/.test(value),
+    "Informe um usuário válido do TikTok (2 a 30 caracteres).",
+  );
+
 const optionalUsername = z
   .string()
   .trim()
@@ -182,7 +209,7 @@ export const affiliateWizardFieldsSchema = z
     number: z.string().trim().min(1, "Informe o número.").max(15),
     complement: z.string().trim().max(120),
     instagramUsername: username,
-    tiktokUsername: optionalUsername,
+    tiktokUsername: optionalTiktokUsername,
     xUsername: optionalUsername,
     youtubeUsername: z.string().trim().max(100),
     niche: z.enum(CONTENT_NICHES),
@@ -277,7 +304,8 @@ export function stepErrors(step: number, values: AffiliateWizardDraft): Record<s
     step === 0 &&
     values.email &&
     values.emailConfirmation &&
-    String(values.email).toLowerCase() !== String(values.emailConfirmation).toLowerCase()
+    String(values.email).trim().toLowerCase() !==
+      String(values.emailConfirmation).trim().toLowerCase()
   )
     errors["emailConfirmation"] = "Os e-mails não coincidem.";
   if (step === 1 && values.niche === "Outro" && String(values.otherNiche).trim().length < 2)

@@ -116,6 +116,15 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(stepErrors(0, { ...fixture, emailConfirmation: "outro@example.com" })).toHaveProperty(
       "emailConfirmation",
     );
+    // Email schemas trim input, so both the step and final submission must
+    // compare those same normalized values (including case).
+    expect(
+      stepErrors(0, {
+        ...fixture,
+        email: " MARINA@EXAMPLE.COM ",
+        emailConfirmation: "marina@example.com",
+      }),
+    ).not.toHaveProperty("emailConfirmation");
     expect(stepErrors(1, { ...fixture, niche: "Outro", otherNiche: "" })).toHaveProperty(
       "otherNiche",
     );
@@ -126,6 +135,33 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(stepErrors(2, fixture)).not.toHaveProperty("municipalNumber");
     expect(stepErrors(4, { ...fixture, termsAccepted: false })).toHaveProperty("termsAccepted");
   });
+  it("blocks invalid social usernames in step one instead of failing only at final submission", () => {
+    for (const instagramUsername of ["@p", "reels", "@stories", "explore", "direct"]) {
+      expect(stepErrors(0, { ...fixture, instagramUsername })).toHaveProperty("instagramUsername");
+    }
+    for (const tiktokUsername of [
+      "@a",
+      "@".concat("a".repeat(31)),
+      "@incorrect+handle",
+      "@user/name",
+    ]) {
+      expect(stepErrors(0, { ...fixture, tiktokUsername })).toHaveProperty("tiktokUsername");
+    }
+    expect(stepErrors(0, { ...fixture, instagramUsername: "@valid.creator" })).not.toHaveProperty(
+      "instagramUsername",
+    );
+    expect(stepErrors(0, { ...fixture, tiktokUsername: "@valid.creator" })).not.toHaveProperty(
+      "tiktokUsername",
+    );
+    // The maximum valid Instagram username remains usable with an @ prefix.
+    expect(
+      stepErrors(0, { ...fixture, instagramUsername: "@".concat("a".repeat(30)) }),
+    ).not.toHaveProperty("instagramUsername");
+    expect(
+      stepErrors(0, { ...fixture, tiktokUsername: "@".concat("a".repeat(30)) }),
+    ).not.toHaveProperty("tiktokUsername");
+  });
+
   it("blocks coupon suggestions not ending in 10 and rejects unsupported product names", () => {
     expect(affiliateWizardSchema.safeParse({ ...fixture, couponSuggestion: "TESTE" }).success).toBe(
       false,
