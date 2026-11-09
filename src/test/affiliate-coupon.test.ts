@@ -42,3 +42,12 @@ describe("cupom de afiliada", () => {
     expect(await resolveAffiliateCoupon("REDEFALHA10")).toBeUndefined();
   });
 });
+
+describe("cupom de afiliada com código longo", () => {
+  it("aceita o código de 30 caracteres mais o 10", () => {
+    const ref = "ana-flavia-soares-dos-santos";
+    expect(isAffiliateCouponCode(`${ref.toUpperCase()}10`)).toBe(true);
+    expect(isAffiliateCouponCode(`${"A".repeat(30)}10`)).toBe(true);
+    expect(isAffiliateCouponCode(`${"A".repeat(31)}10`)).toBe(false);
+  });
+});

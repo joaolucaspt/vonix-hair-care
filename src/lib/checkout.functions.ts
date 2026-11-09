@@ -33,14 +33,14 @@ function buildLines(items: z.infer<typeof itemSchema>[]) {
 
 const cents = (v: number) => Math.round(v * 100);
 
-const couponSchema = z.string().max(30).optional();
+const couponSchema = z.string().max(40).optional();
 
 /** Cupom fixo do site ou cupom de afiliada (MARISSOL10), este confirmado no app de afiliadas. */
 const resolveCoupon = async (code?: string) => findCoupon(code) ?? (code && isAffiliateCouponCode(code) ? await resolveAffiliateCoupon(code) : undefined);
 
 /** O checkout pergunta aqui se um cupom de afiliada vale (o cupom fixo é conferido no próprio navegador). */
 export const lookupCoupon = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ code: z.string().min(1).max(30) }))
+  .inputValidator(z.object({ code: z.string().min(1).max(40) }))
   .handler(async ({ data }) => {
     const c = await resolveCoupon(data.code);
     return c ? { ok: true as const, code: c.code, label: c.label, percent: c.percent ?? 0 } : { ok: false as const };
