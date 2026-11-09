@@ -148,10 +148,18 @@ export function affiliateAdminOriginAllowed(
   }
 }
 
-export function affiliateAdminSameOrigin(): boolean {
-  const request = getRequest();
-  return affiliateAdminOriginAllowed(request.headers.get("origin"), request.url);
+/** All applicant and admin mutations must originate from this site's browser. */
+export function affiliateMutationSameOrigin(): boolean {
+  try {
+    const request = getRequest();
+    return affiliateAdminOriginAllowed(request.headers.get("origin"), request.url);
+  } catch {
+    // Missing request context is never an authorization signal.
+    return false;
+  }
 }
+
+export const affiliateAdminSameOrigin = affiliateMutationSameOrigin;
 
 export function affiliateAdminSecondFactorValid(code: string): boolean {
   const configured = env("AFFILIATE_ADMIN_TOTP_SECRET");

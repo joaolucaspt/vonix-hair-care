@@ -38,6 +38,63 @@ describe("Vonix five-stage browser wizard", () => {
     expect(screen.getByText("Passo 1 de 5")).toBeInTheDocument();
   });
 
+  it("requires confirmation before discarding a private draft", async () => {
+    render(<AffiliateWizard preview />);
+    expect(screen.queryByRole("button", { name: "Limpar meus dados" })).not.toBeInTheDocument();
+    field("firstName", "Marina");
+    field("email", "marina@example.com");
+    fireEvent.click(screen.getByRole("button", { name: "Limpar meus dados" }));
+    expect(screen.getByText("Descartar todos os dados digitados?")).toBeInTheDocument();
+    const advance = screen.getByRole("button", { name: /Avançar/i });
+    expect(advance).toBeDisabled();
+    fireEvent.submit(advance.closest("form")!);
+    expect(screen.getByText("Passo 1 de 5")).toBeInTheDocument();
+    expect(api.submit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar preenchendo" }));
+    expect((document.getElementById("wizard-firstName") as HTMLInputElement).value).toBe("Marina");
+    expect((document.getElementById("wizard-email") as HTMLInputElement).value).toBe(
+      "marina@example.com",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Limpar meus dados" }));
+    fireEvent.click(screen.getByRole("button", { name: "Descartar dados" }));
+    expect((document.getElementById("wizard-firstName") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-email") as HTMLInputElement).value).toBe("");
+    expect(screen.getByText("Os dados deste formulário foram descartados.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Limpar meus dados" })).not.toBeInTheDocument();
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+
+  it("does not let an outstanding postal-code request repopulate discarded data", async () => {
+    let completeLookup: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            completeLookup = resolve;
+          }),
+      ),
+    );
+    render(<AffiliateWizard />);
+    field("postalCode", "30110012");
+    fireEvent.blur(document.getElementById("wizard-postalCode")!);
+    fireEvent.click(screen.getByRole("button", { name: "Limpar meus dados" }));
+    fireEvent.click(screen.getByRole("button", { name: "Descartar dados" }));
+    await act(async () => {
+      completeLookup?.(
+        Response.json({
+          localidade: "Cidade Antiga",
+          uf: "MG",
+          logradouro: "Rua Antiga",
+          bairro: "Bairro Antigo",
+        }),
+      );
+    });
+    expect((document.getElementById("wizard-postalCode") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe("");
+  });
+
   it("keeps progress and blocks any real submission during a public preview", () => {
     render(<AffiliateWizard preview />);
     field("firstName", "Marina");

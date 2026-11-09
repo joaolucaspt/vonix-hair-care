@@ -5,6 +5,7 @@ import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-ap
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import {
   affiliateAdminSameOrigin,
+  affiliateMutationSameOrigin,
   affiliateAdminSessionValid,
   destroyAffiliateAdminSession,
 } from "./affiliate-admin-session.server";
@@ -33,6 +34,12 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
       return {
         ok: false as const,
         reason: "Inscrições ainda não disponíveis. Consulte os canais oficiais da Vonix Hair.",
+      };
+    }
+    if (!affiliateMutationSameOrigin()) {
+      return {
+        ok: false as const,
+        reason: "Envie a candidatura diretamente pelo formulário oficial da Vonix Hair.",
       };
     }
     // The public registration form now uses the full five-stage questionnaire.

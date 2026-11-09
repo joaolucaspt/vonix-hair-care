@@ -79,6 +79,18 @@ describe("Dedicated database for applicant personal information", () => {
     expect(affiliateDatabaseConfig()).toBeNull();
   });
 
+  it("rejects a checkout service-role key reused under the affiliate variable", () => {
+    process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
+    process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+    process.env["SUPABASE_URL"] = "https://checkout.example.supabase.co";
+    process.env["SUPABASE_SERVICE_ROLE_KEY"] = "same-key-not-valid-for-two-databases";
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "same-key-not-valid-for-two-databases";
+    expect(affiliateDatabaseConfig()).toBeNull();
+
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "separate-affiliate-test-only-key";
+    expect(affiliateDatabaseConfig()).not.toBeNull();
+  });
+
   it("refuses wrong protocols, embedded credentials, paths or short keys", () => {
     process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
     process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "affiliate-only-service-role-key";

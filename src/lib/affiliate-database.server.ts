@@ -11,10 +11,17 @@ export function affiliateDatabaseConfig(): {
 } | null {
   const rawUrl = env("AFFILIATE_SUPABASE_URL");
   const key = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
+  const checkoutKey = env("SUPABASE_SERVICE_ROLE_KEY");
   const expectedRef = env("AFFILIATE_SUPABASE_PROJECT_REF");
   // An explicit server-side project pin is mandatory in every environment.
   // Without it, a valid-looking checkout URL could receive private applicant data.
-  if (!rawUrl || key.length < 16 || !/^[a-z0-9]{20}$/.test(expectedRef)) return null;
+  if (
+    !rawUrl ||
+    key.length < 16 ||
+    (checkoutKey.length > 0 && key === checkoutKey) ||
+    !/^[a-z0-9]{20}$/.test(expectedRef)
+  )
+    return null;
 
   try {
     const url = new URL(rawUrl);

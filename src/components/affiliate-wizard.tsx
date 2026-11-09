@@ -9,6 +9,7 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { affiliateApplicationSchema } from "@/lib/affiliate-application";
 import { submitAffiliateApplication } from "@/lib/affiliate-functions";
@@ -211,6 +212,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   // Synchronous lock prevents a second POST before React updates the disabled button.
   const sendingRef = useRef(false);
   const [website, setWebsite] = useState("");
@@ -246,10 +248,14 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
       setZipLoading(false);
     }
     setValues((old) => ({ ...old, [key]: value }));
+    setConfirmDiscard(false);
     setErrors((old) => ({ ...old, [key]: "" }));
     setMessage("");
   }
 
+  const hasDraft =
+    Object.keys(initial).some((key) => values[key as WizardKey] !== initial[key as WizardKey]) ||
+    website.length > 0;
   const value = (key: WizardKey) => String(values[key] ?? "");
   const field = (
     key: WizardKey,
@@ -322,8 +328,24 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
     zipLookupId.current += 1;
     setZipLoading(false);
     setStep(next);
+    setConfirmDiscard(false);
     setErrors({});
     setMessage("");
+  }
+
+  function discardDraft() {
+    if (sendingRef.current) return;
+    // The pending ViaCEP reply must not repopulate discarded private data.
+    zipLookupId.current += 1;
+    navigated.current = true;
+    setZipLoading(false);
+    setValues({ ...initial });
+    setWebsite("");
+    setErrors({});
+    setConfirmDiscard(false);
+    setStep(0);
+    setMessage("Os dados deste formulário foram descartados.");
+    heading.current?.focus();
   }
 
   async function lookupPostalCode() {
@@ -366,7 +388,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (sending || sendingRef.current || sent) return;
+    if (sending || sendingRef.current || sent || confirmDiscard) return;
     const localErrors = stepErrors(step, values);
     if (Object.keys(localErrors).length) {
       setErrors(localErrors);
@@ -787,6 +809,45 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
           </p>
         )}
 
+        {hasDraft && (
+          <div className="mt-7 rounded-2xl border border-[#eadbd6] bg-[#fdf9f7] p-4 sm:p-5">
+            {confirmDiscard ? (
+              <div role="group" aria-label="Confirmar descarte do formulário">
+                <p className="text-sm font-semibold text-[#59343d]">
+                  Descartar todos os dados digitados?
+                </p>
+                <p className="mt-1 text-sm text-[#805d65]">
+                  O formulário voltará ao primeiro passo. Essa ação não envia uma candidatura.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button type="button" className={muted} disabled={sending} onClick={discardDraft}>
+                    Descartar dados
+                  </button>
+                  <button type="button" className={muted} onClick={() => setConfirmDiscard(false)}>
+                    Continuar preenchendo
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="max-w-md text-xs leading-relaxed text-[#80666b]">
+                  Este formulário não salva rascunhos. Você pode apagar os dados digitados antes de
+                  enviar sua candidatura.
+                </p>
+                <button
+                  type="button"
+                  disabled={sending}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-[#8a4c56] underline underline-offset-4 hover:text-[#5c303a] disabled:opacity-50"
+                  onClick={() => setConfirmDiscard(true)}
+                >
+                  <Trash2 aria-hidden="true" className="h-4 w-4" />
+                  Limpar meus dados
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-9 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0e6e0] pt-7">
           {step > 0 ? (
             <button type="button" className={muted} onClick={() => moveTo(step - 1)}>
@@ -795,7 +856,7 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
           ) : (
             <span className="text-xs leading-relaxed text-[#977b80]">O cadastro é gratuito.</span>
           )}
-          <button type="submit" className={primary} disabled={sending}>
+          <button type="submit" className={primary} disabled={sending || confirmDiscard}>
             {sending
               ? "Enviando..."
               : step < 4

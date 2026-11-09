@@ -11,6 +11,7 @@ vi.mock("@tanstack/react-start/server", () => cookieApi);
 
 import {
   affiliateAdminOriginAllowed,
+  affiliateMutationSameOrigin,
   affiliateAdminSecondFactorValid,
   affiliateAdminSessionValid,
   createAffiliateAdminSession,
@@ -173,6 +174,25 @@ describe("Vonix affiliate admin second factor", () => {
 });
 
 describe("Cross-site request safety", () => {
+  it("fails closed without request metadata and rejects forged public origins", () => {
+    expect(affiliateMutationSameOrigin()).toBe(false);
+    cookieApi.getRequest.mockReturnValue({
+      url: "https://vonixhair.com/api/affiliate",
+      headers: new Headers({ origin: "https://evil.example.com" }),
+    });
+    expect(affiliateMutationSameOrigin()).toBe(false);
+    cookieApi.getRequest.mockReturnValue({
+      url: "https://vonixhair.com/api/affiliate",
+      headers: new Headers({ origin: "https://vonixhair.com" }),
+    });
+    expect(affiliateMutationSameOrigin()).toBe(true);
+    cookieApi.getRequest.mockReturnValue({
+      url: "https://vonixhair.com/api/affiliate",
+      headers: new Headers(),
+    });
+    expect(affiliateMutationSameOrigin()).toBe(false);
+  });
+
   it("allows same-origin HTTPS and local development, rejects cross-site requests", () => {
     expect(
       affiliateAdminOriginAllowed(
