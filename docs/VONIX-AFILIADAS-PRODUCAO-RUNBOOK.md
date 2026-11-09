@@ -12,6 +12,7 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 
 - Formulário Vonix em cinco etapas, com validação de CPF/CNPJ, email, maioridade e termos.
 - Prévia pública do formulário sem envios e sem armazenamento; descarte voluntário do rascunho com confirmação, sem salvar documentos no navegador.
+- A página de cadastro reconsulta a disponibilidade quando a aba volta a ficar ativa; chamadas antigas não alteram a decisão mais recente. Uma prévia **nunca vira inscrição real automaticamente** depois de uma abertura. Para começar a inscrição real, é necessário iniciar um novo formulário explicitamente. Caso as inscrições sejam fechadas durante um preenchimento real, os campos continuam apenas na memória da aba, em modo simulação e sem POST.
 - Antes de fechar uma página com candidatura não enviada, o navegador recebe um aviso de saída; a Política de Privacidade abre em outra aba, preservando os dados preenchidos. O aviso de saída depende do suporte do navegador e não substitui o descarte explícito.
 - Campos condicionais ocultos (outro nicho e número de inscrição municipal) são limpos quando deixam de ser aplicáveis. O servidor também elimina esses valores antes de criptografar um questionário, mesmo se receber payload manipulado.
 - Envio público exige origem do próprio site (HTTPS ou localhost de desenvolvimento); origem ausente ou divergente não passa ao limitador nem grava candidaturas.
@@ -21,7 +22,8 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 - Login administrativo com sessão HttpOnly/SameSite Strict, TOTP no servidor e quota por IP. O botão de login só habilita após seis dígitos do autenticador.
 - O painel oculta os dados das candidatas assim que a aba é escondida e durante a revalidação ao retomá-la. Se a validação falhar por conexão, mantém a tela protegida e permite repetir a consulta; se a sessão expirou, elimina imediatamente os dados privados.
 - Acesso negado durante pesquisa, decisão, exclusão ou diagnósticos limpa os dados da candidata. A prévia de retenção descarta respostas antigas quando seus prazos são alterados, exibe os critérios efetivamente consultados e continua somente leitura.
-- Busca, triagem, decisões atômicas, fila Resend com idempotência e estados incertos.
+- Durante a troca de filtros, busca ou paginação administrativa, os cartões pessoais anteriores ficam ocultos até o retorno da nova consulta, evitando apresentar dados defasados sob uma seleção diferente.
+- Busca, triagem, decisões atômicas, fila Resend com idempotência e estados incertos. Antes de enviar qualquer comunicação, o servidor valida o resultado da reserva privada: exatamente zero ou uma mensagem, com UUIDs válidos, e-mail válido, decisão permitida e contador de tentativa inteiro. Respostas incompatíveis exigem conciliação e jamais disparam envio.
 - Exclusão definitiva **por administrador após validação externa da titular**, com confirmação
   de email, motivo e bloqueio durante mensagens em processamento.
 - Trilha técnica de decisões e exclusões sem PII direta, preservada após apagar a candidata.

@@ -400,13 +400,17 @@ export async function previewAffiliateRetention(pendingDays: number, rejectedDay
   };
 }
 
-type ClaimedMail = {
-  mail_id: string;
-  application_id: string;
-  recipient: string;
-  decision: "aprovada" | "recusada";
-  attempt: number;
-};
+// A privileged queue response is not automatically safe to send to a third
+// party. Reject malformed recipients, decisions and claim identifiers before
+// any Resend request; the database claim can then be reconciled by an operator.
+const claimedMailSchema = z.object({
+  mail_id: z.string().uuid(),
+  application_id: z.string().uuid(),
+  recipient: z.string().trim().toLowerCase().email().max(180),
+  decision: z.enum(["aprovada", "recusada"]),
+  attempt: z.number().int().min(1).max(2_147_483_647),
+});
+type ClaimedMail = z.infer<typeof claimedMailSchema>;
 
 async function claimAffiliateMail(id?: string): Promise<ClaimedMail | null> {
   const response = await requestSupabase("rpc/vonix_affiliate_claim_mail", {
@@ -414,7 +418,10 @@ async function claimAffiliateMail(id?: string): Promise<ClaimedMail | null> {
     body: JSON.stringify({ p_application_id: id ?? null }),
   });
   if (!response.ok) throw new Error("Não foi possível reservar notificação.");
-  const results = (await response.json()) as ClaimedMail[];
+  const results = z
+    .array(claimedMailSchema)
+    .max(1)
+    .parse(await response.json());
   return results[0] ?? null;
 }
 

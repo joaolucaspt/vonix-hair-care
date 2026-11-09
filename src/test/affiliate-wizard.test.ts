@@ -91,6 +91,28 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(PREFERRED_VONIX_LINES).toContain("Progressiva Fio de Luz");
     expect(PREFERRED_VONIX_LINES.join(" ")).not.toContain("Nuala");
   });
+  it("rejects social URLs with query parameters, hashes, credentials or non-standard ports", () => {
+    const base = affiliateApplicationSchema.parse(
+      buildAffiliatePayload(affiliateWizardSchema.parse(fixture)),
+    );
+    for (const url of [
+      "https://instagram.com/marina.exemplo?redirect=https://example.invalid",
+      "https://instagram.com/marina.exemplo#tracking",
+      "https://instagram.com:8443/marina.exemplo",
+      "https://user:pass@instagram.com/marina.exemplo",
+    ]) {
+      expect(affiliateApplicationSchema.safeParse({ ...base, instagram: url }).success).toBe(false);
+    }
+    for (const url of [
+      "https://tiktok.com/@creator?campaign=1",
+      "https://tiktok.com/@creator#tracking",
+      "https://tiktok.com:8443/@creator",
+    ]) {
+      expect(affiliateApplicationSchema.safeParse({ ...base, tiktok: url }).success).toBe(false);
+    }
+    expect(affiliateApplicationSchema.safeParse(base).success).toBe(true);
+  });
+
   it("validates a full profile, deriving normalized data rather than asking for age twice", () => {
     const wizard = affiliateWizardSchema.parse(fixture);
     expect(ageFromBirthDate("1998-09-14", new Date("2026-11-09T12:00:00Z"))).toBe(28);

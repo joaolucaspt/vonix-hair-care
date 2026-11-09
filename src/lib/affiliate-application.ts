@@ -44,7 +44,15 @@ function validSocialProfile(value: string, host: "instagram.com" | "tiktok.com")
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
-    if (url.protocol !== "https:" || hostname !== host || url.username || url.password)
+    if (
+      url.protocol !== "https:" ||
+      hostname !== host ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.port
+    )
       return false;
     // Exact profile paths only: reject //, extra segments and content links.
     if (host === "instagram.com") {

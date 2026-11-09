@@ -27,23 +27,50 @@ export const Route = createFileRoute("/seja-afiliada")({
   component: AffiliateApplicationPage,
 });
 
-function AffiliateApplicationPage() {
+export function AffiliateApplicationPage() {
   const [recruitment, setRecruitment] = useState<"loading" | "open" | "closed">("loading");
   const [preview, setPreview] = useState(false);
+  // Keep an already-started application mounted if the operator closes
+  // recruitment while somebody is filling it in. It becomes read-only preview
+  // mode, but never loses the unsent local draft or attempts to POST.
+  const [liveFormStarted, setLiveFormStarted] = useState(false);
 
   useEffect(() => {
     let active = true;
-    void getAffiliateRecruitmentStatus()
-      .then(({ open }) => {
-        if (active) setRecruitment(open ? "open" : "closed");
-      })
-      .catch(() => {
-        if (active) setRecruitment("closed");
-      });
+    let latestRequest = 0;
+    async function refreshStatus() {
+      const requestId = ++latestRequest;
+      try {
+        const { open } = await getAffiliateRecruitmentStatus();
+        if (!active || requestId !== latestRequest) return;
+        setRecruitment(open ? "open" : "closed");
+        if (open) setLiveFormStarted(true);
+      } catch {
+        // Never assume availability while a status probe is unavailable.
+        if (active && requestId === latestRequest) setRecruitment("closed");
+      }
+    }
+    void refreshStatus();
+    // Re-check availability after leaving a tab idle, without restarting
+    // the five-stage form or reinterpreting a preview as a live application.
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void refreshStatus();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshStatus();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       active = false;
+      latestRequest += 1;
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
+
+  const showWizard = preview || recruitment === "open" || liveFormStarted;
+  const simulationOnly = preview || recruitment !== "open";
 
   return (
     <Shell>
@@ -133,7 +160,7 @@ function AffiliateApplicationPage() {
             </p>
           </div>
 
-          {recruitment !== "open" && !preview ? (
+          {!showWizard ? (
             <div
               role="status"
               className="mx-auto max-w-2xl rounded-[2rem] border border-[#e7d4cf] bg-white px-8 py-14 text-center shadow-[0_15px_70px_rgba(80,32,39,.08)]"
@@ -166,20 +193,29 @@ function AffiliateApplicationPage() {
             </div>
           ) : (
             <>
-              {preview && recruitment !== "open" && (
-                <p className="mx-auto mb-5 max-w-3xl text-center text-sm text-[#806268]">
-                  Esta simulação não envia ou armazena dados. As inscrições ainda estão fechadas.
+              {simulationOnly && (
+                <p
+                  role="status"
+                  className="mx-auto mb-5 max-w-3xl rounded-xl border border-[#eadbd6] bg-white p-4 text-center text-sm text-[#806268]"
+                >
+                  {preview
+                    ? "Esta prévia nunca envia ou armazena candidaturas, mesmo se as inscrições forem abertas."
+                    : "A disponibilidade mudou: este cadastro não recebe candidaturas agora. O rascunho permanece nesta aba, mas nenhum envio será realizado."}
                 </p>
               )}
-              <AffiliateWizard preview={recruitment !== "open"} />
-              {preview && recruitment !== "open" && (
+              {/* A preview must never turn into a live POST because status changed.
+                  Switching explicitly to live starts a fresh form, not an old draft. */}
+              <AffiliateWizard key={preview ? "preview" : "live"} preview={simulationOnly} />
+              {preview && (
                 <div className="mt-6 text-center">
                   <button
                     type="button"
                     className="text-sm font-semibold text-[#8a5962] underline"
                     onClick={() => setPreview(false)}
                   >
-                    Fechar prévia
+                    {recruitment === "open"
+                      ? "Iniciar inscrição real (novo formulário)"
+                      : "Fechar prévia"}
                   </button>
                 </div>
               )}
