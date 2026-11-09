@@ -479,7 +479,7 @@ function ProductPage() {
                 className="rounded-full bg-action py-3.5 font-medium text-action-foreground"
                 onClick={() => {
                   add();
-                  nav({ to: "/carrinho" });
+                  nav({ to: "/checkout" });
                 }}
               >
                 Comprar agora
@@ -548,7 +548,7 @@ function ProductPage() {
           className="ml-auto shrink-0 rounded-full bg-action px-6 py-3 text-body font-medium text-action-foreground"
           onClick={() => {
             add();
-            nav({ to: "/carrinho" });
+            nav({ to: "/checkout" });
           }}
         >
           Comprar agora

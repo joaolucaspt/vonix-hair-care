@@ -232,9 +232,10 @@ export function Shell({ children }: { children: ReactNode }) {
   const path = useLocation().pathname;
   const router = useRouter();
   const hideWhatsApp = path === "/carrinho" || path === "/checkout";
+  const isCheckout = path === "/checkout";
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
-      <div className="overflow-hidden bg-marquee py-2.5 text-small font-medium tracking-wide text-marquee-foreground">
+      <div className={`overflow-hidden bg-marquee py-2.5 text-small font-medium tracking-wide text-marquee-foreground ${isCheckout ? "hidden" : ""}`}>
         <div className="flex w-max animate-marquee gap-12 whitespace-nowrap">
           {[...MARQUEE, ...MARQUEE, ...MARQUEE].map((m, i) => (
             <span key={i}>{m} &nbsp;✧</span>
@@ -249,7 +250,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <Link to="/" className="shrink-0">
             <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-8 w-auto sm:h-11" />
           </Link>
-          <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
+          <div className={`mx-auto min-w-0 w-full max-w-xl flex-col items-center gap-1.5 ${isCheckout ? "hidden" : "hidden lg:flex"}`}>
             <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
             <SearchBox />
             <AudienceChoice />
@@ -258,8 +259,8 @@ export function Shell({ children }: { children: ReactNode }) {
             <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
               <Heart className="h-5 w-5" />
             </Link>
-            <Link to="/conta" aria-label="Entrar" className="flex items-center gap-1 text-small sm:text-body">
-              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="max-[359px]:hidden">Entrar</span>
+            <Link to="/conta" aria-label="Acompanhar pedido" className="flex items-center gap-1 text-small sm:text-body">
+              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="max-[359px]:hidden">Pedidos</span>
             </Link>
             <Link to="/carrinho" aria-label="Carrinho" className="relative -m-2 p-2">
               <ShoppingCart className="h-5 w-5" />
@@ -271,12 +272,12 @@ export function Shell({ children }: { children: ReactNode }) {
             </Link>
           </div>
         </div>
-        <div className="container-site space-y-2 pb-3 lg:hidden">
+        <div className={`container-site ${isCheckout ? "hidden" : "space-y-2 pb-3 lg:hidden"}`}>
           <p className="whitespace-nowrap text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
           <SearchBox />
           <AudienceChoice />
         </div>
-        <nav aria-label="Categorias" className="hidden border-t border-border lg:block">
+        <nav aria-label="Categorias" className={isCheckout ? "hidden" : "hidden border-t border-border lg:block"}>
           <div className="container-site flex justify-center gap-x-10 py-3 text-small font-medium uppercase tracking-[0.18em]">
             {NAV.map((n) => (
               <Link key={n.label} to="/loja" search={n.search} className="shrink-0 whitespace-nowrap border-b border-transparent pb-0.5 transition-colors hover:border-foreground">
@@ -295,7 +296,7 @@ export function Shell({ children }: { children: ReactNode }) {
           >
             <div className="mb-6 flex items-center gap-3">
               <Link to="/conta" onClick={() => setOpen(false)} className="flex flex-1 items-center justify-center gap-2 rounded-md border border-foreground px-3 py-2.5 text-center text-small font-semibold uppercase tracking-[0.12em] transition-colors hover:bg-foreground hover:text-background">
-                <User className="h-4 w-4 shrink-0" aria-hidden="true" /> Entrar / Meus pedidos
+                <User className="h-4 w-4 shrink-0" aria-hidden="true" /> Acompanhar pedido
               </Link>
               <button aria-label="Fechar menu" onClick={() => setOpen(false)} className="-m-2 shrink-0 p-2">
                 <X className="h-6 w-6" />

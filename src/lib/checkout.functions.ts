@@ -95,6 +95,10 @@ export const createPayment = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!env("APPMAX_CLIENT_ID") || !env("APPMAX_CLIENT_SECRET")) return { ok: false as const, message: "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora." };
     try {
+      // Avoid creating an Appmax customer or order when card tokenization has failed.
+      if (data.method === "card" && !data.token) {
+        return { ok: false as const, message: "Não foi possível validar o cartão. Confira os dados e tente de novo." };
+      }
       const lines = buildLines(data.items);
       const option = (await shippingOptions(data.address.cep, lines, data.coupon)).find((o) => o.id === data.serviceId);
       if (!option) return { ok: false as const, message: "Escolha uma opção de entrega válida." };

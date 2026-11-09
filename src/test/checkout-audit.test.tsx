@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   config: vi.fn(),
   payment: vi.fn(),
   status: vi.fn(),
-  cart: { lines: [] as unknown[], netSubtotal: 0, subtotal: 0, clear: vi.fn() },
+  cart: { lines: [] as unknown[], netSubtotal: 0, subtotal: 0, clear: vi.fn(), add: vi.fn() },
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@tanstack/react-router", () => ({
@@ -202,5 +202,30 @@ describe("checkout auditado sem chamadas reais", () => {
       "value",
     ]);
     expect(vi.mocked(fbq).mock.calls.some((c) => c[1] === "Purchase")).toBe(false);
+  });
+});
+
+describe("complemento do carrinho", () => {
+  it("registra AddToCart com o desconto realmente aplicado ao item", () => {
+    render(<Cart />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Adicionar" })[0]!);
+    expect(mocks.cart.add).toHaveBeenCalledTimes(1);
+    const [slug, variant, qty, offer] = mocks.cart.add.mock.calls[0]!;
+    expect(qty).toBe(1);
+    expect(offer).toBe("comp5");
+
+    const product = getProduct(slug);
+    const selectedVariant = product?.variants.find((v) => v.label === variant);
+    expect(selectedVariant).toBeDefined();
+    const expectedPrice = lineTotals(selectedVariant!.price, 1, "comp5").net;
+    const gtag = window.gtag;
+    if (!gtag) throw new Error("Mock de analytics ausente");
+    const addEvents = vi.mocked(gtag).mock.calls.filter((call) => call[1] === "add_to_cart");
+    expect(addEvents).toHaveLength(1);
+    expect(addEvents[0]?.[2]).toMatchObject({
+      currency: "BRL",
+      value: expectedPrice,
+      items: [{ item_id: expect.any(String), price: expectedPrice, quantity: 1 }],
+    });
   });
 });

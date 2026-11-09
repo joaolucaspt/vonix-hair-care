@@ -65,7 +65,10 @@ function Suggestions() {
                 Economia de {brl(v.price - offer)} neste item
               </div>
               <button
-                onClick={() => c.add(p.slug, v.label, 1, "comp5")}
+                onClick={() => {
+                  c.add(p.slug, v.label, 1, "comp5");
+                  track("add_to_cart", { value: offer, items: [toItem(p, v.label, offer)] });
+                }}
                 className="mt-3 rounded-full border border-action px-4 py-2 text-small font-medium text-action"
               >
                 Adicionar
