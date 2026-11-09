@@ -93,7 +93,9 @@ formato aproximado; NÃO valida migração real, posse de domínio ou conformida
 - Banco de produção real, backups, domínio de email, credenciais e agendador ainda
   precisam ser confirmados pelo respectivo operador/fornecedor.
 - Regulamento comercial de comissão, produtos, cupons, atribuição, estornos e pagamentos
-  precisa ser aprovado. O formulário coleta uma **sugestão de cupom**, não o cria.
+  precisa ser aprovado. O laboratório de comissões no painel e a migração
+  `vonix-affiliate-sale-simulation.sql` servem **somente a testes sintéticos**:
+  não representam valores devidos, pagamentos liberados ou vendas da loja. O formulário coleta uma **sugestão de cupom**, não o cria.
 - Política LGPD, controlador, contato, base legal, retenção e descarte precisam
   de revisão apropriada antes de solicitar documentos pessoais em produção.
 - A autenticação compartilhada não é identidade individual por funcionário;

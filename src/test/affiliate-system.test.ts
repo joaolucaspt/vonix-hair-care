@@ -256,6 +256,8 @@ describe("Diagnóstico de preparação sem segredos", () => {
     const result = await affiliateOperationalReadiness();
     expect(result.recruitmentOpen).toBe(false);
     expect(result.checks.some((c) => c.id === "migration" && !c.ok)).toBe(true);
+    // The calculator is synthetic, not evidence that live sales are reconciled.
+    expect(result.checks.some((c) => c.id === "commercial_ledger" && !c.ok)).toBe(true);
     expect(result.databaseResponding).toBe(true);
     expect(result.governanceResponding).toBe(true);
     const printed = JSON.stringify(result);
