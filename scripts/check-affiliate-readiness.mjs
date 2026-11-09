@@ -46,8 +46,13 @@ const sameAsCheckout = (() => {
     return false;
   }
 })();
+const sameAsCheckoutKey = Boolean(
+  raw["SUPABASE_SERVICE_ROLE_KEY"] &&
+  raw["SUPABASE_SERVICE_ROLE_KEY"] === raw["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
+);
 const db =
   !sameAsCheckout &&
+  !sameAsCheckoutKey &&
   validUrl("AFFILIATE_SUPABASE_URL") &&
   present("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY", 16) &&
   projectPinned;
