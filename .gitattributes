@@ -10,5 +10,6 @@ src/routes/api.internal.affiliate-mail-worker.ts text eol=lf
 src/routes/seja-afiliada.tsx text eol=lf
 src/test/affiliate-system.test.ts text eol=lf
 src/test/affiliate-throttle.test.ts text eol=lf
+src/test/affiliate-recruitment.test.ts text eol=lf
 scripts/qa-affiliate-concurrency.mjs text eol=lf
 src/routeTree.gen.ts text eol=lf

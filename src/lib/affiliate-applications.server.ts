@@ -29,6 +29,31 @@ function supabase() {
   };
 }
 
+/**
+ * Publishing the source must never advertise an open signup before infrastructure
+ * has been configured and independently tested by an operator.
+ */
+export function affiliateRecruitmentOpen(): boolean {
+  if (env("AFFILIATE_RECRUITMENT_OPEN") !== "true") return false;
+  const dedicatedUrl = env("AFFILIATE_SUPABASE_URL");
+  const dedicatedKey = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
+  if (Boolean(dedicatedUrl) !== Boolean(dedicatedKey)) return false;
+  const url = dedicatedUrl || env("SUPABASE_URL");
+  const key = dedicatedKey || env("SUPABASE_SERVICE_ROLE_KEY");
+  const otp = env("AFFILIATE_ADMIN_TOTP_SECRET").replace(/\s/g, "");
+  return Boolean(
+    url &&
+    key &&
+    env("AFFILIATE_TRAFFIC_PEPPER").length >= 32 &&
+    env("AFFILIATE_ADMIN_PASSWORD").length >= 16 &&
+    env("AFFILIATE_ADMIN_SESSION_SECRET").length >= 32 &&
+    (process.env["NODE_ENV"] !== "production" || /^[A-Z2-7]{32,128}$/i.test(otp)) &&
+    env("AFFILIATE_WORKER_SECRET").length >= 24 &&
+    env("RESEND_API_KEY") &&
+    env("AFFILIATE_FROM_EMAIL"),
+  );
+}
+
 export function secureEqual(actual: string, expected: string) {
   if (!actual || !expected) return false;
   const a = createHash("sha256").update(actual).digest();

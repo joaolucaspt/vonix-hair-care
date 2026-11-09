@@ -11,6 +11,7 @@ import {
 } from "./affiliate-admin-session.server";
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
 import {
+  affiliateRecruitmentOpen,
   affiliateAdminAuthorized,
   createAffiliateApplication,
   decideAffiliateApplication,
@@ -18,9 +19,21 @@ import {
   processAffiliateEmails,
 } from "./affiliate-applications.server";
 
+/** Public, non-secret status used only to avoid presenting a broken form. */
+export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).handler(async () => {
+  setResponseHeader("Cache-Control", "no-store");
+  return { open: affiliateRecruitmentOpen() };
+});
+
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
   .validator(affiliateApplicationSchema)
   .handler(async ({ data }) => {
+    if (!affiliateRecruitmentOpen()) {
+      return {
+        ok: false as const,
+        reason: "Inscrições ainda não disponíveis. Consulte os canais oficiais da Vonix Hair.",
+      };
+    }
     if (!(await consumeAffiliateRateLimit("submit"))) {
       return {
         ok: false as const,

@@ -72,3 +72,10 @@ A implantação só deve prosseguir após verificar quem administra o banco atua
 - A consulta administrativa usa busca **literal** por nome ou e-mail: `%`, `_` e barras invertidas não podem ser interpretados como curingas SQL. Isso foi verificado no PostgreSQL isolado com uma transação de QA que executa `ROLLBACK`.
 - Os contadores permitem identificar problemas de envio sem expor dados de candidatas aos usuários públicos. O acesso continua exigindo sessão administrativa válida, e a checagem inicial de sessão envia `Cache-Control: no-store`.
 - Ainda faltam webhooks de confirmação de entrega, monitoramento de rejeição/bounce e uma trilha de auditoria por funcionário. Esses itens não são substituídos pelos contadores atuais.
+
+## Portão de abertura — integração segura pelo GitHub
+**O merge de código não abre inscrições automaticamente.** A nova página `/seja-afiliada` apresenta o programa, mas exibe “Inscrições em preparação” até a ativação consciente do ambiente. A função de envio também rejeita tentativas de cadastro pela API enquanto o portão estiver fechado, independentemente do HTML/JavaScript exibido.
+
+Para abrir **apenas após homologação**, definir `AFFILIATE_RECRUITMENT_OPEN=true` nas variáveis de ambiente **do servidor**. Além da confirmação explícita, o sistema exige banco configurado, segredo de IP, autenticação administrativa, TOTP válido em produção, chave/responsável do worker e configuração do Resend. NÃO colocar essas variáveis no cliente/GitHub nem editar os segredos do checkout. Antes de ativar, validar SQL aplicado à base correta, remetente verificado, proteção do proxy e aviso de privacidade. A flag não é substituto de teste de conectividade do banco: se o banco estiver errado, o envio ainda falhará de modo controlado.
+
+Por padrão `AFFILIATE_RECRUITMENT_OPEN` está ausente e o sistema fica **fechado**, inclusive se o PR de código for mesclado à `main` pelo GitHub. A página não anunciará “Inscrições abertas” quando estiver desativada, evitando coletar dados pessoais em instalação incompleta.

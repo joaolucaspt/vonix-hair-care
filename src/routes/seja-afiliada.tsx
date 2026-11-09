@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, CheckCircle2, Heart, Sparkles, UsersRound } from "lucide-react";
 import { Shell } from "@/components/site";
 import { BRAZIL_STATES, HAIR_TYPES, affiliateApplicationSchema } from "@/lib/affiliate-application";
-import { submitAffiliateApplication } from "@/lib/affiliate-functions";
+import {
+  getAffiliateRecruitmentStatus,
+  submitAffiliateApplication,
+} from "@/lib/affiliate-functions";
 import { SITE_URL } from "@/lib/store";
 
 export const Route = createFileRoute("/seja-afiliada")({
@@ -62,6 +65,21 @@ function AffiliateApplicationPage() {
   const [serverError, setServerError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [recruitment, setRecruitment] = useState<"loading" | "open" | "closed">("loading");
+
+  useEffect(() => {
+    let active = true;
+    void getAffiliateRecruitmentStatus()
+      .then(({ open }) => {
+        if (active) setRecruitment(open ? "open" : "closed");
+      })
+      .catch(() => {
+        if (active) setRecruitment("closed");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function set<K extends keyof FormFields>(name: K, value: FormFields[K]) {
     setForm((old) => ({ ...old, [name]: value }));
@@ -70,7 +88,7 @@ function AffiliateApplicationPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting) return;
+    if (submitting || recruitment !== "open") return;
     setServerError("");
     const result = affiliateApplicationSchema.safeParse({
       ...form,
@@ -131,7 +149,8 @@ function AffiliateApplicationPage() {
                 href="#inscricao"
                 className="mt-8 inline-flex min-h-12 items-center gap-3 rounded-full bg-[#f5e0ce] px-7 py-3 text-sm font-bold text-[#361f25] transition hover:bg-white"
               >
-                Quero me inscrever <ArrowRight className="h-4 w-4" />
+                {recruitment === "open" ? "Quero me inscrever" : "Conhecer o programa"}{" "}
+                <ArrowRight className="h-4 w-4" />
               </a>
             </div>
             <div className="rounded-[2rem] border border-white/15 bg-white/10 p-7 shadow-2xl backdrop-blur-sm sm:p-10">
@@ -177,16 +196,40 @@ function AffiliateApplicationPage() {
         <section id="inscricao" className="mx-auto max-w-5xl px-5 py-14 sm:py-20">
           <div className="mb-10 text-center">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-[#9e565e]">
-              Inscrições abertas
+              {recruitment === "open" ? "Inscrições abertas" : "Programa de afiliados"}
             </p>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl">Queremos conhecer você.</h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#765c5d] sm:text-base">
-              Preencha os campos abaixo para participar da seleção. A inscrição é gratuita e não
-              garante aprovação. O programa é destinado a pessoas com 18 anos ou mais.
+              {recruitment === "open"
+                ? "Preencha os campos abaixo para participar da seleção. A inscrição é gratuita e não garante aprovação. O programa é destinado a pessoas com 18 anos ou mais."
+                : "O programa é destinado a pessoas com 18 anos ou mais. Consulte os canais oficiais da Vonix Hair para acompanhar a abertura das inscrições."}
             </p>
           </div>
 
-          {sent ? (
+          {recruitment !== "open" ? (
+            <div
+              role="status"
+              className="mx-auto max-w-2xl rounded-[2rem] border border-[#e7d4cf] bg-white px-8 py-14 text-center shadow-[0_15px_70px_rgba(80,32,39,.08)]"
+            >
+              <Sparkles aria-hidden="true" className="mx-auto h-12 w-12 text-[#86535a]" />
+              <h3 className="mt-5 font-display text-3xl sm:text-4xl">
+                {recruitment === "loading"
+                  ? "Verificando inscrições..."
+                  : "Inscrições em preparação"}
+              </h3>
+              <p className="mt-4 leading-relaxed text-[#755b5e]">
+                {recruitment === "loading"
+                  ? "Estamos verificando a disponibilidade do cadastro."
+                  : "O formulário ainda não está habilitado. Quando o programa estiver pronto para receber candidaturas, o cadastro aparecerá aqui."}
+              </p>
+              <Link
+                to="/"
+                className="mt-7 inline-flex rounded-full border border-[#b98e86] px-6 py-3 text-sm font-semibold"
+              >
+                Voltar para a loja
+              </Link>
+            </div>
+          ) : sent ? (
             <div className="mx-auto max-w-2xl rounded-[2rem] border border-[#e7d4cf] bg-white px-8 py-14 text-center shadow-[0_15px_70px_rgba(80,32,39,.08)]">
               <CheckCircle2 className="mx-auto h-14 w-14 text-[#86535a]" />
               <h3 className="mt-5 font-display text-4xl">Inscrição enviada!</h3>
