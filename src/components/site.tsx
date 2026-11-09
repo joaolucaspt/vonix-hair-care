@@ -111,8 +111,8 @@ export function PaymentMethods({ dark = false }: { dark?: boolean }) {
 /** Security seal: only facts that hold (HTTPS on the host, payment processed by Appmax, card tokenized in the browser). No third-party certification is claimed. */
 export function SecuritySeal({ dark = false }: { dark?: boolean }) {
   return (
-    <div role="group" aria-label="Compra segura" className={`inline-flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${dark ? "border-marquee-foreground/35 text-marquee-foreground" : "border-border bg-white text-foreground"}`}>
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-action text-action-foreground">
+    <div role="group" aria-label="Compra segura" className={`inline-flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${dark ? "border-marquee-foreground/35 text-marquee-foreground" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`}>
+      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${dark ? "bg-action text-action-foreground" : "bg-emerald-600 text-white"}`}>
         <ShieldCheck className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
       </span>
       <span className="leading-tight">
