@@ -4,10 +4,12 @@ import { z } from "zod";
 import * as appmax from "./appmax.server";
 import { isValidCpf } from "./cpf";
 import { env } from "./env.server";
+import { orderStatusToken, validOrderStatusToken } from "./order-status-token.server";
+import { saveOrderSnapshot } from "./order-snapshot.server";
 import { calculateShipping } from "./melhorenvio.server";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
-import { checkoutTotals, getProduct, lineTotals, type Offer } from "./store";
+import { checkoutTotals, complementsFor, getProduct, lineTotals, type Offer } from "./store";
 import { couponCheck, couponFreeShipping, couponPercent, findCoupon } from "./coupons";
 
 const itemSchema = z.object({
@@ -20,6 +22,12 @@ const cepSchema = z.string().regex(/^\d{5}-?\d{3}$/);
 
 /** Prices always come from the catalog on the server; the browser only sends what is in the cart. */
 function buildLines(items: z.infer<typeof itemSchema>[]) {
+  // Validate that complement discounts are among recommendations for the other items.
+  const baseProducts = items.filter((i) => i.offer !== "comp5").map((i) => i.slug);
+  const eligible = new Set(complementsFor(baseProducts).map((p) => p.slug));
+  if (items.some((i) => i.offer === "comp5" && !eligible.has(i.slug))) {
+    throw new Error("Complemento promocional indisponível para este carrinho");
+  }
   return items.map((i) => {
     const p = getProduct(i.slug);
     const v = p?.variants.find((x) => x.label === i.variant);
@@ -57,7 +65,7 @@ export const quoteShipping = createServerFn({ method: "POST" })
 export const getPaymentConfig = createServerFn({ method: "GET" }).handler(async () => ({
   externalId: env("APPMAX_EXTERNAL_ID"),
   sandbox: env("APPMAX_ENV") !== "production",
-  pixEnabled: !!env("APPMAX_CLIENT_ID") && !!env("APPMAX_CLIENT_SECRET"),
+  pixEnabled: !!env("APPMAX_CLIENT_ID") && !!env("APPMAX_CLIENT_SECRET") && !!env("SUPABASE_URL") && !!env("SUPABASE_SERVICE_ROLE_KEY"),
 }));
 
 const customerSchema = z.object({
@@ -93,7 +101,7 @@ const paySchema = z.object({
 export const createPayment = createServerFn({ method: "POST" })
   .inputValidator(paySchema)
   .handler(async ({ data }) => {
-    if (!env("APPMAX_CLIENT_ID") || !env("APPMAX_CLIENT_SECRET")) return { ok: false as const, message: "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora." };
+    if (!env("APPMAX_CLIENT_ID") || !env("APPMAX_CLIENT_SECRET") || !env("SUPABASE_URL") || !env("SUPABASE_SERVICE_ROLE_KEY")) return { ok: false as const, message: "Os pagamentos desta loja estão sendo ativados. Fale com a gente no WhatsApp para comprar agora." };
     try {
       // Avoid creating an Appmax customer or order when card tokenization has failed.
       if (data.method === "card" && !data.token) {
@@ -144,10 +152,20 @@ export const createPayment = createServerFn({ method: "POST" })
       }));
       const orderId = await appmax.createOrder({
         customer_id: customerId,
-        products_value: products.reduce((s, p) => s + p.unit_value, 0),
+        // Per-item unit_value already prices products; do not also send products_value.
         discount_value: cents(totals.pixDiscount) + cents(totals.couponDiscount),
         shipping_value: cents(option.price),
         products,
+      });
+      // Save data available only at checkout (not returned by Appmax GET /v1/orders/{id}).
+      // Fail closed BEFORE requesting a payment if durable storage is unavailable.
+      await saveOrderSnapshot({
+        orderId,
+        customer: { name: data.customer.nome.trim(), email: data.customer.email, phone: data.customer.whatsapp.replace(/\D/g, ""), documentNumber: document },
+        address: { street: data.address.rua, number: data.address.numero, complement: data.address.complemento, district: data.address.bairro, city: data.address.cidade, state: data.address.uf.toUpperCase(), postcode: data.address.cep.replace(/\D/g, "") },
+        products: products.map((p) => ({ sku: p.sku, name: p.name, quantity: p.quantity, unitValueCents: p.unit_value })),
+        shippingValueCents: cents(option.price),
+        discountValueCents: cents(totals.pixDiscount) + cents(totals.couponDiscount),
       });
       const total = totals.net + option.price;
       // Venda pelo link de uma afiliada: o app de expedição registra como pendente; só conta comissão depois de paga.
@@ -156,7 +174,7 @@ export const createPayment = createServerFn({ method: "POST" })
 
       if (data.method === "pix") {
         const pix = await appmax.payWithPix(orderId, document);
-        return { ok: true as const, method: "pix" as const, orderId, total, pix: { emv: pix.pix_emv, qrcode: pix.pix_qrcode, expiresAt: pix.pix_expiration_date } };
+        return { ok: true as const, method: "pix" as const, orderId, statusToken: orderStatusToken(orderId), total, pix: { emv: pix.pix_emv, qrcode: pix.pix_qrcode, expiresAt: pix.pix_expiration_date } };
       }
 
       if (!data.token) return { ok: false as const, message: "Não foi possível validar o cartão. Confira os dados e tente de novo." };
@@ -170,7 +188,7 @@ export const createPayment = createServerFn({ method: "POST" })
       });
       const order = await appmax.getOrder(orderId);
       if (ref && appmax.isPaid(order)) await notifyAffiliateSale({ orderId, status: "pago" });
-      return { ok: true as const, method: "card" as const, orderId, total, paid: appmax.isPaid(order), status: order.data.order.status };
+      return { ok: true as const, method: "card" as const, orderId, statusToken: orderStatusToken(orderId), total, paid: appmax.isPaid(order), status: order.data.order.status };
     } catch (e) {
       console.error("[pagamento]", e);
       return { ok: false as const, message: "Não conseguimos processar o pagamento. Confira os dados ou tente outra forma de pagamento." };
@@ -178,9 +196,10 @@ export const createPayment = createServerFn({ method: "POST" })
   });
 
 export const getOrderStatus = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ orderId: z.number().int().positive() }))
+  .inputValidator(z.object({ orderId: z.number().int().positive(), statusToken: z.string().min(30).max(128) }))
   .handler(async ({ data }) => {
     try {
+      if (!validOrderStatusToken(data.orderId, data.statusToken)) return { ok: false as const };
       const order = await appmax.getOrder(data.orderId);
       const paid = appmax.isPaid(order);
       if (paid) await notifyAffiliateSale({ orderId: data.orderId, status: "pago" }); // o app ignora pedidos que não são de afiliada

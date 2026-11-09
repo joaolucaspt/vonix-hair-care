@@ -36,7 +36,7 @@ async function appmax<T>(method: "GET" | "POST", path: string, body?: unknown, r
   });
   if (res.status === 401 && !retried) return appmax<T>(method, path, body, true);
   const text = await res.text();
-  if (!res.ok) throw new Error(`Appmax ${method} ${path} ${res.status}: ${text.slice(0, 400)}`);
+  if (!res.ok) throw new Error(`Appmax ${method} HTTP ${res.status}`);
   return JSON.parse(text) as T;
 }
 
@@ -58,7 +58,7 @@ export const createCustomer = async (c: AppmaxCustomerInput) =>
 
 export const createOrder = async (o: {
   customer_id: number;
-  products_value: number;
+  // Products are priced via per-item unit_value; products_value must not be sent too.
   discount_value: number;
   shipping_value: number;
   products: AppmaxProduct[];
@@ -100,6 +100,8 @@ export type AppmaxOrder = {
 };
 export const getOrder = (orderId: number) => appmax<AppmaxOrder>("GET", `/v1/orders/${orderId}`);
 
-/** The docs do not list every status string; paid = approved/authorized/integrated, never refunded. */
-const PAID = new Set(["aprovado", "autorizado", "integrado", "pago", "approved", "authorized", "paid"]);
-export const isPaid = (o: AppmaxOrder) => PAID.has(String(o.data.order.status).toLowerCase());
+/** Appmax autorizado is still pending antifraud, not paid. Verified against official status guide. */
+const PAID = new Set(["aprovado", "integrado", "pendente_integracao"]);
+export const isPaid = (o: AppmaxOrder) => PAID.has(String(o.data.order.status).trim().toLowerCase());
+/** Only integrado is ready for physical fulfillment; approved can still await integration. */
+export const isReadyForFulfillment = (o: AppmaxOrder) => String(o.data.order.status).trim().toLowerCase() === "integrado";

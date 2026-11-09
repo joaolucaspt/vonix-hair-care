@@ -1,5 +1,6 @@
 import { env, requireEnv } from "./env.server";
-import type { AppmaxOrder } from "./appmax.server";
+import { orderSnapshotSchema, type OrderSnapshot } from "./order-snapshot.server";
+import { readBlingRefreshToken, rotateBlingRefreshToken } from "./bling-refresh.server";
 
 /**
  * Bling API v3 (ERP): cria o pedido de venda quando o pagamento é confirmado na Appmax.
@@ -7,25 +8,26 @@ import type { AppmaxOrder } from "./appmax.server";
  * O refresh token do Bling muda a cada renovação; aqui o mais novo fica só em memória.
  * Para produção estável, guarde o novo token num banco (pendência no docs/ESTRUTURA.md).
  */
-const AUTH = "https://www.bling.com.br/Api/v3/oauth/token";
+const AUTH = "https://api.bling.com.br/Api/v3/oauth/token";
 const API = "https://api.bling.com.br/Api/v3";
 
-export const blingEnabled = () => Boolean(env("BLING_CLIENT_ID") && env("BLING_CLIENT_SECRET") && env("BLING_REFRESH_TOKEN"));
+export const blingEnabled = () => Boolean(env("BLING_CLIENT_ID") && env("BLING_CLIENT_SECRET") && env("SUPABASE_URL") && env("SUPABASE_SERVICE_ROLE_KEY"));
 
 let cached: { token: string; expiresAt: number } | null = null;
-let refreshToken = "";
+// Rotating refresh credentials are persisted in Supabase, never only in worker memory.
 
 async function getToken(force = false) {
   if (!force && cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
   const basic = Buffer.from(`${requireEnv("BLING_CLIENT_ID")}:${requireEnv("BLING_CLIENT_SECRET")}`).toString("base64");
+  const currentRefreshToken = await readBlingRefreshToken();
   const res = await fetch(AUTH, {
     method: "POST",
     headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded", Accept: "1.0" },
-    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken || requireEnv("BLING_REFRESH_TOKEN") }),
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: currentRefreshToken }),
   });
   if (!res.ok) throw new Error(`Bling auth ${res.status}`);
   const j = (await res.json()) as { access_token: string; refresh_token: string; expires_in: number };
-  refreshToken = j.refresh_token;
+  await rotateBlingRefreshToken(currentRefreshToken, j.refresh_token);
   cached = { token: j.access_token, expiresAt: Date.now() + j.expires_in * 1000 };
   return cached.token;
 }
@@ -38,37 +40,50 @@ async function bling<T>(method: "GET" | "POST", path: string, body?: unknown, re
   });
   if (res.status === 401 && !retried) return bling<T>(method, path, body, true);
   const text = await res.text();
-  if (!res.ok) throw new Error(`Bling ${method} ${path} ${res.status}: ${text.slice(0, 400)}`);
+  if (!res.ok) throw new Error(`Bling ${method} HTTP ${res.status}`);
   return JSON.parse(text) as T;
 }
 
-/** Campos que o pedido da Appmax costuma trazer; a estrutura exata será confirmada com a chave de teste. */
-type Loose = {
-  customer?: { first_name?: string; last_name?: string; email?: string; phone?: string; document_number?: string; address?: { street?: string; number?: string; complement?: string; district?: string; city?: string; state?: string; postcode?: string } };
-  products?: { sku?: string; name?: string; quantity?: number; unit_value?: number }[];
-  shipping_value?: number;
-  discount_value?: number;
-};
+/** Appmax monetary values are integer cents; Bling sale values are BRL decimals. */
+export function appmaxCentsToBrl(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error("Valor da Appmax em centavos inválido");
+  return value / 100;
+}
 
-/** Envia a venda paga ao Bling. Usa o número do pedido Appmax como numeroLoja para não duplicar. */
-export async function sendPaidOrder(order: AppmaxOrder) {
-  if (!blingEnabled()) return "bling desligado";
-  const o = order.data.order as AppmaxOrder["data"]["order"] & Loose;
-  const c = o.customer;
-  if (!c || !o.products?.length) return "pedido da Appmax sem cliente ou itens: mapeamento a confirmar";
-  const a = c.address ?? {};
+/**
+ * Export the immutable server-priced checkout snapshot. GET /v1/orders/{id}
+ * only provides the payment state, totals and a minimal customer object.
+ * It DOES NOT include the product lines and shipping address required by Bling.
+ */
+export async function sendPaidOrder(snapshot: OrderSnapshot) {
+  if (!blingEnabled()) throw new Error("Bling não configurado");
+  const data = orderSnapshotSchema.parse(snapshot);
+  const id = data.orderId;
+  // Guard against duplicate exports after retry or an unknown POST response.
+  const existing = await bling<{ data: { numeroLoja?: string | number }[] }>(
+    "GET", `/pedidos/vendas?numerosLojas%5B%5D=${encodeURIComponent(String(id))}`,
+  );
+  if (!Array.isArray(existing.data)) throw new Error("Consulta de duplicidade Bling inválida");
+  // If Bling omits numeroLoja in this endpoint, we cannot establish that a
+  // previous request failed: stop rather than risk shipping a duplicate.
+  if (existing.data.some((entry) => entry.numeroLoja == null)) throw new Error("Bling não retornou a referência de loja para deduplicação");
+  if (existing.data.some((entry) => String(entry.numeroLoja) === String(id))) return "ja enviado";
+  const c = data.customer;
+  const a = data.address;
   await bling("POST", "/pedidos/vendas", {
-    numeroLoja: String(o.id),
+    numeroLoja: String(id),
     ...(env("BLING_LOJA_ID") ? { loja: { id: Number(env("BLING_LOJA_ID")) } } : {}),
-    observacoes: "Origem: site Vonix Hair (vonixhair.com) | Pedido Appmax " + o.id,
+    observacoes: "Origem: site Vonix Hair (vonixhair.com) | Pedido Appmax " + id,
     data: new Date().toISOString().slice(0, 10),
-    contato: { nome: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(), tipoPessoa: "F", numeroDocumento: c.document_number, email: c.email, celular: c.phone },
-    itens: o.products.map((p) => ({ codigo: p.sku, descricao: p.name, unidade: "UN", quantidade: p.quantity, valor: p.unit_value })),
-    desconto: { valor: o.discount_value ?? 0, unidade: "REAL" },
+    contato: { nome: c.name, tipoPessoa: "F", numeroDocumento: c.documentNumber, email: c.email, celular: c.phone },
+    itens: data.products.map((p) => ({
+      codigo: p.sku, descricao: p.name, unidade: "UN", quantidade: p.quantity, valor: appmaxCentsToBrl(p.unitValueCents),
+    })),
+    desconto: { valor: appmaxCentsToBrl(data.discountValueCents), unidade: "REAL" },
     transporte: {
       fretePorConta: 0,
-      frete: o.shipping_value ?? 0,
-      etiqueta: { nome: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim(), endereco: a.street, numero: a.number, complemento: a.complement, bairro: a.district, municipio: a.city, uf: a.state, cep: a.postcode },
+      frete: appmaxCentsToBrl(data.shippingValueCents),
+      etiqueta: { nome: c.name, endereco: a.street, numero: a.number, complemento: a.complement, bairro: a.district, municipio: a.city, uf: a.state, cep: a.postcode },
     },
   });
   return "enviado";

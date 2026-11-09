@@ -59,7 +59,7 @@ type ShipOption = {
   days: number;
   free: boolean;
 };
-type PixResult = { orderId: number; total: number; emv: string; qrcode: string; expiresAt: string };
+type PixResult = { orderId: number; statusToken: string; total: number; emv: string; qrcode: string; expiresAt: string };
 
 declare global {
   interface Window {
@@ -345,7 +345,7 @@ function Checkout() {
   useEffect(() => {
     if (!pix || paid) return;
     const timer = setInterval(async () => {
-      const r = await getOrderStatus({ data: { orderId: pix.orderId } }).catch(() => null);
+      const r = await getOrderStatus({ data: { orderId: pix.orderId, statusToken: pix.statusToken } }).catch(() => null);
       if (r?.ok && r.paid) {
         setPaid(true);
         finishRef.current(pix.orderId, pix.total);
@@ -390,6 +390,7 @@ function Checkout() {
       if (r.method === "pix") {
         setPix({
           orderId: r.orderId,
+          statusToken: r.statusToken,
           total: r.total,
           emv: r.pix.emv,
           qrcode: r.pix.qrcode,

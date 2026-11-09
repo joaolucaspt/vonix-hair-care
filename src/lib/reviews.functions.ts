@@ -58,16 +58,17 @@ export const submitReview = createServerFn({ method: "POST" })
     const review = { origem: "avaliacao-site", produto: data.slug, nome: data.nome, nota: data.nota, comentario: data.comentario, email: data.email ?? "", conferencia: veredito.status, em: new Date().toISOString() };
     const url = env("REVIEW_WEBHOOK_URL") || env("LEAD_WEBHOOK_URL");
     if (!url) {
-      console.info("[avaliacao]", JSON.stringify(review));
-      return { ok: true as const, publicada: false, review: null };
+      // Never log visitors' names, emails or review text.
+      return { ok: false as const, publicada: false, review: null, motivo: "Avaliações temporariamente indisponíveis. Tente mais tarde." };
     }
     try {
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(review), signal: AbortSignal.timeout(6000) });
-      if (!r.ok) throw new Error(`webhook respondeu ${r.status}`);
+      if (!r.ok) throw new Error("Webhook indisponível");
+      return { ok: true as const, publicada: false, review: null };
     } catch (e) {
-      console.error("[avaliacao] webhook falhou", e, JSON.stringify(review));
+      // No PII is logged on delivery failures.
     }
-    return { ok: true as const, publicada: false, review: null };
+    return { ok: false as const, publicada: false, review: null, motivo: "Não conseguimos receber sua avaliação agora. Tente novamente." };
   });
 
 /** Avaliações de visitantes já aprovadas de um produto (vazio se o banco não estiver ligado). */
