@@ -7,6 +7,7 @@ const keys = [
   "AFFILIATE_PRIVACY_POLICY_APPROVED",
   "AFFILIATE_PROVIDER_VERIFIED",
   "AFFILIATE_SUPABASE_URL",
+  "AFFILIATE_SUPABASE_PROJECT_REF",
   "AFFILIATE_SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
@@ -30,7 +31,8 @@ beforeEach(() => {
     AFFILIATE_GOVERNANCE_MIGRATED: "true",
     AFFILIATE_PRIVACY_POLICY_APPROVED: "true",
     AFFILIATE_PROVIDER_VERIFIED: "true",
-    AFFILIATE_SUPABASE_URL: "https://example.supabase.co",
+    AFFILIATE_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",
+    AFFILIATE_SUPABASE_PROJECT_REF: "abcdefghijklmnopqrst",
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: "synthetic-dedicated-test-role-key",
     AFFILIATE_TRAFFIC_PEPPER: "unit-test-hmac-pepper-longer-than-32-chars",
     AFFILIATE_QUESTIONNAIRE_KEY: Buffer.from("0123456789abcdef0123456789abcdef").toString(
@@ -66,6 +68,16 @@ describe("Public affiliate launch gate", () => {
       expect(affiliateRecruitmentOpen()).toBe(true);
     }
   });
+  it("requires a project-specific pin and forbids the checkout database", () => {
+    process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
+    expect(affiliateRecruitmentOpen()).toBe(true);
+    delete process.env["AFFILIATE_SUPABASE_PROJECT_REF"];
+    expect(affiliateRecruitmentOpen()).toBe(false);
+    process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
+    process.env["SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+    expect(affiliateRecruitmentOpen()).toBe(false);
+  });
+
   it("rejects partially configured dedicated DB instead of mixing credentials", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
     delete process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
@@ -76,11 +88,11 @@ describe("Public affiliate launch gate", () => {
     process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
     expect(affiliateRecruitmentOpen()).toBe(true);
     for (const badUrl of [
-      "http://example.supabase.co",
-      "https://user:password@example.supabase.co",
-      "https://example.supabase.co/unexpected-path",
-      "https://example.supabase.co?apikey=unsafe",
-      "https://example.supabase.co:8080",
+      "http://abcdefghijklmnopqrst.supabase.co",
+      "https://user:password@abcdefghijklmnopqrst.supabase.co",
+      "https://abcdefghijklmnopqrst.supabase.co/unexpected-path",
+      "https://abcdefghijklmnopqrst.supabase.co?apikey=unsafe",
+      "https://abcdefghijklmnopqrst.supabase.co:8080",
       "javascript:alert(1)",
     ]) {
       process.env["AFFILIATE_SUPABASE_URL"] = badUrl;
@@ -98,7 +110,7 @@ describe("Public affiliate launch gate", () => {
     delete process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
     expect(affiliateRecruitmentOpen()).toBe(false);
 
-    process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+    process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
     expect(affiliateRecruitmentOpen()).toBe(false);
   });
 

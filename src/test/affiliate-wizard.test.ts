@@ -58,6 +58,7 @@ const fixture = {
 const original = {
   secret: process.env["AFFILIATE_QUESTIONNAIRE_KEY"],
   url: process.env["AFFILIATE_SUPABASE_URL"],
+  ref: process.env["AFFILIATE_SUPABASE_PROJECT_REF"],
   key: process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
 };
 beforeEach(() => {
@@ -65,13 +66,15 @@ beforeEach(() => {
     "0123456789abcdef0123456789abcdef",
     "utf8",
   ).toString("base64url");
-  process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+  process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+  process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
   process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "fake-unit-test-service-role";
 });
 afterEach(() => {
   for (const [key, value] of Object.entries({
     AFFILIATE_QUESTIONNAIRE_KEY: original.secret,
     AFFILIATE_SUPABASE_URL: original.url,
+    AFFILIATE_SUPABASE_PROJECT_REF: original.ref,
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: original.key,
   })) {
     if (value === undefined) delete process.env[key];
@@ -96,6 +99,14 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(submitted.tiktok).toBe("");
     expect(submitted.wizard?.couponSuggestion).toBe("MARINA10");
   });
+  it("uses the Brazilian calendar day for the legal 18-year age boundary", () => {
+    const born = "2008-11-09";
+    // UTC already says November 9 while São Paulo is still on November 8.
+    expect(ageFromBirthDate(born, new Date("2026-11-09T02:59:59Z"))).toBe(17);
+    expect(ageFromBirthDate(born, new Date("2026-11-09T03:00:00Z"))).toBe(18);
+    expect(ageFromBirthDate("2008-11-10", new Date("2026-11-09T23:00:00Z"))).toBe(17);
+  });
+
   it("rejects invalid Brazilian documents and implausible birthdates", () => {
     expect(validCpf(fixture.cpf)).toBe(true);
     expect(validCpf("111.111.111-11")).toBe(false);

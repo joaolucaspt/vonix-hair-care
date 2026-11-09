@@ -117,6 +117,8 @@ describe("Vonix affiliate private panel", () => {
     render(<Page />);
     expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "APROVAR" }));
+    expect(server.reviewAffiliateApplication).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aprovação" }));
     await waitFor(() => expect(server.reviewAffiliateApplication).toHaveBeenCalledOnce());
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
     expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
@@ -128,6 +130,27 @@ describe("Vonix affiliate private panel", () => {
     expect(screen.queryByText("Inscrição aprovada.")).not.toBeInTheDocument();
     expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+  });
+
+  it("requires deliberate confirmation for each irreversible decision", async () => {
+    server.reviewAffiliateApplication.mockResolvedValue({ ok: true, emailSent: false });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "RECUSAR" }));
+    expect(screen.getByText(/Confirmar recusa de Segredo da candidata/)).toBeInTheDocument();
+    expect(server.reviewAffiliateApplication).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("button", { name: "Confirmar recusa" })).not.toBeInTheDocument();
+    expect(server.reviewAffiliateApplication).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "RECUSAR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar recusa" }));
+    await waitFor(() =>
+      expect(server.reviewAffiliateApplication).toHaveBeenCalledWith({
+        data: { id: candidate.id, decision: "recusada" },
+      }),
+    );
+    expect(server.reviewAffiliateApplication).toHaveBeenCalledTimes(1);
   });
 
   it("opens global uncertain mail triage with a database-backed filter and can clear it", async () => {

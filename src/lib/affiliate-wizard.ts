@@ -116,9 +116,19 @@ export function ageFromBirthDate(value: string, now = new Date()): number {
     date.getUTCDate() !== day
   )
     return -1;
-  const y = now.getUTCFullYear(),
-    m = now.getUTCMonth() + 1,
-    d = now.getUTCDate();
+  // Legal adulthood for Brazilian applicants must follow the Brazilian date.
+  // UTC can accept an applicant hours before their 18th birthday in Brazil.
+  const dateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(now);
+  const part = (type: "year" | "month" | "day") =>
+    Number(dateParts.find((entry) => entry.type === type)?.value);
+  const y = part("year");
+  const m = part("month");
+  const d = part("day");
   return y - year! - (m < month! || (m === month && d < day!) ? 1 : 0);
 }
 

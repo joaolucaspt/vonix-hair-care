@@ -78,6 +78,10 @@ describe("Vonix five-stage browser wizard", () => {
     field("couponSuggestion", "MARINA10");
     next();
     expect(screen.getByText("Passo 5 de 5")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Revise sua candidatura" })).toBeInTheDocument();
+    expect(screen.getByText("marina@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Sugestão de cupom: MARINA10")).toBeInTheDocument();
+    expect(screen.queryByText("529.982.247-25")).not.toBeInTheDocument();
     field("hairType", "Cacheado");
     fireEvent.click(document.getElementById("wizard-termsAccepted")!);
     fireEvent.click(screen.getByRole("button", { name: /Simular finalização/i }));
@@ -89,6 +93,11 @@ describe("Vonix five-stage browser wizard", () => {
     expect((document.getElementById("wizard-couponSuggestion") as HTMLInputElement).value).toBe(
       "MARINA10",
     );
+    next();
+    fireEvent.click(screen.getByRole("button", { name: "Editar dados pessoais e contato" }));
+    expect(screen.getByText("Passo 1 de 5")).toBeInTheDocument();
+    expect((document.getElementById("wizard-firstName") as HTMLInputElement).value).toBe("Marina");
+    expect(api.submit).not.toHaveBeenCalled();
   });
 
   it("focuses the newly rendered stage heading on navigation", async () => {

@@ -19,12 +19,14 @@ import {
 
 const original = {
   url: process.env["AFFILIATE_SUPABASE_URL"],
+  ref: process.env["AFFILIATE_SUPABASE_PROJECT_REF"],
   key: process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
   pepper: process.env["AFFILIATE_TRAFFIC_PEPPER"],
   header: process.env["AFFILIATE_TRUSTED_IP_HEADER"],
 };
 beforeEach(() => {
-  process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+  process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+  process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
   process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "fake-service-role-for-unit-test";
   process.env["AFFILIATE_TRAFFIC_PEPPER"] = "very-long-hmac-pepper-only-for-unit-testing-1234";
   process.env["AFFILIATE_TRUSTED_IP_HEADER"] = "cf-connecting-ip";
@@ -34,6 +36,7 @@ beforeEach(() => {
 afterEach(() => {
   const values = {
     AFFILIATE_SUPABASE_URL: original.url,
+    AFFILIATE_SUPABASE_PROJECT_REF: original.ref,
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: original.key,
     AFFILIATE_TRAFFIC_PEPPER: original.pepper,
     AFFILIATE_TRUSTED_IP_HEADER: original.header,
@@ -64,7 +67,9 @@ describe("Persisted affiliate request rate limiting", () => {
     expect(await consumeAffiliateRateLimit("submit")).toBe(true);
     expect(mock).toHaveBeenCalledTimes(1);
     const [url, init] = mock.mock.calls[0]!;
-    expect(url).toBe("https://example.supabase.co/rest/v1/rpc/vonix_affiliate_consume_rate_limit");
+    expect(url).toBe(
+      "https://abcdefghijklmnopqrst.supabase.co/rest/v1/rpc/vonix_affiliate_consume_rate_limit",
+    );
     const body = JSON.parse(init.body);
     expect(body.p_scope).toBe("submit");
     expect(body.p_fingerprint).toMatch(/^[0-9a-f]{64}$/);

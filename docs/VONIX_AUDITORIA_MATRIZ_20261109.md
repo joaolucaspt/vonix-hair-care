@@ -144,3 +144,12 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N45 | Alta | Produto retirado do catálogo gerava erro de compra ambígua mesmo sem haver chamada à Appmax | Cotação e checkout distinguem rejeição de catálogo de falha incerta de gateway; mensagem para revisar sacola, `retrySafe:true`, nenhum frete/intent/customer/order/Pix em teste simulado |
 
 **Recibo C9:** **475/475 testes Vitest em 62 arquivos**, TypeScript/ESLint/build PASS, Chrome com normalização de carrinho e atualização de oferta em 390/1366 px PASS; SSR **42/42** com `plex-vonix` HTTP 404. Ver `docs/VONIX_AUDITORIA_CONTINUIDADE_C9_20261109.md` e `docs/VONIX_C9_VERIFIED_RECEIPT_20261109.json`. **Homologação Appmax, Supabase staging, Bling, estoque físico, consentimento tardio e desempenho comercial real continuam P0/P1.**
+
+## Auditoria C10 — GA4 e consentimento na integração com main (09/11)
+
+| ID | Prioridade | Achado | Correção e evidência |
+| --- | --- | --- | --- |
+| N46 | Alta | PR tinha ID de GA4 antigo, enquanto `main` alterou oficialmente para `G-J8TYLB425K` (`8c8bf6b`), causando falha no teste de integração Linux | Herdado GA4 atualizado com merge conservador da `main` e teste alinhado ao novo ID; Chrome confirmou URL exata e eventos apenas após consentimento |
+| N47 | Alta | Versão atual da `main` tinha inicialização GA4/Clarity/Pixel sem a guarda de opt-in do PR; risco de regressão de privacidade | Merge manteve `__vonixMarketingAllowed`, restrição a domínio canônico e `consent:true` no PageView; teste impede tags externas estáticas incondicionais. **Não publicado: main operacional continua dependendo do merge/homologação** |
+
+**Recibo C10:** **482/482 testes em 62 arquivos**, TypeScript/ESLint/build PASS, SSR **42/42**, Chrome com rede externa interceptada: zero tags sem consentimento e GA4 `G-J8TYLB425K` + Clarity/Pixel + PageView após aceitação. Arquivos `docs/VONIX_AUDITORIA_CONTINUIDADE_C10_20261109.md` e `docs/VONIX_C10_VERIFIED_RECEIPT_20261109.json`. Verificar ainda propriedade real do GA4 e requisitos P0; sem deploy.

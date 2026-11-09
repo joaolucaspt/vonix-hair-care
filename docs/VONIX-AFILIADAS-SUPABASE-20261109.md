@@ -49,8 +49,8 @@ O projeto Lovable da loja pode utilizar backend e configurações diferentes.
 Jamais inserir a `service_role` ou segredos no frontend, em links públicos ou no Git.
 
 1. Configurar **somente nos segredos do servidor hospedeiro** as variáveis
-   `AFFILIATE_SUPABASE_URL` e `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY`,
-   obtidas no painel do projeto dedicado. Não substituir credenciais do checkout.
+   `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` e `AFFILIATE_SUPABASE_PROJECT_REF`,
+   obtidas no painel do projeto dedicado (ref público `jewbzrbbvxyqmxqbrwrq`). Não substituir credenciais do checkout. O backend nega URLs divergentes ou idênticas à do checkout.
 2. Configurar também MFA, sessão, pepper, cabeçalho de proxy confiável e
    `AFFILIATE_QUESTIONNAIRE_KEY` privada de 32 bytes. Manter a chave criptográfica
    em backup separado para evitar perda irrecuperável dos questionários.

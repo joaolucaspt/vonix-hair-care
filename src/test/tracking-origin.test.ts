@@ -59,6 +59,14 @@ function simulate(origin: string, choice: string | null, blocked = false, reject
 }
 
 describe("rastreamento respeita origem e consentimento opcional", () => {
+  it("impede tags GA4/Clarity/Meta externas estáticas antes de consentimento", () => {
+    // The base branch once inserted a direct GA script in <head>. That would
+    // bypass every runtime opt-in check even if the inline simulator passed.
+    const srcs = head.scripts.map((s) => s.src).filter(Boolean);
+    expect(srcs.filter((url) => /googletagmanager\.com|clarity\.ms|facebook\.net/.test(url!))).toEqual([]);
+    expect(bootstrap).toContain("__vonixMarketingAllowed");
+  });
+
   it("nega GA4, Clarity, Pixel e CAPI antes de qualquer decisão", () => {
     for (const choice of [null, "rejected", "desconhecido"]) {
       const r = simulate("https://vonixhair.com", choice);
@@ -95,10 +103,10 @@ describe("rastreamento respeita origem e consentimento opcional", () => {
 
   it("carrega os três serviços e PageView somente após consentimento na loja publicada", () => {
     const r = simulate("https://vonixhair.com", "accepted");
-    if (!r.externalScripts.includes("https://www.googletagmanager.com/gtag/js?id=G-JW91EQ32F3")) {
+    if (!r.externalScripts.includes("https://www.googletagmanager.com/gtag/js?id=G-J8TYLB425K")) {
       throw new Error("Unexpected GA bootstrap scripts (public URLs only): " + JSON.stringify(r.externalScripts));
     }
-    expect(r.externalScripts).toContain("https://www.googletagmanager.com/gtag/js?id=G-JW91EQ32F3");
+    expect(r.externalScripts).toContain("https://www.googletagmanager.com/gtag/js?id=G-J8TYLB425K");
     expect(r.externalScripts).toContain("https://www.clarity.ms/tag/zaq09ea2zy");
     expect(r.externalScripts).toContain("https://connect.facebook.net/en_US/fbevents.js");
     expect(r.requests).toContain("/api/public/meta-event");

@@ -285,6 +285,38 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
       required={required}
     />
   );
+  const reviewGroups = [
+    {
+      title: "Dados pessoais e contato",
+      step: 0,
+      lines: [
+        (value("firstName") + " " + value("lastName")).trim(),
+        value("email").trim(),
+        [value("city"), value("state")].filter(Boolean).join(" / "),
+        "Instagram: @" + value("instagramUsername").replace(/^@/, ""),
+      ],
+    },
+    {
+      title: "Conteúdo e audiência",
+      step: 1,
+      lines: [
+        values.niche === "Outro" ? value("otherNiche") : value("niche"),
+        "Instagram: " + (value("instagramFollowers") || "Não informado"),
+        "TikTok: " + value("tiktokFollowers"),
+      ],
+    },
+    {
+      title: "Dados complementares",
+      step: 2,
+      lines: ["Inscrição municipal: " + (values.municipalRegistration === "sim" ? "Sim" : "Não")],
+    },
+    {
+      title: "Sua conexão com a Vonix",
+      step: 3,
+      lines: [value("preferredLine"), "Sugestão de cupom: " + value("couponSuggestion")],
+    },
+  ] as const;
+
   function moveTo(next: number) {
     navigated.current = true;
     zipLookupId.current += 1;
@@ -638,6 +670,43 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
         {step === 4 && (
           <div className="space-y-6">
             {select("hairType", "Qual é o seu tipo de cabelo?", WIZARD_HAIR_TYPES)}
+            <section
+              aria-labelledby="wizard-review-title"
+              className="rounded-2xl border border-[#eadbd6] bg-[#fffaf7] p-5 sm:p-6"
+            >
+              <h4 id="wizard-review-title" className="font-display text-2xl">
+                Revise sua candidatura
+              </h4>
+              <p className="mt-2 text-xs leading-relaxed text-[#80666b]">
+                Confira os dados antes de finalizar. Documentos, telefone, data de nascimento,
+                endereço completo e informações privadas não são repetidos neste resumo. Utilize
+                Editar para voltar à etapa correspondente.
+              </p>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {reviewGroups.map((group) => (
+                  <div key={group.step} className="rounded-xl border border-[#efdfd9] bg-white p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h5 className="text-sm font-bold text-[#563942]">{group.title}</h5>
+                      <button
+                        type="button"
+                        onClick={() => moveTo(group.step)}
+                        className="text-xs font-semibold text-[#8d505b] underline underline-offset-2"
+                        aria-label={"Editar " + group.title.toLowerCase()}
+                      >
+                        Editar
+                      </button>
+                    </div>
+                    <ul className="mt-3 space-y-1.5 text-xs leading-relaxed text-[#755b5e]">
+                      {group.lines.map((line, index) => (
+                        <li key={index} className="break-words">
+                          {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </section>
             <div className="rounded-2xl border border-[#e7d8d1] bg-[#fcf8f5] p-6">
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-1 h-6 w-6 shrink-0 text-[#80505a]" />

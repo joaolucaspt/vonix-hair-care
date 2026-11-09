@@ -1,0 +1,85 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce-only",
+  "date": "2026-11-09",
+  "pr": 26,
+  "baseline": "da5711ae3b1b850c2a59e87ba0cd33bdcdc335f9",
+  "diagnosticCommit": "a1365bf582204df47344e48541fd1d437efd1627",
+  "integratedMain": "d2e7ba1d8f8355df53ffa08ab3ad1e1de9a4d9c0",
+  "ga": {
+    "oldId": "G-JW91EQ32F3",
+    "newId": "G-J8TYLB425K",
+    "upstreamUpdate": "8c8bf6b",
+    "privacyGatesPreserved": true,
+    "externallyVerifiedProperty": false
+  },
+  "localVerification": {
+    "vitest": {
+      "passed": 482,
+      "total": 482,
+      "files": 62,
+      "exit": 0
+    },
+    "targetedTracking": {
+      "passed": 24,
+      "total": 24,
+      "files": 3,
+      "exit": 0
+    },
+    "typescript": {
+      "exit": 0
+    },
+    "eslintTargeted": {
+      "exit": 0
+    },
+    "build": {
+      "exit": 0
+    },
+    "ssr": {
+      "passed": 42,
+      "failed": 0,
+      "excluded": [
+        {
+          "slug": "plex-vonix",
+          "http": 404
+        }
+      ]
+    },
+    "browser": {
+      "simulatedOrigin": "https://vonixhair.com",
+      "localBackingServer": "http://127.0.0.1:43972",
+      "externalRequestsIntercepted": true,
+      "noConsent": {
+        "ga": 0,
+        "clarity": 0,
+        "pixel": 0,
+        "meta": 0
+      },
+      "consentAccepted": {
+        "gaRequest": "https://www.googletagmanager.com/gtag/js?id=G-J8TYLB425K",
+        "clarity": 1,
+        "pixel": 1,
+        "metaPageViewConsent": true
+      },
+      "pageErrors": 0
+    }
+  },
+  "safety": {
+    "productionTouched": false,
+    "affiliateCodeManuallyChanged": false,
+    "realPayments": false,
+    "realDatabaseWrites": false,
+    "realAnalyticsDelivered": false,
+    "deploy": false,
+    "mergedPrToMain": false
+  },
+  "remaining": [
+    "Appmax real sandbox",
+    "Supabase staging and backup/RLS",
+    "Bling/actual SKU inventory/weights",
+    "LGPD late revocation ledger and legal review",
+    "WAF and distributed rate limiting",
+    "verify GA4 property belongs to store",
+    "real paid-order conversion"
+  ]
+}

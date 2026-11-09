@@ -36,3 +36,7 @@ Obter também histórico dos preços de referência, autorização de depoimento
 ## Gate final antes de produção
 
 Exigir responsáveis do negócio, jurídico, pagamentos, ERP, dados e operações assinarem cada porta P0 com evidência datada. Preparar plano de reversão em PR e backup, janela de monitoramento de cobranças duplicadas e falha de pedidos, revisão de domínio e permissões. **Sem esses registros, PR #26 continua em revisão.**
+
+### Auditoria C10 — identificar propriedade GA4 e consentimento
+
+A `main` mudou o identificador público GA4 para `G-J8TYLB425K` no commit `8c8bf6b`. O PR incorpora o ID vigente preservando bloqueios de GA4, Clarity e Meta antes de aceite. Em staging ou revisão jurídica, confirmar que este ID pertence à propriedade GA4 autorizada da loja, revisar consentimento/revogação tardia e comparar contagens agregadas (sem PII) antes de qualquer deploy. Não instalar tag duplicada de GA4 via painel, Lovable, GTM ou script direto sem novo teste de consentimento. Os checks locais não provam que o ID recebe dados reais da conta correta.

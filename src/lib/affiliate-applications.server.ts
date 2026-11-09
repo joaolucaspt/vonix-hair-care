@@ -128,7 +128,8 @@ export async function affiliateOperationalReadiness() {
   const checks = [
     {
       id: "database",
-      label: "Banco dedicado de inscrições configurado no servidor",
+      label:
+        "Supabase dedicado identificado e separado do checkout (URL, projeto e chave privados)",
       ok: dbConfigured,
     },
     {
