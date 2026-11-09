@@ -31,6 +31,14 @@ export function TrackingConsentBanner() {
 
   const choose = (next: TrackingConsent) => {
     if (!saveTrackingConsent(next)) {
+      if (next === "rejected") {
+        // Even without either storage API, allow essential-only browsing in this tab.
+        // If scripts were previously loaded, reload to stop their execution.
+        setChoice("rejected");
+        setOpen(false);
+        if (window.gtag || window.fbq || window.clarity) window.location.reload();
+        return;
+      }
       setError(
         "Não foi possível salvar a preferência neste navegador. O rastreamento opcional permanece desativado.",
       );

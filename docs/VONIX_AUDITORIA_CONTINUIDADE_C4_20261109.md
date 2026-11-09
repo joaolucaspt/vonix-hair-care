@@ -10,7 +10,7 @@ A loja já possuía proteção contra analytics de produção em localhost, mas 
 
 ## Implementação
 
-1. **`src/lib/tracking-consent.ts`:** escolha `accepted`/`rejected` guardada em `localStorage` sob chave versionada; valores ausentes, inválidos e exceções de armazenamento negam rastreamento. Revogação elimina cookies analíticos acessíveis por JavaScript quando possível (não garante remoção dos dados já transferidos para terceiros).
+1. **`src/lib/tracking-consent.ts`:** escolha `accepted`/`rejected` guardada em `localStorage` sob chave versionada; valores ausentes, inválidos e exceções de armazenamento negam rastreamento. Se a gravação persistente for bloqueada, a recusa pode ficar registrada apenas em `sessionStorage`; quando nenhum dos dois armazenamentos funciona, o aviso pode ser dispensado na aba atual sem ativar rastreadores. Revogação elimina cookies analíticos acessíveis por JavaScript quando possível (não garante remoção dos dados já transferidos para terceiros).
 2. **`src/routes/__root.tsx`:** bootstrap de consentimento anterior aos scripts do head. GA4, Clarity e Meta Pixel apenas são inicializados quando **origem canônica `https://vonixhair.com` E escolha expressa `accepted`**. SPA `PageView` também exige consentimento. Prévia/localhost continuam isolados.
 3. **`src/components/tracking-consent.tsx`:** aviso de privacidade acessível, sem checkbox pré-marcado, com opções equivalentes **Recusar opcionais** e **Aceitar opcionais**, explicação de que a compra funciona sem cookies opcionais, link para política e erro visível se a preferência não puder ser salva. O checkout não é bloqueado por modal; a escolha reabre via rodapé. Alterar opção recarrega a página para ativar/desativar scripts a partir de documento limpo.
 4. **`src/components/site.tsx`:** botão **Preferências de cookies** disponível no rodapé.
@@ -20,7 +20,7 @@ A loja já possuía proteção contra analytics de produção em localhost, mas 
 
 ## Evidências executadas
 
-- **Vitest completo:** **410/410 testes em 57 arquivos**, `TEST_EXIT=0`.
+- **Vitest completo:** **413/413 testes em 57 arquivos**, `TEST_EXIT=0`.
 - **TypeScript:** `npx tsc --noEmit`, `TSC_EXIT=0`.
 - **Build:** `npm run build`, `BUILD_EXIT=0`.
 - **ESLint direcionado:** arquivos alterados, sem regra Prettier legada, `LINT_EXIT=0`.

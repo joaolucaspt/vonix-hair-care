@@ -7,8 +7,8 @@
   "pr": 26,
   "checks": {
     "vitest": {
-      "passed": 410,
-      "total": 410,
+      "passed": 413,
+      "total": 413,
       "files": 57,
       "exit": 0
     },
@@ -21,6 +21,8 @@
       "failed": 0
     },
     "browserConsent": {
+      "rejectionSessionFallback": true,
+      "unavailableStorageInMemoryRejection": true,
       "firstVisitBlocked": true,
       "refusedBlocked": true,
       "acceptedLoadedVendors": [

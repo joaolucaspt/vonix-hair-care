@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   TRACKING_CONSENT_KEY,
+  TRACKING_SESSION_REJECTION_KEY,
   TRACKING_PREFERENCES_EVENT,
   getTrackingConsent,
   hasTrackingConsent,
@@ -19,10 +20,12 @@ vi.mock("@tanstack/react-router", async (original) => ({
 beforeEach(() => {
   route.path = "/";
   window.localStorage.removeItem(TRACKING_CONSENT_KEY);
+  window.sessionStorage.removeItem(TRACKING_SESSION_REJECTION_KEY);
 });
 afterEach(() => {
   vi.restoreAllMocks();
   window.localStorage.removeItem(TRACKING_CONSENT_KEY);
+  window.sessionStorage.removeItem(TRACKING_SESSION_REJECTION_KEY);
 });
 
 describe("preferências de privacidade", () => {
@@ -46,6 +49,30 @@ describe("preferências de privacidade", () => {
     expect(getTrackingConsent()).toBeNull();
     expect(hasTrackingConsent()).toBe(false);
     expect(saveTrackingConsent("accepted")).toBe(false);
+  });
+
+  it("salva uma recusa na sessão quando localStorage é bloqueado", () => {
+    const original = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+      if (this === window.localStorage) throw new DOMException("Blocked", "SecurityError");
+      return original.call(this, key, value);
+    });
+    expect(saveTrackingConsent("rejected")).toBe(true);
+    expect(window.sessionStorage.getItem(TRACKING_SESSION_REJECTION_KEY)).toBe("rejected");
+    expect(getTrackingConsent()).toBe("rejected");
+    expect(hasTrackingConsent()).toBe(false);
+  });
+
+  it("permite recusar para a aba atual mesmo sem nenhuma API de armazenamento", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Blocked", "SecurityError");
+    });
+    render(<TrackingConsentBanner />);
+    fireEvent.click(await screen.findByRole("button", { name: "Recusar opcionais" }));
+    expect(screen.queryByRole("region", { name: "Preferências de privacidade" })).not.toBeInTheDocument();
+    expect(hasTrackingConsent()).toBe(false);
+    fireEvent(window, new Event(TRACKING_PREFERENCES_EVENT));
+    expect(await screen.findByText(/somente necessários/i)).toBeInTheDocument();
   });
 
   it("remove cookies opcionais acessíveis ao revogar a preferência", () => {

@@ -114,7 +114,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [
       {
         // Read consent before any third-party bootstrap; storage failures deny tracking.
-        children: `window.__vonixMarketingAllowed=function(){try{return window.localStorage.getItem(${JSON.stringify(TRACKING_CONSENT_KEY)})==="accepted";}catch(e){return false;}};`,
+        children: `window.__vonixMarketingAllowed=function(){try{if(window.sessionStorage.getItem("vonix-tracking-rejected-session-v1")==="rejected")return false;}catch(e){}try{return window.localStorage.getItem(${JSON.stringify(TRACKING_CONSENT_KEY)})==="accepted";}catch(e){return false;}};`,
       },
       {
         type: "application/ld+json",

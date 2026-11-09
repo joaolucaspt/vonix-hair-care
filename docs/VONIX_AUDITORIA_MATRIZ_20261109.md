@@ -66,13 +66,13 @@ A auditoria inicial (`AUDITORIA-2026-11-03.md`) levantou 20 itens. Este document
 
 | N25 | Média | Botão da sacola nos cards obrigava abrir a página do produto mesmo quando só havia uma variante | 39/43 itens com uma opção agora usam adição direta com `add_to_cart`; 4 itens multivariantes ainda exigem escolha. Três testes específicos e navegação Chrome com produto em carrinho aprovados. |
 
-| N26 | Alta | GA4, Clarity e Meta Pixel iniciavam no domínio publicado sem escolha expressa de cookies opcionais | Bootstrap default-deny com consentimento versionado, opção aceitar/recusar/reabrir/revogar, política atualizada, 11 testes de consentimento/bootstraps + validação Chrome com requisições externas interceptadas. |
+| N26 | Alta | GA4, Clarity e Meta Pixel iniciavam no domínio publicado sem escolha expressa de cookies opcionais | Bootstrap default-deny com consentimento versionado, opção aceitar/recusar/reabrir/revogar, política atualizada, 14 testes de consentimento/bootstraps + validação Chrome com requisições externas interceptadas. |
 | N27 | Alta, pendente | Meta Purchase por servidor pode ser enviado sem consultar consentimento de cookies registrado no navegador | **BLOQUEIO de afirmação de conformidade integral:** revisar fundamento legal, contrato, evidência de preferência e pipeline com staging; não alterar conciliação de vendas nem acionar cobranças reais. |
 | N28 | Média | Página institucional anunciava 480 vendas, entrega universal e SLA de atendimento sem documentação comprobatória nesta auditoria | Substituídas por descrições sem números não verificados e cobertura por CEP. Obter provas reais antes de divulgar contagem e prazos de atendimento. |
 
 ## Recibo adicional C4 (09/11)
 
-Controle de privacidade: **410/410 testes em 57 arquivos**, TypeScript/build/lint direcionado PASS e SSR **43/43**. Chrome testou primeira visita, recusa, aceite e revogação com todas as chamadas de terceiros interceptadas, e responsividade 320/390/1366 px. Recibos: `VONIX_AUDITORIA_CONTINUIDADE_C4_20261109.md`, `VONIX_C4_VERIFIED_RECEIPT_20261109.json`, `VONIX_CONSENT_BROWSER_AUDIT_20261109.json`. Não substitui revisão jurídica nem homologação dos pagamentos.
+Controle de privacidade: **413/413 testes em 57 arquivos**, TypeScript/build/lint direcionado PASS e SSR **43/43**. Chrome testou primeira visita, recusa, aceite e revogação com todas as chamadas de terceiros interceptadas, e responsividade 320/390/1366 px. Recibos: `VONIX_AUDITORIA_CONTINUIDADE_C4_20261109.md`, `VONIX_C4_VERIFIED_RECEIPT_20261109.json`, `VONIX_CONSENT_BROWSER_AUDIT_20261109.json`. Não substitui revisão jurídica nem homologação dos pagamentos.
 ## Evidências e validações técnicas
 
 - Varredura pública sem efeitos externos: `scripts/audit-public-catalog.mjs --live`, recibo `docs/VONIX_PUBLIC_CATALOG_AUDIT_20261109.json`.

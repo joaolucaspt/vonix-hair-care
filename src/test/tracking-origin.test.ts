@@ -10,7 +10,7 @@ const ga = head.scripts.find((s) => s.children?.includes("googletagmanager.com/g
 const clarity = head.scripts.find((s) => s.children?.includes("clarity.ms/tag/"))?.children;
 const meta = head.scripts.find((s) => s.children?.includes("connect.facebook.net/en_US/fbevents.js"))?.children;
 
-function simulate(origin: string, choice: string | null, blocked = false) {
+function simulate(origin: string, choice: string | null, blocked = false, rejectedInSession = false) {
   const externalScripts: string[] = [];
   const requests: string[] = [];
   const loadHandlers: Array<() => void> = [];
@@ -28,6 +28,7 @@ function simulate(origin: string, choice: string | null, blocked = false) {
     },
   };
   sandbox["window"] = sandbox;
+  sandbox["sessionStorage"] = { getItem: () => rejectedInSession ? "rejected" : null };
   sandbox["localStorage"] = {
     getItem: (key: string) => {
       if (blocked) throw new DOMException("Storage denied", "SecurityError");
@@ -70,6 +71,14 @@ describe("rastreamento respeita origem e consentimento opcional", () => {
     const r = simulate("https://vonixhair.com", "accepted", true);
     expect(r.externalScripts).toEqual([]);
     expect(r.requests).toEqual([]);
+  });
+
+  it("recusa salva na sessão prevalece mesmo sobre um aceite antigo no localStorage", () => {
+    const r = simulate("https://vonixhair.com", "accepted", false, true);
+    expect(r.externalScripts).toEqual([]);
+    expect(r.requests).toEqual([]);
+    expect(r.sandbox["gtag"]).toBeUndefined();
+    expect(r.sandbox["fbq"]).toBeUndefined();
   });
 
   it("consentimento salvo não habilita rastreadores em localhost ou prévias", () => {

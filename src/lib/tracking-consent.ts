@@ -5,10 +5,16 @@
  */
 export const TRACKING_CONSENT_KEY = "vonix-tracking-consent-v1";
 export const TRACKING_PREFERENCES_EVENT = "vonix:open-privacy-preferences";
+export const TRACKING_SESSION_REJECTION_KEY = "vonix-tracking-rejected-session-v1";
 export type TrackingConsent = "accepted" | "rejected";
 
 export function getTrackingConsent(): TrackingConsent | null {
   if (typeof window === "undefined") return null;
+  try {
+    if (window.sessionStorage.getItem(TRACKING_SESSION_REJECTION_KEY) === "rejected") return "rejected";
+  } catch {
+    // A blocked session store is also acceptable.
+  }
   try {
     const saved = window.localStorage.getItem(TRACKING_CONSENT_KEY);
     return saved === "accepted" || saved === "rejected" ? saved : null;
@@ -42,9 +48,24 @@ export function saveTrackingConsent(choice: TrackingConsent): boolean {
   if (typeof window === "undefined") return false;
   try {
     window.localStorage.setItem(TRACKING_CONSENT_KEY, choice);
+    try {
+      window.sessionStorage.removeItem(TRACKING_SESSION_REJECTION_KEY);
+    } catch {
+      // With an inaccessible session store, default-deny still applies.
+    }
     if (choice === "rejected") clearTrackingCookies();
     return true;
   } catch {
+    if (choice === "rejected") {
+      // Private windows may deny localStorage but permit sessionStorage.
+      try {
+        window.sessionStorage.setItem(TRACKING_SESSION_REJECTION_KEY, "rejected");
+        clearTrackingCookies();
+        return true;
+      } catch {
+        // Neither persistent store is available: caller keeps an in-memory rejection.
+      }
+    }
     return false;
   }
 }
