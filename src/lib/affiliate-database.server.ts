@@ -11,13 +11,26 @@ export function affiliateDatabaseConfig(): {
 } | null {
   const rawUrl = env("AFFILIATE_SUPABASE_URL");
   const key = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-  if (!rawUrl || key.length < 16) return null;
+  const expectedRef = env("AFFILIATE_SUPABASE_PROJECT_REF");
+  // An explicit server-side project pin is mandatory in every environment.
+  // Without it, a valid-looking checkout URL could receive private applicant data.
+  if (!rawUrl || key.length < 16 || !/^[a-z0-9]{20}$/.test(expectedRef)) return null;
 
   try {
     const url = new URL(rawUrl);
+    // A separately named key is not sufficient: never reuse the checkout DB.
+    const checkoutUrl = env("SUPABASE_URL");
+    if (checkoutUrl) {
+      try {
+        if (new URL(checkoutUrl).origin === url.origin) return null;
+      } catch {
+        // Invalid checkout configuration does not authorize an affiliate fallback.
+      }
+    }
     if (
       url.protocol !== "https:" ||
       !url.hostname ||
+      url.hostname !== expectedRef + ".supabase.co" ||
       url.username ||
       url.password ||
       url.port ||

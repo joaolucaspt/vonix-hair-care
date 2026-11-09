@@ -8,7 +8,8 @@ function runReadiness(overrides: Record<string, string> = {}) {
     AFFILIATE_GOVERNANCE_MIGRATED: "true",
     AFFILIATE_PRIVACY_POLICY_APPROVED: "true",
     AFFILIATE_PROVIDER_VERIFIED: "true",
-    AFFILIATE_SUPABASE_URL: "https://example.supabase.co",
+    AFFILIATE_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",
+    AFFILIATE_SUPABASE_PROJECT_REF: "abcdefghijklmnopqrst",
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: "synthetic-only-credential-1234",
     AFFILIATE_TRAFFIC_PEPPER: "synthetic-only-pepper-32-chars-minimum",
     AFFILIATE_QUESTIONNAIRE_KEY: "0123456789abcdef".repeat(4),
@@ -58,12 +59,33 @@ describe("Checklist do cadastro sem serviços de comissão", () => {
     expect(output.missing).toContain("database_pair");
   });
 
+  it("sinaliza ligação incorreta quando o Supabase do cadastro é fixado", () => {
+    const expected = "jewbzrbbvxyqmxqbrwrq";
+    const wrong = runReadiness({ AFFILIATE_SUPABASE_PROJECT_REF: expected });
+    expect(wrong.status).toBe(2);
+    expect(wrong.output.missing).toContain("database_pair");
+    const correct = runReadiness({
+      AFFILIATE_SUPABASE_PROJECT_REF: expected,
+      AFFILIATE_SUPABASE_URL: "https://jewbzrbbvxyqmxqbrwrq.supabase.co",
+    });
+    expect(correct.status).toBe(0);
+    expect(correct.output.canOpenFromConfiguration).toBe(true);
+  });
+
+  it("nunca aprova a mesma origem usada pelo checkout", () => {
+    const result = runReadiness({
+      SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co",
+    });
+    expect(result.status).toBe(2);
+    expect(result.output.missing).toContain("database_pair");
+  });
+
   it("mantém bloqueios de proteção de dados, migrações e HTTPS", () => {
     for (const overrides of [
       { AFFILIATE_PRIVACY_POLICY_APPROVED: "false" },
       { AFFILIATE_GOVERNANCE_MIGRATED: "false" },
-      { AFFILIATE_SUPABASE_URL: "http://example.supabase.co" },
-      { AFFILIATE_SUPABASE_URL: "https://example.supabase.co/private" },
+      { AFFILIATE_SUPABASE_URL: "http://abcdefghijklmnopqrst.supabase.co" },
+      { AFFILIATE_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co/private" },
       { AFFILIATE_QUESTIONNAIRE_KEY: "short" },
       { AFFILIATE_TRUSTED_IP_HEADER: "unsafe" },
     ]) {

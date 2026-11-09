@@ -29,13 +29,15 @@ const valid = {
 
 const original = {
   url: process.env["AFFILIATE_SUPABASE_URL"],
+  ref: process.env["AFFILIATE_SUPABASE_PROJECT_REF"],
   key: process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"],
   password: process.env["AFFILIATE_ADMIN_PASSWORD"],
   resend: process.env["RESEND_API_KEY"],
   from: process.env["AFFILIATE_FROM_EMAIL"],
 };
 beforeEach(() => {
-  process.env["AFFILIATE_SUPABASE_URL"] = "https://example.supabase.co";
+  process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+  process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
   process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "example-test-service-key";
   process.env["AFFILIATE_ADMIN_PASSWORD"] = "a-long-test-password-for-team";
   delete process.env["RESEND_API_KEY"];
@@ -44,6 +46,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const [name, old] of Object.entries({
     AFFILIATE_SUPABASE_URL: original.url,
+    AFFILIATE_SUPABASE_PROJECT_REF: original.ref,
     AFFILIATE_SUPABASE_SERVICE_ROLE_KEY: original.key,
     AFFILIATE_ADMIN_PASSWORD: original.password,
     RESEND_API_KEY: original.resend,
@@ -372,9 +375,9 @@ describe("Notificações", () => {
     vi.stubGlobal("fetch", fetchMock);
     expect(await processAffiliateEmails(1)).toEqual({ sent: 1, failed: 0, configured: true });
     expect(calls).toEqual([
-      "https://example.supabase.co/rest/v1/rpc/vonix_affiliate_claim_mail",
+      "https://abcdefghijklmnopqrst.supabase.co/rest/v1/rpc/vonix_affiliate_claim_mail",
       "https://api.resend.com/emails",
-      "https://example.supabase.co/rest/v1/rpc/vonix_affiliate_finish_mail",
+      "https://abcdefghijklmnopqrst.supabase.co/rest/v1/rpc/vonix_affiliate_finish_mail",
     ]);
     const finish = JSON.parse(String(fetchMock.mock.calls[2]![1].body));
     expect(finish.p_success).toBe(true);

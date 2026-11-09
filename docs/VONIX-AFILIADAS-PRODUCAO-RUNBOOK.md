@@ -31,8 +31,8 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 1. Identificar a instância Supabase **dedicada** ao módulo de candidaturas.
    O cadastro **nunca reutiliza** `SUPABASE_URL` ou
    `SUPABASE_SERVICE_ROLE_KEY` do checkout. A ausência de
-   `AFFILIATE_SUPABASE_URL` e `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY`
-   mantém tanto o formulário quanto a consulta administrativa indisponíveis.
+   `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` e
+   `AFFILIATE_SUPABASE_PROJECT_REF` mantém tanto o formulário quanto a consulta administrativa indisponíveis.
 2. Fazer backup/restauração de teste, revisar permissões e responsável pela base.
 3. Aplicar, **nesta ordem**, em ambiente de homologação:
    `supabase/vonix-affiliate-applications.sql`;
@@ -55,7 +55,7 @@ commits, GitHub issues ou telas públicas. Não acessar/alterar os segredos de c
 
 | Variável | Finalidade |
 | --- | --- |
-| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY` | **Obrigatórias** para o módulo de inscrições; apenas no servidor, sem fallback para checkout |
+| `AFFILIATE_SUPABASE_URL`, `AFFILIATE_SUPABASE_SERVICE_ROLE_KEY`, `AFFILIATE_SUPABASE_PROJECT_REF` | **Três variáveis obrigatórias** para o módulo de inscrições; apenas no servidor. O ref deve corresponder ao hostname; a URL não pode ser a do checkout |
 | `AFFILIATE_ADMIN_PASSWORD` | Senha de equipe (mínimo 16 caracteres); planejar identidades individuais antes de escalar |
 | `AFFILIATE_ADMIN_SESSION_SECRET` | Assinatura da sessão (mínimo 32 caracteres, separada da senha) |
 | `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 TOTP obrigatória para login e abertura em qualquer ambiente, mesmo sem `NODE_ENV` |
