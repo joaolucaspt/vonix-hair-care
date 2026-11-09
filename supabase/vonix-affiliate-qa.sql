@@ -124,6 +124,25 @@ begin
      or (public.vonix_affiliate_search('recusada', '', 0, 40, 'incerto')->>'total')::integer <> 1 then
     raise exception 'Mail triage filter did not respect the selected decision status';
   end if;
+  -- The five-step questionnaire is retained only as ciphertext.
+  -- These strings are synthetic fixtures, never actual documents or contacts.
+  update public.vonix_affiliate_applications
+     set questionnaire_encrypted = 'v2.qa-ciphertext-fixture',
+         tiktok_url = null, motivation = null
+   where id = id_approved;
+  if (select questionnaire_encrypted from public.vonix_affiliate_applications
+       where id = id_approved) <> 'v2.qa-ciphertext-fixture' then
+    raise exception 'Encrypted questionnaire column was not stored';
+  end if;
+  if (public.vonix_affiliate_search('aprovada', 'aprovada-qa', 0, 40)->'applications'->0->>'questionnaire_encrypted')
+       <> 'v2.qa-ciphertext-fixture' then
+    raise exception 'Service-role search did not return encrypted questionnaire';
+  end if;
+  if (select count(*) from public.vonix_affiliate_applications
+       where id = id_approved and tiktok_url is null and motivation is null) <> 1 then
+    raise exception 'Optional social and free-text fields were not migrated';
+  end if;
+
   select public.vonix_affiliate_stats() into statuses;
   if (statuses->>'aprovada')::integer <>
       (select count(*) from public.vonix_affiliate_applications where status = 'aprovada')

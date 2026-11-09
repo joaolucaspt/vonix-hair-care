@@ -32,6 +32,11 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
         reason: "Inscrições ainda não disponíveis. Consulte os canais oficiais da Vonix Hair.",
       };
     }
+    // The public registration form now uses the full five-stage questionnaire.
+    // Legacy simplified payloads are never accepted through this public endpoint.
+    if (!data.wizard) {
+      return { ok: false as const, reason: "Preencha as cinco etapas do cadastro." };
+    }
     if (!(await consumeAffiliateRateLimit("submit"))) {
       return {
         ok: false as const,
