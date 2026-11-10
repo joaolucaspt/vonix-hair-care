@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { z } from "zod";
 import { env } from "./env.server";
-import { affiliateWizardSchema, type ValidatedAffiliateWizard } from "./affiliate-wizard";
+import type { ValidatedAffiliateWizard } from "./affiliate-wizard";
 
 function encryptionKey(): Buffer | null {
   const supplied = env("AFFILIATE_QUESTIONNAIRE_KEY");
@@ -59,6 +60,21 @@ export type AffiliateWizardSummary = {
   couponSuggestion: string;
 };
 
+// Historical ciphertext is authenticated, but the admin only needs this
+// bounded, non-sensitive projection. Re-validating a person's DOB, CPF or
+// current coupon rules could make a legitimate old application disappear from
+// triage when the applicant ages or the onboarding rules change.
+const summaryFieldsSchema = z.object({
+  niche: z.string().min(1).max(120),
+  otherNiche: z.string().max(120),
+  instagramFollowers: z.string().max(100),
+  tiktokFollowers: z.string().max(100),
+  municipalRegistration: z.enum(["sim", "nao"]),
+  dependents: z.string().min(1).max(100),
+  preferredLine: z.string().min(1).max(120),
+  couponSuggestion: z.string().min(1).max(40),
+});
+
 /**
  * Deliberately never exposes CPF, CNPJ, birth date, telephone, or address to the
  * regular candidate listing. This is a review summary, not an identity-verification API.
@@ -83,11 +99,7 @@ export function affiliateWizardSummary(
     ]).toString("utf8");
     const payload = JSON.parse(json) as { version?: number; answers?: unknown };
     if (payload.version !== 2) return null;
-    const data = affiliateWizardSchema.safeParse({
-      ...(payload.answers as Record<string, unknown>),
-      emailConfirmation: (payload.answers as Record<string, unknown>)?.["email"],
-      termsAccepted: true,
-    });
+    const data = summaryFieldsSchema.safeParse(payload.answers);
     if (!data.success) return null;
     const w = data.data;
     return {
