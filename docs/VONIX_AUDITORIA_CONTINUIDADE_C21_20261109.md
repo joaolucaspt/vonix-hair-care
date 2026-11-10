@@ -35,3 +35,9 @@ O filtro da vitrine comparava strings apenas em minúsculas. Consultas `mascara`
 **NOT_APPROVED** para produção. Faltam homologação Appmax sandbox Pix/cartão (`paid_at`, duplicação, expiração, antifraude), Supabase staging isolado (RLS, backups, concorrência), Bling SKU/estoque/dimensões, cotação real, WAF/rate-limit distribuído, LGPD pós-pedido, GA4/Meta somente pedidos pagos, smoke Worker Cloudflare e revisão de dependências. A regra global de Prettier/CRLF conserva dívida histórica; este ciclo não rodou `--fix` em todo repositório.
 
 **Limites de Git:** nunca mesclar automaticamente na `main` original, publicar ou acessar app independente de afiliadas. Checkpoint C21, hashes, relatório QA e status remoto/CI serão read-back verificados. A existência de um PR integrável não substitui a homologação operacional de checkout e estoque.
+
+## Sincronização incremental: PR #51 após o commit do C21
+
+Depois de fixar as correções do e-commerce no commit `edcf592`, a `main` original avançou para **`dd1fae0`, PR #51**, com ajustes de integridade de email/DTO exclusivamente no módulo de afiliadas existente no mesmo repositório. A incorporação foi executada somente na branch auditada por `git merge --no-commit --no-ff origin/main`, **zero conflitos**. Os arquivos de catálogo, favoritos, sacola e checkout auditados não foram modificados nessa segunda integração.
+
+A validação foi **repetida após PR #51**: **624/624 Vitest PASS em 73 arquivos**, TypeScript exit 0, ESLint integral com apenas Prettier histórico isolado exit 0, build Nitro exit 0. Chrome sintético 320/390/1366 **3/3 PASS**, 12 capturas adicionais em `qa-artifacts/vonix-c21/pr51/`, sem tráfego externo e sem pagamentos. A auditoria SSR 42/42 ocorreu antes da atualização, que não alterou produtos nem renderização da vitrine. A conclusão de prontidão permanece **NOT_APPROVED**.

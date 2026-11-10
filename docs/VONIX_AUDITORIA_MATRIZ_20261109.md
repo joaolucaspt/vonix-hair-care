@@ -253,3 +253,5 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | N82 | Média | Pesquisa ignorava diferenças de caixa, mas não acentos nem espaços extras: `mascara` versus **Máscara** | Corrigido: normalização Unicode e espaços, mantendo preço/ranking e limites da URL |
 
 **C21:** base C20 `f04a8af`; QA de foco 9/9, integral **621/621 Vitest em 73 arquivos**, TypeScript, ESLint sem Prettier, build Cloudflare, SSR 42/42 e Chrome 3/3 em três resoluções, 12 screenshots, rede externa bloqueada. Produção **NOT_APPROVED**. Ver `VONIX_AUDITORIA_CONTINUIDADE_C21_20261109.md`.
+
+**Read-back C21 / PR #51:** `dd1fae0` incorporado na branch auditada com 0 conflitos, sem alterações ao checkout/carrinho/catálogo implementados no C21. Após incorporação, **624/624 Vitest, 73 arquivos**, TypeScript, ESLint de código e build verdes; Chrome **3/3** (320/390/1366) também repetido. Riscos P0 e formatação histórica não foram liberados.

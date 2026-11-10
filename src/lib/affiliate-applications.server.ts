@@ -134,20 +134,30 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify(record),
   });
-  // Only a PostgreSQL uniqueness violation is a duplicate submission.
-  // Other HTTP 409 responses can mean a broken schema or another operational
-  // conflict. Reporting those as received would silently lose applications.
-  // Never expose the database error body to the candidate.
+  // This table has three separate unique restrictions: email, Instagram and
+  // TikTok. An arbitrary SQLSTATE 23505 does NOT prove the applicant's email
+  // was already registered; falsely acknowledging a social-profile collision
+  // would silently discard a different candidate's application.
+  // PostgreSQL/PostgREST identifies the violated constraint in the message.
+  // Return the same public acknowledgement only for the exact email key, and
+  // fail closed if the provider does not identify the constraint.
+  // Never expose raw database messages/details to the candidate.
   if (response.status === 409) {
-    let duplicate = false;
+    let duplicateEmail = false;
     try {
       const error: unknown = await response.json();
-      duplicate =
-        typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+      duplicateEmail =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23505" &&
+        "message" in error &&
+        error.message ===
+          'duplicate key value violates unique constraint "vonix_affiliate_applications_email_key"';
     } catch {
-      // Malformed/conflicting responses are not proof of an existing signup.
+      // Malformed/conflicting responses are not proof of an email duplicate.
     }
-    if (duplicate) return { ok: true as const };
+    if (duplicateEmail) return { ok: true as const };
   }
   if (!response.ok) throw new Error("Falha ao salvar inscrição: HTTP " + response.status);
   return { ok: true as const };
@@ -292,7 +302,13 @@ const affiliateAdminRowSchema = z.object({
     .nullable()
     .optional(),
   vonix_affiliate_mail_outbox: z
-    .array(z.object({ status: validMailStatus, sent_at: z.string().max(64).nullable() }))
+    .array(
+      z.object({
+        status: validMailStatus,
+        sent_at: z.string().datetime({ offset: true }).max(64).nullable(),
+      }),
+    )
+    .max(1)
     .nullable()
     .optional(),
 });

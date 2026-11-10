@@ -12,8 +12,9 @@
   "mainNewlyDetected": {
     "commit": "dd1fae0886424f40fdee7b522a072618604a1670",
     "pr": 51,
-    "integrated": false,
-    "note": "To be merged into audited branch only after commit of safe C21 changes"
+    "integrated": true,
+    "mergeConflicts": 0,
+    "note": "Merged into audited branch only, without altering C21 cart/catalog checkout files or independent affiliate signup application"
   },
   "findings": [
     {
@@ -44,9 +45,10 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 621,
+      "passed": 624,
       "files": 73,
-      "exitCode": 0
+      "exitCode": 0,
+      "afterMainPr": 51
     },
     "typescript": {
       "exitCode": 0
@@ -86,6 +88,18 @@
     },
     "gitDiffCheck": {
       "exitCode": 0
+    },
+    "afterPr51": {
+      "vitest": "624/624 PASS in 73 files",
+      "typescriptExit": 0,
+      "eslintNonformatExit": 0,
+      "buildExit": 0,
+      "chromePassed": 3,
+      "chromeFailed": 0,
+      "chromeScreenshots": 12,
+      "chromeReport": "qa-artifacts/vonix-c21/pr51/report.json",
+      "realPayments": false,
+      "externalRequestsBlocked": true
     }
   },
   "files": [
@@ -95,6 +109,7 @@
     "src/test/storefront-search-audit.test.tsx",
     "scripts/qa-c21-multitab-storefront.mjs",
     "qa-artifacts/vonix-c21/dev/report.json",
+    "qa-artifacts/vonix-c21/pr51/report.json",
     "docs/VONIX_AUDITORIA_CONTINUIDADE_C21_20261109.md",
     "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
     "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
