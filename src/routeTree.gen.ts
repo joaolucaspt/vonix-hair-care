@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PageRouteImport } from './routes/$page'
+import { Route as AcessoEquipeAfiliadasRouteImport } from './routes/acesso-equipe-afiliadas'
+import { Route as AcompanharInscricaoRouteImport } from './routes/acompanhar-inscricao'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BuscaRouteImport } from './routes/busca'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
@@ -37,6 +39,16 @@ const IndexRoute = IndexRouteImport.update({
 const PageRoute = PageRouteImport.update({
   id: '/$page',
   path: '/$page',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcessoEquipeAfiliadasRoute = AcessoEquipeAfiliadasRouteImport.update({
+  id: '/acesso-equipe-afiliadas',
+  path: '/acesso-equipe-afiliadas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcompanharInscricaoRoute = AcompanharInscricaoRouteImport.update({
+  id: '/acompanhar-inscricao',
+  path: '/acompanhar-inscricao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -129,6 +141,8 @@ const ApiPublicBlingCallbackRoute = ApiPublicBlingCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$page': typeof PageRoute
+  '/acesso-equipe-afiliadas': typeof AcessoEquipeAfiliadasRoute
+  '/acompanhar-inscricao': typeof AcompanharInscricaoRoute
   '/auth': typeof AuthRoute
   '/busca': typeof BuscaRoute
   '/carrinho': typeof CarrinhoRoute
@@ -150,6 +164,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$page': typeof PageRoute
+  '/acesso-equipe-afiliadas': typeof AcessoEquipeAfiliadasRoute
+  '/acompanhar-inscricao': typeof AcompanharInscricaoRoute
   '/auth': typeof AuthRoute
   '/busca': typeof BuscaRoute
   '/carrinho': typeof CarrinhoRoute
@@ -172,6 +188,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$page': typeof PageRoute
+  '/acesso-equipe-afiliadas': typeof AcessoEquipeAfiliadasRoute
+  '/acompanhar-inscricao': typeof AcompanharInscricaoRoute
   '/auth': typeof AuthRoute
   '/busca': typeof BuscaRoute
   '/carrinho': typeof CarrinhoRoute
@@ -195,6 +213,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$page'
+    | '/acesso-equipe-afiliadas'
+    | '/acompanhar-inscricao'
     | '/auth'
     | '/busca'
     | '/carrinho'
@@ -216,6 +236,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$page'
+    | '/acesso-equipe-afiliadas'
+    | '/acompanhar-inscricao'
     | '/auth'
     | '/busca'
     | '/carrinho'
@@ -237,6 +259,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/$page'
+    | '/acesso-equipe-afiliadas'
+    | '/acompanhar-inscricao'
     | '/auth'
     | '/busca'
     | '/carrinho'
@@ -259,6 +283,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PageRoute: typeof PageRoute
+  AcessoEquipeAfiliadasRoute: typeof AcessoEquipeAfiliadasRoute
+  AcompanharInscricaoRoute: typeof AcompanharInscricaoRoute
   AuthRoute: typeof AuthRoute
   BuscaRoute: typeof BuscaRoute
   CarrinhoRoute: typeof CarrinhoRoute
@@ -292,6 +318,20 @@ declare module '@tanstack/react-router' {
       path: '/$page'
       fullPath: '/$page'
       preLoaderRoute: typeof PageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acesso-equipe-afiliadas': {
+      id: '/acesso-equipe-afiliadas'
+      path: '/acesso-equipe-afiliadas'
+      fullPath: '/acesso-equipe-afiliadas'
+      preLoaderRoute: typeof AcessoEquipeAfiliadasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acompanhar-inscricao': {
+      id: '/acompanhar-inscricao'
+      path: '/acompanhar-inscricao'
+      fullPath: '/acompanhar-inscricao'
+      preLoaderRoute: typeof AcompanharInscricaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -419,6 +459,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PageRoute: PageRoute,
+  AcessoEquipeAfiliadasRoute: AcessoEquipeAfiliadasRoute,
+  AcompanharInscricaoRoute: AcompanharInscricaoRoute,
   AuthRoute: AuthRoute,
   BuscaRoute: BuscaRoute,
   CarrinhoRoute: CarrinhoRoute,

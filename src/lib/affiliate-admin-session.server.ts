@@ -1,6 +1,10 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { deleteCookie, getCookie, getRequest, setCookie } from "@tanstack/react-start/server";
 import { env } from "./env.server";
+import {
+  affiliateMemberSession,
+  clearAffiliateMemberSession,
+} from "./affiliate-member-session.server";
 
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 /**
@@ -182,10 +186,26 @@ export function createAffiliateAdminSession(): boolean {
 }
 
 export function affiliateAdminSessionValid(): boolean {
-  return verifyAffiliateSessionToken(getCookie(cookieName()), sessionSigningKey());
+  return (
+    verifyAffiliateSessionToken(getCookie(cookieName()), sessionSigningKey()) ||
+    affiliateMemberSession() !== null
+  );
+}
+
+/** Member reviewers may triage. Only the legacy owner or a member owner may erase data. */
+export function affiliateAdminMayErase(): boolean {
+  return (
+    verifyAffiliateSessionToken(getCookie(cookieName()), sessionSigningKey()) ||
+    affiliateMemberSession()?.role === "owner"
+  );
+}
+
+export function affiliateAdminActor(): string {
+  return affiliateMemberSession()?.email ?? "legacy-owner";
 }
 
 export function destroyAffiliateAdminSession(): void {
+  clearAffiliateMemberSession();
   deleteCookie(cookieName(), {
     secure: !localHttpDevelopmentRequest(),
     path: "/",

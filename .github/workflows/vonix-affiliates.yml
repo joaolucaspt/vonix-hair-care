@@ -36,6 +36,10 @@ jobs:
         run: |
           bunx eslint \
             src/lib/affiliate-admin-session.server.ts \
+            src/lib/affiliate-member-auth.server.ts \
+            src/lib/affiliate-member-session.server.ts \
+            src/lib/affiliate-invites.server.ts \
+            src/lib/vonix-affiliate-auth.ts \
             src/lib/affiliate-admin-auth.server.ts \
             src/lib/affiliate-application.ts \
             src/lib/affiliate-applications.server.ts \
@@ -53,7 +57,11 @@ jobs:
             src/routes/admin.afiliadas.tsx \
             src/routes/api.internal.affiliate-mail-worker.ts \
             src/routes/seja-afiliada.tsx \
+            src/routes/acompanhar-inscricao.tsx \
+            src/routes/acesso-equipe-afiliadas.tsx \
             src/test/affiliate-admin-session.test.ts \
+            src/test/affiliate-invites.test.ts \
+            src/test/affiliate-member-login.test.ts \
             src/test/affiliate-admin-auth.test.ts \
             src/test/affiliate-admin-ui.test.tsx \
             src/test/affiliate-database.test.ts \
