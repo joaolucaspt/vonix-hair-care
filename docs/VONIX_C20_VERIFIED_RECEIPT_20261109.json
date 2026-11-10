@@ -13,6 +13,13 @@
     "upstreamPr": 49,
     "mergeConflicts": 0
   },
+  "mainAdditionalIntegration": {
+    "upstreamPr": 50,
+    "commit": "96296d42ba4c382ec485091139c182726997a60a",
+    "mergeConflicts": 0,
+    "scope": "Existing affiliate module in same original repo; independent signup app untouched",
+    "note": "The C20 focused code/files remained unchanged after this additional upstream merge"
+  },
   "findings": [
     {
       "id": "N76",
@@ -37,8 +44,9 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 611,
+      "passed": 614,
       "files": 72,
+      "afterUpstreamPr": 50,
       "exitCode": 0
     },
     "typescript": {
@@ -78,6 +86,18 @@
     },
     "gitDiffCheck": {
       "exitCode": 0
+    },
+    "postPr50": {
+      "fullVitest": "614/614 PASS in 72 files",
+      "typescriptExit": 0,
+      "eslintAllNonformatExit": 0,
+      "buildExit": 0,
+      "chromePassed": 3,
+      "chromeFailed": 0,
+      "chromeArtifact": "qa-artifacts/vonix-c20/pr50/report.json",
+      "chromeScreenshots": 9,
+      "externalRequestsBlocked": true,
+      "livePaymentsOrReviews": false
     }
   },
   "sha256": {
@@ -97,6 +117,7 @@
     "src/test/account-order-status.test.tsx",
     "scripts/qa-c20-reviews-private-pages.mjs",
     "qa-artifacts/vonix-c20/dev/report.json",
+    "qa-artifacts/vonix-c20/pr50/report.json",
     "docs/VONIX_AUDITORIA_CONTINUIDADE_C20_20261109.md",
     "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
     "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"

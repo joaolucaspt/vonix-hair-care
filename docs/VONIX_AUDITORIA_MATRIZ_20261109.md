@@ -240,3 +240,5 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N78 | Baixa/média | `/conta` e `/favoritos` não tinham diretiva `noindex` | Corrigido: `noindex, nofollow`, testes de meta e Chrome; **não equivale à autenticação** |
 
 A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero conflitos; não editar app independente de afiliadas. C20: 611/611 Vitest em 72 arquivos, TypeScript/ESLint sem Prettier/build/Prettier alterados verdes, SSR 42/42, Chrome 3/3 (320/390/1366, 9 imagens), sem pagamentos ou reviews reais. Produção **NOT_APPROVED**. Documentação: `VONIX_AUDITORIA_CONTINUIDADE_C20_20261109.md`.
+
+**C20, atualização da origem PR #50:** `96296d4` incorporado sem conflitos na branch auditada; nenhuma nova alteração aos módulos de e-commerce deste ciclo. Gates finais locais: **614/614 Vitest em 72 arquivos**, Chrome 3/3 em três resoluções após PR50, TypeScript, build e ESLint não formatação verdes. Homologação de serviços reais e `npm run lint` estrito permanecem pendentes.

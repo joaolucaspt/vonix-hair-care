@@ -32,3 +32,9 @@ A origem `lucassilva1175/vonix-hair-care` passou a incluir PR #49, commit `0dc0d
 ## Checkpoint e próximo gate
 
 Branch de auditoria e PR #26 devem manter histórico da `main` incorporado, commit exclusivo C20, backup e gates de CI verificáveis. A etapa seguinte deve validar segurança do Worker e as integrações financeiras em **staging explicitamente autorizado** antes de qualquer liberação operacional. Nenhuma alteração no app independente de afiliadas, pagamento real, banco operacional, push para a `main` ou deploy foi realizada.
+
+## Sincronização adicional da origem: PR #50
+
+Após o commit inicial do C20, a `main` do repositório original avançou para **`96296d4` (PR #50)**, com validação de chaves e limites de criptografia nas funções de afiliadas já presentes no mesmo repositório. A atualização foi incorporada **na branch auditada** usando `git merge --no-commit --no-ff origin/main`; zero conflitos, nenhuma mudança adicional nas rotas de e-commerce, componentes de avaliação ou tratamento de pagamentos auditados. Não houve alterações no aplicativo independente de candidaturas.
+
+Após PR #50, nova execução integral: **614/614 Vitest PASS em 72 arquivos**, TypeScript exit 0, ESLint do repositório sem a regra Prettier legada exit 0, build Nitro exit 0. O Chrome foi executado novamente em 320/390/1366 com **3/3 PASS** e nove novas capturas em `qa-artifacts/vonix-c20/pr50/`, usando dados sintéticos e bloqueio de toda rede externa. A validação SSR 42/42 ocorreu antes dessa integração, que não modificou catálogo nem PDP. Esses resultados confirmam a compatibilidade da branch atual, não a prontidão de produção.

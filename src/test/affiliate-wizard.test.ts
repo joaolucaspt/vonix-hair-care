@@ -236,6 +236,30 @@ describe("Private encrypted questionnaire storage", () => {
     expect(affiliateQuestionnaireEncryptionReady()).toBe(false);
     expect(() => encryptAffiliateWizard(affiliateWizardSchema.parse(fixture))).toThrow();
   });
+  it("rejects malformed, padded or non-canonical 256-bit encryption key strings", () => {
+    const validBase64Url = process.env["AFFILIATE_QUESTIONNAIRE_KEY"]!;
+    const validHex = Buffer.from(validBase64Url, "base64url").toString("hex");
+    expect(affiliateQuestionnaireEncryptionReady()).toBe(true);
+    process.env["AFFILIATE_QUESTIONNAIRE_KEY"] = validHex;
+    expect(affiliateQuestionnaireEncryptionReady()).toBe(true);
+
+    for (const invalid of [
+      validBase64Url + "!!",
+      validBase64Url + "=",
+      validBase64Url + " ",
+      validBase64Url.slice(0, -1) + (validBase64Url.endsWith("B") ? "C" : "B"),
+      "0".repeat(63) + "G",
+    ]) {
+      process.env["AFFILIATE_QUESTIONNAIRE_KEY"] = invalid;
+      expect(affiliateQuestionnaireEncryptionReady(), "invalid key: " + invalid.slice(-7)).toBe(
+        false,
+      );
+      expect(() => encryptAffiliateWizard(affiliateWizardSchema.parse(fixture))).toThrow(
+        /Criptografia do questionário não configurada/,
+      );
+    }
+  });
+
   it("does not persist inapplicable conditional answers in encrypted questionnaires", () => {
     const sensitive = affiliateWizardSchema.parse({
       ...fixture,

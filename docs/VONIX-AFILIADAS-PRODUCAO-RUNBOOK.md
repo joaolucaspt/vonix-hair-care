@@ -20,6 +20,7 @@ vendas, cálculo ou pagamento de comissões já estejam implementados.
 - Envio público exige origem do próprio site (HTTPS ou localhost de desenvolvimento); origem ausente ou divergente não passa ao limitador nem grava candidaturas.
 - Somente conflitos `23505` (violação de unicidade / cadastro duplicado) recebem a mesma resposta pública de sucesso para impedir enumeração de candidatas. Outros HTTP 409, inclusive conflitos de migração ou integridade do banco, não podem ser apresentados como candidatura recebida; a resposta externa continua genérica, sem expor erros SQL.
 - Criptografia AES-256-GCM do questionário completo, com resumo sem documentos no painel. A API privada de triagem usa uma lista explícita de campos autorizados e remove campos adicionais vindos do banco, incluindo propriedades extras na fila de notificações. Registros e contadores inválidos são recusados, não apresentados como dados confiáveis.
+- A chave do questionário exige exatamente **32 bytes** em 64 caracteres hexadecimais ou **43 caracteres base64url canônicos** (sem padding, espaços ou caracteres adicionais); servidor e script de prontidão aplicam a mesma regra. Respostas privadas com ciphertext acima de 32.768 caracteres são recusadas antes da decodificação, em vez de alocar memória sem limite.
 - A projeção de resumo de um questionário antigo valida somente campos **não sensíveis** de interesse administrativo, com limites de tamanho, após autenticar o ciphertext. Não reavalia CPF ou idade atuais da candidata: requisitos de novas inscrições não podem apagar o resumo de um cadastro legítimo já recebido.
 - A listagem privada rejeita resultados de busca com **mais de 40 inscrições** (limite máximo por página) e carimbos de criação/revisão que não sejam datas ISO válidas com fuso. Assim, respostas incorretas de uma RPC não produzem cartões ou datas inválidas no painel.
 - Prévia LGPD exclusivamente de leitura: números obrigatoriamente inteiros e não negativos, sem preencher valores ausentes como se fossem zero.
@@ -78,7 +79,7 @@ commits, GitHub issues ou telas públicas. Não acessar/alterar os segredos de c
 | `AFFILIATE_ADMIN_TOTP_SECRET` | Chave Base32 TOTP obrigatória para login e abertura em qualquer ambiente, mesmo sem `NODE_ENV` |
 | `AFFILIATE_TRAFFIC_PEPPER` | Segredo de pseudonimização de IP (mínimo 32 caracteres) |
 | `AFFILIATE_TRUSTED_IP_HEADER` | Um de `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for`; **testar a borda** |
-| `AFFILIATE_QUESTIONNAIRE_KEY` | Chave privada de **32 bytes** (64 caracteres hex ou base64url); backup seguro separado |
+| `AFFILIATE_QUESTIONNAIRE_KEY` | Chave privada de **32 bytes** (64 caracteres hex ou 43 caracteres base64url canônicos, sem padding); backup seguro separado |
 | `AFFILIATE_WORKER_SECRET` | Autorização do worker (mínimo 24 caracteres), **opcional para receber inscrições** |
 | `RESEND_API_KEY`, `AFFILIATE_FROM_EMAIL` | Notificações de decisões, **opcionais para receber inscrições**; sem elas, e-mails não são enviados |
 | `AFFILIATE_GOVERNANCE_MIGRATED` | `true` só após migração e testes na base correta |
