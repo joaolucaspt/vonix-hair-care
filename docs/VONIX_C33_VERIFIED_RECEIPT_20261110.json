@@ -1,0 +1,84 @@
+{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C33",
+    "date":  "2026-11-10",
+    "baseHead":  "f80909d",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "pr":  26,
+    "workloopId":  "38612f30-f24b-4310-8a6d-b78914061111",
+    "workloopRunId":  "6d9533a3-70bf-48bc-9e41-9c72d0ae6c93",
+    "scope":  "E-commerce operational only; separate affiliate form unchanged",
+    "fixes":  [
+                  "N138 reset old delivery fields after CEP changes",
+                  "N139 preserve manual address fields and ignore lookup for other CEP",
+                  "N140 10s address lookup timeout, manual fallback and explicit retry with no stale overwrite"
+              ],
+    "verification":  {
+                         "baseline":  "3 synthetic regression tests FAIL on base C32",
+                         "focused":  "65/65 Vitest checkout PASS",
+                         "full":  "683/683 Vitest PASS across 83 files",
+                         "typescript":  0,
+                         "eslintFunctional":  0,
+                         "eslintWarnings":  12,
+                         "buildNitroCloudflareLocal":  0,
+                         "prettier":  0,
+                         "gitDiffCheck":  0,
+                         "ssr":  {
+                                     "active":  42,
+                                     "failed":  0,
+                                     "outOfStock":  "plex-vonix HTTP404"
+                                 },
+                         "chrome":  {
+                                        "navigation":  3,
+                                        "checkout":  3,
+                                        "failed":  0,
+                                        "viewports":  [
+                                                          320,
+                                                          390,
+                                                          1366
+                                                      ],
+                                        "screenshots":  15,
+                                        "externalNetworkBlocked":  true
+                                    },
+                         "environment":  "Fresh Vite 43974 after stale old server and unsupported vite preview 500; all final checks green"
+                     },
+    "safety":  {
+                   "production":  "NOT_APPROVED",
+                   "realOrders":  false,
+                   "payments":  false,
+                   "realFreight":  false,
+                   "externalConnected":  false,
+                   "databaseAccess":  false,
+                   "affiliateFilesChanged":  false,
+                   "deploy":  false
+               },
+    "sha256":  {
+                   "src/hooks/use-cep-address.ts":  "6B7C4B02F342084115A47A9FDC330CF2B31F75F342B8B1AFC780767FEDF7D390",
+                   "src/routes/checkout.tsx":  "29984B7B7F452AD510E21D5D9E35DBD63A9FE4505CF981951CB87BE800A6C143",
+                   "src/test/checkout-audit.test.tsx":  "E04E9F31F33A1826F97A153D1C021048A1E6A48AAA4FA4C5F7EDB51DB5900BB2",
+                   "scripts/qa-c33-ssr-storefront.mjs":  "ED4500ACD7986F3993CD46FD223414B5F436FCE64F297BB23AF4EEECC3D1C7D8",
+                   "scripts/qa-c33-crossflow.mjs":  "956B6E396977FBFBDC77B90ADA13E1432F27BCDA21C1C28BA0733093E2A20A0E",
+                   "scripts/qa-c33-checkout-readiness.mjs":  "8CC9F2176AD51F5D59312871277EE46CA48542A89590A4CB2168A9B0779A0092",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C33_20261110.md":  "43E322E7A142D21E4289DA6877E31B3B4F49EA7187269AE9726149B9A875851D",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "0AE3ABDC1DB6D9152200E94DF14574EC5B84679E41B49873B9882EBAE8B9BD16",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "4657D71D54C11F6CB22C3762ACB0C837A96A6CA967174FB39741B91B378BE000",
+                   "docs/VONIX_SSR_PREFLIGHT_C33_20261110.json":  "3B74BC6BE423D2D53EA27EBEF4A0D05157B1596A4511DA8D99359E91EAFBAA69",
+                   "qa-artifacts/vonix-c33/cart-1366.png":  "13EC8B3B6A7C07B2213178C5DEB427E2684D3FB99BEC4D05BBDA02EAC2418E99",
+                   "qa-artifacts/vonix-c33/cart-320.png":  "0CA8A91EDA119CCA91329DE4832CC224800EE233F1E117D9C2A0FE09218BE432",
+                   "qa-artifacts/vonix-c33/cart-390.png":  "5545245B0D153431EECF55A493BD366796F6E11C6A33739FCB7007B9BAFB2DE8",
+                   "qa-artifacts/vonix-c33/drawer-1366.png":  "93C592AFABC2AA572CE596F784CDB848E9862355FED197FF54A248B024FEF3CF",
+                   "qa-artifacts/vonix-c33/drawer-320.png":  "2E2027CBEAB322D9DE39CA5C2EAAA87927DF36DC94223CF8392A192C151E7BD5",
+                   "qa-artifacts/vonix-c33/drawer-390.png":  "28A8512ACF56925EA6B2671B99410DFA7E008D356A55195242581DC70263AAF8",
+                   "qa-artifacts/vonix-c33/home-1366.png":  "2DC82CF649E8BFDB91A66C01E4C8E73D09B88BC07C7231168CE344593020C8B1",
+                   "qa-artifacts/vonix-c33/home-320.png":  "255BB35AADD34EBE4304CE5B746DBBBBF17EF688888F8FE713A901E7E005585B",
+                   "qa-artifacts/vonix-c33/home-390.png":  "37211FB870175CB3FAD6709DA86A5CFA059D3149CB9560213B5B750FCCF0254F",
+                   "qa-artifacts/vonix-c33/report.json":  "9B96FD0A0BBAAAE52DC5558C9309148A927367522488343DCA04B57CAC41D76A",
+                   "qa-artifacts/vonix-c33/salon-1366.png":  "1F8236D0965C08CAB667B58D399EEEE3B6A7091E35BA49A7622C6E5FF4F66031",
+                   "qa-artifacts/vonix-c33/salon-320.png":  "85493328FDF58EFE92BDEF6C4085EE4B64F316905E782087DFCEA90384817E88",
+                   "qa-artifacts/vonix-c33/salon-390.png":  "BF94AD439DAAF8B5799278DE7C5B4DEA444F7AB5C1B68ACF05FBB8A424265E1F",
+                   "qa-artifacts/vonix-c33/checkout/checkout-1366.png":  "86699E8D8D1E771CCEAA5EA8A7E86F71753B42BF1905C662A2F0F3EC592DF4DA",
+                   "qa-artifacts/vonix-c33/checkout/checkout-320.png":  "2CACE31CB51A3FD09D39144C90EC5E3F4B5C1EBBB99F38D4767E727E6DC0268F",
+                   "qa-artifacts/vonix-c33/checkout/checkout-390.png":  "35CB2B82F6517C960589ADAD0B1AC4BDBA543474218F4A5D826725E22BF8F2F1",
+                   "qa-artifacts/vonix-c33/checkout/report.json":  "A263C7A87ABDF264E2F9DE48E23884C11FDB061C6FE27E8EC5C6C0B0C3309985"
+               }
+}

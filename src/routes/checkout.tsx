@@ -412,19 +412,32 @@ function Checkout() {
     quoteRetry,
   ]);
   const addressFilled = useCallback(
-    (address: { street: string; district: string; city: string; uf: string }) => {
-      setF((old) => ({
-        ...old,
-        rua: address.street,
-        bairro: address.district,
-        cidade: address.city,
-        uf: address.uf,
-      }));
-      numeroRef.current?.focus();
+    (
+      address: { street: string; district: string; city: string; uf: string },
+      lookedUpCep: string,
+    ) => {
+      setF((old) => {
+        // A late lookup must never fill a different delivery CEP. Preserve
+        // fields typed by the buyer after the request started.
+        if (old.cep.replace(/\D/g, "") !== lookedUpCep) return old;
+        return {
+          ...old,
+          rua: old.rua.trim() ? old.rua : address.street,
+          bairro: old.bairro.trim() ? old.bairro : address.district,
+          cidade: old.cidade.trim() ? old.cidade : address.city,
+          uf: old.uf.trim() ? old.uf : address.uf,
+        };
+      });
+      if (!numeroRef.current?.value) numeroRef.current?.focus();
     },
     [],
   );
-  const { loading: cepLoading, message: cepMsg } = useCepAddress(f.cep, addressFilled);
+  const {
+    loading: cepLoading,
+    message: cepMsg,
+    failed: cepLookupFailed,
+    retry: retryCepLookup,
+  } = useCepAddress(f.cep, addressFilled);
 
   // Shipping quote (Melhor Envio) whenever a full CEP or the cart changes.
   useEffect(() => {
@@ -1249,7 +1262,25 @@ function Checkout() {
                 maxLength={9}
                 onChange={(e) => {
                   const m = maskCep(e.target.value);
-                  setF((old) => ({ ...old, cep: m }));
+                  setF((old) => {
+                    const previous = old.cep.replace(/\D/g, "");
+                    const next = m.replace(/\D/g, "");
+                    if (previous === next) return { ...old, cep: m };
+                    // Old street, city, house number and complement belong to
+                    // the old destination, not the buyer's new postal code.
+                    return previous.length === 8
+                      ? {
+                          ...old,
+                          cep: m,
+                          rua: "",
+                          numero: "",
+                          complemento: "",
+                          bairro: "",
+                          cidade: "",
+                          uf: "",
+                        }
+                      : { ...old, cep: m };
+                  });
                 }}
                 autoComplete="postal-code"
                 className={inp}
@@ -1263,6 +1294,15 @@ function Checkout() {
                 <p role="status" className="text-body text-muted-foreground">
                   {cepMsg}
                 </p>
+              )}
+              {cepLookupFailed && !cepLoading && f.cep.replace(/\D/g, "").length === 8 && (
+                <button
+                  type="button"
+                  onClick={retryCepLookup}
+                  className="min-h-11 rounded-lg border border-border px-4 text-body font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Tentar buscar CEP novamente
+                </button>
               )}
               <input
                 required

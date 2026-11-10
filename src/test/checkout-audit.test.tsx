@@ -299,6 +299,79 @@ describe("checkout auditado sem chamadas reais", () => {
     }
   });
 
+  it("não conserva o endereço nem o número da entrega anterior quando o CEP muda", async () => {
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    await waitFor(() => expect(screen.getByLabelText("Rua")).toHaveValue("Rua teste"));
+    fireEvent.change(screen.getByLabelText("Número"), { target: { value: "57" } });
+    fireEvent.change(screen.getByLabelText("Complemento"), { target: { value: "Apto 12" } });
+    mocks.address.mockReturnValueOnce(new Promise(() => undefined));
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140011" } });
+    expect(screen.getByLabelText("Rua")).toHaveValue("");
+    expect(screen.getByLabelText("Bairro")).toHaveValue("");
+    expect(screen.getByLabelText("Cidade")).toHaveValue("");
+    expect(screen.getByLabelText("UF")).toHaveValue("");
+    expect(screen.getByLabelText("Número")).toHaveValue("");
+    expect(screen.getByLabelText("Complemento")).toHaveValue("");
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("não sobrescreve rua digitada manualmente enquanto a consulta do CEP está pendente", async () => {
+    let resolveAddress: (value: typeof address) => void = () => undefined;
+    mocks.address.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveAddress = resolve;
+        }),
+    );
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    fireEvent.change(screen.getByLabelText("Rua"), { target: { value: "Rua correta, digitada" } });
+    await act(async () => resolveAddress(address));
+    expect(screen.getByLabelText("Rua")).toHaveValue("Rua correta, digitada");
+    expect(screen.getByLabelText("Bairro")).toHaveValue("Centro");
+    expect(screen.getByLabelText("Cidade")).toHaveValue("BH");
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("encerra consulta de CEP travada em 10 segundos e permite preencher endereço manualmente", async () => {
+    mocks.address.mockImplementationOnce(() => new Promise(() => undefined));
+    render(<Checkout />);
+    await waitFor(() =>
+      expect(document.getElementById("checkout-form")).not.toHaveAttribute("inert"),
+    );
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+      expect(screen.getByText(/Buscando endereço/)).toBeInTheDocument();
+      await act(async () => vi.advanceTimersByTime(10000));
+      expect(screen.queryByText(/Buscando endereço/)).not.toBeInTheDocument();
+      expect(
+        screen.getByText(/Não foi possível confirmar o endereço pelo CEP/),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Rua")).toBeEnabled();
+      fireEvent.change(screen.getByLabelText("Rua"), {
+        target: { value: "Rua informada manualmente" },
+      });
+      expect(screen.getByLabelText("Rua")).toHaveValue("Rua informada manualmente");
+      mocks.address.mockResolvedValueOnce(address);
+      expect(screen.getByRole("button", { name: "Tentar buscar CEP novamente" })).toBeEnabled();
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "Tentar buscar CEP novamente" })),
+      );
+      expect(mocks.address).toHaveBeenCalledTimes(2);
+      expect(screen.getByLabelText("Rua")).toHaveValue("Rua informada manualmente");
+      expect(screen.getByLabelText("Bairro")).toHaveValue("Centro");
+      expect(
+        screen.queryByRole("button", { name: "Tentar buscar CEP novamente" }),
+      ).not.toBeInTheDocument();
+      expect(mocks.payment).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
   it("erro de frete mantém botão fora do parágrafo de alerta para HTML e hidratação válidos", async () => {
     mocks.quote.mockResolvedValueOnce({
       ok: false,

@@ -396,3 +396,13 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N137, QA** | Precisão dos testes | Ajustado o teste de watchdog de frete para não avançar o relógio separado de gateway por engano. |
 
 **C32:** Vitest **680/680 em 83 arquivos**, TS/ESLint funcional/build local PASS, SSR **42/42**, Chrome navegação **3/3**, checkout indisponível local **3/3**, **15 screenshots**. Em `docs/VONIX_AUDITORIA_CONTINUIDADE_C32_20261110.md`. Nenhum serviço externo de cobrança/frete nem aplicativo separado de afiliadas alterado. **Produção NOT_APPROVED.**
+
+## C33 — CEP coerente, resposta manual e recuperação (10/11/2026)
+
+| ID | Impacto | Antes (baseline RED) | Corrigido e testado |
+| --- | --- | --- | --- |
+| **N138 — alta** | Endereço de entrega | Trocar CEP mantinha rua, bairro, cidade, UF, número e complemento da entrega anterior | Ao modificar dígitos de um CEP completo, zerar campos pertencentes ao endereço anterior sem afetar dados pessoais de cliente, cesta ou pagamento |
+| **N139 — alta** | Preenchimento e confiança | Lookup assíncrono sobrescrevia rua corrigida manualmente enquanto aguardava resposta | Vincular callback ao CEP consultado e preencher somente campos de endereço vazios; preservar correções do comprador |
+| **N140 — média/alta** | Loading e abandono | Consulta CEP que não respondia mantinha indicação de carregamento sem limite | Timeout de 10s, aviso de entrada manual e botão de retry explícito; resposta antiga ignorada |
+
+**QA C33:** 3 testes novos demonstrados **RED** antes e **GREEN** após; **683/683 Vitest em 83 arquivos**, TS/lint funcional/build PASS, SSR **42/42**, Chrome **3/3** e checkout **3/3** com rede externa bloqueada. A primeira tentativa no Vite antigo e a tentativa `vite preview` não são evidências positivas (falha de ambiente descrita no handoff). Documentação: `docs/VONIX_AUDITORIA_CONTINUIDADE_C33_20261110.md`. **Produção NOT_APPROVED.**
