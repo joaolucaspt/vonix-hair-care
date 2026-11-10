@@ -170,6 +170,57 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     }
   });
 
+  it("categorizes an invalid Resend API key without recording the provider error body", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const detailedMessage = "API key is invalid; potentially sensitive context: " + inbox;
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(true))
+        .mockResolvedValueOnce(generate())
+        .mockResolvedValueOnce(
+          Response.json({ name: "validation_error", message: detailedMessage }, { status: 400 }),
+        )
+        .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      vi.stubGlobal("fetch", fetcher);
+      expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+      expect(warn).toHaveBeenCalledWith(
+        "[vonix-affiliate-auth-mail] resend-api-key-invalid http=400",
+      );
+      const safeLog = JSON.stringify(warn.mock.calls);
+      expect(safeLog).not.toContain("API key is invalid");
+      expect(safeLog).not.toContain(inbox);
+      expect(safeLog).not.toContain("123456");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("categorizes a malformed Resend sender without recording the rejected address", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(true))
+        .mockResolvedValueOnce(generate())
+        .mockResolvedValueOnce(
+          Response.json(
+            { name: "validation_error", message: "The from email is invalid: private@example.com" },
+            { status: 400 },
+          ),
+        )
+        .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      vi.stubGlobal("fetch", fetcher);
+      expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+      expect(warn).toHaveBeenCalledWith(
+        "[vonix-affiliate-auth-mail] resend-api-sender-invalid http=400",
+      );
+      expect(JSON.stringify(warn.mock.calls)).not.toContain("private@example.com");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("does not claim managed e-mail delivery if Supabase itself rate limits the fallback", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

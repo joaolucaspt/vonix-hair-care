@@ -15,6 +15,35 @@ function auditAffiliateAuthMailFailure(phase: string, status?: number) {
   console.warn(`[vonix-affiliate-auth-mail] ${phase} http=${safeStatus}`);
 }
 
+/**
+ * Reduce a Resend error to a fixed diagnostic label. Never send the
+ * upstream response body, recipient, sender, OTP or key to application logs.
+ * Unknown payloads are intentionally reported without detail.
+ */
+async function classifyAffiliateResendError(response: Response): Promise<string> {
+  if (response.status !== 400 && response.status !== 422) return "resend-api-http";
+  try {
+    const raw: unknown = await response.json();
+    const parsed = z
+      .object({ name: z.string().max(80).optional(), message: z.string().max(4000).optional() })
+      .safeParse(raw);
+    if (!parsed.success || parsed.data.name !== "validation_error") return "resend-api-http";
+    const message = (parsed.data.message ?? "").toLowerCase();
+    if (/api[ -]?key/.test(message) && /invalid|revoked|not valid|unauthorized/.test(message))
+      return "resend-api-key-invalid";
+    if (
+      /(?:from|sender|remetente)/.test(message) &&
+      /invalid|not valid|verified|required|domain/.test(message)
+    )
+      return "resend-api-sender-invalid";
+    if (/domain/.test(message) && /unverified|not verified|not allowed|restricted/.test(message))
+      return "resend-api-domain-invalid";
+    return "resend-api-validation-error";
+  } catch {
+    return "resend-api-http";
+  }
+}
+
 export function affiliateCustomAuthEmailReady(): boolean {
   const key = env("RESEND_API_KEY");
   const sender = env("AFFILIATE_FROM_EMAIL");
@@ -219,7 +248,7 @@ export async function sendAffiliateAuthEmailWithResend(
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) {
-      auditAffiliateAuthMailFailure("resend-api-http", response.status);
+      auditAffiliateAuthMailFailure(await classifyAffiliateResendError(response), response.status);
     } else {
       const receipt: unknown = await response.json();
       accepted = z.object({ id: z.string().min(1).max(128) }).safeParse(receipt).success;
