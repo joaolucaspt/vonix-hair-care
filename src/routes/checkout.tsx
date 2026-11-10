@@ -237,6 +237,7 @@ function Checkout() {
   const [couponChecking, setCouponChecking] = useState(false);
   const couponLookupSequence = useRef(0);
   const couponEdited = useRef(false);
+  const checkoutSubmissionStarted = useRef(false);
   const [applied, setApplied] = useState<Coupon | null>(null);
   const [options, setOptions] = useState<ShipOption[]>([]);
   const [quoting, setQuoting] = useState(false);
@@ -296,7 +297,8 @@ function Checkout() {
       const code = `${ref.toUpperCase()}10`;
       lookupCoupon({ data: { code } })
         .then((resolved) => {
-          if (!resolved.ok || couponEdited.current) return;
+          // Never alter a payment amount after the customer has submitted.
+          if (!resolved.ok || couponEdited.current || checkoutSubmissionStarted.current) return;
           setApplied({ code: resolved.code, label: resolved.label, percent: resolved.percent });
           setCoupon(resolved.code);
           setShowCoupon(true);
@@ -320,6 +322,9 @@ function Checkout() {
     };
     const watchdog = window.setTimeout(() => {
       if (!active) return;
+      // A response arriving after the deadline must not silently re-open a
+      // checkout that told the customer the provider could not be verified.
+      active = false;
       setConfigLookupFailed(true);
       setCfg(unavailable);
     }, 12000);
@@ -435,6 +440,18 @@ function Checkout() {
     }
     saveCep(f.cep);
     let cancelled = false;
+    // A carrier outage must never leave the button spinning forever.
+    // Late responses are ignored; only an explicit new quote may unlock pay.
+    const deadline = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setOptions([]);
+      setServiceId(null);
+      setQuotedRequestKey(null);
+      setQuoting(false);
+      setQuoteErr("O cálculo de frete demorou demais. Tente calcular novamente.");
+      track("checkout_error", { step: "shipping", reason: "quote_timeout" });
+    }, 15000);
     setQuoting(true);
     setQuoteErr(null);
     quoteShipping({
@@ -468,9 +485,13 @@ function Checkout() {
         setQuoteErr("Não foi possível calcular o frete agora. Tente novamente.");
         track("checkout_error", { step: "shipping", reason: "network_or_server" });
       })
-      .finally(() => !cancelled && setQuoting(false));
+      .finally(() => {
+        window.clearTimeout(deadline);
+        if (!cancelled) setQuoting(false);
+      });
     return () => {
       cancelled = true;
+      window.clearTimeout(deadline);
     };
   }, [f.cep, itemsKey, appliedCode, quoteRetry, shippingRequestKey]);
 
@@ -507,6 +528,9 @@ function Checkout() {
   const applyCoupon = async () => {
     const sequence = ++couponLookupSequence.current;
     couponEdited.current = true;
+    // A previous remote lookup may still be pending when the buyer types a
+    // local coupon. It must not keep the payment button blocked indefinitely.
+    setCouponChecking(false);
     const code = coupon.trim().toUpperCase();
     if (!code) return setCouponMsg("Digite um código de cupom.");
     let found = findCoupon(code);
@@ -656,6 +680,10 @@ function Checkout() {
   }, [cardDone, cardRetryVerified]);
 
   const submitPayment = async (token?: string) => {
+    if (couponChecking) {
+      setError("Aguarde a validação do cupom antes de iniciar o pagamento.");
+      return;
+    }
     if (!cfg || (pay === "pix" ? !cfg.pixEnabled : !cfg.cardEnabled)) {
       setError("Aguarde a verificação das formas de pagamento antes de continuar.");
       return;
@@ -832,6 +860,10 @@ function Checkout() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || cardDone || paymentInFlight.current) return;
+    if (couponChecking) {
+      setError("Aguarde a validação do cupom antes de iniciar o pagamento.");
+      return;
+    }
     if (!cfg || (pay === "pix" ? !cfg.pixEnabled : !cfg.cardEnabled)) {
       setError("Aguarde a verificação das formas de pagamento antes de continuar.");
       return;
@@ -847,6 +879,9 @@ function Checkout() {
       cpfRef.current?.focus();
       return;
     }
+    // A delayed affiliate lookup must not change the coupon once this payment
+    // attempt has begun, even if the buyer never opened the coupon field.
+    checkoutSubmissionStarted.current = true;
     track("add_payment_info", { payment_type: pay, value: total });
     if (pay === "pix") void submitPayment();
     else if (!cfg?.cardEnabled)
@@ -1109,8 +1144,8 @@ function Checkout() {
           <form
             id="checkout-form"
             className="min-w-0 space-y-8"
-            inert={!cfg}
-            aria-busy={!cfg}
+            inert={!cfg || busy}
+            aria-busy={!cfg || busy}
             onSubmit={onSubmit}
           >
             <div>
@@ -1660,6 +1695,7 @@ function Checkout() {
               disabled={
                 busy ||
                 quoting ||
+                couponChecking ||
                 !chosen ||
                 !cfg ||
                 !(pay === "pix" ? cfg.pixEnabled : cfg.cardEnabled) ||

@@ -384,3 +384,15 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N131** | Testes/regressão | Faltavam testes que verificassem o intervalo antes da nova cotação | 3 casos simulados CEP, sacola e cupom, nova cotação pendente e submit forçado sem pedido. **675/675 Vitest**, TypeScript, lint funcional, build, **42/42 SSR** e Chrome **3/3** |
 
 **C31 documentação:** `docs/VONIX_AUDITORIA_CONTINUIDADE_C31_20261110.md`. Sem alterar lógica do servidor, APIs reais, catálogo de afiliadas, banco, cobrança, anúncios ou deploy. **Produção NOT_APPROVED**.
+
+## C32 — timeout de frete, resposta tardia, cupons e estado de pagamento (10/11/2026)
+
+| ID | Impacto | Evidência e mudança |
+| --- | --- | --- |
+| **N132–N133, alta** | Frete/progresso e total | Cotação sem prazo máximo mantinha spinner indefinido. Watchdog 15 s com retry explícito; retorno tardio é ignorado; retry válido não pode ser sobrescrito pelo anterior. Assinatura de cotação do C31 preservada. |
+| **N134, alta** | Disponibilidade do gateway | Configuração retornada após timeout de 12 s podia reabrir campos sem ação explícita do cliente; agora resposta é ignorada após a expiração, exige retry. |
+| **N135, alta** | Conversão/cupom | Pagamento bloqueado enquanto cupom remoto estiver em validação; substituição por cupom local cancela estado pendente, e retorno antigo não sobrepõe a escolha posterior. |
+| **N136, alta** | Segurança/valor submetido | Formulário `inert` durante chamada de pagamento; cupom automático de indicação não muda valor após submit. |
+| **N137, QA** | Precisão dos testes | Ajustado o teste de watchdog de frete para não avançar o relógio separado de gateway por engano. |
+
+**C32:** Vitest **680/680 em 83 arquivos**, TS/ESLint funcional/build local PASS, SSR **42/42**, Chrome navegação **3/3**, checkout indisponível local **3/3**, **15 screenshots**. Em `docs/VONIX_AUDITORIA_CONTINUIDADE_C32_20261110.md`. Nenhum serviço externo de cobrança/frete nem aplicativo separado de afiliadas alterado. **Produção NOT_APPROVED.**

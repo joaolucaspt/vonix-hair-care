@@ -183,6 +183,122 @@ describe("checkout auditado sem chamadas reais", () => {
     }
   });
 
+  it("encerra cotação travada em 15 segundos e ignora resposta tardia, sem cobrança", async () => {
+    let resolveQuote: (value: { ok: true; options: (typeof option)[] }) => void = () => undefined;
+    mocks.quote.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveQuote = resolve;
+        }),
+    );
+    try {
+      render(<Checkout />);
+      // Finish the independent payment-readiness request first, so fake time
+      // tests only the shipping watchdog, not the gateway watchdog.
+      await waitFor(() =>
+        expect(document.getElementById("checkout-form")).not.toHaveAttribute("inert"),
+      );
+      vi.useFakeTimers();
+      fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+      expect(screen.getByText(/Calculando frete/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+      await act(async () => vi.advanceTimersByTime(15000));
+      expect(screen.getByRole("alert", { name: "" })).toHaveTextContent(
+        "O cálculo de frete demorou demais. Tente calcular novamente.",
+      );
+      expect(screen.getByRole("button", { name: "Tentar calcular frete novamente" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+      await act(async () => resolveQuote({ ok: true, options: [option] }));
+      expect(screen.queryByText(/Correios PAC/)).not.toBeInTheDocument();
+      fireEvent.submit(document.getElementById("checkout-form")!);
+      expect(mocks.payment).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
+  it("recota depois do timeout e não aceita a primeira resposta atrasada", async () => {
+    let resolveOldQuote: (value: { ok: true; options: (typeof option)[] }) => void = () =>
+      undefined;
+    mocks.quote
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOldQuote = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({ ok: true, options: [option] });
+    try {
+      render(<Checkout />);
+      await waitFor(() =>
+        expect(document.getElementById("checkout-form")).not.toHaveAttribute("inert"),
+      );
+      vi.useFakeTimers();
+      fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+      await act(async () => {
+        vi.advanceTimersByTime(15000);
+      });
+      expect(screen.getByText(/O cálculo de frete demorou demais/)).toBeInTheDocument();
+      await act(async () =>
+        fireEvent.click(screen.getByRole("button", { name: "Tentar calcular frete novamente" })),
+      );
+      expect(screen.getByText(/Correios PAC/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
+      await act(async () =>
+        resolveOldQuote({
+          ok: true,
+          options: [{ ...option, id: 999, name: "Frete obsoleto", price: 99 }],
+        }),
+      );
+      expect(screen.queryByText(/Frete obsoleto/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Correios PAC/)).toBeInTheDocument();
+      expect(mocks.payment).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
+  it("configuração atrasada após timeout não libera dados pessoais sem nova consulta", async () => {
+    vi.useFakeTimers();
+    let resolveConfig: (value: {
+      externalId: string;
+      sandbox: boolean;
+      pixEnabled: boolean;
+      cardEnabled: boolean;
+    }) => void = () => undefined;
+    mocks.config.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveConfig = resolve;
+        }),
+    );
+    try {
+      render(<Checkout />);
+      await act(async () => vi.advanceTimersByTime(12000));
+      expect(
+        screen.getByRole("heading", {
+          name: "Não foi possível verificar as formas de pagamento",
+        }),
+      ).toBeInTheDocument();
+      await act(async () =>
+        resolveConfig({
+          externalId: "synthetic-test-only",
+          sandbox: true,
+          pixEnabled: true,
+          cardEnabled: true,
+        }),
+      );
+      expect(screen.queryByLabelText("CPF")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Tentar consultar novamente" })).toBeEnabled();
+      expect(mocks.payment).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
   it("erro de frete mantém botão fora do parágrafo de alerta para HTML e hidratação válidos", async () => {
     mocks.quote.mockResolvedValueOnce({
       ok: false,
@@ -703,6 +819,87 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(await screen.findByText(/Cupom ativo: MARISSOL10/)).toBeInTheDocument();
     expect(mocks.couponLookup).toHaveBeenCalledWith({ data: { code: "MARISSOL10" } });
     expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia pagamento enquanto cupom de afiliada é validado e descarta resultado antigo", async () => {
+    let resolveLookup: (value: {
+      ok: boolean;
+      code: string;
+      label: string;
+      percent: number;
+    }) => void = () => undefined;
+    mocks.couponLookup.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLookup = resolve;
+        }),
+    );
+    render(<Checkout />);
+    await fill();
+    const pay = screen.getByRole("button", { name: /Gerar Pix/ });
+    await waitFor(() => expect(pay).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    const couponInput = screen.getByLabelText("Código do cupom");
+    fireEvent.change(couponInput, { target: { value: "MARISSOL10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(screen.getByText(/Conferindo cupom de afiliada/)).toBeInTheDocument();
+    expect(pay).toBeDisabled();
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/Aguarde a validação do cupom antes de iniciar o pagamento/),
+    ).toBeInTheDocument();
+    fireEvent.change(couponInput, { target: { value: "BEMVINDA5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(await screen.findByText(/Cupom BEMVINDA5 aplicado/)).toBeInTheDocument();
+    await waitFor(() => expect(pay).toBeEnabled());
+    await act(async () =>
+      resolveLookup({
+        ok: true,
+        code: "MARISSOL10",
+        label: "Cupom obsoleto (QA)",
+        percent: 10,
+      }),
+    );
+    expect(screen.getByText(/Cupom ativo: BEMVINDA5/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cupom ativo: MARISSOL10/)).not.toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("congela o formulário durante envio Pix e ignora cupom de indicação tardio", async () => {
+    let resolveLookup: (value: {
+      ok: boolean;
+      code: string;
+      label: string;
+      percent: number;
+    }) => void = () => undefined;
+    captureRef("?ref=marissol");
+    mocks.couponLookup.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLookup = resolve;
+        }),
+    );
+    mocks.payment.mockReturnValueOnce(new Promise(() => undefined));
+    render(<Checkout />);
+    await fill();
+    const pay = screen.getByRole("button", { name: /Gerar Pix/ });
+    await waitFor(() => expect(pay).toBeEnabled());
+    fireEvent.click(pay);
+    await waitFor(() => expect(mocks.payment).toHaveBeenCalledTimes(1));
+    expect(document.getElementById("checkout-form")).toHaveAttribute("inert");
+    expect(document.getElementById("checkout-form")).toHaveAttribute("aria-busy", "true");
+    expect(pay).toBeDisabled();
+    await act(async () =>
+      resolveLookup({
+        ok: true,
+        code: "MARISSOL10",
+        label: "Cupom de indicação tardio",
+        percent: 10,
+      }),
+    );
+    expect(screen.queryByText(/Cupom ativo: MARISSOL10/)).not.toBeInTheDocument();
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
   });
 
   it("falha na validação remota de cupom de afiliada não aplica desconto nem tenta pagar", async () => {

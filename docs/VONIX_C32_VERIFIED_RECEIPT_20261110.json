@@ -1,0 +1,64 @@
+{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C32",
+    "date":  "2026-11-10",
+    "previousHead":  "9e4ac78",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "pr":  26,
+    "scope":  "E-commerce operational only; separate affiliate form untouched",
+    "changes":  [
+                    "N132 shipping quote 15s deadline and explicit retry",
+                    "N133 ignore late shipping response after timeout and after retry",
+                    "N134 ignore late payment-config response after 12s",
+                    "N135 block payment during remote coupon validation and supersede stale lookup",
+                    "N136 freeze customer form during payment and freeze async referral coupon after submit",
+                    "N137 isolate shipping timer test from separate payment readiness deadline"
+                ],
+    "validation":  {
+                       "fullVitest":  "680/680 PASS in 83 files",
+                       "checkoutFocused":  "62/62 PASS",
+                       "typecheckExit":  0,
+                       "eslintFunctionalExit":  0,
+                       "buildNitroCloudflareLocalExit":  0,
+                       "prettierChangedExit":  0,
+                       "gitDiffCheckExit":  0,
+                       "ssrActiveProducts":  42,
+                       "chromeCrossflow":  {
+                                               "pass":  3,
+                                               "fail":  0
+                                           },
+                       "chromeCheckout":  {
+                                              "pass":  3,
+                                              "fail":  0
+                                          },
+                       "viewports":  [
+                                         320,
+                                         390,
+                                         1366
+                                     ],
+                       "screenshots":  15,
+                       "externalNetworkBlocked":  true
+                   },
+    "safety":  {
+                   "production":  "NOT_APPROVED",
+                   "noRealPayments":  true,
+                   "noRealOrders":  true,
+                   "noExternalShipping":  true,
+                   "noProductionDB":  true,
+                   "noAffiliateAppChange":  true,
+                   "noDeploy":  true
+               },
+    "sha256":  {
+                   "src/routes/checkout.tsx":  "F86ED7F408E1AD10328E99754A2C012915A19F410999EA3DD3C3442FF7B200B6",
+                   "src/test/checkout-audit.test.tsx":  "0184980F3F0CF3E6496D3C10F55D66DDCEB2E03290976B0DE91D357711E02585",
+                   "scripts/qa-c32-ssr-storefront.mjs":  "B23442E3368B06B05A96BA5BB3FAFB81D023F9463A1045EDB47C2CA74F3667D5",
+                   "scripts/qa-c32-crossflow.mjs":  "833B46788087733E3B64CF80A1CA9546211A542D0C00CA362B760C4AFFD7C6C6",
+                   "scripts/qa-c32-checkout-readiness.mjs":  "EDCCDEAAB1323F1E559575D877836F0B6E862F814DF353991DB5ED017B4E60E8",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C32_20261110.md":  "427DF866140C9DD861522864010E8DC2A5CED5962FD844576376E1499EA0A0B6",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "60232E21DE446248C1EB67AC2B5436551EAEB5D04C9FB8F2AE565D31AE2A1D38",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "D0D706F6B41DA7960C8B3AA36BB1AB6239AAE6ECFA52A3328F70BF8FAF4C4368",
+                   "docs/VONIX_SSR_PREFLIGHT_C32_20261110.json":  "A5F97185BC6D4F699DF8C4EE55E6CE018645632930826F85E21C8403E7C988B4",
+                   "qa-artifacts/vonix-c32/report.json":  "D1AB25755857CA66C2944B89AFC00F2FA96D8FC199BAD95CB804DD65568D5C8B",
+                   "qa-artifacts/vonix-c32/checkout/report.json":  "57AADDABF7D056EB3951D6D0C73F6937204DFC95AB63EDF167AD6A9FDE79BBDF"
+               }
+}
