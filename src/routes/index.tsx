@@ -340,7 +340,7 @@ function Home() {
       <section className="container-site mt-20">
         <Title a="Resultados que" b="Falam por Si" to={{ q: "botox vonix" }} />
         <p className="-mt-4 mb-6 text-body text-muted-foreground">
-          Depoimentos reais de cabeleireiras que usam o Botox Vonix.
+          Experiências compartilhadas com a Vonix Hair sobre o Botox Vonix.
         </p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {reviews.map((r) => (

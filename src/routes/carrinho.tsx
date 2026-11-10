@@ -19,6 +19,7 @@ export const Route = createFileRoute("/carrinho")({
     meta: [
       { title: "Carrinho — Vonix Hair" },
       { name: "description", content: "Seu carrinho Vonix Hair." },
+      { name: "robots", content: "noindex, nofollow" },
       { property: "og:title", content: "Carrinho — Vonix Hair" },
       { property: "og:description", content: "Seu carrinho Vonix Hair." },
       { property: "og:type", content: "website" },
@@ -209,7 +210,8 @@ function Cart() {
                           type="button"
                           aria-label={`Diminuir quantidade de ${l.product.name}, ${l.variant}${l.offer ? `, ${OFFER_LABEL[l.offer]}` : ""}`}
                           onClick={() => c.setQty(l.slug, l.variant, l.qty - 1, l.offer)}
-                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2"
+                          disabled={l.qty <= 1}
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Minus className="h-3 w-3" />
                         </button>
@@ -221,7 +223,7 @@ function Cart() {
                           aria-label={`Aumentar quantidade de ${l.product.name}, ${l.variant}${l.offer ? `, ${OFFER_LABEL[l.offer]}` : ""}`}
                           onClick={() => c.setQty(l.slug, l.variant, l.qty + 1, l.offer)}
                           disabled={l.qty >= 99}
-                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2"
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Plus className="h-3 w-3" />
                         </button>

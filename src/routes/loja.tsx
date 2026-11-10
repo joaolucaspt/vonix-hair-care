@@ -64,16 +64,22 @@ const searchKey = (value: string) =>
     .trim();
 
 export function matchesStoreQuery(
-  product: Pick<Product, "name" | "categoryLabel" | "short">,
+  product: Pick<Product, "name" | "categoryLabel" | "short"> & Partial<Pick<Product, "variants">>,
   query: string,
 ): boolean {
-  const term = searchKey(query)
-    .replace(/^combos(?=\b| )/, "kits")
-    .replace(/^combo(?=\b| )/, "kit");
-  if (!term) return true;
-  const haystack = searchKey(`${product.name} ${product.categoryLabel} ${product.short}`);
+  // Old "combo" terminology may occur ANYWHERE in the search, not just as the first word.
+  const words = searchKey(query)
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => (word === "combo" ? "kit" : word === "combos" ? "kits" : word));
+  if (!words.length) return true;
+  // Size is a real selection attribute and should be searchable, not silently excluded.
+  const variants = product.variants?.map((variant) => variant.label).join(" ") ?? "";
+  const haystack = searchKey(
+    `${product.name} ${product.categoryLabel} ${product.short} ${variants}`,
+  );
   // All terms may occur in different fields, not necessarily beside one another.
-  return term.split(" ").every((word) => haystack.includes(word));
+  return words.every((word) => haystack.includes(word));
 }
 
 export const Route = createFileRoute("/loja")({

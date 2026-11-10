@@ -350,3 +350,15 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N117** | Integridade de sacola | Conferir se Escolher tamanho altera carrinho antes de escolha | SKU com múltiplas variantes navega à ficha sem adicionar linha | Chrome 3/3, Kit Cachos |
 
 **C28 local:** 666/666 Vitest (82 arquivos), TypeScript/ESLint de código/build exit 0, SSR 42/42 e Chrome 6/6 (3 JS desativado + 3 JS ativo), 18 screenshots; nenhuma cobrança nem integração real. `docs/VONIX_AUDITORIA_CONTINUIDADE_C28_20261110.md`. Produção **NOT_APPROVED**; verificar volumes no ERP, Appmax sandbox e os demais P0 antes de merge/publicação.
+
+## C29 — busca por variantes, controle da sacola e feed Meta (10/11/2026)
+
+| ID | Impacto | Diagnóstico confirmado | Tratamento |
+| --- | --- | --- | --- |
+| **N118** | **UX/conversão** | Na sacola completa, `−` em uma unidade executava `setQty(0)` e removia o produto | Botão `−` desativado em 1; `Remover` exclusivo, limite 99 com estado claro; Chrome 3/3 |
+| **N119–N120** | Descoberta | Alias Combo→Kit só na primeira palavra; busca ignorava tamanhos de variantes | Tokens `combo/combos` em qualquer ordem e busca por rótulos de variantes, com negativos testados |
+| **N121** | Privacidade/SEO | `/carrinho` sem `noindex` | Meta `noindex, nofollow`, unitário e Chrome |
+| **N122 — P0 aberto** | **Meta Ads / Estoque** | Feed retorna 42 `in stock` sem estoque Bling comprovado por SKU; C26 já omitiu estoque não verificado no JSON-LD | Auditoria CSV: 42/42 IDs, títulos, preços, imagens, promoções e links alinhados (zero inconsistências); estoque 42/42 **NÃO VERIFICADO**. Não desativar feed/anúncios nem alegar estoque sem validação |
+| **N123** | Prova social | Texto da home afirmava identidade/qualidade verificada dos depoentes sem auditoria de origem | Copy descritiva sem qualificador não demonstrado; conteúdo original preservado |
+
+**C29:** Vitest **669/669 em 83 arquivos**; TS/ESLint funcional/build PASS, SSR **42/42**, Chrome **3/3** em 320/390/1366 px e 9 screenshots, feed estruturalmente consistente, disponibilidade **BLOQUEADA**. `docs/VONIX_AUDITORIA_CONTINUIDADE_C29_20261110.md`. Produção **NOT_APPROVED**, sem operações reais e sem alteração do sistema separado de afiliadas.

@@ -81,6 +81,12 @@ describe("busca e filtros do catálogo público", () => {
     expect(matchesStoreQuery(cafe, "kit cafe verde")).toBe(true);
     expect(matchesStoreQuery(cafe, "verde kit cafe")).toBe(true);
     expect(matchesStoreQuery(cafe, "cafe kit")).toBe(true);
+    expect(matchesStoreQuery(cafe, "verde combo cafe")).toBe(true);
+    expect(matchesStoreQuery(cafe, "verde combos cafe")).toBe(true);
+    expect(matchesStoreQuery(cafe, "cafe combos")).toBe(true);
+    const botox = getProduct("botox-vonix")!;
+    expect(matchesStoreQuery(botox, "1kg botox")).toBe(true);
+    expect(matchesStoreQuery(botox, "2kg botox")).toBe(false);
     expect(matchesStoreQuery(cafe, "cafe produto inexistente")).toBe(false);
   });
 

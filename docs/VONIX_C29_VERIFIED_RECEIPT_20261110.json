@@ -1,0 +1,69 @@
+﻿{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C29",
+    "date":  "2026-11-10",
+    "sourceHead":  "aeb0689",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "pr":  26,
+    "scope":  "Operational e-commerce only; standalone affiliate app untouched",
+    "changes":  [
+                    "N118 cart min qty and max disabled controls",
+                    "N119 legacy combo aliases any position",
+                    "N120 variant searchable labels",
+                    "N121 cart robots noindex",
+                    "N122 Meta stock feed P0 evidence only, unchanged",
+                    "N123 truthful testimonial description"
+                ],
+    "validation":  {
+                       "vitest":  "669/669 PASS in 83 files",
+                       "typescriptExit":  0,
+                       "eslintFunctionalExit":  0,
+                       "buildCloudflareLocalExit":  0,
+                       "prettierChangedExit":  0,
+                       "gitDiffCheckExit":  0,
+                       "ssr":  "42/42 active products PASS, plex-vonix 404",
+                       "chrome":  {
+                                      "pass":  3,
+                                      "fail":  0,
+                                      "viewports":  [
+                                                        320,
+                                                        390,
+                                                        1366
+                                                    ],
+                                      "screenshots":  9,
+                                      "externalNetworkBlocked":  true,
+                                      "jsErrors":  0
+                                  },
+                       "metaFeed":  {
+                                        "csvRows":  42,
+                                        "formatIssues":  0,
+                                        "stockClaimsUnverified":  42,
+                                        "readiness":  "BLOCKED_UNTIL_VERIFIED_STOCK_BY_SKU"
+                                    }
+                   },
+    "safety":  {
+                   "production":  "NOT_APPROVED",
+                   "realPayments":  false,
+                   "realOrders":  false,
+                   "realCustomerData":  false,
+                   "productionDatabase":  false,
+                   "affiliateAppEdited":  false,
+                   "deploy":  false
+               },
+    "sha256":  {
+                   "src/routes/carrinho.tsx":  "C981FBFD3BA374319CDBE7B07922DC5EF7A5E9C2A7942C68D51BDCB5C37EBFF1",
+                   "src/routes/loja.tsx":  "0C77CC1B1E41157DBC92E55830F3A658AB38B0213F73B23A865BDB1BE029DBE5",
+                   "src/routes/index.tsx":  "00CD181C975904DF5A04140CBBD902556FDCAB0E5715E9F64C29C1E5983AE5F1",
+                   "src/test/storefront-search-audit.test.tsx":  "48EBCB8A04B2CFADC6B793614D7E834B89C3133527571C89EBE05D56C1E33D28",
+                   "src/test/cart-quantity-audit.test.tsx":  "5F06E7AC79E8444B442FDC2CB8455F460EEA137290B687A8B40358A1A8A83717",
+                   "scripts/qa-c29-meta-feed-readiness.mjs":  "4145C16C1E0213C242B5702B0955D4E9A8EB24C396A59F7B9E83D9D4BB599F42",
+                   "scripts/qa-c29-search-cart-chrome.mjs":  "3EA8F8CCF8430533B899DD9AB14D9405635D87D137BD79D7A2ADF63179E65A69",
+                   "scripts/qa-c29-ssr-storefront.mjs":  "69030BD6664A3A02D8A6AAEBF64B231352E3C1562E3661DAE9E6CDAEC53A7A85",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C29_20261110.md":  "93661CD7195C4B8EBEFC071F3F65F331E31D7FC77D744538FE9BE999FA3B0E8A",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "5E57BD559ABB1C17F1ADB990AB72C3C476DD26E35DD06DDC9A3500D4D2CB203D",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "ADB6F48F3C7EFE1D37FAF4A34662D9879FF95A45510EA9F1933DE72400936C14",
+                   "docs/VONIX_META_FEED_READINESS_C29_20261110.json":  "657AB12213192EF6E6BDADA284BB68C92E6168C14515AEAD1FCAEA64C90D0DF9",
+                   "docs/VONIX_SSR_PREFLIGHT_C29_20261110.json":  "B1F90D4F349D65E08A575B5EC8039E714871F3C92D2E69A033577F4CA5C59AE8",
+                   "qa-artifacts/vonix-c29/browser/report.json":  "3D0AA6F985211F473BF4E775AB4DF29F6E9FF72FC75E8260CD451CC9639A8E3A"
+               }
+}
