@@ -167,3 +167,9 @@ No staging seguro, com cesta sintética e cotação inicial válida, testar (1) 
 A página de produto passou a informar frete grátis usando `sel.gross`, e não o valor líquido descontado, alinhado a `shippingOptions`, `checkoutTotals` e `ShippingBar`. Caso regressivo: 2× R$81,90 → bruto R$163,80 → líquido R$144,14, com cotação grátis apenas se transportadora atender o CEP. Teste RED antes / GREEN depois, sem alterar preço ou servidor. A comunicação diz agora *calculado antes dos descontos*.
 
 **Gates externos inalterados:** validar estoque vendável dos 42 SKUs do feed com Bling, Appmax sandbox Pix/cartão e status pago, dimensões reais de frete, staging Cloudflare/Supabase, WAF/RLS/rollback, consentimento LGPD e GA4/Meta conciliados. **Não tratar C35 local como aprovação de produção.**
+
+### C36 — CEP postal externo com dados incompletos/invalidáveis
+
+A regra de endereçamento em `address.server.ts` agora rejeita UFs que não pertençam às 27 unidades federativas (mesmo que sejam duas letras) e cidade composta só por espaços. Respostas de ViaCEP inconsistentes devem abrir tentativa ao BrasilAPI; se ambas falharem, mostrar entrada manual. O checkout indica corretamente quando faltam rua ou bairro em CEPs municipais e prioriza o foco no primeiro campo vazio, sem sobrescrever dados que o comprador já digitou. Testes somente com mocks, nenhum endereço real de cliente acessado.
+
+A regra financeira não foi modificada: **não habilitar pagamentos reais** até homologar Appmax sandbox, Bling 42 SKUs com saldo real, frete por peso/dimensão, Supabase/Cloudflare staging/RLS/restore/rollback e dados GA4/Meta reconciliados. Todos permanecem pendentes de responsável operacional; **NO-GO** para produção sem provas.

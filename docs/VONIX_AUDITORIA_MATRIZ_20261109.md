@@ -433,3 +433,13 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | N149 | P2 — cobertura de preços | Não havia conferência exaustiva da elegibilidade de frete entre PDP e checkout para variantes e quantidades. | Novo teste cobre **46 variantes × 3 quantidades = 138 casos** com base no bruto e destaca cenários bruto>R$150 / líquido<=R$150. **113/113** testes focados, **726/726** suíte geral em 87 arquivos. |
 
 **Resultados C35**: TypeScript, lint funcional, build, formatação e diff-check PASS; 42/42 PDP SSR, 15/15 rotas, 129/129 imagens, feed Meta 42 linhas sem inconsistência estrutural, Chrome 3/3 vitrine e 3/3 checkout, HTML `noscript` 3/3 como *markup* apenas, 21 screenshots. Evidências: `docs/VONIX_AUDITORIA_CONTINUIDADE_C35_20261110.md`, `qa-artifacts/vonix-c35/`, recibo C35. **P0 externos não resolvidos e produção NOT_APPROVED; sem merge ou deploy.**
+
+## C36 — auditoria de endereço e integridade postal (10/11/2026)
+
+| ID | Gravidade | Reprodução RED | Correção GREEN |
+| --- | --- | --- | --- |
+| **N150** | P1 — CEP/checkout | ViaCEP com CEP correto, UF fictícia `ZZ` era aprovada pelo regex `^[A-Z]{2}$`; se as duas fontes devolvessem UF inválida, o sistema ainda podia preencher dados incoerentes. | `address.server.ts` usa `isValidBrazilUF` compartilhado com checkout; busca BrasilAPI quando fonte primária inválida e falha de forma segura se ambas forem inválidas. |
+| **N151** | P1 — CEP/checkout | Cidade `"   "` passava em `min(1)` e travava a conclusão do endereço só mais tarde. | `trim().min(1)` na cidade e `trim()` em rua/bairro; tenta segunda fonte em resposta inconsistente. |
+| **N152** | P2 — usabilidade | CEP de abrangência municipal sem rua/bairro exibia mensagem enganosa de endereço completo e enviava foco diretamente ao número. | `use-cep-address.ts` mostra campos faltantes e checkout foca rua, bairro ou número conforme necessidade. |
+
+**Provas C36:** 4 testes inéditos RED→GREEN, 133/133 focados, **730/730 Vitest completo** em 87 arquivos, TypeScript/lint funcional/build/Prettier/diff-check verdes, 42/42 SSR, 15/15 rotas, 129/129 imagens, feed Meta local 42 linhas, Chrome 6/6, `noscript` markup 3/3, 21 screenshots. Recebimentos no `docs/VONIX_AUDITORIA_CONTINUIDADE_C36_20261110.md` e `docs/VONIX_C36_VERIFIED_RECEIPT_20261110.json`. Não há atualização de estoque, pagamentos ou publicação. **PRODUÇÃO NOT_APPROVED**.

@@ -64,6 +64,72 @@ describe("consulta de CEP pública no servidor", () => {
       expect(fetch.mock.calls[1]?.[0]).toBe("https://brasilapi.com.br/api/cep/v1/30140010");
     },
   );
+  it("não preenche endereço com UF inexistente e consulta o segundo provedor", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(response({ ...primary("30140010"), uf: "ZZ" }))
+      .mockResolvedValueOnce(
+        response({
+          cep: "30140010",
+          street: "Avenida Válida",
+          neighborhood: "Centro",
+          city: "Belo Horizonte",
+          state: "MG",
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    expect(await fetchAddress("30140010")).toEqual({
+      ok: true,
+      address: {
+        street: "Avenida Válida",
+        district: "Centro",
+        city: "Belo Horizonte",
+        uf: "MG",
+      },
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("não usa cidade composta só de espaços e consulta o segundo provedor", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(response({ ...primary("30140010"), localidade: "   " }))
+      .mockResolvedValueOnce(
+        response({
+          cep: "30140010",
+          street: "Rua Válida",
+          neighborhood: "Centro",
+          city: "Belo Horizonte",
+          state: "MG",
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    expect(await fetchAddress("30140010")).toEqual({
+      ok: true,
+      address: { street: "Rua Válida", district: "Centro", city: "Belo Horizonte", uf: "MG" },
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejeita UF falsa mesmo quando as duas fontes devolvem estado inválido", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(response({ ...primary("30140010"), uf: "ZZ" }))
+      .mockResolvedValueOnce(
+        response({
+          cep: "30140010",
+          street: "Rua",
+          neighborhood: "Centro",
+          city: "Cidade",
+          state: "XX",
+        }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const result = await fetchAddress("30140010");
+    expect(result.ok).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it("retorna resposta segura para falha de ambos e JSON inválido", async () => {
     vi.stubGlobal(
       "fetch",

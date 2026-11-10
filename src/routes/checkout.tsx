@@ -237,6 +237,7 @@ function Checkout() {
   const nameRef = useRef<HTMLInputElement>(null);
   const whatsappRef = useRef<HTMLInputElement>(null);
   const streetRef = useRef<HTMLInputElement>(null);
+  const districtRef = useRef<HTMLInputElement>(null);
   const ufRef = useRef<HTMLInputElement>(null);
   const [cpfInvalid, setCpfInvalid] = useState(false);
   const [pay, setPay] = useState<"pix" | "card">("pix");
@@ -437,7 +438,12 @@ function Checkout() {
           uf: old.uf.trim() ? old.uf : address.uf,
         };
       });
-      if (!numeroRef.current?.value) numeroRef.current?.focus();
+      // A city-wide CEP may not include a street or district. Guide the buyer
+      // to the first missing field instead of prematurely focusing the house number.
+      if (!streetRef.current?.value.trim() && !address.street.trim()) streetRef.current?.focus();
+      else if (!districtRef.current?.value.trim() && !address.district.trim())
+        districtRef.current?.focus();
+      else if (!numeroRef.current?.value.trim()) numeroRef.current?.focus();
     },
     [],
   );
@@ -1388,6 +1394,7 @@ function Checkout() {
               </div>
               <input
                 required
+                ref={districtRef}
                 aria-label="Bairro"
                 placeholder="Bairro"
                 value={f.bairro}

@@ -1,11 +1,15 @@
 import { z } from "zod";
+import { isValidBrazilUF } from "./checkout-input-validation";
 
 export const cepInput = z.object({ cep: z.string().regex(/^\d{8}$/) });
 const addressSchema = z.object({
-  street: z.string().max(160),
-  district: z.string().max(100),
-  city: z.string().min(1).max(100),
-  uf: z.string().regex(/^[A-Z]{2}$/),
+  street: z.string().trim().max(160),
+  district: z.string().trim().max(100),
+  city: z.string().trim().min(1).max(100),
+  uf: z
+    .string()
+    .regex(/^[A-Z]{2}$/)
+    .refine(isValidBrazilUF, "UF inválida."),
 });
 export type AddressResult =
   { ok: true; address: z.infer<typeof addressSchema> } | { ok: false; message: string };

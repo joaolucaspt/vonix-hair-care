@@ -130,6 +130,23 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("CEP válido sem rua/bairro informa preenchimento parcial e direciona ao primeiro campo ausente", async () => {
+    mocks.address.mockResolvedValueOnce({
+      ok: true,
+      address: { street: "", district: "", city: "Belo Horizonte", uf: "MG" },
+    });
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    expect(
+      await screen.findByText(/CEP localizado.*preencha rua, bairro e número/i),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Rua")).toHaveValue("");
+    expect(screen.getByLabelText("Bairro")).toHaveValue("");
+    expect(screen.getByLabelText("Cidade")).toHaveValue("Belo Horizonte");
+    expect(screen.getByLabelText("Rua")).toHaveFocus();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("impede pagamento com nome composto apenas por espaços e informa como corrigir", async () => {
     render(<Checkout />);
     await fill();

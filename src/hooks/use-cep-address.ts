@@ -39,7 +39,13 @@ export function useCepAddress(
         if (cancelled) return;
         if (result.ok) {
           onAddress(result.address, digits);
-          setMessage("Endereço preenchido — confira e complete o número.");
+          const streetMissing = !result.address.street.trim();
+          const districtMissing = !result.address.district.trim();
+          if (streetMissing && districtMissing)
+            setMessage("CEP localizado — preencha rua, bairro e número.");
+          else if (streetMissing) setMessage("CEP localizado — preencha rua e número.");
+          else if (districtMissing) setMessage("CEP localizado — preencha bairro e número.");
+          else setMessage("Endereço preenchido — confira e complete o número.");
         } else {
           setFailed(true);
           setMessage(result.message);

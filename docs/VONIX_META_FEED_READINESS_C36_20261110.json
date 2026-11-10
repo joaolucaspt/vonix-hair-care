@@ -1,0 +1,21 @@
+{
+  "checkpoint": "C36",
+  "date": "2026-11-10",
+  "scope": "Local public Meta CSV only; NO production inventory, ERP, ad account or orders accessed",
+  "feedHttp": 200,
+  "totalSourceProducts": 43,
+  "activeFeedRows": 42,
+  "excludedPlexVonix": true,
+  "distinctIds": 42,
+  "duplicateIds": [],
+  "missingImageCount": 0,
+  "feedFormatIssues": [],
+  "availabilityClaims": {
+    "in stock": 42
+  },
+  "unsupportedInStockClaims": 42,
+  "inventoryProof": "NOT_PRESENT_IN_REPOSITORY",
+  "readiness": "BLOCKED_UNTIL_VERIFIED_STOCK_BY_SKU",
+  "decision": "DO_NOT_DEPLOY_FEED_CHANGE_WITHOUT_BLING_STOCK_AND_ADS_REVIEW",
+  "note": "The CSV claims availability for all active SKUs while only a static OUT_OF_STOCK exclusion is present. This does NOT prove products are unavailable, only that live availability remains unverified."
+}
