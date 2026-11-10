@@ -264,6 +264,25 @@ describe("Private encrypted questionnaire storage", () => {
     expect(affiliateWizardSummary(packed)?.preferredLine).toBe("Botox Vonix");
   });
 
+  it("preserves a historical candidate summary after the candidate ages beyond the current application limit", () => {
+    const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2101-01-01T12:00:00Z"));
+      // Applicants are validated at submission, not silently invalidated years later.
+      // Private identity documents must not need re-validation just to show the
+      // permitted non-sensitive summary.
+      expect(affiliateWizardSummary(packed)).toMatchObject({
+        niche: "Lifestyle",
+        preferredLine: "Botox Vonix",
+        couponSuggestion: "MARINA10",
+        dependents: "Não tenho",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("encrypts PII with authentication and returns only business-relevant summary", () => {
     const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
     expect(packed).toMatch(/^v2\.[\w-]+\.[\w-]+\.[\w-]+$/);
