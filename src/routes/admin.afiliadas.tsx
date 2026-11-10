@@ -238,6 +238,14 @@ export function AffiliateAdminPage() {
         if (!sessionExpired(response.reason)) setError(response.reason);
         return;
       }
+      // Deletions or decisions can empty the last page while another page
+      // still contains records. Refresh the last *valid* page instead of
+      // stranding the reviewer on an empty page with no pagination controls.
+      const lastPage = Math.max(0, Math.ceil(response.total / PER_PAGE) - 1);
+      if (nextPage > lastPage) {
+        await load(nextStatus, lastPage, nextSearch, nextMailFilter);
+        return;
+      }
       setAuthorized(true);
       setStatus(nextStatus);
       setMailFilter(nextMailFilter);

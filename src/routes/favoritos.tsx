@@ -5,6 +5,7 @@ import { products, useFavorites } from "@/lib/store";
 export const Route = createFileRoute("/favoritos")({
   head: () => ({
     meta: [
+      { name: "robots", content: "noindex, nofollow" },
       { title: "Favoritos — Vonix Hair" },
       { name: "description", content: "Seus produtos favoritos Vonix Hair." },
       { property: "og:title", content: "Favoritos — Vonix Hair" },
@@ -21,8 +22,15 @@ function Favs() {
     <Shell>
       <div className="container-site py-10">
         <h1 className="mb-8 font-display text-h1">Favoritos</h1>
-        {list.length ? <Grid items={list} /> : (
-          <p className="py-16 text-center text-muted-foreground">Você ainda não favoritou produtos. <Link to="/loja" className="underline">Ver loja</Link></p>
+        {list.length ? (
+          <Grid items={list} />
+        ) : (
+          <p className="py-16 text-center text-muted-foreground">
+            Você ainda não favoritou produtos.{" "}
+            <Link to="/loja" className="underline">
+              Ver loja
+            </Link>
+          </p>
         )}
       </div>
     </Shell>

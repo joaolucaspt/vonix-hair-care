@@ -75,6 +75,64 @@ afterEach(() => {
 });
 
 describe("Vonix affiliate private panel", () => {
+  it("returns to a populated page after approving the last pending candidate on the final page", async () => {
+    const lastCandidate = {
+      ...candidate,
+      id: "00000000-0000-4000-8000-000000000041",
+      full_name: "Última candidata fictícia",
+      email: "last@example.invalid",
+    };
+    server.getAffiliateApplications
+      .mockResolvedValueOnce({ ...list([candidate]), total: 41 })
+      .mockResolvedValueOnce({ ...list([lastCandidate]), total: 41 })
+      .mockResolvedValueOnce({ ...list([candidate]), total: 40 });
+    server.reviewAffiliateApplication.mockResolvedValueOnce({
+      ok: true,
+      emailSent: false,
+      notification: "queued",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
+    expect(await screen.findByText("Última candidata fictícia")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "APROVAR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aprovação" }));
+    await waitFor(() =>
+      expect(server.getAffiliateApplications).toHaveBeenLastCalledWith({
+        data: { status: "pendente", page: 0, search: undefined, mailStatus: null },
+      }),
+    );
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+  });
+
+  it("returns to the previous page after erasing the last candidate on the final page", async () => {
+    const lastCandidate = {
+      ...candidate,
+      id: "00000000-0000-4000-8000-000000000041",
+      full_name: "Última candidata fictícia",
+      email: "last@example.invalid",
+    };
+    server.getAffiliateApplications
+      .mockResolvedValueOnce({ ...list([candidate]), total: 41 })
+      .mockResolvedValueOnce({ ...list([lastCandidate]), total: 41 })
+      .mockResolvedValueOnce({ ...list([candidate]), total: 40 });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Próxima" }));
+    expect(await screen.findByText("Última candidata fictícia")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Exclusão de dados/i }));
+    fireEvent.change(screen.getByLabelText(/Confirme digitando o e-mail da candidata/i), {
+      target: { value: lastCandidate.email },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar exclusão definitiva/i }));
+    await waitFor(() =>
+      expect(server.getAffiliateApplications).toHaveBeenLastCalledWith({
+        data: { status: "pendente", page: 0, search: undefined, mailStatus: null },
+      }),
+    );
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+  });
+
   it("does not show stale applicant data while changing search filters", async () => {
     let finish!: (value: ReturnType<typeof list>) => void;
     server.getAffiliateApplications.mockResolvedValueOnce(list()).mockReturnValueOnce(

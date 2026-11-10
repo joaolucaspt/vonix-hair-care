@@ -11,10 +11,17 @@ import { isTerminatedOrder } from "@/lib/order-events";
 export const Route = createFileRoute("/conta")({
   head: () => ({
     meta: [
+      { name: "robots", content: "noindex, nofollow" },
       { title: "Meus pedidos — Vonix Hair" },
-      { name: "description", content: "Consulte pedidos recentes neste navegador ou fale com o atendimento Vonix Hair." },
+      {
+        name: "description",
+        content: "Consulte pedidos recentes neste navegador ou fale com o atendimento Vonix Hair.",
+      },
       { property: "og:title", content: "Meus pedidos — Vonix Hair" },
-      { property: "og:description", content: "Consulte pagamentos recentes ou fale com o atendimento." },
+      {
+        property: "og:description",
+        content: "Consulte pagamentos recentes ou fale com o atendimento.",
+      },
     ],
   }),
   component: Conta,
@@ -71,22 +78,37 @@ function Conta() {
     if (order.checking || checkingIds.current.has(order.orderId)) return;
     checkingIds.current.add(order.orderId);
     setOrders((current) =>
-      current.map((o) => o.orderId === order.orderId ? { ...o, checking: true, error: false } : o),
+      current.map((o) =>
+        o.orderId === order.orderId ? { ...o, checking: true, error: false } : o,
+      ),
     );
     try {
       const response = await getStatus({
         data: { orderId: order.orderId, statusToken: order.statusToken },
       });
-      setOrders((current) => current.map((o) => o.orderId !== order.orderId ? o : {
-        ...o,
-        checking: false,
-        error: !response.ok,
-        result: !response.ok ? null : response.paid ? "paid" :
-          isTerminatedOrder(response.status) ? "ended" : "pending",
-      }));
+      setOrders((current) =>
+        current.map((o) =>
+          o.orderId !== order.orderId
+            ? o
+            : {
+                ...o,
+                checking: false,
+                error: !response.ok,
+                result: !response.ok
+                  ? null
+                  : response.paid
+                    ? "paid"
+                    : isTerminatedOrder(response.status)
+                      ? "ended"
+                      : "pending",
+              },
+        ),
+      );
     } catch {
       setOrders((current) =>
-        current.map((o) => o.orderId === order.orderId ? { ...o, checking: false, error: true, result: null } : o),
+        current.map((o) =>
+          o.orderId === order.orderId ? { ...o, checking: false, error: true, result: null } : o,
+        ),
       );
     } finally {
       checkingIds.current.delete(order.orderId);
@@ -98,8 +120,8 @@ function Conta() {
       <Page>
         <h1 className="font-display text-h1">Meus pedidos</h1>
         <p className="mt-3 text-body text-muted-foreground">
-          Consulte pedidos ainda em andamento neste navegador, sem precisar criar uma conta.
-          A consulta não cria cobranças nem altera o pagamento.
+          Consulte pedidos ainda em andamento neste navegador, sem precisar criar uma conta. A
+          consulta não cria cobranças nem altera o pagamento.
         </p>
         {orders.length ? (
           <section aria-label="Pedidos disponíveis neste navegador" className="mt-6 space-y-4">
@@ -109,15 +131,30 @@ function Conta() {
                 <p className="mt-1 text-body text-muted-foreground">Pagamento: {order.method}</p>
                 <div aria-live="polite" className="mt-3 text-body">
                   {order.error ? (
-                    <p role="alert">Não foi possível confirmar o status agora. Consulte o atendimento antes de tentar pagar novamente.</p>
+                    <p role="alert">
+                      Não foi possível confirmar o status agora. Consulte o atendimento antes de
+                      tentar pagar novamente.
+                    </p>
                   ) : order.result === "paid" ? (
-                    <p>Pagamento confirmado pela Appmax. Para rastreio de entrega, fale com o atendimento.</p>
+                    <p>
+                      Pagamento confirmado pela Appmax. Para rastreio de entrega, fale com o
+                      atendimento.
+                    </p>
                   ) : order.result === "ended" ? (
-                    <p>A Appmax informou que esta tentativa foi encerrada. Consulte o atendimento antes de tentar novamente.</p>
+                    <p>
+                      A Appmax informou que esta tentativa foi encerrada. Consulte o atendimento
+                      antes de tentar novamente.
+                    </p>
                   ) : order.result === "pending" ? (
-                    <p>Pagamento ainda não confirmado. Não gere uma nova cobrança antes de verificar a situação.</p>
+                    <p>
+                      Pagamento ainda não confirmado. Não gere uma nova cobrança antes de verificar
+                      a situação.
+                    </p>
                   ) : (
-                    <p>Esta tentativa está registrada nesta aba, mas o status ainda precisa ser consultado.</p>
+                    <p>
+                      Esta tentativa está registrada nesta aba, mas o status ainda precisa ser
+                      consultado.
+                    </p>
                   )}
                 </div>
                 <button
@@ -134,9 +171,9 @@ function Conta() {
           </section>
         ) : (
           <p role="note" className="mt-6 rounded-lg border border-border bg-muted p-4 text-body">
-            Nenhum pedido recente disponível nesta aba. A consulta rápida só funciona enquanto
-            o navegador mantém a sessão do pagamento. Para pedidos antigos, compras em outro
-            aparelho ou acompanhamento de entrega, utilize o atendimento.
+            Nenhum pedido recente disponível nesta aba. A consulta rápida só funciona enquanto o
+            navegador mantém a sessão do pagamento. Para pedidos antigos, compras em outro aparelho
+            ou acompanhamento de entrega, utilize o atendimento.
           </p>
         )}
         <p role="note" className="mt-6 rounded-lg border border-border bg-muted p-4 text-body">
@@ -144,9 +181,13 @@ function Conta() {
           rastreio, informe o número do pedido ao{" "}
           <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">
             WhatsApp Vonix Hair
-          </a>.
+          </a>
+          .
         </p>
-        <Link to="/loja" className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground">
+        <Link
+          to="/loja"
+          className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground"
+        >
           Ver produtos
         </Link>
       </Page>

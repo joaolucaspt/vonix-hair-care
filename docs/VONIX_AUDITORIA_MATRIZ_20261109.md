@@ -230,3 +230,13 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 **C19:** base C18 `3e03fcf`; PR #47 da `main` original sincronizado na branch de auditoria, sem tocar aplicativo de afiliadas separado. Após PR47: 596/596 Vitest em 71 arquivos, Chrome 3/3 (320/390/1366), SSR 42/42, TypeScript/ESLint sem Prettier/build exit 0. Pagamentos, banco operacional e deploy seguem bloqueados. Ver `VONIX_AUDITORIA_CONTINUIDADE_C19_20261109.md`.
 
 **Read-back C19 / main PR48:** `03df19a` incorporada sem conflitos à branch auditada, testes globais atualizados para **602/602, 71 arquivos**. Checkout e busca não receberam alterações adicionais; gates P0 reais permanecem pendentes.
+
+## C20 — avaliações, estado SPA e áreas pessoais (09/11)
+
+| ID | Gravidade | Falha reproduzida | Correção verificada |
+| --- | --- | --- | --- |
+| N76 | Média | Avaliação enviada para produto A fazia o produto B mostrar sucesso indevidamente quando `ReviewForm` permanecia montado | Corrigido: cada slug reconfigura formulário e consulta armazenamento somente daquele produto; testes de mudança de SKU |
+| N77 | Média | Duas submissões no mesmo batch React podiam enviar duas avaliações; resposta tardia do SKU anterior podia afetar o atual | Corrigido: trava síncrona `sendingRef`, geração por SKU, recuperação após falha; não substitui deduplicação de servidor |
+| N78 | Baixa/média | `/conta` e `/favoritos` não tinham diretiva `noindex` | Corrigido: `noindex, nofollow`, testes de meta e Chrome; **não equivale à autenticação** |
+
+A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero conflitos; não editar app independente de afiliadas. C20: 611/611 Vitest em 72 arquivos, TypeScript/ESLint sem Prettier/build/Prettier alterados verdes, SSR 42/42, Chrome 3/3 (320/390/1366, 9 imagens), sem pagamentos ou reviews reais. Produção **NOT_APPROVED**. Documentação: `VONIX_AUDITORIA_CONTINUIDADE_C20_20261109.md`.

@@ -1,0 +1,121 @@
+{
+  "project": "vonix-hair-care",
+  "dateLocal": "2026-11-09",
+  "scope": "ecommerce PR #26 audit branch only; independent affiliate application not accessed",
+  "workloop": {
+    "id": "ce7e142d-ebbe-47c1-9edb-c13889ede64b",
+    "runId": "727d3fb5-1b19-4172-8ecb-220994055ede"
+  },
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "baseCommit": "8a6e57f757bb0a58165d0910046812f8c37eed6f",
+  "mainIncluded": {
+    "commit": "0dc0dd8eeed6dbb13e3249a56a65df1caf11d9cf",
+    "upstreamPr": 49,
+    "mergeConflicts": 0
+  },
+  "findings": [
+    {
+      "id": "N76",
+      "result": "Review form state and drafts isolated per product slug"
+    },
+    {
+      "id": "N77",
+      "result": "Synchronous local submit lock, stale async generation handling, retry on failure"
+    },
+    {
+      "id": "N78",
+      "result": "robots noindex,nofollow on /conta and /favoritos; order tokens still never in DOM"
+    }
+  ],
+  "verification": {
+    "red": {
+      "expectedFailures": 3
+    },
+    "targeted": {
+      "passed": 15,
+      "files": 2,
+      "exitCode": 0
+    },
+    "fullVitest": {
+      "passed": 611,
+      "files": 72,
+      "exitCode": 0
+    },
+    "typescript": {
+      "exitCode": 0
+    },
+    "eslintAllWithoutPrettier": {
+      "exitCode": 0
+    },
+    "prettierChanged": {
+      "exitCode": 0
+    },
+    "build": {
+      "exitCode": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "activeProducts": 42,
+      "failures": 0,
+      "exitCode": 0
+    },
+    "chrome": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "passed": 3,
+      "failed": 0,
+      "screenshots": 9,
+      "errors": 0,
+      "accountNoindex": true,
+      "favoritesNoindex": true,
+      "statusTokenNotInHTML": true,
+      "unverifiedPaidSessionNeverConfirmed": true,
+      "reviewDraftNoSubmit": true,
+      "externalTrafficBlocked": true
+    },
+    "gitDiffCheck": {
+      "exitCode": 0
+    }
+  },
+  "sha256": {
+    "src/components/review-form.tsx": "D4C2CE2459F5E7677278F0619500F5F7C0EB2F00D7A9EB2CA59623D9AD1BB68C",
+    "src/routes/conta.tsx": "87E366C3DA820D8BD5D71912276E6852576BBC9B4447FEC4F9A65DA95F49702B",
+    "src/routes/favoritos.tsx": "60B5583D5E81154A2E8DD9F50D4531EEDFC2993B19343018F4EC3127E765ABB2",
+    "src/test/review-form-safety.test.tsx": "ACE07D356E73E5997A9D43AE73896AF380A6896B93DDBEF76512D8FB475459F3",
+    "src/test/account-order-status.test.tsx": "8E5EC65754FD2D049FD49F24A26ADB828CDAD4ACC2A3C989A26423B8CD9D2AB2",
+    "scripts/qa-c20-reviews-private-pages.mjs": "F037FC2266856C0AE755499B7DF1E40678EC9D0100CD2F64FF0FC7FE97E2D378",
+    "qa-artifacts/vonix-c20/dev/report.json": "AB901AF22319F0F8006D455B1EF2222C521A54B5547DB6FA9A55B2D33EDFE038"
+  },
+  "files": [
+    "src/components/review-form.tsx",
+    "src/routes/conta.tsx",
+    "src/routes/favoritos.tsx",
+    "src/test/review-form-safety.test.tsx",
+    "src/test/account-order-status.test.tsx",
+    "scripts/qa-c20-reviews-private-pages.mjs",
+    "qa-artifacts/vonix-c20/dev/report.json",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C20_20261109.md",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
+  ],
+  "privacyLimit": "robots is cooperative instruction, not authentication; status token requires server verification",
+  "noRealPayments": true,
+  "noRealReviewSubmissions": true,
+  "noRealDatabaseAccess": true,
+  "noMergeIntoMain": true,
+  "noDeploy": true,
+  "production": "NOT_APPROVED",
+  "blockers": [
+    "Appmax sandbox end to end signed status and paid_at",
+    "Supabase isolated staging backup/restore/RLS",
+    "Bling SKU mapping inventory and dimensions",
+    "Real carrier/shipping quote",
+    "LGPD revocation post-purchase, WAF/distributed rate limits",
+    "GA4/Meta only paid-order reconciled",
+    "Cloudflare Worker staging real smoke",
+    "Global legacy Prettier/CRLF formatting debt"
+  ]
+}

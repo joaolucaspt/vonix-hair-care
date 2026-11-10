@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-09",
+  "scope": "C20 synthetic account/favorites privacy and review draft, no submissions; all external requests blocked",
+  "base": "http://127.0.0.1:43972",
+  "outcomes": [
+    {
+      "width": 320,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 3,
+      "accountStatusIsUnverified": true,
+      "accountNoindex": true,
+      "favoritesNoindex": true,
+      "reviewDraftWithoutSubmit": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 3,
+      "accountStatusIsUnverified": true,
+      "accountNoindex": true,
+      "favoritesNoindex": true,
+      "reviewDraftWithoutSubmit": true
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 3,
+      "accountStatusIsUnverified": true,
+      "accountNoindex": true,
+      "favoritesNoindex": true,
+      "reviewDraftWithoutSubmit": true
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

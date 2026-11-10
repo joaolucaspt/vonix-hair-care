@@ -15,11 +15,17 @@ vi.mock("@/components/site", () => ({
 }));
 vi.mock("@/lib/checkout.functions", () => ({ getOrderStatus: mocks.status }));
 import { Route as AccountRoute } from "@/routes/conta";
-const Account = (AccountRoute as unknown as { options: { component: React.ComponentType } }).options.component;
+import { Route as FavoritesRoute } from "@/routes/favoritos";
+const Account = (AccountRoute as unknown as { options: { component: React.ComponentType } }).options
+  .component;
 
 const token = "signed-test-only-capability-of-sufficient-length";
 const pendingCard = (orderId = 701) => ({
-  orderId, statusToken: token, total: 154.9, paid: false, status: "autorizado",
+  orderId,
+  statusToken: token,
+  total: 154.9,
+  paid: false,
+  status: "autorizado",
 });
 
 beforeEach(() => {
@@ -33,9 +39,30 @@ afterEach(() => {
 });
 
 describe("Meus pedidos sem cadastro e sem cobranças", () => {
+  it("impede indexação de área de pedidos e favoritos locais, sem expor sessão a robôs de busca", () => {
+    const head = (route: unknown) =>
+      (
+        route as {
+          options: { head: () => { meta: Array<{ name?: string; content: string }> } };
+        }
+      ).options.head().meta;
+    expect(head(AccountRoute)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "robots", content: "noindex, nofollow" }),
+      ]),
+    );
+    expect(head(FavoritesRoute)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "robots", content: "noindex, nofollow" }),
+      ]),
+    );
+  });
+
   it("não promete encontrar compras antigas nem expõe dados privados", async () => {
     render(<Account />);
-    expect(await screen.findByText(/Nenhum pedido recente disponível nesta aba/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Nenhum pedido recente disponível nesta aba/),
+    ).toBeInTheDocument();
     expect(screen.getByText(/pedidos antigos, compras em outro aparelho/)).toBeInTheDocument();
     expect(mocks.status).not.toHaveBeenCalled();
   });
@@ -48,9 +75,11 @@ describe("Meus pedidos sem cadastro e sem cobranças", () => {
     expect(view.container.innerHTML).not.toContain(token);
     expect(mocks.status).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Consultar pedido 701" }));
-    await waitFor(() => expect(mocks.status).toHaveBeenCalledWith({
-      data: { orderId: 701, statusToken: token },
-    }));
+    await waitFor(() =>
+      expect(mocks.status).toHaveBeenCalledWith({
+        data: { orderId: 701, statusToken: token },
+      }),
+    );
     expect(await screen.findByText(/Pagamento ainda não confirmado/)).toBeInTheDocument();
     expect(view.container.innerHTML).not.toContain(token);
   });
@@ -87,7 +116,10 @@ describe("Meus pedidos sem cadastro e sem cobranças", () => {
     savePendingCard(pendingCard(714));
     let finish: ((result: { ok: boolean; paid: boolean; status: string }) => void) | undefined;
     mocks.status.mockImplementationOnce(
-      () => new Promise((resolve) => { finish = resolve; }),
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
     );
     render(<Account />);
     const button = await screen.findByRole("button", { name: "Consultar pedido 714" });
@@ -97,14 +129,21 @@ describe("Meus pedidos sem cadastro e sem cobranças", () => {
     });
     expect(mocks.status).toHaveBeenCalledTimes(1);
     expect(button).toBeDisabled();
-    await act(async () => { finish?.({ ok: true, paid: false, status: "pendente" }); });
+    await act(async () => {
+      finish?.({ ok: true, paid: false, status: "pendente" });
+    });
     expect(await screen.findByText(/Pagamento ainda não confirmado/)).toBeInTheDocument();
     expect(button).toBeEnabled();
   });
 
   it("mostra pagamento aprovado somente após resposta autenticada", async () => {
     savePendingPix({
-      orderId: 702, statusToken: token, total: 120, emv: "mock-qr", qrcode: "mock-image", expiresAt: "2099-01-01T00:00:00Z",
+      orderId: 702,
+      statusToken: token,
+      total: 120,
+      emv: "mock-qr",
+      qrcode: "mock-image",
+      expiresAt: "2099-01-01T00:00:00Z",
     });
     mocks.status.mockResolvedValue({ ok: true, paid: true, status: "aprovado" });
     render(<Account />);
@@ -127,7 +166,12 @@ describe("Meus pedidos sem cadastro e sem cobranças", () => {
   it("mostra no máximo um card por pedido, mesmo com sessões Pix e cartão duplicadas", async () => {
     savePendingCard(pendingCard(703));
     savePendingPix({
-      orderId: 703, statusToken: token, total: 100, emv: "synthetic", qrcode: "synthetic", expiresAt: "2099-01-01T00:00:00Z",
+      orderId: 703,
+      statusToken: token,
+      total: 100,
+      emv: "synthetic",
+      qrcode: "synthetic",
+      expiresAt: "2099-01-01T00:00:00Z",
     });
     render(<Account />);
     expect(await screen.findAllByText("Pedido nº 703")).toHaveLength(1);
