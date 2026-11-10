@@ -1,0 +1,30 @@
+{
+  "checkpoint": "C30",
+  "mode": "JavaScript disabled, native search and product header navigation",
+  "externalNetworkBlocked": true,
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "headerSearch": true,
+      "catalogSearch": true,
+      "productMobileSearch": true,
+      "passed": true
+    },
+    {
+      "width": 390,
+      "headerSearch": true,
+      "catalogSearch": true,
+      "productMobileSearch": true,
+      "passed": true
+    },
+    {
+      "width": 1366,
+      "headerSearch": true,
+      "catalogSearch": true,
+      "productMobileSearch": "not applicable",
+      "passed": true
+    }
+  ]
+}

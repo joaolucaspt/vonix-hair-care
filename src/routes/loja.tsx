@@ -203,16 +203,22 @@ export function Loja() {
           <form
             role="search"
             aria-label="Buscar produtos"
+            action="/loja"
+            method="get"
             className="flex w-full flex-wrap items-center gap-2 sm:w-auto"
             onSubmit={(event) => {
               event.preventDefault();
               set({ q: searchInputRef.current?.value.trim().slice(0, 120) || undefined });
             }}
           >
+            {(["secao", "tiposProduto", "necessidades", "uso", "categoria", "ordem"] as const).map(
+              (key) => s[key] && <input key={key} type="hidden" name={key} value={s[key]} />,
+            )}
             <input
               ref={searchInputRef}
               key={s.q ?? ""}
               type="search"
+              name="q"
               enterKeyHint="search"
               maxLength={120}
               defaultValue={s.q}

@@ -130,6 +130,59 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("não libera dados pessoais nem pagamento enquanto a configuração ainda não respondeu", () => {
+    mocks.config.mockReturnValueOnce(new Promise(() => undefined));
+    render(<Checkout />);
+    expect(screen.getByRole("status")).toHaveTextContent(/Verificando as formas de pagamento/);
+    const form = document.getElementById("checkout-form");
+    expect(form).toHaveAttribute("inert");
+    expect(form).toHaveAttribute("aria-busy", "true");
+    fireEvent.submit(form!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("recupera uma consulta de pagamento com erro sem criar pedidos e sem reaplicar cupons", async () => {
+    mocks.config.mockRejectedValueOnce(new Error("Falha sintética de configuração"));
+    render(<Checkout />);
+    expect(
+      await screen.findByRole("heading", {
+        name: "Não foi possível verificar as formas de pagamento",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("CPF")).not.toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar consultar novamente" }));
+    await waitFor(() => expect(mocks.config).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(document.getElementById("checkout-form")).not.toHaveAttribute("inert"),
+    );
+    expect(screen.getByLabelText("CPF")).toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("expira a consulta travada em 12 segundos sem liberar pagamento ou perder a sacola", () => {
+    vi.useFakeTimers();
+    try {
+      mocks.config.mockReturnValueOnce(new Promise(() => undefined));
+      render(<Checkout />);
+      const form = document.getElementById("checkout-form");
+      expect(form).toHaveAttribute("inert");
+      act(() => vi.advanceTimersByTime(12000));
+      expect(
+        screen.getByRole("heading", {
+          name: "Não foi possível verificar as formas de pagamento",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("CPF")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Tentar consultar novamente" })).toBeEnabled();
+      expect(mocks.payment).not.toHaveBeenCalled();
+      expect(mocks.cart.clear).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
   it("erro de frete mantém botão fora do parágrafo de alerta para HTML e hidratação válidos", async () => {
     mocks.quote.mockResolvedValueOnce({
       ok: false,

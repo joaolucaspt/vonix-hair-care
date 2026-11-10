@@ -251,6 +251,10 @@ function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; autoFoc
   const [q, setQ] = useState("");
   return (
     <form
+      action="/loja"
+      method="get"
+      role="search"
+      aria-label="Pesquisar produtos Vonix Hair"
       className="relative w-full"
       onSubmit={(e) => {
         e.preventDefault();
@@ -259,6 +263,10 @@ function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; autoFoc
       }}
     >
       <input
+        type="search"
+        name="q"
+        maxLength={120}
+        enterKeyHint="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar produtos, kits, tratamentos..."
@@ -267,6 +275,7 @@ function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; autoFoc
         className="h-11 w-full rounded-full border border-border bg-background px-4 pr-10 text-body outline-none focus:border-foreground"
       />
       <button
+        type="submit"
         aria-label="Buscar"
         className="absolute right-0 top-0 grid h-11 w-11 place-items-center"
       >
@@ -356,6 +365,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const hideWhatsApp = path === "/carrinho" || path === "/checkout";
   const isProduct = path.startsWith("/produto/");
   const isCheckout = path === "/checkout";
+  const hydrated = useHydrated();
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -449,17 +459,24 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
           <div className="ml-auto flex items-center justify-self-end gap-2 text-body sm:gap-4">
-            {isProduct && (
-              <button
-                type="button"
-                aria-label="Buscar"
-                aria-expanded={searchOpen}
-                onClick={() => setSearchOpen((v) => !v)}
-                className="-m-2 p-2 lg:hidden"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-            )}
+            {isProduct &&
+              (hydrated ? (
+                <button
+                  type="button"
+                  aria-label="Buscar"
+                  aria-expanded={searchOpen}
+                  aria-controls="vonix-product-mobile-search"
+                  onClick={() => setSearchOpen((v) => !v)}
+                  className="-m-2 p-2 lg:hidden"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              ) : (
+                // SSR fallback: a link must work even if JavaScript hasn't hydrated.
+                <Link to="/loja" aria-label="Buscar produtos" className="-m-2 p-2 lg:hidden">
+                  <Search className="h-5 w-5" aria-hidden="true" />
+                </Link>
+              ))}
             {!isCheckout && (
               <Link to="/favoritos" aria-label="Favoritos" className="-m-2 p-2">
                 <Heart className="h-5 w-5" />
@@ -490,7 +507,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {isProduct
           ? // Página de produto no celular: só a busca, e só depois de tocar na lupa.
             searchOpen && (
-              <div className="container-site pb-3 lg:hidden">
+              <div id="vonix-product-mobile-search" className="container-site pb-3 lg:hidden">
                 <SearchBox autoFocus onDone={() => setSearchOpen(false)} />
               </div>
             )

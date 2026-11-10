@@ -362,3 +362,16 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N123** | Prova social | Texto da home afirmava identidade/qualidade verificada dos depoentes sem auditoria de origem | Copy descritiva sem qualificador não demonstrado; conteúdo original preservado |
 
 **C29:** Vitest **669/669 em 83 arquivos**; TS/ESLint funcional/build PASS, SSR **42/42**, Chrome **3/3** em 320/390/1366 px e 9 screenshots, feed estruturalmente consistente, disponibilidade **BLOQUEADA**. `docs/VONIX_AUDITORIA_CONTINUIDADE_C29_20261110.md`. Produção **NOT_APPROVED**, sem operações reais e sem alteração do sistema separado de afiliadas.
+
+## C30 — busca nativa antes da hidratação e readiness do checkout (10/11/2026)
+
+| ID | Prioridade | Falha comprovada | Correção / teste |
+| --- | --- | --- | --- |
+| **N124** | **Alta/conversão** | Header pesquisava `/?` se JS indisponível, perdendo termo | `form action=/loja method=get input name=q`, pesquisa SSR + SPA; Chrome RED 0/3 → GREEN 3/3 sem JS |
+| **N125** | **Alta/conversão** | Busca filtrada recarregava `/loja?` sem pesquisa nem filtros antes da hidratação | GET nativo + campos ocultos para filtros normalizados; Chrome 3/3 |
+| **N126** | Mobile/A11y | Lupa de PDP dependia de JS antes da hidratação | Link SSR `/loja`, botão após hidratação `aria-controls`, Chrome 3/3 |
+| **N127** | Checkout/privacidade | CPF/endereço e submissão podiam ser manipulados antes do retorno de `getPaymentConfig` | `inert`, `aria-busy`, aviso e retorno à sacola fora do formulário, bloqueio em duas funções de submit, testes |
+| **N128** | Checkout/resiliência | Consulta ao readiness indefinida sem caminho de recuperação | Watchdog 12 s e retry somente de configuração, sem recriar pagamento nem revalidar cupom à revelia, Vitest e Chrome local |
+| **N129** | QA | Agent offline encerrou Vite e causou `ERR_CONNECTION_REFUSED`; seed de variante inválida zerou carrinho sintético | Recriação segura de ambiente, testes cruzados e checkout repetidos, sem confundir falha do teste com falha do produto |
+
+**C30:** **672/672 Vitest em 83 arquivos**, TypeScript/ESLint funcional/build PASS, SSR 42/42, Chrome sem JS **3/3**, Chrome hidratado **3/3**, crossflow **3/3**, checkout sintético sem gateway **3/3** (27 screenshots). Sem pagamentos, contas reais, merge ou deploy. `docs/VONIX_AUDITORIA_CONTINUIDADE_C30_20261110.md`. Produção **NOT_APPROVED**.

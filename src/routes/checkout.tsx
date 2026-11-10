@@ -265,6 +265,8 @@ function Checkout() {
     pixEnabled?: boolean;
     cardEnabled?: boolean;
   } | null>(null);
+  const [configRetry, setConfigRetry] = useState(0);
+  const [configLookupFailed, setConfigLookupFailed] = useState(false);
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF((old) => ({ ...old, [k]: e.target.value }));
@@ -272,11 +274,8 @@ function Checkout() {
   useEffect(() => {
     const saved = getSavedCep();
     if (saved) setF((old) => (old.cep ? old : { ...old, cep: saved }));
-    getPaymentConfig()
-      .then(setCfg)
-      .catch(() =>
-        setCfg({ externalId: "", sandbox: true, pixEnabled: false, cardEnabled: false }),
-      );
+    // Payment readiness has its own retryable effect; a retry must not reapply
+    // a prize or overwrite the discount a buyer already chose.
     // A coupon won on the prize wheel is applied automatically.
     const prize = getPrize();
     if (prize) {
@@ -305,6 +304,41 @@ function Checkout() {
         .catch(() => undefined);
     }
   }, []);
+
+  useEffect(() => {
+    // A slow or failed configuration request must not leave an apparently
+    // payable checkout collecting customer/card details indefinitely.
+    let active = true;
+    const unavailable = {
+      externalId: "",
+      sandbox: true,
+      pixEnabled: false,
+      cardEnabled: false,
+    };
+    const watchdog = window.setTimeout(() => {
+      if (!active) return;
+      setConfigLookupFailed(true);
+      setCfg(unavailable);
+    }, 12000);
+    void getPaymentConfig().then(
+      (config) => {
+        if (!active) return;
+        window.clearTimeout(watchdog);
+        setConfigLookupFailed(false);
+        setCfg(config);
+      },
+      () => {
+        if (!active) return;
+        window.clearTimeout(watchdog);
+        setConfigLookupFailed(true);
+        setCfg(unavailable);
+      },
+    );
+    return () => {
+      active = false;
+      window.clearTimeout(watchdog);
+    };
+  }, [configRetry]);
 
   // Reattach a pending authorization after a refresh without recharging.
   useEffect(() => {
@@ -608,6 +642,10 @@ function Checkout() {
   }, [cardDone, cardRetryVerified]);
 
   const submitPayment = async (token?: string) => {
+    if (!cfg || (pay === "pix" ? !cfg.pixEnabled : !cfg.cardEnabled)) {
+      setError("Aguarde a verificação das formas de pagamento antes de continuar.");
+      return;
+    }
     if (!chosen) {
       setError("Escolha a forma de entrega.");
       return;
@@ -780,6 +818,10 @@ function Checkout() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || cardDone || paymentInFlight.current) return;
+    if (!cfg || (pay === "pix" ? !cfg.pixEnabled : !cfg.cardEnabled)) {
+      setError("Aguarde a verificação das formas de pagamento antes de continuar.");
+      return;
+    }
     if (!isValidCpf(f.cpf)) {
       track("checkout_error", { step: "customer", reason: "invalid_cpf" });
       setCpfInvalid(true);
@@ -979,16 +1021,34 @@ function Checkout() {
             <span className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-full bg-muted text-foreground">
               <Lock className="h-7 w-7" aria-hidden="true" />
             </span>
-            <h1 className="font-display text-h1">Pagamento online indisponível</h1>
+            <h1 className="font-display text-h1">
+              {configLookupFailed
+                ? "Não foi possível verificar as formas de pagamento"
+                : "Pagamento online indisponível"}
+            </h1>
             <p className="mx-auto mt-4 max-w-lg text-body text-muted-foreground">
-              Não é possível finalizar a compra pelo site agora. Sua sacola continua salva neste
-              navegador e nenhum pagamento foi solicitado.
+              {configLookupFailed
+                ? "A consulta aos meios de pagamento falhou ou demorou demais. Sua sacola continua salva; nenhum pagamento foi solicitado."
+                : "Não é possível finalizar a compra pelo site agora. Sua sacola continua salva neste navegador e nenhum pagamento foi solicitado."}
             </p>
             <p className="mx-auto mt-2 max-w-lg text-body text-muted-foreground">
               Para consultar uma alternativa de atendimento, fale diretamente com a equipe Vonix
               Hair.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
+              {configLookupFailed && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCfg(null);
+                    setConfigLookupFailed(false);
+                    setConfigRetry((previous) => previous + 1);
+                  }}
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-emerald-700 bg-emerald-50 px-6 py-3 text-body font-semibold text-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Tentar consultar novamente
+                </button>
+              )}
               <a
                 href={WHATSAPP}
                 target="_blank"
@@ -1015,7 +1075,26 @@ function Checkout() {
     <Shell>
       <div className="container-site grid min-w-0 grid-cols-[minmax(0,1fr)] gap-10 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-8">
-          <form id="checkout-form" className="min-w-0 space-y-8" onSubmit={onSubmit}>
+          {!cfg && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-xl border border-border bg-muted px-4 py-3 text-body text-muted-foreground"
+            >
+              Verificando as formas de pagamento. Os campos serão liberados quando essa consulta
+              terminar.
+              <Link to="/carrinho" className="ml-2 font-semibold underline underline-offset-2">
+                Voltar à sacola
+              </Link>
+            </p>
+          )}
+          <form
+            id="checkout-form"
+            className="min-w-0 space-y-8"
+            inert={!cfg}
+            aria-busy={!cfg}
+            onSubmit={onSubmit}
+          >
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h1 className="font-display text-h1">Finalizar compra</h1>
