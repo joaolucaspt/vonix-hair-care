@@ -74,6 +74,18 @@ describe("Dedicated database for applicant personal information", () => {
     expect(config.url).toBe("https://abcdefghijklmnopqrst.supabase.co");
   });
 
+  it("removes surrounding whitespace from a secret stored in the hosting vault", () => {
+    process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = " abcdefghijklmnopqrst ";
+    process.env["AFFILIATE_SUPABASE_URL"] = " https://abcdefghijklmnopqrst.supabase.co/ ";
+    const secret = "sb_secret_" + "C".repeat(48);
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "\r\n " + secret + " \n";
+    const config = requireAffiliateDatabaseConfig();
+    expect(config.headers["apikey"]).toBe(secret);
+    expect(config.headers).not.toHaveProperty("authorization");
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = secret + " invalid";
+    expect(affiliateDatabaseConfig()).toBeNull();
+  });
+
   it("rejects a publishable key accidentally pasted into the private admin variable", () => {
     process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
     process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
