@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { isOrderPaidEvent, normalizeEvent, parseAppmaxWebhook } from "@/lib/appmax-event";
 import {
+  balanceWarning,
   buildCartBody,
+  failureHint,
   hasOrderTag,
   orderTag,
+  parseBalance,
   parsePaidOrder,
   pickService,
   volumeFor,
@@ -218,5 +221,33 @@ describe("envio no Melhor Envio", () => {
     expect(hasOrderTag({ tags: ["appmax-132469895"] }, 132469895)).toBe(true);
     expect(hasOrderTag({ tags: [{ tag: "appmax-1" }] }, 132469895)).toBe(false);
     expect(hasOrderTag({}, 132469895)).toBe(false);
+  });
+});
+
+describe("avisos de saldo e falha", () => {
+  it("lê o saldo e o débito do Melhor Envio", () => {
+    expect(parseBalance({ balance: 77.43, reserved: 0, debts: 0 })).toEqual({ balance: 77.43, debts: 0 });
+    expect(parseBalance({ balance: "12.5", debts: 3 })).toEqual({ balance: 12.5, debts: 3 });
+    expect(parseBalance({ foo: 1 })).toBeNull();
+    expect(parseBalance(null)).toBeNull();
+  });
+
+  it("avisa saldo baixo, débito e fica quieto quando está tudo certo", () => {
+    expect(balanceWarning({ balance: 77.43, debts: 0 }, 40)).toBeNull();
+    expect(balanceWarning({ balance: 12.5, debts: 0 }, 40)).toContain("Saldo baixo");
+    expect(balanceWarning({ balance: 100, debts: 22.57 }, 40)).toContain("R$ 22,57");
+    expect(balanceWarning(null, 40)).toBeNull();
+  });
+
+  it("explica o motivo mais provável da falha", () => {
+    expect(failureHint("Melhor Envio POST /x 422: saldo insuficiente")).toContain("Falta saldo");
+    expect(failureHint("Melhor Envio POST /x 403: Forbidden")).toContain("permissão");
+    expect(failureHint("Existe um débito pendente")).toContain("débito");
+    expect(failureHint("erro qualquer")).toContain("carrinho");
+  });
+
+  it("o e-mail da loja vem do aviso do Appmax, sem valor fixo no código", () => {
+    const o = parsePaidOrder({ ...real.data, company_email: "loja@example.com" });
+    expect(o?.sellerEmail).toBe("loja@example.com");
   });
 });

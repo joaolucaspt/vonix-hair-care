@@ -35,6 +35,7 @@ export type PaidOrder = {
   units: number;
   productsTotal: number;
   sellerCnpj: string;
+  sellerEmail: string;
 };
 
 /** Lê o corpo `data` do aviso "Pedido pago" do Appmax. Devolve null se faltar algo que a etiqueta exige. */
@@ -91,6 +92,7 @@ export function parsePaidOrder(data: Record<string, unknown>): PaidOrder | null 
     units: Math.max(1, units),
     productsTotal: items.reduce((s, i) => s + i.unitValue * i.quantity, 0),
     sellerCnpj: digits(data["company_cnpj"]),
+    sellerEmail: text(data["company_email"]),
   };
 }
 
@@ -211,4 +213,34 @@ export function buildCartBody(
       tags: [{ tag: orderTag(order.id), url: null }],
     },
   };
+}
+
+export type Balance = { balance: number; debts: number };
+
+/** Lê a resposta de saldo do Melhor Envio ({ balance, reserved, debts }). Devolve null se vier em outro formato. */
+export function parseBalance(v: unknown): Balance | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const balance = Number(o["balance"]);
+  if (!Number.isFinite(balance)) return null;
+  const debts = Number(o["debts"]);
+  return { balance, debts: Number.isFinite(debts) ? debts : 0 };
+}
+
+export const brl = (n: number) => "R$ " + n.toFixed(2).replace(".", ",");
+
+/** Mensagem de aviso quando o saldo está baixo ou há débito que bloqueia etiquetas; null se está tudo certo. */
+export function balanceWarning(b: Balance | null, minBalance: number): string | null {
+  if (!b) return null;
+  if (b.debts > 0) return `O Melhor Envio mostra um débito de ${brl(b.debts)}. Enquanto ele não for pago, novas etiquetas ficam bloqueadas (Conferências > Pagar).`;
+  if (b.balance < minBalance) return `Saldo baixo no Melhor Envio: ${brl(b.balance)} (aviso abaixo de ${brl(minBalance)}). Saque no Appmax e recarregue em Financeiro > Adicionar saldo.`;
+  return null;
+}
+
+/** Explica em português o motivo mais provável de a compra da etiqueta ter falhado. */
+export function failureHint(message: string): string {
+  if (/d[eé]bito|debit|pend[eê]ncia/i.test(message)) return "Há um débito no Melhor Envio bloqueando etiquetas. Pague em Conferências.";
+  if (/saldo|balance|insufficient|insuficiente|credit/i.test(message)) return "Falta saldo no Melhor Envio. Saque no Appmax, recarregue em Financeiro > Adicionar saldo e pague o envio no carrinho.";
+  if (/ (401|403):|unauthor|forbidden|scope|permiss/i.test(message)) return "O token do Melhor Envio não tem permissão de carrinho, compra e geração de etiquetas. Gere um token novo com essas permissões.";
+  return "Veja o erro abaixo. O envio, se foi criado, está no carrinho do Melhor Envio.";
 }
