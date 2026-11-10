@@ -207,3 +207,14 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N68 | Média | Cupom anterior permanecia ativo quando usuário testava código inválido sem mensagem explícita | **Corrigido:** Cupom ativo e economia elegível apresentados ao lado do erro, sem alterar cálculo server-side |
 
 **C17:** 545/545 Vitest, 66 arquivos, TypeScript/build e ESLint focado aprovados, SSR 42/42 e Chrome 3/3 (320/390/1366). **Lint global Prettier falha** por formatação legada (12.428 erros); ESLint integral com `prettier/prettier: off` passou (exit 0). Cinco conflitos persistem com a `main` ed23f7e, com Appmax/Supabase/Bling em staging ainda pendentes. Ver `VONIX_AUDITORIA_CONTINUIDADE_C17_20261109.md`.
+
+## C18 — conciliação `main` / checkout auditado e confirmação de indicação (09/11)
+
+| ID | Severidade | Falha concreta encontrada na conciliação | Resultado |
+| --- | --- | --- | --- |
+| N69 | Crítica | O checkout compacto da main não preservava token autenticado de status, proteção de pedido reservado/idempotência e total revisado; resolução direta de `theirs` enfraqueceria o fluxo financeiro | **Prevenido**: cinco arquivos base auditada preservados; integração manual de cupom com revalidação server-side e testes |
+| N70 | Alta | Cupons NOME10 da main não eram aceitos no checkout auditado; confiar apenas em cálculo local abriria desconto não autorizado | **Corrigido**: lookup somente servidor + revalidação antes do claim de cobrança, validação de preço, falha fechada e controle de corrida no cliente |
+| N71 | Média | Popup recém-integrado prometia 10% “em qualquer compra”, apesar do cálculo negar desconto em itens com promoção | **Corrigido**: mensagem explicita itens elegíveis, eventual Pix adicional condicionado, alvos de toque de 44px |
+| N72 | Média | CI não rodava regras de ESLint fora da dívida de formatação CRLF | **Corrigido**: job de ESLint real em CI, sem `--fix` global; formatação legada segue pendente |
+
+**C18:** PR45 (`ed23f7e`) + PR46 (`cd91784`) integrados na branch auditada, não na main. 590/590 Vitest em 70 arquivos, TypeScript/build/ESLint sem Prettier aprovados, 42 SSR, 3 Chrome. Check de CI remoto/PR após push. P0 operacional segue **NOT_APPROVED**.

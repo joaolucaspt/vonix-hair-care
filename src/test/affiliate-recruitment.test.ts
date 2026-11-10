@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { affiliateRecruitmentOpen } from "@/lib/affiliate-applications.server";
+import {
+  affiliateOperationalReadiness,
+  affiliateRecruitmentOpen,
+} from "@/lib/affiliate-applications.server";
 
 const keys = [
   "AFFILIATE_RECRUITMENT_OPEN",
@@ -55,6 +58,25 @@ afterEach(() => {
   }
 });
 describe("Public affiliate launch gate", () => {
+  it("reports recruitment as blocked in the admin checklist when launch is requested but encryption is not ready", async () => {
+    process.env["AFFILIATE_RECRUITMENT_OPEN"] = "true";
+    delete process.env["AFFILIATE_QUESTIONNAIRE_KEY"];
+    // No dedicated database request or real records in this test.
+    delete process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
+    expect(affiliateRecruitmentOpen()).toBe(false);
+    const status = await affiliateOperationalReadiness();
+    expect(status.recruitmentOpen).toBe(false);
+    expect(status.checks.find((check) => check.id === "launch")?.ok).toBe(false);
+    expect(status.checks.find((check) => check.id === "encryption")?.ok).toBe(false);
+  });
+
+  it("admin readiness recognizes the same whitespace-tolerant TOTP secret format as the auth gate", async () => {
+    process.env["AFFILIATE_ADMIN_TOTP_SECRET"] = "GEZD GNBV GY3T QOJQ GEZD GNBV GY3T QOJQ";
+    delete process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"];
+    const status = await affiliateOperationalReadiness();
+    expect(status.checks.find((check) => check.id === "totp")?.ok).toBe(true);
+  });
+
   it("keeps recruitment closed by default even with secrets configured", () => {
     expect(affiliateRecruitmentOpen()).toBe(false);
   });

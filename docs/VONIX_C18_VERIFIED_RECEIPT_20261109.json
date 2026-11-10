@@ -1,0 +1,149 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "E-commerce branch only. Does not alter the independent affiliate application/worktree.",
+  "localDate": "2026-11-09",
+  "workloop": {
+    "id": "b1593390-c736-450c-9f4f-eada8207384a",
+    "runId": "8413aff6-ce74-4db8-8b9e-6d8011d11504"
+  },
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "baselineHead": "949214d6bc77ee95188650aa0b7ca2dccac1906b",
+  "merge1": {
+    "commit": "c8476ab",
+    "mergedMain": "ed23f7e",
+    "mainPR": 45
+  },
+  "merge2": {
+    "mergedMain": "cd91784",
+    "mainPR": 46,
+    "mergeCommitPending": true
+  },
+  "observedLaterMain": {
+    "sha": "266763f",
+    "mainPR": 47,
+    "scope": "Affiliate-only server/admin, no new checkout changes"
+  },
+  "resolvedConflicts": [
+    "src/components/buy-drawer.tsx",
+    "src/lib/checkout.functions.ts",
+    "src/lib/upsell.ts",
+    "src/routes/checkout.tsx",
+    "src/routes/produto.$slug.tsx"
+  ],
+  "securityInvariants": [
+    "Order status requires per-order signed token",
+    "Checkout attempts HMAC fingerprints claimed atomically before gateway operations",
+    "Ambiguous timeout never creates another charge",
+    "Immutable order snapshot persisted before asking for payment",
+    "Displayed amount in cents compared to server pricing before claim",
+    "Coupon lookup server-side and coupon revalidation before reservation",
+    "Pix and card confirmation only after verified gateway paid status",
+    "Marketing consent and no-PII purchase analytics unaffected"
+  ],
+  "changes": [
+    "lookupCoupon server-only validation max40, affiliate coupon via confirmation without trusting browser percent",
+    "createPayment revalidates coupon and displayed total before claim, rejects unknown coupon safely",
+    "auto/manual affiliate coupon UI with race guard, no unverified discounts or unexpected overwrites",
+    "affiliate popup ecommerce copy conditions discounts to eligible items and 44px close/copy controls",
+    "CI lint without legacy Prettier rule, no autoformat outside audit"
+  ],
+  "qa": {
+    "vitest": {
+      "passed": 590,
+      "files": 70,
+      "exit": 0
+    },
+    "targeted": {
+      "passed": 105,
+      "files": 5,
+      "exit": 0
+    },
+    "popup": {
+      "passed": 2,
+      "exit": 0
+    },
+    "tsc": {
+      "exit": 0
+    },
+    "eslintTargeted": {
+      "exit": 0
+    },
+    "eslintAllNonFormat": {
+      "exit": 0
+    },
+    "prettierChanged": {
+      "exit": 0
+    },
+    "build": {
+      "exit": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "count": 42,
+      "failed": 0,
+      "exit": 0
+    },
+    "chrome": {
+      "passed": 3,
+      "failed": 0,
+      "widths": [
+        320,
+        390,
+        1366
+      ],
+      "screenshots": 9,
+      "externalRequestsBlocked": true,
+      "jsErrors": 0,
+      "paymentSubmitted": false,
+      "cartRetained": true,
+      "touchTargets44px": true,
+      "negativeShippingSafety": true
+    },
+    "diffCheck": 0
+  },
+  "qaFiles": [
+    "scripts/qa-c18-merged-checkout.mjs",
+    "qa-artifacts/vonix-c18/dev/report.json",
+    "qa-artifacts/vonix-c18/dev/cart-320.png",
+    "qa-artifacts/vonix-c18/dev/cart-390.png",
+    "qa-artifacts/vonix-c18/dev/cart-1366.png",
+    "qa-artifacts/vonix-c18/dev/checkout-320.png",
+    "qa-artifacts/vonix-c18/dev/checkout-390.png",
+    "qa-artifacts/vonix-c18/dev/checkout-1366.png",
+    "qa-artifacts/vonix-c18/dev/drawer-320.png",
+    "qa-artifacts/vonix-c18/dev/drawer-390.png",
+    "qa-artifacts/vonix-c18/dev/drawer-1366.png"
+  ],
+  "sha256": {
+    ".github/workflows/vonix-ci.yml": "9F8C03FC50339A14D80150C2E5696BCE438D0EA67AD77316386BE9BB9DEBA2D1",
+    "src/lib/checkout.functions.ts": "9FD4B31AF720E078276C8B382134C2A6E122F2105F7BD12C1A46562DC2608E2E",
+    "src/routes/checkout.tsx": "B5E299A265947C6580D87C4119CFF784DCEBD9A628EF12D1317C1CD05A8FE72E",
+    "src/components/affiliate-popup.tsx": "A9A6B43D4B0B470BA5F400E26EA32F92987B21E296E06042C9C7DCE968960FD8",
+    "src/test/checkout-security.test.ts": "42E18B8ADA4AFC06A771234F83FEB2C122CF6E51EC5ED788B79576FFA75F5C09",
+    "src/test/checkout-audit.test.tsx": "23FEB244435CA1416E2BCDC3972C5C29EE8A95C0F516791743134F61EAEB0F15",
+    "src/test/ecommerce-affiliate-consistency.test.tsx": "DE1BC766A8F823A12F3647A07EB610EBE9243E8A7DC9A0D9A5443813E5B39786",
+    "scripts/qa-c18-merged-checkout.mjs": "F654685312B56181484FBBB61CE2EE404B79FA4DADC1B4923B97EC8A981F99DB",
+    "qa-artifacts/vonix-c18/dev/report.json": "C8BF6D8D0DCD46AE1C01BAB182E27564530C7B115FEEB088FC1A5D69FD1CD958",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C18_20261109.md": "1A227AFF3FCAAE7BAD25DD1F73AF2AEB2EE3DEBC4441F1B349B6A81926FB3734"
+  },
+  "legacy": {
+    "npmRunLintWithPrettier": "Known historical CRLF/Prettier formatting debt; strict global lint not asserted green. Full ESLint without formatting rule passed."
+  },
+  "productionStatus": "NOT_APPROVED",
+  "realPayments": false,
+  "productionDatabaseAccess": false,
+  "deployment": false,
+  "mergeIntoMain": false,
+  "blockers": [
+    "Appmax sandbox end-to-end payment and uncertain timeout verification",
+    "Supabase staging RLS/backup/concurrency/reconciliation",
+    "Bling SKU physical dimensions and inventory",
+    "LGPD post-purchase revocation",
+    "WAF/distributed throttling",
+    "GA4 events tied to paid orders",
+    "Cloudflare staging worker smoke",
+    "Strict Prettier/CRLF debt",
+    "Independent upstream PR check requirements"
+  ]
+}
