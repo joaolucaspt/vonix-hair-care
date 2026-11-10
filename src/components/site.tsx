@@ -14,6 +14,7 @@ import {
   Scissors,
   Search,
   ShieldCheck,
+  Sparkles,
   ShoppingBag,
   ShoppingCart,
   Truck,
@@ -450,7 +451,7 @@ export function Shell({ children }: { children: ReactNode }) {
             )}
         {!isCheckout && (
           <nav aria-label="Categorias" className="hidden border-t border-border lg:block">
-            <div className="container-site flex justify-center gap-x-10 py-3 text-small font-medium uppercase tracking-[0.18em]">
+            <div className="container-site flex flex-wrap items-center justify-center gap-x-6 gap-y-2 py-3 text-small font-medium uppercase tracking-[0.15em] xl:gap-x-9">
               {NAV.map((n) => (
                 <Link
                   key={n.label}
@@ -461,6 +462,13 @@ export function Shell({ children }: { children: ReactNode }) {
                   {n.label}
                 </Link>
               ))}
+              <Link
+                to="/seja-afiliada"
+                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#a27b62]/35 bg-[#f8ede5] px-3 text-[11px] font-bold tracking-[.1em] text-[#684639] transition hover:bg-[#f1ddcb] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#725345]"
+              >
+                <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
+                Seja afiliada
+              </Link>
             </div>
           </nav>
         )}
@@ -498,6 +506,16 @@ export function Shell({ children }: { children: ReactNode }) {
                 </Link>
               ))}
             </nav>
+            <Link
+              to="/seja-afiliada"
+              onClick={() => setOpen(false)}
+              className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[#e7d5cc] bg-[#fbf1eb] px-4 py-3 text-[#623b45] hover:bg-[#f4e4dc]"
+            >
+              <span className="flex items-center gap-2 font-semibold">
+                <Sparkles aria-hidden="true" className="h-4 w-4" /> Seja afiliada
+              </span>
+              <ArrowLeft aria-hidden="true" className="h-4 w-4 rotate-180" />
+            </Link>
             <h3 className="mb-3 mt-8 text-small font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Por necessidade
             </h3>
@@ -606,6 +624,13 @@ function Footer() {
           <Link to="/$page" params={{ page: "contato" }}>
             Contato
           </Link>
+          <h4 className="mb-1 mt-4 font-semibold">Comunidade Vonix</h4>
+          <Link
+            to="/seja-afiliada"
+            className="font-semibold text-[#eed4b5] underline decoration-[#eed4b5]/50 underline-offset-4 hover:text-white"
+          >
+            Programa de afiliadas
+          </Link>
         </div>
         <div className="flex flex-col gap-2 opacity-90">
           <h4 className="mb-2 font-semibold">Atendimento</h4>
@@ -649,6 +674,7 @@ function Footer() {
           <Link to="/$page" params={{ page: "politica-de-frete" }}>
             Política de Frete
           </Link>
+          <Link to="/seja-afiliada">Seja afiliada</Link>
         </div>
       </div>
     </footer>
