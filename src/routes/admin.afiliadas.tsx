@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { LOGO } from "@/components/site";
+import { AffiliateOwnerActivationPanel } from "@/components/affiliate-owner-activation-panel";
 import {
   getAffiliateAdminSession,
   eraseAffiliateApplicationAdmin,
@@ -835,6 +836,7 @@ export function AffiliateAdminPage() {
           </section>
         ) : (
           <>
+            <AffiliateOwnerActivationPanel />
             <section
               aria-label="Preparação do programa"
               className="mb-6 rounded-[1.5rem] border border-[#e8dcd8] bg-white p-5 sm:p-6"
