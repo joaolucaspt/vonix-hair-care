@@ -34,7 +34,7 @@ jobs:
       # O repositório tem dívida histórica de formatação/CRLF. Regras reais de
       # código devem bloquear o CI sem reformatar automaticamente outras áreas.
       - name: ESLint sem a dívida histórica de Prettier
-        run: bunx eslint . --quiet --rule 'prettier/prettier: off'
+        run: "bunx eslint . --quiet --rule 'prettier/prettier: off'"
       - name: Build sem publicação
         run: bun run build
 

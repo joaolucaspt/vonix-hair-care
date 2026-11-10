@@ -116,7 +116,7 @@
     "qa-artifacts/vonix-c18/dev/drawer-1366.png"
   ],
   "sha256": {
-    ".github/workflows/vonix-ci.yml": "9F8C03FC50339A14D80150C2E5696BCE438D0EA67AD77316386BE9BB9DEBA2D1",
+    ".github/workflows/vonix-ci.yml": "F1C57A5A9FAE85FC5025A97C617A1B7929A29E13C1BD17888D0018D2D13DEF72",
     "src/lib/checkout.functions.ts": "9FD4B31AF720E078276C8B382134C2A6E122F2105F7BD12C1A46562DC2608E2E",
     "src/routes/checkout.tsx": "B5E299A265947C6580D87C4119CFF784DCEBD9A628EF12D1317C1CD05A8FE72E",
     "src/components/affiliate-popup.tsx": "A9A6B43D4B0B470BA5F400E26EA32F92987B21E296E06042C9C7DCE968960FD8",
@@ -129,6 +129,12 @@
   },
   "legacy": {
     "npmRunLintWithPrettier": "Known historical CRLF/Prettier formatting debt; strict global lint not asserted green. Full ESLint without formatting rule passed."
+  },
+  "ciYamlValidation": {
+    "prettierYamlParseExit": 0,
+    "initialGitHubRunId": 42731237665,
+    "initialRun": "Failed before jobs because unquoted YAML plain scalar contained a colon; fixed by quoting the full run command",
+    "correctedRun": "Pending remote read-back after push"
   },
   "productionStatus": "NOT_APPROVED",
   "realPayments": false,
