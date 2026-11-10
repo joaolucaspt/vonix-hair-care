@@ -279,6 +279,62 @@ describe("checkout auditado sem chamadas reais", () => {
     await waitFor(() => expect(mocks.quote).toHaveBeenCalledTimes(2));
     expect(mocks.payment).toHaveBeenCalledTimes(1);
   });
+  it("invalida o frete antigo imediatamente ao mudar o CEP, antes da resposta seguinte", async () => {
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    await screen.findByText(/Correios PAC/);
+    const pay = screen.getByRole("button", { name: /Gerar Pix/ });
+    await waitFor(() => expect(pay).toBeEnabled());
+    mocks.quote.mockReturnValueOnce(new Promise(() => undefined));
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140011" } });
+    expect(pay).toBeDisabled();
+    expect(screen.queryByText(/Correios PAC/)).not.toBeInTheDocument();
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("ao alterar itens da sacola, rejeita cotação da cesta anterior sem cobrar", async () => {
+    const view = render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    await screen.findByText(/Correios PAC/);
+    const pay = screen.getByRole("button", { name: /Gerar Pix/ });
+    await waitFor(() => expect(pay).toBeEnabled());
+    mocks.quote.mockReturnValueOnce(new Promise(() => undefined));
+    const item = mocks.cart.lines[0] as { qty: number; net: number; gross: number; units: number };
+    item.qty = 2;
+    item.units = 2;
+    item.net = 339.8;
+    item.gross = 339.8;
+    mocks.cart.netSubtotal = 339.8;
+    mocks.cart.subtotal = 339.8;
+    view.rerender(<Checkout />);
+    expect(pay).toBeDisabled();
+    expect(screen.queryByText(/Correios PAC/)).not.toBeInTheDocument();
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("cupom novo bloqueia o pagamento até recalcular o frete da mesma cesta", async () => {
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    await screen.findByText(/Correios PAC/);
+    const pay = screen.getByRole("button", { name: /Gerar Pix/ });
+    await waitFor(() => expect(pay).toBeEnabled());
+    mocks.quote.mockReturnValueOnce(new Promise(() => undefined));
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    fireEvent.change(screen.getByLabelText("Código do cupom"), {
+      target: { value: "BEMVINDA5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(
+      await screen.findByText(/Cupom BEMVINDA5 aplicado aos itens elegíveis/),
+    ).toBeInTheDocument();
+    expect(pay).toBeDisabled();
+    expect(screen.queryByText(/Correios PAC/)).not.toBeInTheDocument();
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("oferece nova cotação de frete após falha transitória, sem iniciar pagamento", async () => {
     mocks.quote.mockResolvedValueOnce({ ok: false, message: "Transportadora indisponível" });
     render(<Checkout />);

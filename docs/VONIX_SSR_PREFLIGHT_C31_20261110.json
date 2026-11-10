@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-11-10T15:22:07.395Z",
+  "environment": "http://127.0.0.1:43972",
+  "target": "Local SSR only; no payment, leads or DB operations",
+  "productCount": 42,
+  "sourceProductCount": 43,
+  "excludedProductSlugs": [
+    "plex-vonix"
+  ],
+  "excludedPages": [
+    {
+      "slug": "plex-vonix",
+      "status": 404
+    }
+  ],
+  "pagesChecked": 42,
+  "passed": 42,
+  "failed": 0,
+  "descriptionLengthRange": {
+    "min": 139,
+    "max": 168
+  },
+  "inventoryAvailabilityValidated": false,
+  "note": "JSON-LD does not claim InStock without Bling verification; the separate public feed and real inventory remain unverified.",
+  "extra": {
+    "/": {
+      "status": 200,
+      "descriptionHasCep": true,
+      "productUrls": null
+    },
+    "/loja": {
+      "status": 200,
+      "descriptionHasCep": null,
+      "productUrls": null
+    },
+    "/carrinho": {
+      "status": 200,
+      "descriptionHasCep": null,
+      "productUrls": null
+    },
+    "/checkout": {
+      "status": 200,
+      "descriptionHasCep": null,
+      "productUrls": null
+    },
+    "/sitemap.xml": {
+      "status": 200,
+      "descriptionHasCep": null,
+      "productUrls": 42
+    },
+    "/robots.txt": {
+      "status": 200,
+      "descriptionHasCep": null,
+      "productUrls": null
+    },
+    "/rota-inexistente-auditoria-c3-20261109": {
+      "status": 404,
+      "descriptionHasCep": null,
+      "productUrls": null
+    }
+  },
+  "failures": []
+}

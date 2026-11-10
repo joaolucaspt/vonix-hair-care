@@ -1,0 +1,62 @@
+{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C31",
+    "date":  "2026-11-10",
+    "previousHead":  "a75d4ab",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "pr":  26,
+    "scope":  "e-commerce operational only, affiliate independent app untouched",
+    "changes":  [
+                    "N130 stale shipping quote invalidation by CEP/items/coupon/retry",
+                    "N131 no-pay transition regression tests"
+                ],
+    "validations":  {
+                        "fullVitest":  "675/675 PASS in 83 files",
+                        "typecheckExit":  0,
+                        "eslintFunctionalExit":  0,
+                        "buildNitroCloudflareLocalExit":  0,
+                        "prettierChangedExit":  0,
+                        "gitDiffCheckExit":  0,
+                        "ssr":  {
+                                    "pass":  42,
+                                    "failed":  0,
+                                    "outOfStockPlex":  "404"
+                                },
+                        "chrome":  {
+                                       "pass":  3,
+                                       "failed":  0,
+                                       "resolutions":  [
+                                                           320,
+                                                           390,
+                                                           1366
+                                                       ],
+                                       "screenshots":  12,
+                                       "network":  "external denied"
+                                   }
+                    },
+    "safety":  {
+                   "productionApproved":  false,
+                   "paymentOrOrderReal":  false,
+                   "stockOrFreightReal":  false,
+                   "affiliateAppModified":  false,
+                   "deployment":  false
+               },
+    "pending":  [
+                    "Appmax sandbox",
+                    "Supabase staging",
+                    "Bling SKU availability",
+                    "real carrier rate and Cloudflare staging",
+                    "LGPD and paid financial event reconciliation"
+                ],
+    "sha256":  {
+                   "src/routes/checkout.tsx":  "3B3A7C9A0AE773DE87C47731DCC67C2994514D7514DB53058DC08FE1895452BA",
+                   "src/test/checkout-audit.test.tsx":  "7E86A79DD0B1EB33036F376B226B92E24117F3BE143EB9AE93BC956C9BF4807A",
+                   "scripts/qa-c31-ssr-storefront.mjs":  "2D148D1D7B70F9680DD856D62AAD814775F9A845FF720EA8789030797ED7F2E6",
+                   "scripts/qa-c31-crossflow.mjs":  "5292BDB7CA9A928203E913651D706F9A94C06D26CF72E8E813FB31E721C0030B",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C31_20261110.md":  "282138AE054A03ED4030E98B41A85E04F612C97A52224657D18C30C554492E6D",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "6298AB15163DAB7995DB9DA9178B4EC07C0D7B447B1D54CFC2E6307A9E45994F",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "94DA02EF906E3E629F0BEEA0B759EE38E7FEB9B97FB6BF0086B10D12BD995C57",
+                   "docs/VONIX_SSR_PREFLIGHT_C31_20261110.json":  "C3545D26D9C9EB5358C8F65593ED81FC4B9F51AD561015963C5E1618F52BB793",
+                   "qa-artifacts/vonix-c31/report.json":  "F1916E177E10C55DDC398FB9A7DE29E0140A95A6824C633868ECB643ED4308AB"
+               }
+}

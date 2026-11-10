@@ -241,6 +241,9 @@ function Checkout() {
   const [options, setOptions] = useState<ShipOption[]>([]);
   const [quoting, setQuoting] = useState(false);
   const [quoteRetry, setQuoteRetry] = useState(0);
+  // The last successful shipping response is valid only for the exact
+  // CEP, basket, coupon and retry cycle that produced it.
+  const [quotedRequestKey, setQuotedRequestKey] = useState<string | null>(null);
   const [quoteErr, setQuoteErr] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<number | null>(null);
   const [card, setCard] = useState({ number: "", holder: "", month: "", year: "", cvv: "" });
@@ -397,6 +400,12 @@ function Checkout() {
   }));
   const itemsKey = JSON.stringify(items);
   const appliedCode = applied?.code;
+  const shippingRequestKey = JSON.stringify([
+    f.cep.replace(/\D/g, ""),
+    itemsKey,
+    appliedCode ?? null,
+    quoteRetry,
+  ]);
   const addressFilled = useCallback(
     (address: { street: string; district: string; city: string; uf: string }) => {
       setF((old) => ({
@@ -418,6 +427,7 @@ function Checkout() {
     const d = f.cep.replace(/\D/g, "");
     setOptions([]);
     setServiceId(null);
+    setQuotedRequestKey(null);
     setQuoteErr(null);
     if (d.length !== 8 || !quoteItems.length) {
       setQuoting(false);
@@ -436,6 +446,7 @@ function Checkout() {
           if (!r.options.length)
             track("checkout_error", { step: "shipping", reason: "no_options" });
           setOptions(r.options);
+          setQuotedRequestKey(r.options.length > 0 ? shippingRequestKey : null);
           setServiceId((cur) =>
             r.options.some((o) => o.id === cur) ? cur : (r.options[0]?.id ?? null),
           );
@@ -446,12 +457,14 @@ function Checkout() {
         } else {
           setOptions([]);
           setServiceId(null);
+          setQuotedRequestKey(null);
           setQuoteErr(r.message);
           track("checkout_error", { step: "shipping", reason: "quote_rejected" });
         }
       })
       .catch(() => {
         if (cancelled) return;
+        setQuotedRequestKey(null);
         setQuoteErr("Não foi possível calcular o frete agora. Tente novamente.");
         track("checkout_error", { step: "shipping", reason: "network_or_server" });
       })
@@ -459,7 +472,7 @@ function Checkout() {
     return () => {
       cancelled = true;
     };
-  }, [f.cep, itemsKey, appliedCode, quoteRetry]);
+  }, [f.cep, itemsKey, appliedCode, quoteRetry, shippingRequestKey]);
 
   const gross = checkoutTotals(c.lines, "card").gross;
   const pct = couponPercent(applied ?? undefined, gross);
@@ -468,7 +481,8 @@ function Checkout() {
   const tCard = checkoutTotals(c.lines, "card", pct);
   const couponProblem = applied ? couponCheck(applied, gross) : null;
   const couponNoSavings = !!applied && couponProblem?.ok === true && tCard.couponDiscount <= 0;
-  const chosen = options.find((o) => o.id === serviceId) ?? null;
+  const shippingQuoteCurrent = quotedRequestKey === shippingRequestKey && !quoting;
+  const chosen = shippingQuoteCurrent ? (options.find((o) => o.id === serviceId) ?? null) : null;
   const shippingEvent = useRef("");
   useEffect(() => {
     if (!chosen || quoting) return;
@@ -646,8 +660,8 @@ function Checkout() {
       setError("Aguarde a verificação das formas de pagamento antes de continuar.");
       return;
     }
-    if (!chosen) {
-      setError("Escolha a forma de entrega.");
+    if (!shippingQuoteCurrent || !chosen) {
+      setError("O CEP ou a sacola mudou. Aguarde uma nova cotação de frete antes de pagar.");
       return;
     }
     if (paymentInFlight.current || cardDone || paymentRecoveryRequired) return;
@@ -820,6 +834,10 @@ function Checkout() {
     if (busy || cardDone || paymentInFlight.current) return;
     if (!cfg || (pay === "pix" ? !cfg.pixEnabled : !cfg.cardEnabled)) {
       setError("Aguarde a verificação das formas de pagamento antes de continuar.");
+      return;
+    }
+    if (!shippingQuoteCurrent || !chosen) {
+      setError("O CEP ou a sacola mudou. Aguarde uma nova cotação de frete antes de pagar.");
       return;
     }
     if (!isValidCpf(f.cpf)) {
@@ -1290,7 +1308,7 @@ function Checkout() {
                     )}
                   </div>
                 )}
-                {!quoting &&
+                {shippingQuoteCurrent &&
                   options.map((o) => (
                     <label
                       key={o.id}

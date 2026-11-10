@@ -375,3 +375,12 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N129** | QA | Agent offline encerrou Vite e causou `ERR_CONNECTION_REFUSED`; seed de variante inválida zerou carrinho sintético | Recriação segura de ambiente, testes cruzados e checkout repetidos, sem confundir falha do teste com falha do produto |
 
 **C30:** **672/672 Vitest em 83 arquivos**, TypeScript/ESLint funcional/build PASS, SSR 42/42, Chrome sem JS **3/3**, Chrome hidratado **3/3**, crossflow **3/3**, checkout sintético sem gateway **3/3** (27 screenshots). Sem pagamentos, contas reais, merge ou deploy. `docs/VONIX_AUDITORIA_CONTINUIDADE_C30_20261110.md`. Produção **NOT_APPROVED**.
+
+## C31 — cotação de frete sempre correspondente à compra (10/11/2026)
+
+| ID | Severidade | Defeito confirmado | Mitigação e evidência |
+| --- | --- | --- | --- |
+| **N130 (alta/checkout)** | Frete/total/cobrança | O cliente podia alterar CEP, sacola ou cupom no instante em que `chosen` ainda referenciava o serviço antigo, pois a limpeza de `options` ocorre em `useEffect` posterior | Assinar cada cotação com CEP + itens/variantes/ofertas + cupom + retry; descartar seleção antiga imediatamente no render, remover opções antigas, desabilitar pagamento e reforçar `onSubmit` e `submitPayment` antes de qualquer cobrança |
+| **N131** | Testes/regressão | Faltavam testes que verificassem o intervalo antes da nova cotação | 3 casos simulados CEP, sacola e cupom, nova cotação pendente e submit forçado sem pedido. **675/675 Vitest**, TypeScript, lint funcional, build, **42/42 SSR** e Chrome **3/3** |
+
+**C31 documentação:** `docs/VONIX_AUDITORIA_CONTINUIDADE_C31_20261110.md`. Sem alterar lógica do servidor, APIs reais, catálogo de afiliadas, banco, cobrança, anúncios ou deploy. **Produção NOT_APPROVED**.
