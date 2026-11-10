@@ -25,6 +25,14 @@ export const Route = createFileRoute("/acesso-equipe-afiliadas")({
 type Stage = "checking" | "email" | "existing-password" | "password" | "first-password" | "denied";
 type Invitation = { role: "reviewer" | "owner"; password_set_at: string | null };
 
+/** A display-only shortcut; no authentication or authorization bypass. */
+function unauthenticatedTeamAccessStage(): Stage {
+  return typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("login") === "senha"
+    ? "existing-password"
+    : "email";
+}
+
 export function AffiliateTeamAccess() {
   const [email, setEmail] = useState("");
   const [stage, setStage] = useState<Stage>("checking");
@@ -40,7 +48,7 @@ export function AffiliateTeamAccess() {
       const identity = await vonixAffiliateAuth.auth.getUser();
       const user = identity.data.user;
       if (identity.error || !user?.email || !user.email_confirmed_at) {
-        setStage("email");
+        setStage(unauthenticatedTeamAccessStage());
         return;
       }
       const normalized = user.email.toLowerCase();
@@ -57,7 +65,7 @@ export function AffiliateTeamAccess() {
       const invite = row.data as Invitation;
       setStage(invite.password_set_at ? "password" : "first-password");
     } catch {
-      setStage("email");
+      setStage(unauthenticatedTeamAccessStage());
     }
   }, []);
 

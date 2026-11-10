@@ -34,6 +34,7 @@ vi.mock("@tanstack/react-router", () => ({
 import { AffiliateTeamAccess } from "@/routes/acesso-equipe-afiliadas";
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/acesso-equipe-afiliadas");
   vi.resetAllMocks();
   mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
   mocks.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } });
@@ -44,11 +45,26 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  window.history.replaceState({}, "", "/acesso-equipe-afiliadas");
   cleanup();
   vi.restoreAllMocks();
 });
 
 describe("Vonix affiliate already-activated owner password sign-in", () => {
+  it("opens the administrator shortcut directly on personal password sign-in", async () => {
+    window.history.replaceState({}, "", "/acesso-equipe-afiliadas?login=senha");
+    render(<AffiliateTeamAccess />);
+    expect(
+      await screen.findByRole("heading", { name: "Entrar com senha pessoal" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "E-mail administrativo" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Enviar acesso por e-mail" }),
+    ).not.toBeInTheDocument();
+    expect(mocks.requestAffiliateAccessEmail).not.toHaveBeenCalled();
+    expect(mocks.loginAffiliateAdminMember).not.toHaveBeenCalled();
+  });
+
   it("offers direct password sign-in without requesting a new OTP", async () => {
     render(<AffiliateTeamAccess />);
     fireEvent.click(await screen.findByRole("button", { name: /Já tenho senha/ }));
