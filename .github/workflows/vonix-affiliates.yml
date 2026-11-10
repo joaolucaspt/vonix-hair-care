@@ -46,6 +46,8 @@ jobs:
             src/lib/affiliate-wizard.ts \
             src/lib/affiliate-wizard-crypto.server.ts \
             src/components/affiliate-wizard.tsx \
+            src/components/affiliate-home-invite.tsx \
+            src/test/affiliate-home-invite.test.tsx \
             src/routes/admin.afiliadas.tsx \
             src/routes/api.internal.affiliate-mail-worker.ts \
             src/routes/seja-afiliada.tsx \
