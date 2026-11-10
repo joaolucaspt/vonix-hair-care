@@ -13,9 +13,11 @@ describe("código da afiliada no site", () => {
     for (const bad of ["", "a b", "<script>", "isabela;drop", "x".repeat(31), null, 5]) expect(normalizeRef(bad)).toBeNull();
   });
 
-  it("guarda o código do link e devolve em outra página da mesma visita", () => {
+  it("entrou pelo link e comprou vários produtos na mesma visita: conta para ela", () => {
     captureRef("?ref=isabela&utm_source=ig");
-    expect(getRef()).toBe("isabela");
+    expect(getRef()).toBe("isabela"); // página de produto
+    expect(getRef()).toBe("isabela"); // carrinho
+    expect(getRef()).toBe("isabela"); // checkout
   });
 
   it("ignora código inválido e não apaga o que já estava salvo na visita", () => {
@@ -25,11 +27,17 @@ describe("código da afiliada no site", () => {
     expect(getRef()).toBe("isabela");
   });
 
-  it("vale só na visita: depois de fechar a aba (sessão nova) não conta mais", () => {
+  it("voltar depois, sem o link (aba nova), não conta mais para ela", () => {
     captureRef("?ref=isabela");
-    sessionStorage.clear(); // aba fechada e site aberto de novo, sem o link
+    sessionStorage.clear(); // aba fechada e site aberto de novo
     captureRef("");
     expect(getRef()).toBeNull();
+  });
+
+  it("a visita expira: aba esquecida aberta não conta no dia seguinte", () => {
+    captureRef("?ref=isabela", 1_000);
+    expect(getRef(1_000 + 2 * 3_600_000)).toBe("isabela");
+    expect(getRef(1_000 + 4 * 3_600_000)).toBeNull();
   });
 
   it("nunca guarda o código no navegador de forma duradoura", () => {
