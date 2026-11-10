@@ -9,16 +9,19 @@ export function affiliateDatabaseConfig(): {
   url: string;
   headers: Record<string, string>;
 } | null {
-  const rawUrl = env("AFFILIATE_SUPABASE_URL");
-  const key = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY");
-  const checkoutKey = env("SUPABASE_SERVICE_ROLE_KEY");
-  const expectedRef = env("AFFILIATE_SUPABASE_PROJECT_REF");
+  const rawUrl = env("AFFILIATE_SUPABASE_URL").trim();
+  const key = env("AFFILIATE_SUPABASE_SERVICE_ROLE_KEY").trim();
+  const checkoutKey = env("SUPABASE_SERVICE_ROLE_KEY").trim();
+  const expectedRef = env("AFFILIATE_SUPABASE_PROJECT_REF").trim();
   // An explicit server-side project pin is mandatory in every environment.
   // Without it, a valid-looking checkout URL could receive private applicant data.
   if (
     !rawUrl ||
     key.length < 16 ||
+    /\s/.test(key) ||
     (checkoutKey.length > 0 && key === checkoutKey) ||
+    // Publishable/unknown opaque keys cannot authorize admin data operations.
+    (key.startsWith("sb_") && !key.startsWith("sb_secret_")) ||
     !/^[a-z0-9]{20}$/.test(expectedRef)
   )
     return null;
@@ -50,7 +53,9 @@ export function affiliateDatabaseConfig(): {
       url: url.origin,
       headers: {
         apikey: key,
-        authorization: "Bearer " + key,
+        // Modern sb_secret_* is an API key, NOT a JWT Bearer token.
+        // Legacy service_role JWTs retain their Bearer authentication.
+        ...(key.startsWith("sb_secret_") ? {} : { authorization: "Bearer " + key }),
         "content-type": "application/json",
         "cache-control": "no-store",
       },

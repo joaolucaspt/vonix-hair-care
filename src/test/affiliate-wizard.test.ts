@@ -287,7 +287,7 @@ describe("Private encrypted questionnaire storage", () => {
       validBase64Url + "=",
       validBase64Url + " ",
       validBase64Url.slice(0, -1) + (validBase64Url.endsWith("B") ? "C" : "B"),
-      "0".repeat(63) + "G",
+      "0".repeat(63) + "@",
     ]) {
       process.env["AFFILIATE_QUESTIONNAIRE_KEY"] = invalid;
       expect(affiliateQuestionnaireEncryptionReady(), "invalid key: " + invalid.slice(-7)).toBe(
@@ -297,6 +297,19 @@ describe("Private encrypted questionnaire storage", () => {
         /Criptografia do questionário não configurada/,
       );
     }
+  });
+
+  it("supports a securely generated 64-character alphanumeric Secrets Manager key", () => {
+    // Deterministic fixture only: production uses Lovable's secret generator,
+    // never a fixed test literal or a secret copied into source control.
+    const managerKey = "AbC123".repeat(10) + "Z9X0";
+    expect(managerKey).toHaveLength(64);
+    process.env["AFFILIATE_QUESTIONNAIRE_KEY"] = managerKey;
+    expect(affiliateQuestionnaireEncryptionReady()).toBe(true);
+    const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
+    expect(decryptAffiliateWizardForAdmin(packed)?.answers.firstName).toBe("Marina");
+    process.env["AFFILIATE_QUESTIONNAIRE_KEY"] = managerKey.slice(0, -1) + "1";
+    expect(decryptAffiliateWizardForAdmin(packed)).toBeNull();
   });
 
   it("does not persist inapplicable conditional answers in encrypted questionnaires", () => {

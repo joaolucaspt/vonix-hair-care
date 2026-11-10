@@ -1,14 +1,16 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-const ipHeaders = vi.hoisted(() => ({ cf: "203.0.113.14", xff: "", real: "" }));
+const ipHeaders = vi.hoisted(() => ({ cf: "203.0.113.14", xff: "", real: "", ray: "" }));
 vi.mock("@tanstack/react-start/server", () => ({
   getRequestHeader: (name: string) =>
-    name === "cf-connecting-ip"
-      ? ipHeaders.cf
-      : name === "x-forwarded-for"
-        ? ipHeaders.xff
-        : name === "x-real-ip"
-          ? ipHeaders.real
-          : undefined,
+    name === "cf-ray"
+      ? ipHeaders.ray
+      : name === "cf-connecting-ip"
+        ? ipHeaders.cf
+        : name === "x-forwarded-for"
+          ? ipHeaders.xff
+          : name === "x-real-ip"
+            ? ipHeaders.real
+            : undefined,
 }));
 import {
   affiliateIpDigest,
@@ -32,6 +34,7 @@ beforeEach(() => {
   process.env["AFFILIATE_TRUSTED_IP_HEADER"] = "cf-connecting-ip";
   ipHeaders.cf = "203.0.113.14";
   ipHeaders.xff = "";
+  ipHeaders.ray = "";
 });
 afterEach(() => {
   const values = {
@@ -107,6 +110,18 @@ describe("Persisted affiliate request rate limiting", () => {
     expect(affiliateTrustedIpHeaderValid()).toBe(false);
     expect(await consumeAffiliateRateLimit("submit")).toBe(false);
     expect(mock).toHaveBeenCalledOnce();
+  });
+
+  it("uses Cloudflare-owned client IP when both CF headers are present", async () => {
+    const request = vi.fn().mockResolvedValue(Response.json(true));
+    vi.stubGlobal("fetch", request);
+    delete process.env["AFFILIATE_TRUSTED_IP_HEADER"];
+    ipHeaders.ray = "a13b024cd12345ff-BHZ";
+    expect(affiliateTrustedIpHeaderValid()).toBe(true);
+    expect(await consumeAffiliateRateLimit("submit")).toBe(true);
+    expect(request).toHaveBeenCalledOnce();
+    ipHeaders.ray = "";
+    expect(affiliateTrustedIpHeaderValid()).toBe(false);
   });
 
   it("only consumes the selected proxy header, ignoring conflicting client-supplied headers", async () => {

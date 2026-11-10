@@ -18,10 +18,25 @@ export function affiliateIpDigest(
 }
 
 /** Only trust headers set/overwritten by the reverse proxy, never an arbitrary client-selected IP. */
+function verifiedAffiliateClientIpHeader(): string {
+  const explicit = env("AFFILIATE_TRUSTED_IP_HEADER");
+  if (explicit) {
+    return ["cf-connecting-ip", "x-real-ip", "x-forwarded-for"].includes(explicit) ? explicit : "";
+  }
+  // Lovable runs behind Cloudflare: CF-RAY and CF-Connecting-IP are supplied
+  // by the edge, not by a user-controlled forwarding chain. Without these
+  // platform signals, fail closed rather than trust spoofable headers.
+  try {
+    const ray = getRequestHeader("cf-ray")?.trim() ?? "";
+    const ip = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
+    return ray && isIP(ip) !== 0 ? "cf-connecting-ip" : "";
+  } catch {
+    return "";
+  }
+}
+
 export function affiliateTrustedIpHeaderValid(): boolean {
-  return ["cf-connecting-ip", "x-real-ip", "x-forwarded-for"].includes(
-    env("AFFILIATE_TRUSTED_IP_HEADER"),
-  );
+  return Boolean(verifiedAffiliateClientIpHeader());
 }
 
 /**
@@ -29,7 +44,7 @@ export function affiliateTrustedIpHeaderValid(): boolean {
  * unless the selected reverse proxy strips and overwrites them at ingress.
  */
 function trustedClientIp(): string | undefined {
-  const trusted = env("AFFILIATE_TRUSTED_IP_HEADER");
+  const trusted = verifiedAffiliateClientIpHeader();
   if (trusted === "cf-connecting-ip") return getRequestHeader("cf-connecting-ip")?.trim();
   if (trusted === "x-real-ip") return getRequestHeader("x-real-ip")?.trim();
   if (trusted === "x-forwarded-for")
@@ -49,7 +64,7 @@ async function affiliateRateRequest(
     const response = await fetch(config.url + "/rest/v1/rpc/vonix_affiliate_" + rpc, {
       method: "POST",
       headers: config.headers,
-      redirect: "error",
+      redirect: "manual",
       body: JSON.stringify({ p_scope: scope, p_fingerprint: digest }),
       signal: AbortSignal.timeout(4500),
     });

@@ -36,6 +36,10 @@ jobs:
         run: |
           bunx eslint \
             src/lib/affiliate-admin-session.server.ts \
+            src/lib/affiliate-member-auth.server.ts \
+            src/lib/affiliate-member-session.server.ts \
+            src/lib/affiliate-invites.server.ts \
+            src/lib/vonix-affiliate-auth.ts \
             src/lib/affiliate-admin-auth.server.ts \
             src/lib/affiliate-application.ts \
             src/lib/affiliate-applications.server.ts \
@@ -53,7 +57,11 @@ jobs:
             src/routes/admin.afiliadas.tsx \
             src/routes/api.internal.affiliate-mail-worker.ts \
             src/routes/seja-afiliada.tsx \
+            src/routes/acompanhar-inscricao.tsx \
+            src/routes/acesso-equipe-afiliadas.tsx \
             src/test/affiliate-admin-session.test.ts \
+            src/test/affiliate-invites.test.ts \
+            src/test/affiliate-member-login.test.ts \
             src/test/affiliate-admin-auth.test.ts \
             src/test/affiliate-admin-ui.test.tsx \
             src/test/affiliate-database.test.ts \
@@ -88,19 +96,36 @@ jobs:
             -e POSTGRES_PASSWORD=qa-disposable-only \
             -e POSTGRES_DB=vonix_affiliates_qa postgres:16
           trap 'docker stop vonix-affiliates-sql-qa >/dev/null 2>&1 || true' EXIT
-          for attempt in $(seq 1 30); do
-            if docker exec vonix-affiliates-sql-qa pg_isready -U postgres -d vonix_affiliates_qa >/dev/null 2>&1; then
+          # pg_isready may succeed against Postgres' TEMPORARY init server
+          # before POSTGRES_DB has been created. This caused intermittent
+          # "database vonix_affiliates_qa does not exist" on main despite
+          # a green PR. Wait for init completion AND a real SQL query.
+          ready=0
+          for attempt in $(seq 1 45); do
+            if docker logs vonix-affiliates-sql-qa 2>&1 | grep -F 'PostgreSQL init process complete' >/dev/null \
+              && docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 \
+                   -U postgres -d vonix_affiliates_qa -Atc 'SELECT 1' >/dev/null 2>&1; then
+              ready=1
               break
             fi
             sleep 1
           done
-          docker exec vonix-affiliates-sql-qa pg_isready -U postgres -d vonix_affiliates_qa
+          if [ "$ready" -ne 1 ]; then
+            echo "Disposable QA database did not finish initialization"
+            docker logs --tail 60 vonix-affiliates-sql-qa
+            exit 1
+          fi
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -c 'CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;'
           docker cp supabase/vonix-affiliate-applications.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-applications.sql
           docker cp supabase/vonix-affiliate-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-qa.sql
           docker cp supabase/vonix-affiliate-governance.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance.sql
           docker cp supabase/vonix-affiliate-governance-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance-qa.sql
+          # A mocked Supabase Auth schema exists ONLY in the disposable container.
+          docker cp supabase/vonix-affiliate-auth-qa-scaffold.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-auth-qa-scaffold.sql
+          docker cp supabase/vonix-affiliate-portal-status.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-portal-status.sql
+          docker cp supabase/vonix-affiliate-verified-email-rls.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-verified-email-rls.sql
+          docker cp supabase/vonix-affiliate-verified-email-rls-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-verified-email-rls-qa.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-applications.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
@@ -109,4 +134,13 @@ jobs:
             -f /tmp/vonix-affiliate-governance.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-governance-qa.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-auth-qa-scaffold.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-portal-status.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-verified-email-rls.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-verified-email-rls-qa.sql
+
           node scripts/qa-affiliate-concurrency.mjs

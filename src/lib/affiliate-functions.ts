@@ -1,37 +1,132 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { setResponseHeader } from "@tanstack/react-start/server";
+import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
+import { isIP } from "node:net";
+import { affiliateDatabaseConfig } from "./affiliate-database.server";
+import { VONIX_AFFILIATE_AUTH_URL, VONIX_AFFILIATE_PUBLIC_KEY } from "./vonix-affiliate-auth";
+import { affiliateQuestionnaireEncryptionReady } from "./affiliate-wizard-crypto.server";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
+import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
+import { invitePersistedAffiliateApplicant } from "./affiliate-invites.server";
 import {
   affiliateAdminSameOrigin,
   affiliateMutationSameOrigin,
   affiliateAdminSessionValid,
+  affiliateAdminMayErase,
   destroyAffiliateAdminSession,
 } from "./affiliate-admin-session.server";
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
 import {
   affiliateRecruitmentOpen,
+  affiliateOperatorIntakeEnabled,
   affiliateOperationalReadiness,
   eraseAffiliateApplication,
   previewAffiliateRetention,
   createAffiliateApplication,
+  readAffiliateApplicantEmailForAccessRecovery,
   decideAffiliateApplication,
   listAffiliateApplications,
   readAffiliateApplicationPrivateDetail,
   processAffiliateEmails,
 } from "./affiliate-applications.server";
 
-/** Public, non-secret status used only to avoid presenting a broken form. */
+function classifyAffiliateFetchFailure(error: unknown): string {
+  // Only a fixed, non-sensitive category is returned to callers.
+  // Never return the raw error or any header/secret content.
+  const name =
+    typeof error === "object" && error !== null && "name" in error ? String(error.name) : "";
+  const message = error instanceof Error ? error.message : "";
+  if (/timeout|abort/i.test(name + " " + message)) return "timeout";
+  if (/redirect/i.test(message)) return "redirect";
+  if (/header/i.test(message)) return "invalid-header";
+  if (name === "TypeError") return "type-error";
+  return "network-error";
+}
+
+/**
+ * Public, read-only readiness probe: never returns any key, customer record,
+ * raw IP, SQL result or provider error. Proves the production Worker actually
+ * reaches the dedicated DB before advertising a working signup.
+ */
 export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).handler(async () => {
   setResponseHeader("Cache-Control", "no-store");
-  return { open: affiliateRecruitmentOpen() };
+  const config = affiliateDatabaseConfig();
+  let storageReachable = false;
+  // Public-key probe is safe and independent of the privileged secret.
+  // A successful HTTP response (including 401/403) proves Worker egress
+  // without exposing or querying any candidate data.
+  let publicNetworkDiagnostic = "network-error";
+  try {
+    const response = await fetch(
+      VONIX_AFFILIATE_AUTH_URL + "/rest/v1/vonix_affiliate_applications?select=id&limit=0",
+      {
+        method: "GET",
+        headers: { apikey: VONIX_AFFILIATE_PUBLIC_KEY },
+        redirect: "manual",
+        signal: AbortSignal.timeout(6500),
+      },
+    );
+    publicNetworkDiagnostic =
+      response.status === 401
+        ? "unauthorized"
+        : response.status === 403
+          ? "forbidden"
+          : response.ok
+            ? "reachable"
+            : "http-" + response.status;
+  } catch (error) {
+    publicNetworkDiagnostic = classifyAffiliateFetchFailure(error);
+  }
+  let storageDiagnostic: string = config ? "network-error" : "not-configured";
+  if (config) {
+    try {
+      const response = await fetch(
+        config.url + "/rest/v1/vonix_affiliate_applications?select=id&limit=0",
+        {
+          method: "GET",
+          headers: config.headers,
+          // Strict redirect:error throws on some Worker fetch adapters.
+          // Manual mode never forwards privileged credentials to a new host.
+          redirect: "manual",
+          signal: AbortSignal.timeout(4000),
+        },
+      );
+      storageReachable = response.ok;
+      storageDiagnostic = response.ok
+        ? "reachable"
+        : response.status === 401
+          ? "unauthorized"
+          : response.status === 403
+            ? "forbidden"
+            : response.status === 404
+              ? "not-found"
+              : response.status >= 300 && response.status < 400
+                ? "redirect-blocked"
+                : "server-error";
+    } catch (error) {
+      storageReachable = false;
+      storageDiagnostic = classifyAffiliateFetchFailure(error);
+    }
+  }
+  const cfConnectingIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
+  const operatorIntakeReady = storageReachable && (await affiliateOperatorIntakeEnabled());
+  const rateLimitReady = operatorIntakeReady && (await affiliateRateLimitAllowed("submit"));
+  return {
+    open: rateLimitReady,
+    rateLimitReady,
+    storageReachable,
+    storageDiagnostic,
+    publicNetworkDiagnostic,
+    cfConnectingIpPresent: isIP(cfConnectingIp) !== 0,
+    encryptionReady: affiliateQuestionnaireEncryptionReady(),
+  };
 });
 
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
   .validator(affiliateApplicationSchema)
   .handler(async ({ data }) => {
-    if (!affiliateRecruitmentOpen()) {
+    if (!(await affiliateOperatorIntakeEnabled())) {
       return {
         ok: false as const,
         reason: "Inscrições ainda não disponíveis. Consulte os canais oficiais da Vonix Hair.",
@@ -55,7 +150,14 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
       };
     }
     try {
-      return await createAffiliateApplication(data);
+      const result = await createAffiliateApplication(data);
+      if (result.ok && !data.website && data.wizard) {
+        // A successful durable insert or a verified email duplicate precedes
+        // any Auth invitation. Never provision a login for honeypots.
+        const inviteSent = await invitePersistedAffiliateApplicant(data.wizard.email);
+        return { ...result, inviteSent };
+      }
+      return result;
     } catch {
       return {
         ok: false as const,
@@ -63,6 +165,52 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
       };
     }
   });
+
+/** Manual recovery: retry an applicant's Auth invite, by stored record ID only.
+ * A reviewer must confirm this action. No client-submitted email is trusted.
+ * Provider acceptance does not prove that the candidate received a message.
+ */
+export const resendAffiliateApplicantInvite = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid()) {
+      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    }
+    if (!(await consumeAffiliateRateLimit("admin"))) {
+      return {
+        ok: false as const,
+        reason: "Limite de solicitações alcançado. Tente novamente mais tarde.",
+      };
+    }
+    try {
+      const email = await readAffiliateApplicantEmailForAccessRecovery(data.id);
+      if (!email) return { ok: false as const, reason: "Candidatura não encontrada." };
+      const accepted = await invitePersistedAffiliateApplicant(email);
+      if (!accepted) {
+        return {
+          ok: false as const,
+          reason:
+            "O provedor não confirmou o convite. Se a conta já existir, oriente a candidata a solicitar um código no portal de acompanhamento.",
+        };
+      }
+      return { ok: true as const };
+    } catch {
+      return {
+        ok: false as const,
+        reason: "Não foi possível solicitar o acesso. Verifique a conexão com o Supabase.",
+      };
+    }
+  });
+
+export const loginAffiliateAdminMember = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      email: z.string().email().max(180),
+      password: z.string().min(12).max(128),
+    }),
+  )
+  .handler(async ({ data }) => loginAffiliateTeamWithPassword(data.email, data.password));
 
 export const loginAffiliateAdmin = createServerFn({ method: "POST" })
   .validator(affiliateAdminSchema.extend({ otp: z.string().max(6).optional() }))
@@ -160,7 +308,7 @@ export const eraseAffiliateApplicationAdmin = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
-    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
+    if (!affiliateAdminSameOrigin() || !affiliateAdminMayErase())
       return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
     if (!(await affiliateRateLimitAllowed("admin")))
       return { ok: false as const, reason: "Acesso temporariamente indisponível." };

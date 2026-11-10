@@ -7,9 +7,12 @@ describe("consistência pública de domínio e políticas", () => {
     const domain = new URL(SITE_URL).hostname;
     expect(domain).toBe("vonixhair.com");
     expect(pages["termos-de-uso"]).toContain(`Site: ${domain}`);
-    expect(pages["politica-de-privacidade"]).toContain(
-      `utilização do site ${domain}`,
-    );
+    // The canonical storefront and legacy brand domain are both documented;
+    // do not remove the separate affiliate-data policy during branch sync.
+    const privacy = pages["politica-de-privacidade"];
+    expect(privacy).toContain(`vonixhaircosmeticos.com.br e ${domain}`);
+    expect(privacy).toContain("## 2A. INSCRIÇÕES PARA O PROGRAMA DE AFILIADAS");
+    expect(privacy).toContain("As ferramentas opcionais Google Analytics");
   });
 
   it("preserva os contatos de atendimento ao corrigir o domínio comercial", () => {

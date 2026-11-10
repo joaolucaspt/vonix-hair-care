@@ -63,6 +63,54 @@ export function affiliateRecruitmentOpen(): boolean {
   );
 }
 
+/**
+ * Alternate, owner-controlled intake toggle for campaign traffic. The operator
+ * acknowledges the data-collection notice in the dedicated Supabase DB.
+ * It does NOT grant any administrative session and does not weaken RLS.
+ * Legacy full-readiness configuration remains supported unchanged.
+ */
+export async function affiliateOperatorIntakeEnabled(): Promise<boolean> {
+  if (affiliateRecruitmentOpen()) return true;
+  const config = affiliateDatabaseConfig();
+  if (
+    !config ||
+    env("AFFILIATE_GOVERNANCE_MIGRATED") !== "true" ||
+    env("AFFILIATE_TRAFFIC_PEPPER").length < 32 ||
+    !affiliateTrustedIpHeaderValid() ||
+    !affiliateQuestionnaireEncryptionReady()
+  )
+    return false;
+  try {
+    const response = await fetch(
+      config.url +
+        "/rest/v1/vonix_affiliate_operator_intake?select=enabled,owner_acknowledged_at&singleton=eq.true&limit=1",
+      {
+        method: "GET",
+        headers: config.headers,
+        redirect: "manual",
+        signal: AbortSignal.timeout(4000),
+      },
+    );
+    if (!response.ok) return false;
+    const records = z
+      .array(
+        z.object({
+          enabled: z.boolean(),
+          owner_acknowledged_at: z.string().datetime({ offset: true }).nullable(),
+        }),
+      )
+      .max(1)
+      .parse(await response.json());
+    return (
+      records.length === 1 &&
+      records[0]!.enabled === true &&
+      records[0]!.owner_acknowledged_at !== null
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function secureEqual(actual: string, expected: string) {
   if (!actual || !expected) return false;
   const a = createHash("sha256").update(actual).digest();
@@ -81,7 +129,7 @@ async function requestSupabase(route: string, init?: RequestInit) {
     ...init,
     headers: { ...config.headers, ...init?.headers },
     // Do not follow unexpected redirects with privileged credentials.
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(8000),
   });
   return response;
@@ -415,6 +463,31 @@ export async function readAffiliateApplicationPrivateDetail(applicationId: strin
   const detail = decryptAffiliateWizardForAdmin(rows[0]!.questionnaire_encrypted);
   if (!detail) throw new Error("Questionário indisponível ou ilegível.");
   return detail;
+}
+
+/**
+ * Recover an existing candidate's login without trusting an e-mail submitted
+ * by the browser. Always call through an authenticated admin server action.
+ * Return only the e-mail, not any encrypted questionnaire fields.
+ */
+export async function readAffiliateApplicantEmailForAccessRecovery(applicationId: string) {
+  const id = z.string().uuid().parse(applicationId);
+  const response = await requestSupabase(
+    "vonix_affiliate_applications?select=id,email&id=eq." + encodeURIComponent(id) + "&limit=1",
+    { method: "GET" },
+  );
+  if (!response.ok) throw new Error("Candidatura não disponível.");
+  const rows = z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        email: z.string().email().max(180),
+      }),
+    )
+    .max(1)
+    .parse(await response.json());
+  if (rows.length !== 1 || rows[0]!.id !== id) return null;
+  return rows[0]!.email.toLowerCase();
 }
 
 export async function decideAffiliateApplication(id: string, decision: "aprovada" | "recusada") {

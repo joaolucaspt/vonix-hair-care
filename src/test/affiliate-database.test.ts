@@ -59,6 +59,43 @@ describe("Dedicated database for applicant personal information", () => {
     expect(JSON.stringify(config)).not.toContain("checkout.example.supabase.co");
   });
 
+  it("sends modern sb_secret keys only as apikey, never as Bearer JWT", () => {
+    process.env["SUPABASE_URL"] = "https://checkout.example.supabase.co";
+    process.env["SUPABASE_SERVICE_ROLE_KEY"] = "checkout-only-key";
+    process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
+    process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+    const modernSecret = "sb_secret_" + "A".repeat(48);
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = modernSecret;
+
+    const config = requireAffiliateDatabaseConfig();
+    expect(config.headers).toHaveProperty("apikey", modernSecret);
+    expect(config.headers).not.toHaveProperty("authorization");
+    expect(config.headers["content-type"]).toBe("application/json");
+    expect(config.url).toBe("https://abcdefghijklmnopqrst.supabase.co");
+  });
+
+  it("removes surrounding whitespace from a secret stored in the hosting vault", () => {
+    process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = " abcdefghijklmnopqrst ";
+    process.env["AFFILIATE_SUPABASE_URL"] = " https://abcdefghijklmnopqrst.supabase.co/ ";
+    const secret = "sb_secret_" + "C".repeat(48);
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "\r\n " + secret + " \n";
+    const config = requireAffiliateDatabaseConfig();
+    expect(config.headers["apikey"]).toBe(secret);
+    expect(config.headers).not.toHaveProperty("authorization");
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = secret + " invalid";
+    expect(affiliateDatabaseConfig()).toBeNull();
+  });
+
+  it("rejects a publishable key accidentally pasted into the private admin variable", () => {
+    process.env["AFFILIATE_SUPABASE_PROJECT_REF"] = "abcdefghijklmnopqrst";
+    process.env["AFFILIATE_SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co";
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "sb_publishable_" + "B".repeat(48);
+    expect(affiliateDatabaseConfig()).toBeNull();
+
+    process.env["AFFILIATE_SUPABASE_SERVICE_ROLE_KEY"] = "sb_unknown_" + "B".repeat(48);
+    expect(affiliateDatabaseConfig()).toBeNull();
+  });
+
   it("can pin the dedicated Supabase project without changing checkout credentials", () => {
     process.env["SUPABASE_URL"] = "https://checkout.example.supabase.co";
     process.env["SUPABASE_SERVICE_ROLE_KEY"] = "checkout-service-role-key";
