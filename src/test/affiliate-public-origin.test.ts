@@ -39,6 +39,7 @@ vi.mock("@/lib/affiliate-throttle.server", () => ({
 }));
 vi.mock("@/lib/affiliate-applications.server", () => ({
   affiliateRecruitmentOpen: gates.open,
+  affiliateOperatorIntakeEnabled: gates.open,
   affiliateOperationalReadiness: vi.fn(),
   eraseAffiliateApplication: vi.fn(),
   previewAffiliateRetention: vi.fn(),
