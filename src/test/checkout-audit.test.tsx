@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { brl, getProduct, lineTotals } from "@/lib/store";
 import { savePendingCard } from "@/lib/pending-card";
 import { savePendingPix } from "@/lib/pending-pix";
+import { savePurchaseBasket, restorePurchaseBasket } from "@/lib/pending-purchase-basket";
 import { UNCERTAIN_PAYMENT_KEY } from "@/lib/uncertain-payment";
 import { TRACKING_CONSENT_KEY } from "@/lib/tracking-consent";
 import { captureRef } from "@/lib/affiliate-ref";
@@ -796,7 +797,117 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(mocks.payment).not.toHaveBeenCalled();
     expect(mocks.cart.clear).not.toHaveBeenCalled();
   });
+  it("registra só a identidade dos itens quando cria um novo Pix, sem armazenar dados pessoais", async () => {
+    mocks.payment.mockResolvedValueOnce({
+      ok: true,
+      method: "pix",
+      orderId: 8780,
+      statusToken: "signed-test-checkout-pix-8780",
+      total: 169.9,
+      pix: { emv: "pix-synthetic", qrcode: "dGVzdA==", expiresAt: "2027-01-01 12:00:00" },
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "pendente" });
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(await screen.findByRole("heading", { name: "Pague com Pix" })).toBeInTheDocument();
+    const product = getProduct("kit-banana-e-mel")!;
+    expect(restorePurchaseBasket(8780)).toEqual([
+      {
+        slug: product.slug,
+        variant: product.variants[0].label,
+        qty: 1,
+      },
+    ]);
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+  });
+
+  it("recuperação de pedido anterior não atribui ao pedido uma nova sacola", async () => {
+    mocks.payment.mockResolvedValueOnce({
+      ok: true,
+      method: "verification",
+      orderId: 8781,
+      statusToken: "signed-test-checkout-verification-8781",
+      total: 169.9,
+      paid: false,
+      status: "aguardando_confirmacao",
+    });
+    mocks.status.mockResolvedValue({ ok: true, paid: false, status: "aguardando_confirmacao" });
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: /Gerar Pix/ }));
+    expect(
+      await screen.findByRole("heading", { name: "Pedido em verificação" }),
+    ).toBeInTheDocument();
+    expect(restorePurchaseBasket(8781)).toBeNull();
+    expect(mocks.cart.clear).not.toHaveBeenCalled();
+    expect(mocks.payment).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["card", "pix"] as const)(
+    "não apaga produtos novos nem os atribui à compra antiga quando %s pendente é pago",
+    async (method) => {
+      const orderId = method === "card" ? 8761 : 8762;
+      const statusToken = "signed-test-order-pending-restore-876100";
+      const purchased = getProduct("kit-banana-e-mel")!;
+      savePurchaseBasket(orderId, [
+        {
+          slug: purchased.slug,
+          variant: purchased.variants[0].label,
+          qty: 1,
+        },
+      ]);
+      if (method === "card") {
+        savePendingCard({ orderId, statusToken, total: 154.9, paid: false, status: "autorizado" });
+      } else {
+        savePendingPix({
+          orderId,
+          statusToken,
+          total: 154.9,
+          emv: "synthetic-pix",
+          qrcode: "dGVzdA==",
+          expiresAt: "2027-01-01 12:00:00",
+        });
+      }
+      let resolveStatus: ((v: { ok: true; paid: boolean; status: string }) => void) | undefined;
+      mocks.status.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveStatus = resolve;
+          }),
+      );
+      render(<Checkout />);
+      await waitFor(() => expect(mocks.status).toHaveBeenCalled());
+      const nextProduct = getProduct("queratina-em-gel")!;
+      // The paid item's original line remains, but a NEW item was added
+      // before Appmax confirmed the old payment.
+      mocks.cart.lines = [
+        ...mocks.cart.lines,
+        {
+          slug: nextProduct.slug,
+          variant: nextProduct.variants[0].label,
+          qty: 1,
+          product: nextProduct,
+          price: nextProduct.variants[0].price,
+          ...lineTotals(nextProduct.variants[0].price, 1),
+        },
+      ];
+      await act(async () => resolveStatus?.({ ok: true, paid: true, status: "aprovado" }));
+      await waitFor(() =>
+        expect(screen.getByText(/Pagamento (aprovado|confirmado)/i)).toBeInTheDocument(),
+      );
+      expect(mocks.cart.clear).not.toHaveBeenCalled();
+      const events = vi.mocked(window.gtag!).mock.calls.filter((call) => call[1] === "purchase");
+      expect(events).toHaveLength(1);
+      expect(JSON.stringify(events[0]?.[2])).not.toContain(nextProduct.slug.toUpperCase());
+    },
+  );
+
   it("cartão pago em sessão só é confirmado após status autenticado", async () => {
+    const purchased = getProduct("kit-banana-e-mel")!;
+    savePurchaseBasket(766, [
+      { slug: purchased.slug, variant: purchased.variants[0].label, qty: 1 },
+    ]);
     savePendingCard({
       orderId: 766,
       statusToken: "signed-read-only-test-token-0000011",
@@ -821,6 +932,7 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     expect(await screen.findByRole("heading", { name: "Pagamento aprovado!" })).toBeInTheDocument();
     expect(mocks.cart.clear).toHaveBeenCalledTimes(1);
+    expect(restorePurchaseBasket(766)).toBeNull();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
   it("retoma a mesma análise de cartão após recarregar o checkout, sem nova cobrança", async () => {

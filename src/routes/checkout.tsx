@@ -9,6 +9,12 @@ import {
 } from "@/lib/pending-card";
 import { clearPendingPix, restorePendingPix, savePendingPix } from "@/lib/pending-pix";
 import {
+  clearPurchaseBasket,
+  matchesPurchaseBasket,
+  restorePurchaseBasket,
+  savePurchaseBasket,
+} from "@/lib/pending-purchase-basket";
+import {
   rememberPaymentAttempt,
   recoverUncertainPayment,
   clearUncertainPayment,
@@ -602,13 +608,22 @@ function Checkout() {
   const finish = (orderId: number, value: number) => {
     if (finishedOrders.current.has(orderId)) return;
     finishedOrders.current.add(orderId);
+    // A pending Pix/card can be confirmed after the buyer has shopped again
+    // (including another tab or a reload). Never delete unrelated cart items
+    // or attribute new SKUs to the old order's Purchase event.
+    const sameBasket = matchesPurchaseBasket(c.lines, restorePurchaseBasket(orderId));
     track("purchase", {
       transaction_id: String(orderId),
       value,
-      shipping,
-      items: c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units)),
+      ...(sameBasket
+        ? {
+            shipping,
+            items: c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units)),
+          }
+        : {}),
     });
-    c.clear();
+    if (sameBasket) c.clear();
+    clearPurchaseBasket(orderId);
   };
   const finishRef = useRef(finish);
   finishRef.current = finish;
@@ -777,6 +792,11 @@ function Checkout() {
         setError(r.message);
         return;
       }
+      // A "verification" response might point to an older reserved order;
+      // never replace that order's basket with this new attempt's items.
+      // A confirmed Pix/card creation can safely record its submitted basket,
+      // without persisting any personal/card information or paid assertion.
+      if (r.method !== "verification") savePurchaseBasket(r.orderId, items);
       if (r.method === "pix") {
         const pixResult = {
           orderId: r.orderId,
