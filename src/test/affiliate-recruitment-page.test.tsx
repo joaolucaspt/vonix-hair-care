@@ -176,3 +176,93 @@ describe("Página pública de inscrições da Vonix", () => {
     );
   });
 });
+
+describe("Landing editorial Vonix Hair — conteúdo próprio e promessas verificáveis", () => {
+  it("usa exclusivamente produtos Vonix sem importar prova social ou benefícios da marca-referência", async () => {
+    server.status.mockResolvedValue({ open: false });
+    render(<Page />);
+    expect(await screen.findByText("Inscrições em preparação")).toBeInTheDocument();
+    const landing = screen.getByTestId("vonix-affiliate-editorial");
+    const text = landing.textContent ?? "";
+
+    expect(text).toContain("Vonix Hair");
+    expect(text).toContain("Inscrição gratuita");
+    expect(text).toContain("A candidatura não garante aprovação");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Seu jeito de criar.");
+    expect(screen.getByRole("heading", { name: /Não procuramos uma fórmula/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Crie do seu jeito/i })).toBeInTheDocument();
+
+    const forbidden = [
+      /Skence/i,
+      /Pliv Pro/i,
+      /TikTok Shop/i,
+      /3 milhões/i,
+      /(?:15|21)\s*%/,
+      /R\$\s*30(?:[.,]00)?/i,
+      /PIX no dia 10/i,
+      /comissão por vendas/i,
+      /produto com desconto/i,
+      /depoimento[s]? de creator/i,
+      /parceria garantida/i,
+    ];
+    forbidden.forEach((pattern) =>
+      expect(text, "Forbidden marketing claim: " + pattern).not.toMatch(pattern),
+    );
+
+    const images = Array.from(landing.querySelectorAll("img"));
+    expect(images.length).toBeGreaterThanOrEqual(8);
+    images.forEach((img) => {
+      expect(img.getAttribute("src")).toMatch(/^\/images\/products\/[a-z0-9-]+\.jpg$/);
+      expect(img.getAttribute("alt")?.toLowerCase()).toContain("vonix");
+      expect(img.getAttribute("alt")).not.toMatch(/creator|parceria|depoimento/i);
+    });
+    expect(document.querySelector("#inscricao")).not.toBeNull();
+    expect(screen.getByText("Inscrições em preparação")).toBeInTheDocument();
+  });
+
+  it("explica etapas e condições sem inventar comissões ou garantir aprovação", async () => {
+    server.status.mockResolvedValue({ open: false });
+    render(<Page />);
+    const heading = await screen.findByRole("heading", { name: /Três momentos/i });
+    expect(heading).toBeInTheDocument();
+    for (const step of ["Apresente seu perfil", "Análise individual", "Próximos passos"]) {
+      expect(screen.getByRole("heading", { name: step })).toBeInTheDocument();
+    }
+    const landing = screen.getByTestId("vonix-affiliate-editorial");
+    expect(landing.querySelectorAll('a[href="#inscricao"]').length).toBeGreaterThanOrEqual(3);
+    expect(landing.textContent).toMatch(/candidatura não garante aprovação/i);
+    expect(screen.queryByText(/receba comissão de \d+%/i)).not.toBeInTheDocument();
+  });
+
+  it("inclui FAQ acessível, com candidatura sem compra obrigatória e aviso de que vantagens dependem de aprovação", async () => {
+    server.status.mockResolvedValue({ open: false });
+    render(<Page />);
+    expect(await screen.findByText("Inscrições em preparação")).toBeInTheDocument();
+    const faq = screen.getByTestId("vonix-affiliate-faq");
+    const items = Array.from(faq.querySelectorAll("details"));
+    expect(items).toHaveLength(6);
+    const question = screen.getByText("Preciso comprar algum produto para me inscrever?");
+    const disclosure = question.closest("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure).not.toHaveAttribute("open");
+    fireEvent.click(question);
+    expect(disclosure).toHaveAttribute("open");
+    expect(disclosure?.textContent).toContain("A candidatura por este formulário é gratuita");
+    expect(faq.textContent).toContain("não garante produtos gratuitos, cupons ativos, remuneração");
+  });
+
+  it("ajusta o CTA para período de recebimento aberto sem transformar uma prévia em candidatura", async () => {
+    server.status.mockResolvedValue({ open: true });
+    render(<Page />);
+    expect(await screen.findByText("Formulário de envio")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Enviar minha candidatura/ })).toHaveAttribute(
+      "href",
+      "#inscricao",
+    );
+    expect(screen.getByRole("link", { name: /Preencher candidatura/ })).toHaveAttribute(
+      "href",
+      "#inscricao",
+    );
+    expect(screen.queryByText("Inscrições em preparação")).not.toBeInTheDocument();
+  });
+});
