@@ -25,3 +25,7 @@
 **NÃO APROVADO PARA DEPLOY/PRODUÇÃO:** Appmax sandbox completo (Pix/card, `paid_at`, falhas ambíguas/charge duplicado, antifraude), Supabase staging isolado RLS/restore/idempotência, Bling e medidas/estoques SKU, Melhor Envio real por CEP, LGPD revogação após pedido, WAF/rate-limit distribuído, GA4 atribuído a pedidos efetivamente pagos, runtime Cloudflare Worker em staging e auditoria de dependências. `npm run lint` global estrito ainda apresenta dívida de formatação/CRLF no repositório; a regra Prettier não deve ser ignorada permanentemente sem plano de limpeza isolada.
 
 **Critério de êxito da integração:** o PR #26 deve apontar para o commit auditado, com histórico da `main` até `cd91784` e `mergeable` sem conflitos no momento do read-back. Se novas alterações concorrerem na main, repetir comparação; não publicar automaticamente. Ganho de conversão/vendas ainda depende de métricas reais, não inferível de testes sintéticos.
+
+## Leitura remota após publicação C18
+
+O fork confirmou **CI verde** no SHA `10ee1f6` ([execução #42731662183](https://github.com/joaolucaspt/vonix-hair-care/actions/runs/42731662183)): job `verify` (Bun frozen-lockfile, testes, TypeScript, ESLint não-formatação e build) e job de idempotência SQL em PostgreSQL sintético concluídos com sucesso. O GitHub marcou o [PR #26](https://github.com/lucassilva1175/vonix-hair-care/pull/26) como **MERGEABLE** e ainda **OPEN**. O CI não valida operações reais; registrar novamente o estado após qualquer novo commit ou avanço relevante da main.

@@ -125,7 +125,7 @@
     "src/test/ecommerce-affiliate-consistency.test.tsx": "DE1BC766A8F823A12F3647A07EB610EBE9243E8A7DC9A0D9A5443813E5B39786",
     "scripts/qa-c18-merged-checkout.mjs": "F654685312B56181484FBBB61CE2EE404B79FA4DADC1B4923B97EC8A981F99DB",
     "qa-artifacts/vonix-c18/dev/report.json": "C8BF6D8D0DCD46AE1C01BAB182E27564530C7B115FEEB088FC1A5D69FD1CD958",
-    "docs/VONIX_AUDITORIA_CONTINUIDADE_C18_20261109.md": "1A227AFF3FCAAE7BAD25DD1F73AF2AEB2EE3DEBC4441F1B349B6A81926FB3734"
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C18_20261109.md": "879251BA52A5B88038D662CDD6F9CEA2FC83799F6707CD5A55D0507E75C2FAB4"
   },
   "legacy": {
     "npmRunLintWithPrettier": "Known historical CRLF/Prettier formatting debt; strict global lint not asserted green. Full ESLint without formatting rule passed."
@@ -134,7 +134,24 @@
     "prettierYamlParseExit": 0,
     "initialGitHubRunId": 42731237665,
     "initialRun": "Failed before jobs because unquoted YAML plain scalar contained a colon; fixed by quoting the full run command",
-    "correctedRun": "Pending remote read-back after push"
+    "correctedRun": {
+      "runId": 42731662183,
+      "headSha": "10ee1f6eb1b6ab02673f1872cbb2f465fa4e0683",
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": {
+        "verify": "success",
+        "Isolated PostgreSQL checkout deduplication": "success"
+      },
+      "url": "https://github.com/joaolucaspt/vonix-hair-care/actions/runs/42731662183"
+    },
+    "prReadBack": {
+      "number": 26,
+      "headSha": "10ee1f6eb1b6ab02673f1872cbb2f465fa4e0683",
+      "state": "OPEN",
+      "mergeable": "MERGEABLE",
+      "url": "https://github.com/lucassilva1175/vonix-hair-care/pull/26"
+    }
   },
   "productionStatus": "NOT_APPROVED",
   "realPayments": false,
