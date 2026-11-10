@@ -130,6 +130,29 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(ageFromBirthDate("2008-11-10", new Date("2026-11-09T23:00:00Z"))).toBe(17);
   });
 
+  it("bounds and formats sensitive identity/contact fields before encryption", () => {
+    expect(affiliateWizardSchema.safeParse(fixture).success).toBe(true);
+    for (const bad of [
+      { phone: "x".repeat(25000) + "31999999999" },
+      { phone: "abc(31) 99999-9999" },
+      { cpf: "garbage".repeat(2000) + "529.982.247-25" },
+      { cpf: "52998224725..." },
+      { postalCode: "debug".repeat(3000) + "30110-012" },
+      { postalCode: "CEP 30110-012" },
+    ]) {
+      const parsed = affiliateWizardSchema.safeParse({ ...fixture, ...bad });
+      expect(parsed.success, "oversized or malformed personal field: " + Object.keys(bad)[0]).toBe(
+        false,
+      );
+    }
+    for (const valid of [
+      { phone: "31999999999", cpf: "52998224725", postalCode: "30110012" },
+      { phone: "(31) 99999-9999", cpf: "529.982.247-25", postalCode: "30110-012" },
+    ]) {
+      expect(affiliateWizardSchema.safeParse({ ...fixture, ...valid }).success).toBe(true);
+    }
+  });
+
   it("rejects invalid Brazilian documents and implausible birthdates", () => {
     expect(validCpf(fixture.cpf)).toBe(true);
     expect(validCpf("111.111.111-11")).toBe(false);

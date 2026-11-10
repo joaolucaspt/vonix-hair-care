@@ -14,10 +14,20 @@ vi.mock("@/components/site", () => ({
 }));
 vi.mock("@/lib/store", () => ({ SITE_URL: "https://vonixhair.com" }));
 vi.mock("@/components/affiliate-wizard", () => ({
-  AffiliateWizard: ({ preview }: { preview: boolean }) => (
+  AffiliateWizard: ({
+    preview,
+    onDraftChange,
+  }: {
+    preview: boolean;
+    onDraftChange?: (dirty: boolean) => void;
+  }) => (
     <div data-testid="wizard">
       <span>{preview ? "Simulação protegida" : "Formulário de envio"}</span>
-      <input aria-label="Rascunho sintético" defaultValue="" />
+      <input
+        aria-label="Rascunho sintético"
+        defaultValue=""
+        onChange={(event) => onDraftChange?.(event.target.value.length > 0)}
+      />
     </div>
   ),
 }));
@@ -48,6 +58,62 @@ describe("Página pública de inscrições da Vonix", () => {
       "Dados fictícios em prévia",
     );
     fireEvent.click(screen.getByRole("button", { name: /Iniciar inscrição real/ }));
+    expect(screen.getByText(/Descartar os dados desta prévia/)).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Descartar dados e iniciar inscrição real" }),
+    );
+    expect(screen.getByText("Formulário de envio")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue("");
+  });
+
+  it("fecha imediatamente uma prévia vazia sem exigir confirmação desnecessária", async () => {
+    server.status.mockResolvedValue({ open: false });
+    render(<Page />);
+    expect(await screen.findByText("Inscrições em preparação")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Visualizar formulário/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Fechar prévia" }));
+    expect(screen.queryByText(/Descartar os dados desta prévia/)).not.toBeInTheDocument();
+    expect(screen.getByText("Inscrições em preparação")).toBeInTheDocument();
+  });
+
+  it("confirma antes de fechar uma prévia com dados preenchidos e mantém os dados ao cancelar", async () => {
+    server.status.mockResolvedValue({ open: false });
+    render(<Page />);
+    expect(await screen.findByText("Inscrições em preparação")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Visualizar formulário/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Rascunho sintético" }), {
+      target: { value: "Rascunho privado de teste" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Fechar prévia" }));
+    expect(screen.getByText(/Descartar os dados desta prévia/)).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue(
+      "Rascunho privado de teste",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Continuar preenchendo" }));
+    expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue(
+      "Rascunho privado de teste",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Fechar prévia" }));
+    fireEvent.click(screen.getByRole("button", { name: "Descartar dados e fechar prévia" }));
+    expect(screen.queryByRole("textbox", { name: "Rascunho sintético" })).not.toBeInTheDocument();
+    expect(screen.getByText("Inscrições em preparação")).toBeInTheDocument();
+  });
+
+  it("pede confirmação antes de reiniciar como inscrição real após abrir o programa", async () => {
+    server.status.mockResolvedValueOnce({ open: false }).mockResolvedValueOnce({ open: true });
+    render(<Page />);
+    expect(await screen.findByText("Inscrições em preparação")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Visualizar formulário/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Rascunho sintético" }), {
+      target: { value: "Não pode ser enviado automaticamente" },
+    });
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    fireEvent.click(screen.getByRole("button", { name: /Iniciar inscrição real/ }));
+    expect(screen.getByText(/Descartar os dados desta prévia/)).toBeInTheDocument();
+    expect(screen.getByText("Simulação protegida")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Descartar dados e iniciar inscrição real" }),
+    );
     expect(screen.getByText("Formulário de envio")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue("");
   });

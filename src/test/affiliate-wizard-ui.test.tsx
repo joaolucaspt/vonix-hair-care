@@ -52,6 +52,18 @@ describe("Vonix five-stage browser wizard", () => {
     expect(screen.getByText("Passo 1 de 5")).toBeInTheDocument();
   });
 
+  it("notifies the parent only whether an unsent draft exists, never its contents", () => {
+    const onDraftChange = vi.fn();
+    render(<AffiliateWizard preview onDraftChange={onDraftChange} />);
+    expect(onDraftChange).toHaveBeenLastCalledWith(false);
+    field("firstName", "Nome privado sintético");
+    expect(onDraftChange).toHaveBeenLastCalledWith(true);
+    expect(JSON.stringify(onDraftChange.mock.calls)).not.toContain("Nome privado sintético");
+    fireEvent.click(screen.getByRole("button", { name: "Limpar meus dados" }));
+    fireEvent.click(screen.getByRole("button", { name: "Descartar dados" }));
+    expect(onDraftChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("warns before leaving with an unsent draft, but not after discarding it", () => {
     render(<AffiliateWizard preview />);
     const emptyExit = new Event("beforeunload", { cancelable: true });
@@ -145,8 +157,10 @@ describe("Vonix five-stage browser wizard", () => {
     field("district", "Centro");
     field("number", "150");
     field("instagramUsername", "@marina.exemplo");
+    expect((document.getElementById("wizard-cpf") as HTMLInputElement).value).toBe(
+      "529.982.247-25",
+    );
     next();
-
     expect(screen.getByText("Passo 2 de 5")).toBeInTheDocument();
     field("niche", "Outro");
     next();
@@ -187,7 +201,16 @@ describe("Vonix five-stage browser wizard", () => {
     expect(screen.getByText("Sugestão de cupom: MARINA10")).toBeInTheDocument();
     expect(screen.queryByText("529.982.247-25")).not.toBeInTheDocument();
     field("hairType", "Cacheado");
-    fireEvent.click(document.getElementById("wizard-termsAccepted")!);
+    fireEvent.click(screen.getByRole("button", { name: /Simular finalização/i }));
+    const terms = document.getElementById("wizard-termsAccepted") as HTMLInputElement;
+    expect(terms).toHaveAttribute("aria-invalid", "true");
+    expect(terms).toHaveAttribute("aria-describedby", "wizard-error-termsAccepted");
+    expect(screen.getByText(/É necessário aceitar os termos/)).toHaveAttribute(
+      "id",
+      "wizard-error-termsAccepted",
+    );
+    fireEvent.click(terms);
+    expect(terms).not.toHaveAttribute("aria-describedby");
     fireEvent.click(screen.getByRole("button", { name: /Simular finalização/i }));
     expect(screen.getByText(/prévia interativa/i)).toBeInTheDocument();
     expect(api.submit).not.toHaveBeenCalled();
