@@ -128,7 +128,7 @@ export function AffiliateApplicationTracker() {
       });
       if (alternate.status === "requested") {
         setNotice(
-          "Se este e-mail corresponde a uma inscrição, solicitamos o envio de um código. Verifique entrada e spam. O provedor ainda precisa concluir a entrega.",
+          "Se este e-mail corresponde a uma inscrição, solicitamos o acesso. A mensagem pode trazer um código ou um link: digite o código aqui se estiver disponível ou abra apenas o link mais recente. Verifique entrada e spam; a entrega depende do provedor.",
         );
         return;
       }

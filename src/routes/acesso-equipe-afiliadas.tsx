@@ -93,7 +93,7 @@ export function AffiliateTeamAccess() {
       });
       if (alternate.status === "requested") {
         setNotice(
-          "Se seu e-mail está autorizado, solicitamos um código de acesso. Verifique entrada e spam e digite o código aqui; não utilize um link antigo. A entrega depende do provedor.",
+          "Se seu e-mail está autorizado, solicitamos o acesso. A mensagem pode conter um código numérico ou um link. Digite o código aqui, quando disponível, ou abra somente o link mais recente. Confira entrada e spam; a entrega depende do provedor.",
         );
         return;
       }
@@ -249,8 +249,8 @@ export function AffiliateTeamAccess() {
                 <h2 className="mt-4 font-display text-2xl">Confirmar e-mail da equipe</h2>
                 <p className="mt-2 text-sm text-[#806970]">
                   Use exclusivamente um e-mail convidado pela administração Vonix Hair. Se um link
-                  anterior mostrar que expirou, solicite um novo acesso e digite o código numérico
-                  nesta página. Não reutilize links antigos.
+                  anterior expirou, solicite novo acesso: use o código numérico, se estiver na
+                  mensagem, ou abra somente o novo link.
                 </p>
                 <form onSubmit={requestInvitation} className="mt-6 space-y-3">
                   <label htmlFor="team-email" className="block text-sm font-semibold">
