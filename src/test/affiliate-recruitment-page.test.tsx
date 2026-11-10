@@ -9,8 +9,8 @@ vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: { component: React.ComponentType }) => options,
   Link: ({ children }: { children: React.ReactNode }) => <a href="/">{children}</a>,
 }));
-vi.mock("@/components/site", () => ({
-  Shell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+vi.mock("@/components/affiliate-shell", () => ({
+  AffiliateShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
 vi.mock("@/lib/store", () => ({ SITE_URL: "https://vonixhair.com" }));
 vi.mock("@/components/affiliate-wizard", () => ({

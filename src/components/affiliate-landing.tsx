@@ -171,7 +171,7 @@ export function AffiliateLandingIntro({
       <section
         data-testid="vonix-affiliate-hero"
         aria-labelledby="vonix-affiliate-title"
-        className="relative isolate overflow-hidden bg-[#f9f0e9] px-5 pb-20 pt-14 sm:pb-24 sm:pt-20"
+        className="relative isolate overflow-hidden bg-[#f9f0e9] px-5 pb-16 pt-9 sm:pb-24 sm:pt-20"
       >
         <div
           aria-hidden="true"
@@ -300,7 +300,7 @@ export function AffiliateLandingIntro({
         </div>
       </div>
 
-      <section id="criterios" className="bg-[#fffaf6] px-5 py-20 sm:py-28">
+      <section id="criterios" className="scroll-mt-24 bg-[#fffaf6] px-5 py-20 sm:py-28">
         <div className="mx-auto max-w-7xl">
           <div className="grid items-end gap-6 lg:grid-cols-[1.1fr_.9fr]">
             <div>
@@ -317,11 +317,19 @@ export function AffiliateLandingIntro({
             </p>
           </div>
 
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <p className="mt-8 text-xs font-semibold uppercase tracking-[.15em] text-[#98747b] sm:hidden">
+            Deslize para conhecer os temas <span aria-hidden="true">→</span>
+          </p>
+          <div
+            role="region"
+            aria-label="Temas da seleção Vonix Hair; deslize horizontalmente em telas pequenas"
+            tabIndex={0}
+            className="-mx-5 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-6 scroll-px-5 focus-visible:outline-2 focus-visible:outline-[#825363] sm:mx-0 sm:mt-12 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
+          >
             {experiences.map((item) => (
               <article
                 key={item.id}
-                className="group flex flex-col overflow-hidden rounded-[1.75rem] border border-[#e9d9d0] bg-white shadow-[0_14px_35px_rgba(66,32,42,.055)]"
+                className="group flex min-w-[78vw] max-w-[21rem] snap-start flex-col overflow-hidden rounded-[1.75rem] border border-[#e9d9d0] bg-white shadow-[0_14px_35px_rgba(66,32,42,.055)] sm:min-w-0 sm:max-w-none"
               >
                 <div className={"relative aspect-[4/3] overflow-hidden " + item.background}>
                   <ProductImage
@@ -356,7 +364,7 @@ export function AffiliateLandingIntro({
 
       <section
         id="como-funciona"
-        className="relative overflow-hidden bg-[#3c212c] px-5 py-20 text-[#fffbf8] sm:py-28"
+        className="scroll-mt-24 relative overflow-hidden bg-[#3c212c] px-5 py-20 text-[#fffbf8] sm:py-28"
       >
         <div
           aria-hidden="true"
@@ -503,7 +511,7 @@ export function AffiliateLandingIntro({
         </div>
       </section>
 
-      <section id="formatos" className="bg-[#fffaf6] px-5 py-20 sm:py-28">
+      <section id="formatos" className="scroll-mt-24 bg-[#fffaf6] px-5 py-20 sm:py-28">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="max-w-3xl">
@@ -523,13 +531,16 @@ export function AffiliateLandingIntro({
           </div>
 
           <div
-            className="mt-11 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            role="region"
+            aria-label="Formatos criativos ilustrados com produtos oficiais Vonix Hair"
+            tabIndex={0}
+            className="-mx-5 mt-11 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-5 scroll-px-5 focus-visible:outline-2 focus-visible:outline-[#825363] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4"
             data-testid="vonix-original-products"
           >
             {creativeIdeas.map((idea) => (
               <article
                 key={idea.number}
-                className="group overflow-hidden rounded-[1.7rem] border border-[#ebded5] bg-[#f8f0e9] shadow-sm"
+                className="group min-w-[76vw] max-w-[20rem] snap-start overflow-hidden rounded-[1.7rem] border border-[#ebded5] bg-[#f8f0e9] shadow-sm sm:min-w-0 sm:max-w-none"
               >
                 <div className="relative aspect-[.95] overflow-hidden bg-white">
                   <ProductImage
@@ -605,7 +616,7 @@ export function AffiliateLandingIntro({
 
 export function AffiliateLandingFAQ() {
   return (
-    <section id="duvidas" className="bg-[#f9f0e9] px-5 py-20 sm:py-28">
+    <section id="duvidas" className="scroll-mt-24 bg-[#f9f0e9] px-5 py-20 sm:py-28">
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.75fr_1.25fr] lg:gap-16">
         <div>
           <Eyebrow>Perguntas frequentes</Eyebrow>

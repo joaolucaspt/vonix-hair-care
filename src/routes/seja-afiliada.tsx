@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
-import { Shell } from "@/components/site";
+import { AffiliateShell } from "@/components/affiliate-shell";
 import { getAffiliateRecruitmentStatus } from "@/lib/affiliate-functions";
 import { AffiliateWizard } from "@/components/affiliate-wizard";
 import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
@@ -10,13 +10,13 @@ import { SITE_URL } from "@/lib/store";
 export const Route = createFileRoute("/seja-afiliada")({
   head: () => ({
     meta: [
-      { title: "Seja um afiliado Vonix Hair | Inscrições" },
+      { title: "Programa de afiliados Vonix Hair | Inscrições" },
       {
         name: "description",
         content:
           "Conheça a inscrição para afiliadas Vonix Hair, o formulário de cinco etapas e como funciona a seleção de candidaturas.",
       },
-      { property: "og:title", content: "Seja um afiliado Vonix Hair" },
+      { property: "og:title", content: "Programa de afiliados Vonix Hair" },
       {
         property: "og:description",
         content: "Conheça o cadastro de cinco etapas para a seleção de afiliadas Vonix Hair.",
@@ -90,11 +90,11 @@ export function AffiliateApplicationPage() {
   }
 
   return (
-    <Shell>
+    <AffiliateShell>
       <div className="bg-[#faf6f2] text-[#311f23]">
         <AffiliateLandingIntro recruitmentStatus={recruitment} />
 
-        <section id="inscricao" className="mx-auto max-w-5xl px-5 py-14 sm:py-20">
+        <section id="inscricao" className="mx-auto max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
           <div className="mb-10 text-center">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-[#9e565e]">
               {recruitment === "open" ? "Inscrições abertas" : "Programa de afiliados"}
@@ -214,6 +214,6 @@ export function AffiliateApplicationPage() {
         </section>
         <AffiliateLandingFAQ />
       </div>
-    </Shell>
+    </AffiliateShell>
   );
 }
