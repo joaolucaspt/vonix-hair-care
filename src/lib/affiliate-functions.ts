@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { setResponseHeader } from "@tanstack/react-start/server";
+import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
+import { isIP } from "node:net";
+import { affiliateDatabaseConfig } from "./affiliate-database.server";
+import { affiliateQuestionnaireEncryptionReady } from "./affiliate-wizard-crypto.server";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
@@ -26,10 +29,38 @@ import {
   processAffiliateEmails,
 } from "./affiliate-applications.server";
 
-/** Public, non-secret status used only to avoid presenting a broken form. */
+/**
+ * Public, read-only readiness probe: never returns any key, customer record,
+ * raw IP, SQL result or provider error. Proves the production Worker actually
+ * reaches the dedicated DB before advertising a working signup.
+ */
 export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).handler(async () => {
   setResponseHeader("Cache-Control", "no-store");
-  return { open: affiliateRecruitmentOpen() };
+  const config = affiliateDatabaseConfig();
+  let storageReachable = false;
+  if (config) {
+    try {
+      const response = await fetch(
+        config.url + "/rest/v1/vonix_affiliate_applications?select=id&limit=0",
+        {
+          method: "GET",
+          headers: config.headers,
+          redirect: "error",
+          signal: AbortSignal.timeout(4000),
+        },
+      );
+      storageReachable = response.ok;
+    } catch {
+      storageReachable = false;
+    }
+  }
+  const cfConnectingIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
+  return {
+    open: storageReachable && affiliateRecruitmentOpen(),
+    storageReachable,
+    cfConnectingIpPresent: isIP(cfConnectingIp) !== 0,
+    encryptionReady: affiliateQuestionnaireEncryptionReady(),
+  };
 });
 
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
