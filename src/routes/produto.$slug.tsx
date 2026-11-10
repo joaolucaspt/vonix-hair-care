@@ -258,8 +258,8 @@ export function ShippingCalc({
           </p>
           {hasFreeShipping(subtotal) && opts.some((o) => o.free) && (
             <p className="mt-1 font-medium">
-              Frete Grátis — pedido acima de {brl(FREE_SHIPPING_ABOVE)} em produtos (vale mesmo após
-              o desconto do Pix).
+              Frete Grátis — pedido acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, calculado antes
+              dos descontos.
             </p>
           )}
           <ul className="mt-2 space-y-1">
@@ -552,7 +552,7 @@ function ProductPurchase({ p }: { p: Product }) {
             <div className="mt-3">
               <SecuritySeal />
             </div>
-            <ShippingCalc subtotal={total} slug={p.slug} variant={v.label} qty={qty} />
+            <ShippingCalc subtotal={sel.gross} slug={p.slug} variant={v.label} qty={qty} />
             <ul className="mt-4 space-y-1 text-body text-muted-foreground">
               <li>
                 Frete grátis em compras acima de {brl(FREE_SHIPPING_ABOVE)} em produtos, antes dos

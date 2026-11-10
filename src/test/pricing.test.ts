@@ -103,6 +103,26 @@ describe("ofertas por linha (não cumulativas)", () => {
     expect(lineTotals(174.9, 1, "kit2")).toMatchObject({ net: 307.82, gross: 349.8, units: 2 });
     expect(lineTotals(174.9, 1, "kit3")).toMatchObject({ net: 446, gross: 524.7, units: 3 });
   });
+  it("a elegibilidade de frete grátis é consistente nas 46 variantes e quantidades 1, 2, 3", () => {
+    let checked = 0;
+    let grossAboveWithNetBelow = 0;
+    for (const product of products) {
+      for (const variant of product.variants) {
+        for (const qty of [1, 2, 3]) {
+          const line = lineTotals(variant.price, qty);
+          const totals = checkoutTotals([line], "pix");
+          expect(totals.freeShipping, product.slug + " " + variant.label + " ×" + qty).toBe(
+            hasFreeShipping(line.gross),
+          );
+          if (hasFreeShipping(line.gross) && line.net <= 150) grossAboveWithNetBelow += 1;
+          checked += 1;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(138);
+    expect(grossAboveWithNetBelow).toBeGreaterThan(0);
+  });
+
   it("frete grátis considera o valor antes do desconto do kit, mesmo que o total fique abaixo de 150", () => {
     const t = lineTotals(84.9, 1, "kit2"); // 169,80 antes do desconto, 149,42 depois
     expect(t.net).toBeLessThan(150);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   slug: "kit-cachos",
@@ -75,6 +75,34 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("segurança e acessibilidade na página de produto", () => {
+  it("mostra frete grátis pelo subtotal bruto quando duas unidades têm desconto por volume", async () => {
+    const p = getProduct("queratina-em-gel")!;
+    expect(p.variants[0].price).toBe(81.9);
+    mocks.product = p;
+    mocks.quote.mockResolvedValueOnce({
+      ok: true,
+      options: [{ id: 42, name: "PAC", company: "Correios", price: 0, days: 5, free: true }],
+    });
+    mocks.address.mockResolvedValueOnce({
+      ok: true,
+      address: { street: "Rua Exemplo", district: "Centro", city: "Belo Horizonte", uf: "MG" },
+    });
+    render(<ProductPage />);
+    fireEvent.click(screen.getByRole("radio", { name: /Leve 2 unidades/i }));
+    expect(screen.getByTestId("qty")).toHaveTextContent("2");
+    fireEvent.change(screen.getByLabelText("CEP de entrega"), { target: { value: "30140010" } });
+    fireEvent.click(screen.getByRole("button", { name: "Calcular" }));
+    await waitFor(() =>
+      expect(mocks.quote).toHaveBeenCalledWith({
+        data: { cep: "30140010", items: [{ slug: p.slug, variant: p.variants[0].label, qty: 2 }] },
+      }),
+    );
+    expect(await screen.findByText(/Correios PAC/)).toBeInTheDocument();
+    expect(screen.getByText(/Frete Grátis — pedido acima de R\$ 150/)).toHaveTextContent(
+      "calculado antes dos descontos",
+    );
+  });
+
   it("ao navegar entre produtos, inicia o novo SKU com 1 unidade e primeira variante", () => {
     const source = getProduct("kit-cachos")!;
     const next = getProduct("kit-banana-e-mel")!;

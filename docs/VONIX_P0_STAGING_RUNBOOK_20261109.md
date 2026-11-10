@@ -161,3 +161,9 @@ No staging seguro, com cesta sintética e cotação inicial válida, testar (1) 
 **Fase 4 — rastreio financeiro/Meta:** reconciliar GA4/Meta Purchase por sessão/consentimento e pedido confirmado (sem PII); somente atribuir abandono ou ROAS a uma causa quando houver evidência. Provar procedência de reviews e LGPD. Fechar apenas quando houver recibo real de cada dependência.
 
 **Auditoria local C34 verificada:** 690/690 testes, 42/42 PDP, 15/15 rotas, 129/129 assets, Meta CSV 42/42 sem divergência, Chrome 6/6, `noscript` SSR markup 3/3 (não visualmente provado com JavaScript desligado). Arquivos de entrega: `docs/VONIX_AUDITORIA_INTEGRAL_C34_20261110.md`, `docs/VONIX_C34_VERIFIED_RECEIPT_20261110.json`, `qa-artifacts/vonix-c34/`.
+
+### C35 — frete grátis por subtotal bruto na ficha de produto (10/11/2026)
+
+A página de produto passou a informar frete grátis usando `sel.gross`, e não o valor líquido descontado, alinhado a `shippingOptions`, `checkoutTotals` e `ShippingBar`. Caso regressivo: 2× R$81,90 → bruto R$163,80 → líquido R$144,14, com cotação grátis apenas se transportadora atender o CEP. Teste RED antes / GREEN depois, sem alterar preço ou servidor. A comunicação diz agora *calculado antes dos descontos*.
+
+**Gates externos inalterados:** validar estoque vendável dos 42 SKUs do feed com Bling, Appmax sandbox Pix/cartão e status pago, dimensões reais de frete, staging Cloudflare/Supabase, WAF/RLS/rollback, consentimento LGPD e GA4/Meta conciliados. **Não tratar C35 local como aprovação de produção.**

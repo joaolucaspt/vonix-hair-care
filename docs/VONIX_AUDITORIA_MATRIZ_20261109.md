@@ -424,3 +424,12 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **P1-PUBLICAÇÃO** | Alta, NÃO resolvido | Publicamente carrinho e conta sem meta/header `noindex`; branch auditada já contém noindex | Confirmar pós-deploy autorizado; o PR ainda não foi mesclado nem publicado |
 
 **Evidência C34:** `docs/VONIX_AUDITORIA_INTEGRAL_C34_20261110.md`, `docs/VONIX_C34_VERIFIED_RECEIPT_20261110.json`. Testes: 690/690 em 83 arquivos; checkout 115/115; TypeScript, ESLint funcional, build PASS; SSR 42/42; 15 rotas, 129 imagens; Chrome 3/3 + checkout 3/3; noJS SSR markup 3/3; feed Meta público/local 42/42 sem divergência. **Produção NOT_APPROVED**. Não alterar sistema separado de candidaturas de afiliadas.
+
+## C35 — continuidade da auditoria em 10/11/2026
+
+| ID | Prioridade | Falha verificada | Solução local e prova |
+| --- | --- | --- | --- |
+| N148 | **P1 — ficha de produto / frete** | `ShippingCalc` recebia subtotal líquido `sel.net`, mas servidor e regra de frete grátis validam subtotal **bruto** acima de R$150. Com 2× R$81,90, antes de descontos R$163,80 e após volume R$144,14, o mock do servidor retornava frete grátis, mas a página escondia o texto explicativo. Teste integrado **RED**. | Passa `sel.gross` ao cálculo visual, atualiza mensagem para *antes dos descontos*, mantém cotação real como condição. Teste **GREEN**, nenhuma mudança de preço ou gateway. |
+| N149 | P2 — cobertura de preços | Não havia conferência exaustiva da elegibilidade de frete entre PDP e checkout para variantes e quantidades. | Novo teste cobre **46 variantes × 3 quantidades = 138 casos** com base no bruto e destaca cenários bruto>R$150 / líquido<=R$150. **113/113** testes focados, **726/726** suíte geral em 87 arquivos. |
+
+**Resultados C35**: TypeScript, lint funcional, build, formatação e diff-check PASS; 42/42 PDP SSR, 15/15 rotas, 129/129 imagens, feed Meta 42 linhas sem inconsistência estrutural, Chrome 3/3 vitrine e 3/3 checkout, HTML `noscript` 3/3 como *markup* apenas, 21 screenshots. Evidências: `docs/VONIX_AUDITORIA_CONTINUIDADE_C35_20261110.md`, `qa-artifacts/vonix-c35/`, recibo C35. **P0 externos não resolvidos e produção NOT_APPROVED; sem merge ou deploy.**
