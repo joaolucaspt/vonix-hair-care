@@ -141,12 +141,64 @@ describe("Inscrição de afiliadas", () => {
   it("evita cadastro duplicado sem revelar se o endereço existe", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: "23505" }), { status: 409 })),
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            code: "23505",
+            message:
+              'duplicate key value violates unique constraint "vonix_affiliate_applications_email_key"',
+            details: "synthetic duplicate email",
+          },
+          { status: 409 },
+        ),
+      ),
     );
     expect(await createAffiliateApplication(affiliateApplicationSchema.parse(valid))).toEqual({
       ok: true,
     });
   });
+  it("não considera perfil social já cadastrado como inscrição recebida", async () => {
+    for (const constraint of [
+      "vonix_affiliate_instagram_unique",
+      "vonix_affiliate_tiktok_unique",
+      "vonix_affiliate_mail_outbox_application_id_key",
+    ]) {
+      const mock = vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            code: "23505",
+            message: `duplicate key value violates unique constraint "${constraint}"`,
+            details: "Synthetic prior applicant profile",
+          },
+          { status: 409 },
+        ),
+      );
+      vi.stubGlobal("fetch", mock);
+      await expect(
+        createAffiliateApplication(affiliateApplicationSchema.parse(valid)),
+      ).rejects.toThrow(/Falha ao salvar inscrição/);
+      expect(mock).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("não presume duplicidade do e-mail sem prova da restrição exata", async () => {
+    for (const body of [
+      { code: "23505" },
+      { code: "23505", message: "duplicate key value violates unique constraint unknown" },
+      {
+        code: "23505",
+        message:
+          'duplicate key value violates unique constraint "vonix_affiliate_applications_email_key_extra"',
+      },
+    ]) {
+      const mock = vi.fn().mockResolvedValue(Response.json(body, { status: 409 }));
+      vi.stubGlobal("fetch", mock);
+      await expect(
+        createAffiliateApplication(affiliateApplicationSchema.parse(valid)),
+      ).rejects.toThrow(/Falha ao salvar inscrição/);
+    }
+  });
+
   it("não confunde conflitos SQL diferentes de duplicidade com cadastro recebido", async () => {
     for (const body of [
       { code: "23503", message: "synthetic foreign key failure" },
@@ -322,6 +374,50 @@ describe("Acesso e decisões", () => {
       await expect(listAffiliateApplications({ status: "pendente", page: 0 })).rejects.toThrow();
       expect(mock).toHaveBeenCalledTimes(2);
     }
+  });
+
+  it("recusa relação de e-mails duplicada ou datas inválidas no retorno privado", async () => {
+    const validMail = { status: "enviado", sent_at: "2026-11-09T14:00:00.123456+00:00" };
+    const counters = {
+      pendente: 1,
+      aprovada: 0,
+      recusada: 0,
+      email_pendente: 0,
+      email_processando: 0,
+      email_enviado: 1,
+      email_falhou: 0,
+      email_incerto: 0,
+    };
+    for (const mail of [
+      [validMail, validMail],
+      [{ status: "enviado", sent_at: "not-a-real-date" }],
+      [{ status: "enviado", sent_at: "2026-11-09" }],
+    ]) {
+      const mock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({
+            total: 1,
+            applications: [{ ...listedCandidate, vonix_affiliate_mail_outbox: mail }],
+          }),
+        )
+        .mockResolvedValueOnce(Response.json(counters));
+      vi.stubGlobal("fetch", mock);
+      await expect(listAffiliateApplications({ status: "pendente", page: 0 })).rejects.toThrow();
+      expect(mock).toHaveBeenCalledTimes(2);
+    }
+    const valid = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          total: 1,
+          applications: [{ ...listedCandidate, vonix_affiliate_mail_outbox: [validMail] }],
+        }),
+      )
+      .mockResolvedValueOnce(Response.json(counters));
+    vi.stubGlobal("fetch", valid);
+    const result = await listAffiliateApplications({ status: "pendente", page: 0 });
+    expect(result.applications[0]?.vonix_affiliate_mail_outbox).toEqual([validMail]);
   });
 
   it("fails closed when privileged search returns excessive encrypted questionnaire payload", async () => {
