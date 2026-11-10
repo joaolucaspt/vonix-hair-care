@@ -1,4 +1,7 @@
+import { z } from "zod";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
+
+const invitedEmailSchema = z.string().email().max(180);
 
 /**
  * Provision an applicant login ONLY after the application's durable insert
@@ -9,7 +12,10 @@ import { affiliateDatabaseConfig } from "./affiliate-database.server";
  */
 export async function invitePersistedAffiliateApplicant(email: string): Promise<boolean> {
   const db = affiliateDatabaseConfig();
-  if (!db || !/^[^\\s@]{1,64}@[^\\s@]{1,190}$/.test(email) || email.length > 180) return false;
+  // Avoid the old handwritten regex: it rejected valid emails containing "s".
+  // Reject all whitespace and malformed addresses before contacting Supabase.
+  const validated = invitedEmailSchema.safeParse(email);
+  if (!db || !validated.success) return false;
   try {
     const response = await fetch(
       db.url +
@@ -18,7 +24,7 @@ export async function invitePersistedAffiliateApplicant(email: string): Promise<
       {
         method: "POST",
         headers: db.headers,
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: validated.data.toLowerCase() }),
         redirect: "error",
         signal: AbortSignal.timeout(9000),
       },

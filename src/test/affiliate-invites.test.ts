@@ -30,6 +30,29 @@ describe("Vonix affiliate account invitation after durable registration", () => 
     expect(JSON.parse(options.body)).toEqual({ email: "creator@example.invalid" });
   });
 
+  it("invites valid applicants whose e-mail contains the letter s", async () => {
+    const request = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", request);
+    expect(await invitePersistedAffiliateApplicant("Silvia.Santos@Example.Invalid")).toBe(true);
+    expect(JSON.parse(request.mock.calls[0]![1].body)).toEqual({
+      email: "silvia.santos@example.invalid",
+    });
+  });
+
+  it.each([
+    "user name@example.invalid",
+    "leading space@example.invalid",
+    "user@example.invalid ",
+    "user\\\\name@example.invalid",
+    "user\nname@example.invalid",
+    "invalid-value",
+  ])("rejects a malformed address without calling the Auth provider: %s", async (invalid) => {
+    const request = vi.fn();
+    vi.stubGlobal("fetch", request);
+    expect(await invitePersistedAffiliateApplicant(invalid)).toBe(false);
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("fails closed if Supabase private credentials are not configured", async () => {
     deps.config.mockReturnValue(null);
     const request = vi.fn();
