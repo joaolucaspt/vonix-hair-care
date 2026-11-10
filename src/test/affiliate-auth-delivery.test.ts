@@ -133,6 +133,63 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     }
   });
 
+  it("uses dedicated Supabase managed e-mail only after Resend rejects a pre-authorized OTP", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(true))
+        .mockResolvedValueOnce(generate())
+        .mockResolvedValueOnce(new Response("provider-rejected-sensitive", { status: 400 }))
+        .mockResolvedValueOnce(new Response(null, { status: 200 }));
+      vi.stubGlobal("fetch", fetcher);
+      expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+      expect(fetcher).toHaveBeenCalledTimes(4);
+      const [url, options] = fetcher.mock.calls[3]!;
+      expect(url).toBe(
+        base +
+          "/auth/v1/otp?redirect_to=" +
+          encodeURIComponent("https://vonixhair.com/acesso-equipe-afiliadas"),
+      );
+      expect(JSON.parse(options.body)).toEqual({ email: inbox, create_user: false });
+      expect(options.headers.apikey).toMatch(/^sb_publishable_/);
+      expect(options.headers.Authorization).toBe("Bearer " + options.headers.apikey);
+      expect(warn).toHaveBeenCalledWith("[vonix-affiliate-auth-mail] resend-api-http http=400");
+      expect(info).toHaveBeenCalledWith(
+        "[vonix-affiliate-auth-mail] supabase-managed-fallback-accepted",
+      );
+      expect(JSON.stringify([...warn.mock.calls, ...info.mock.calls])).not.toContain(inbox);
+      expect(JSON.stringify([...warn.mock.calls, ...info.mock.calls])).not.toContain("123456");
+      expect(JSON.stringify([...warn.mock.calls, ...info.mock.calls])).not.toContain(
+        "provider-rejected-sensitive",
+      );
+    } finally {
+      warn.mockRestore();
+      info.mockRestore();
+    }
+  });
+
+  it("does not claim managed e-mail delivery if Supabase itself rate limits the fallback", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(true))
+        .mockResolvedValueOnce(generate())
+        .mockResolvedValueOnce(new Response(null, { status: 400 }))
+        .mockResolvedValueOnce(new Response(null, { status: 429 }));
+      vi.stubGlobal("fetch", fetcher);
+      expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+      expect(fetcher).toHaveBeenCalledTimes(4);
+      expect(warn).toHaveBeenCalledWith(
+        "[vonix-affiliate-auth-mail] supabase-managed-fallback-http http=429",
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("rejects malformed recipient addresses and invalid delivery receipts", async () => {
     vi.stubGlobal("fetch", vi.fn());
     expect(await sendAffiliateAuthEmailWithResend("wrong-email", "applicant")).toBe(false);
