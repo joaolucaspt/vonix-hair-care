@@ -44,10 +44,10 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 649,
+      "passed": 653,
       "files": 79,
       "exitCode": 0,
-      "afterPR55": true
+      "afterPR56": true
     },
     "typescriptExit": 0,
     "eslintNonformatExit": 0,
@@ -73,15 +73,13 @@
       "pageErrors": 0,
       "externalBlocked": true,
       "livePayments": false,
-      "report": "qa-artifacts/vonix-c23/after-pr55/report.json",
+      "report": "qa-artifacts/vonix-c23/after-pr56/report.json",
       "checks": [
-        "category title",
-        "remove filter retains search",
-        "invalid URL filter sanitation",
-        "favorites empty/saved",
-        "affiliate editorial invite on home",
-        "affiliate desktop/mobile navigation",
-        "affiliate footer links"
+        "category heading",
+        "remove search filter without losing query",
+        "reject invalid filter heading",
+        "empty and saved favorites",
+        "affiliate home invite and header mobile/desktop/footer"
       ]
     },
     "gitDiffCheck": 0
@@ -99,7 +97,8 @@
     "src/routes/index.tsx",
     "src/components/affiliate-home-invite.tsx",
     "qa-artifacts/vonix-c23/after-pr55/report.json",
-    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md"
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "qa-artifacts/vonix-c23/after-pr56/report.json"
   ],
   "sha256": {
     "src/routes/loja.tsx": "C3F9E6D793325EEFBE7E3BF6B55CF54DE7E2CF6387F5872166A0C084B014ABC6",
@@ -109,16 +108,16 @@
     "scripts/qa-c23-storefront-favorites.mjs": "AEB03803489488EE8C926947774747296615B6B00B6C70B2CA82A4607B062D67",
     "qa-artifacts/vonix-c23/debug-headings/report.json": "F2014BF1244A980CB9EC20D55868A260E0434BC01D5A92901565BB08B341AB5C",
     "qa-artifacts/vonix-c23/link-safe/report.json": "8958376E397E3F12C47B0D527CA16377AA624FE791F2D702CF29C3CA659FE408",
-    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md": "C15E3DC4F850D8BED69BDA20DB85444507CB69C14787B1EDFF2D119EA1EE2C9B",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md": "BDBE7D6978EF5458F64E177FBD80B9C59B9B478FA0CFB96FD6DA1E52D286EF3B",
     "src/components/site.tsx": "6CB4147F2D2D231E4DDD0F3904FAC808BF58955A574980FF5129A3BCF09B81B0",
     "src/routes/index.tsx": "963211BF39288BD04AA8A28EA4A4704E07CCF84B81FFAD4DE9A7D3B3E2133356",
     "src/components/affiliate-home-invite.tsx": "A85F0CCAB61C769CFFE30259B55B7AF11105FE0683FD22642F3AE3C8E86892CA",
     "qa-artifacts/vonix-c23/after-pr55/report.json": "3CFED76DDBFDFA43C510397A87445F8A4D595158368608FC1F0B6879AB82FC10",
-    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md": "2C8613BC6DA7A8101B7BAA5F532F9A2A3063E58DEFEF19B2E99E784C9CA970E0"
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md": "506C4FDC9DA8F4AFE3D62C60CE05A295A5A93EC1D82B2BAEAD468B9190536378",
+    "qa-artifacts/vonix-c23/after-pr56/report.json": "3CFED76DDBFDFA43C510397A87445F8A4D595158368608FC1F0B6879AB82FC10"
   },
   "pendingUpstream": {
-    "note": "PR55 merged in audit branch; remote upstream advanced again during C23 and needs a fresh fetch/review before final compatibility claim",
-    "upstreamRemoteAtCheck": "15acf9667eadc485aafdb6c5b3b2138b12e2e893"
+    "note": "PR55 and PR56 are reconciled in the audited branch. A later upstream movement, if any, requires recheck at PR readback."
   },
   "safety": {
     "independentAffiliateSignupApplicationTouched": false,
@@ -151,5 +150,11 @@
     "existingPrivacyCookiePreferencesRetained": true,
     "independentSignupAppTouched": false,
     "originalMainDeployed": false
+  },
+  "upstreamFinalReconciled": {
+    "pr": 56,
+    "head": "15acf9667eadc485aafdb6c5b3b2138b12e2e893",
+    "mergeConflicts": 0,
+    "scope": "Existing affiliate admin in the original ecommerce repo, not independent signup application"
   }
 }

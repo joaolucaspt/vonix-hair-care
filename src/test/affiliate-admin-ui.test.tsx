@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const server = vi.hoisted(() => ({
   getAffiliateAdminSession: vi.fn(),
   getAffiliateApplications: vi.fn(),
+  getAffiliateApplicationPrivateDetail: vi.fn(),
   loginAffiliateAdmin: vi.fn(),
   logoutAffiliateAdmin: vi.fn(),
   reviewAffiliateApplication: vi.fn(),
@@ -75,6 +76,33 @@ afterEach(() => {
 });
 
 describe("Vonix affiliate private panel", () => {
+  it("shows full confidential answers only after deliberate request and hides them again", async () => {
+    server.getAffiliateApplicationPrivateDetail.mockResolvedValueOnce({
+      ok: true,
+      detail: {
+        acceptedAt: "2026-11-09T12:00:00Z",
+        answers: {
+          cpf: "529.982.247-25",
+          phone: "(31) 99999-9999",
+          email: "secret-candidate@example.invalid",
+          street: "Rua de Teste",
+          number: "10",
+        },
+      },
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    expect(screen.queryByText("529.982.247-25")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver todas as respostas" }));
+    expect(await screen.findByText("529.982.247-25")).toBeInTheDocument();
+    expect(screen.getByText("Rua de Teste")).toBeInTheDocument();
+    expect(server.getAffiliateApplicationPrivateDetail).toHaveBeenCalledWith({
+      data: { id: candidate.id },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar respostas" }));
+    expect(screen.queryByText("529.982.247-25")).not.toBeInTheDocument();
+  });
+
   it("returns to a populated page after approving the last pending candidate on the final page", async () => {
     const lastCandidate = {
       ...candidate,

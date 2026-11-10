@@ -45,6 +45,21 @@ describe("Vonix affiliate dedicated recruitment shell", () => {
     expect(screen.queryByText(/Comissão de/i)).not.toBeInTheDocument();
   });
 
+  it("renders the metallic gold Vonix mark on the dark footer without a white plaque", () => {
+    render(
+      <AffiliateShell>
+        <p>Conteúdo</p>
+      </AffiliateShell>,
+    );
+    const footer = screen.getByRole("contentinfo");
+    const mark = footer.querySelector('[role="img"][aria-label="Vonix Hair"]');
+    expect(mark).not.toBeNull();
+    expect(mark).toHaveStyle({ maskRepeat: "no-repeat" });
+    expect(mark).toHaveStyle({ maskSize: "contain" });
+    expect(mark?.getAttribute("class")).not.toContain("bg-white");
+    expect(footer.querySelector("img.bg-white")).toBeNull();
+  });
+
   it("uses the official site-configured Vonix Instagram link, not third party creator links", () => {
     render(
       <AffiliateShell>
