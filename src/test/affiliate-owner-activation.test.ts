@@ -32,6 +32,8 @@ import {
 const root = "https://jewbzrbbvxyqmxqbrwrq.supabase.co";
 const live = "https://vonixhair.com/acesso-equipe-afiliadas";
 const email = "pending.owner@example.invalid";
+const tokenHash = "a".repeat(64);
+const privateShareLink = live + "#vonix_invite=" + tokenHash;
 const actor = "activated.owner@example.invalid";
 const owner = [{ email: actor, role: "owner", password_set_at: "2026-11-10T19:00:00+00:00" }];
 const pending = [{ email, role: "owner", password_set_at: null }];
@@ -106,14 +108,15 @@ describe("owner-mediated one-time activation without transactional email", () =>
       Response.json(owner),
       Response.json(pending),
       Response.json(true),
-      Response.json({ properties: { action_link: tokenLink } }),
+      Response.json({ properties: { action_link: tokenLink, hashed_token: tokenHash } }),
     );
     expect(await generatePendingAffiliateOwnerActivationLink(email)).toEqual({
       ok: true,
-      link: tokenLink,
+      link: privateShareLink,
       recipient: email,
     });
     expect(fetcher).toHaveBeenCalledTimes(4);
+    expect(privateShareLink).not.toContain("synthetic-one-use-token");
     expect(fetcher.mock.calls[2]![0]).toContain("consume_auth_mail_cooldown");
     const options = fetcher.mock.calls[3]![1] as RequestInit;
     expect(JSON.parse(options.body as string)).toEqual({
@@ -146,6 +149,7 @@ describe("owner-mediated one-time activation without transactional email", () =>
       Response.json(pending),
       Response.json(true),
       Response.json({
+        hashed_token: tokenHash,
         action_link: tokenLink.replace(
           encodeURIComponent(live),
           encodeURIComponent("https://attacker.invalid"),

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowRight, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { loginAffiliateAdminMember, requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
@@ -22,7 +22,14 @@ export const Route = createFileRoute("/acesso-equipe-afiliadas")({
   component: AffiliateTeamAccess,
 });
 
-type Stage = "checking" | "email" | "existing-password" | "password" | "first-password" | "denied";
+type Stage =
+  | "checking"
+  | "email"
+  | "manual-confirm"
+  | "existing-password"
+  | "password"
+  | "first-password"
+  | "denied";
 type Invitation = { role: "reviewer" | "owner"; password_set_at: string | null };
 
 /** A display-only shortcut; no authentication or authorization bypass. */
@@ -42,6 +49,7 @@ export function AffiliateTeamAccess() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const pendingManualHash = useRef<string | null>(null);
 
   const inspectIdentity = useCallback(async () => {
     try {
@@ -78,16 +86,59 @@ export function AffiliateTeamAccess() {
       // Never persist provider-supplied error text or token-bearing fragments.
       window.history.replaceState(window.history.state, "", window.location.pathname);
     }
-    void inspectIdentity();
+    // Links shared privately by an owner are never redeemed by URL preview crawlers.
+    const tokenHash = new URLSearchParams(window.location.hash.slice(1)).get("vonix_invite");
+    const manualLink = tokenHash && /^[A-Za-z0-9_-]{32,256}$/.test(tokenHash) ? tokenHash : null;
+    if (manualLink) {
+      pendingManualHash.current = manualLink;
+      setStage("manual-confirm");
+      window.history.replaceState(
+        window.history.state,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    } else {
+      void inspectIdentity();
+    }
     const {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       queueMicrotask(() => {
-        void inspectIdentity();
+        if (!pendingManualHash.current) void inspectIdentity();
       });
     });
     return () => subscription.unsubscribe();
   }, [inspectIdentity]);
+
+  async function confirmManualInvitation() {
+    const tokenHash = pendingManualHash.current;
+    if (!tokenHash || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await vonixAffiliateAuth.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "magiclink",
+      });
+      pendingManualHash.current = null;
+      if (result.error) {
+        setStage("email");
+        setError(
+          "Este link expirou ou já foi utilizado. Peça ao proprietário um novo link individual.",
+        );
+        return;
+      }
+      // Auth still validates the user and the existing invitation, then
+      // requires a new personal password and the activation RPC.
+      await inspectIdentity();
+    } catch {
+      pendingManualHash.current = null;
+      setStage("email");
+      setError("Não foi possível validar o convite. Confira sua conexão ou solicite outro link.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function requestInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -252,6 +303,25 @@ export function AffiliateTeamAccess() {
                   }}
                 >
                   Sair e tentar outra conta
+                </button>
+              </div>
+            )}
+            {stage === "manual-confirm" && (
+              <div>
+                <ShieldCheck className="h-8 w-8 text-[#865766]" />
+                <h2 className="mt-4 font-display text-2xl">Confirmar ativação pessoal</h2>
+                <p className="mt-3 text-sm leading-relaxed text-[#806970]">
+                  Um proprietário da equipe compartilhou este convite individual com você. Confirme
+                  apenas se reconhece o convite. O código não será usado até clicar abaixo. Após
+                  validar, crie sua própria senha. Não encaminhe este link.
+                </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void confirmManualInvitation()}
+                  className="mt-6 min-h-12 w-full rounded-full bg-[#633847] px-5 font-bold text-white disabled:opacity-60"
+                >
+                  {busy ? "Confirmando no Supabase..." : "Confirmar ativação"}
                 </button>
               </div>
             )}

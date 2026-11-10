@@ -15,8 +15,7 @@ vi.mock("@/lib/affiliate-functions", () => ({
 import { AffiliateOwnerActivationPanel } from "@/components/affiliate-owner-activation-panel";
 
 const email = "pending.owner@example.invalid";
-const token =
-  "https://jewbzrbbvxyqmxqbrwrq.supabase.co/auth/v1/verify?token=synthetic-only-activate-1&type=magiclink";
+const token = "https://vonixhair.com/acesso-equipe-afiliadas#vonix_invite=" + "a".repeat(64);
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -55,8 +54,8 @@ describe("owner activation control, private one-time links", () => {
       await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
     ).toBeInTheDocument();
     expect(mocks.generate).toHaveBeenCalledWith({ data: { email } });
-    expect(document.body.textContent).not.toContain("synthetic-only-activate-1");
-    expect(document.querySelector('a[href*="synthetic-only-activate-1"]')).toBeNull();
+    expect(document.body.textContent).not.toContain("vonix_invite");
+    expect(document.querySelector('a[href*="vonix_invite"]')).toBeNull();
     fireEvent.click(
       screen.getByRole("button", { name: /Copiar link para compartilhar em privado/ }),
     );
