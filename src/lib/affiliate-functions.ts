@@ -10,6 +10,11 @@ import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
 import { invitePersistedAffiliateApplicant } from "./affiliate-invites.server";
 import {
+  affiliateCustomAuthEmailReady,
+  affiliateEmailAuthorizedForPortal,
+  sendAffiliateAuthEmailWithResend,
+} from "./affiliate-auth-delivery.server";
+import {
   affiliateAdminSameOrigin,
   affiliateMutationSameOrigin,
   affiliateAdminSessionValid,
@@ -120,8 +125,43 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
     publicNetworkDiagnostic,
     cfConnectingIpPresent: isIP(cfConnectingIp) !== 0,
     encryptionReady: affiliateQuestionnaireEncryptionReady(),
+    transactionalEmailConfigured: affiliateCustomAuthEmailReady(),
   };
 });
+
+/**
+ * Auth e-mail provider recovery: use a verified transactional sender when
+ * configured, but never let the public browser choose an arbitrary recipient.
+ * Applicant access is limited to persisted applications; team access is
+ * limited to the explicit administrator invitation roster.
+ */
+export const requestAffiliateAccessEmail = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      email: z.string().trim().toLowerCase().email().max(180),
+      purpose: z.enum(["applicant", "owner"]),
+    }),
+  )
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    if (!affiliateMutationSameOrigin()) return { status: "denied" as const };
+    if (!affiliateCustomAuthEmailReady()) return { status: "not-configured" as const };
+    if (!(await consumeAffiliateRateLimit("admin"))) {
+      return { status: "rate-limited" as const };
+    }
+    try {
+      const authorized = await affiliateEmailAuthorizedForPortal(data.email, data.purpose);
+      if (!authorized) {
+        // Equal response for an address without a persisted candidate/member.
+        return { status: "requested" as const };
+      }
+      await sendAffiliateAuthEmailWithResend(data.email, data.purpose);
+      // Do not expose account existence or provider-specific failures.
+      return { status: "requested" as const };
+    } catch {
+      return { status: "requested" as const };
+    }
+  });
 
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
   .validator(affiliateApplicationSchema)

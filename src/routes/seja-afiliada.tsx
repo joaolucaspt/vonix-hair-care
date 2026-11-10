@@ -37,6 +37,7 @@ export function AffiliateApplicationPage() {
     publicNetworkDiagnostic: "checking",
     ingress: false,
     encryption: false,
+    emailConfigured: false,
   });
   const [previewHasDraft, setPreviewHasDraft] = useState(false);
   const [confirmPreviewExit, setConfirmPreviewExit] = useState(false);
@@ -58,6 +59,7 @@ export function AffiliateApplicationPage() {
           publicNetworkDiagnostic,
           cfConnectingIpPresent,
           encryptionReady,
+          transactionalEmailConfigured,
         } = await getAffiliateRecruitmentStatus();
         if (!active || requestId !== latestRequest) return;
         setBackendDiagnostics({
@@ -66,6 +68,7 @@ export function AffiliateApplicationPage() {
           publicNetworkDiagnostic,
           ingress: cfConnectingIpPresent,
           encryption: encryptionReady,
+          emailConfigured: transactionalEmailConfigured,
         });
         setRecruitment(open ? "open" : "closed");
         if (open) setLiveFormStarted(true);
@@ -122,6 +125,7 @@ export function AffiliateApplicationPage() {
           data-network-diagnostic={backendDiagnostics.publicNetworkDiagnostic}
           data-ingress-check={backendDiagnostics.ingress ? "ok" : "unavailable"}
           data-encryption-check={backendDiagnostics.encryption ? "ok" : "unavailable"}
+          data-email-provider={backendDiagnostics.emailConfigured ? "configured" : "unavailable"}
           className="mx-auto max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20"
         >
           <div className="mb-10 text-center">

@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
+import { requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
 import { affiliateStatusRedirectUrl, vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
 
 export const Route = createFileRoute("/acompanhar-inscricao")({
@@ -122,6 +123,24 @@ export function AffiliateApplicationTracker() {
     setLoading(true);
     try {
       const normalized = loginEmail.trim().toLowerCase();
+      const alternate = await requestAffiliateAccessEmail({
+        data: { email: normalized, purpose: "applicant" },
+      });
+      if (alternate.status === "requested") {
+        setNotice(
+          "Se este e-mail corresponde a uma inscrição, solicitamos o envio de um código. Verifique entrada e spam. O provedor ainda precisa concluir a entrega.",
+        );
+        return;
+      }
+      if (alternate.status === "rate-limited") {
+        setError("Limite temporário de pedidos de acesso. Tente novamente mais tarde.");
+        return;
+      }
+      if (alternate.status === "denied") {
+        setError("Abra o portal oficial da Vonix Hair e solicite o acesso novamente.");
+        return;
+      }
+      // If a custom provider is unavailable, retain the standard Auth flow.
       const response = await vonixAffiliateAuth.auth.signInWithOtp({
         email: normalized,
         options: {

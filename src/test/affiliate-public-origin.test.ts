@@ -11,6 +11,8 @@ const gates = vi.hoisted(() => ({
   allowed: vi.fn(),
   decide: vi.fn(),
   email: vi.fn(),
+  authorized: vi.fn(),
+  sendAuth: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -24,6 +26,11 @@ vi.mock("@tanstack/react-start", () => ({
   }),
 }));
 vi.mock("@tanstack/react-start/server", () => ({ setResponseHeader: vi.fn() }));
+vi.mock("@/lib/affiliate-auth-delivery.server", () => ({
+  affiliateCustomAuthEmailReady: () => true,
+  affiliateEmailAuthorizedForPortal: gates.authorized,
+  sendAffiliateAuthEmailWithResend: gates.sendAuth,
+}));
 vi.mock("@/lib/affiliate-admin-auth.server", () => ({
   attemptAffiliateAdminLogin: vi.fn(),
 }));
@@ -49,7 +56,11 @@ vi.mock("@/lib/affiliate-applications.server", () => ({
   processAffiliateEmails: gates.email,
 }));
 
-import { reviewAffiliateApplication, submitAffiliateApplication } from "@/lib/affiliate-functions";
+import {
+  requestAffiliateAccessEmail,
+  reviewAffiliateApplication,
+  submitAffiliateApplication,
+} from "@/lib/affiliate-functions";
 
 // Validation takes place in the framework before the handler. These synthetic
 // values only exercise whether the side-effect is reached, never external I/O.
@@ -67,6 +78,8 @@ beforeEach(() => {
   gates.allowed.mockResolvedValue(true);
   gates.decide.mockResolvedValue(true);
   gates.email.mockResolvedValue({ sent: 0, failed: 0, configured: false });
+  gates.authorized.mockResolvedValue(true);
+  gates.sendAuth.mockResolvedValue(true);
 });
 
 describe("Public affiliate submission origin policy", () => {
@@ -111,6 +124,53 @@ describe("Public affiliate submission origin policy", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Muitas tentativas/);
     expect(gates.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("Private Auth delivery recovery", () => {
+  const requestAccess = requestAffiliateAccessEmail as unknown as (args: {
+    data: { email: string; purpose: "applicant" | "owner" };
+  }) => Promise<{ status: string }>;
+
+  it("rejects cross-origin access requests before contacting the email provider", async () => {
+    gates.sameOrigin.mockReturnValue(false);
+    expect(
+      await requestAccess({
+        data: { email: "candidate@example.invalid", purpose: "applicant" },
+      }),
+    ).toMatchObject({ status: "denied" });
+    expect(gates.quota).not.toHaveBeenCalled();
+    expect(gates.sendAuth).not.toHaveBeenCalled();
+  });
+
+  it("sends an Auth code only after verifying the recipient belongs to the portal", async () => {
+    expect(
+      await requestAccess({
+        data: { email: "owner@example.invalid", purpose: "owner" },
+      }),
+    ).toMatchObject({ status: "requested" });
+    expect(gates.authorized).toHaveBeenCalledWith("owner@example.invalid", "owner");
+    expect(gates.sendAuth).toHaveBeenCalledWith("owner@example.invalid", "owner");
+  });
+
+  it("never contacts the provider for an unknown email", async () => {
+    gates.authorized.mockResolvedValueOnce(false);
+    expect(
+      await requestAccess({
+        data: { email: "random@example.invalid", purpose: "applicant" },
+      }),
+    ).toMatchObject({ status: "requested" });
+    expect(gates.sendAuth).not.toHaveBeenCalled();
+  });
+
+  it("blocks repeated requests when the shared IP throttle is exhausted", async () => {
+    gates.quota.mockResolvedValueOnce(false);
+    expect(
+      await requestAccess({
+        data: { email: "candidate@example.invalid", purpose: "applicant" },
+      }),
+    ).toMatchObject({ status: "rate-limited" });
+    expect(gates.sendAuth).not.toHaveBeenCalled();
   });
 });
 

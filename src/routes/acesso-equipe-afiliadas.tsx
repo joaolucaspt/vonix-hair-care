@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
-import { loginAffiliateAdminMember } from "@/lib/affiliate-functions";
+import { loginAffiliateAdminMember, requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
 import { vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
 
 export const Route = createFileRoute("/acesso-equipe-afiliadas")({
@@ -73,6 +73,23 @@ export function AffiliateTeamAccess() {
     setNotice("");
     setError("");
     try {
+      const alternate = await requestAffiliateAccessEmail({
+        data: { email: email.trim().toLowerCase(), purpose: "owner" },
+      });
+      if (alternate.status === "requested") {
+        setNotice(
+          "Se seu e-mail está autorizado, solicitamos um código de acesso. Verifique entrada e spam. A entrega depende do provedor.",
+        );
+        return;
+      }
+      if (alternate.status === "rate-limited") {
+        setError("Limite temporário de solicitações. Tente novamente mais tarde.");
+        return;
+      }
+      if (alternate.status === "denied") {
+        setError("Utilize a página oficial da equipe e solicite o acesso novamente.");
+        return;
+      }
       const result = await vonixAffiliateAuth.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
         options: {
