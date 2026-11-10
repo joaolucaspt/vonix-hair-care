@@ -91,8 +91,8 @@ export function contentLabel(p: Product, short = false) {
   if (p.category === "kits") {
     const block = p.description.match(/\*\*O QUE VEM NO (?:KIT|COMBO)\*\*\s*([\s\S]*?)\n---/)?.[1];
     const n = block ? block.split("\n").filter((l) => l.trim().startsWith("**")).length : 0;
-    if (n) return `${short ? "" : "Combo com "}${n} produtos${sizeText ? ` · ${sizeText}` : ""}`;
-    return sizeText ? `Combo · ${sizeText}` : "Combo";
+    if (n) return `${short ? "" : "Kit com "}${n} produtos${sizeText ? ` · ${sizeText}` : ""}`;
+    return sizeText ? `Kit · ${sizeText}` : "Kit";
   }
   return sizeText;
 }
@@ -121,8 +121,8 @@ export const isProOnly = (slug: string) => PRO_ONLY.has(slug);
 export type Offer = "comp5" | "kit2" | "kit3";
 export const OFFER_LABEL: Record<Offer, string> = {
   comp5: "5% OFF neste item",
-  kit2: "Combo 2 unidades · 12% OFF",
-  kit3: "Combo 3 unidades · 15% OFF",
+  kit2: "Kit 2 unidades · 12% OFF",
+  kit3: "Kit 3 unidades · 15% OFF",
 };
 
 /**
@@ -410,7 +410,7 @@ export const NEEDS: Record<string, RegExp> = {
 export const TYPES: Record<string, (p: Product) => boolean> = {
   Progressiva: (p) => /progressiva/i.test(p.name),
   Máscara: (p) => /máscara/i.test(p.name),
-  Combos: (p) => p.category === "kits",
+  Kits: (p) => p.category === "kits",
   Finalizadores: (p) => p.category === "finalizadores",
 };
 export const BEST_SELLERS = [

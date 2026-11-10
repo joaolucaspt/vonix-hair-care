@@ -255,3 +255,13 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 **C21:** base C20 `f04a8af`; QA de foco 9/9, integral **621/621 Vitest em 73 arquivos**, TypeScript, ESLint sem Prettier, build Cloudflare, SSR 42/42 e Chrome 3/3 em três resoluções, 12 screenshots, rede externa bloqueada. Produção **NOT_APPROVED**. Ver `VONIX_AUDITORIA_CONTINUIDADE_C21_20261109.md`.
 
 **Read-back C21 / PR #51:** `dd1fae0` incorporado na branch auditada com 0 conflitos, sem alterações ao checkout/carrinho/catálogo implementados no C21. Após incorporação, **624/624 Vitest, 73 arquivos**, TypeScript, ESLint de código e build verdes; Chrome **3/3** (320/390/1366) também repetido. Riscos P0 e formatação histórica não foram liberados.
+
+## C21 — reconciliação da origem: Kit/Combo sem regressão da segurança de frete
+
+| ID | Gravidade | Risco detectado no merge | Tratamento |
+| --- | --- | --- | --- |
+| N83 | Alta | `products.json` upstream repunha promessa fixa de Loggi/Jadlog/Correios/Total Express para todos os 43 produtos, contra a auditoria de frete sob CEP | **Prevenido**: manter as 43 descrições de frete condicionadas à cotação, importar somente mudanças verificadas de nomenclatura e preservar preços/SKUs/variantes |
+| N84 | Média | Renomear filtro `Combos` → `Kits` quebraria links antigos da loja e consultas por nome anterior | **Corrigido**: alias `Combos` no validador da URL, busca aceita `combo` e `kit` com nome acentuado |
+| N85 | Média | Parser das especificações e da lista de produtos de um kit poderia perder conteúdo legado `O QUE VEM NO COMBO`; upstream repetia a chave `KIT` no fallback | **Corrigido**: leitura de ambas as seções, com 3 testes direcionados para descrição nova e antiga |
+
+**Rebrand e auditoria até `004ccf4`:** 627/627 testes em 74 arquivos, SSR 42/42, Chrome 3/3 em três resoluções, sem operações reais. Novo PR52 ainda precisa conciliação separada. Produção **NOT_APPROVED**.

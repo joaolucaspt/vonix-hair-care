@@ -45,10 +45,10 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 624,
-      "files": 73,
+      "passed": 627,
+      "files": 74,
       "exitCode": 0,
-      "afterMainPr": 51
+      "afterMainCommit": "004ccf4"
     },
     "typescript": {
       "exitCode": 0
@@ -100,6 +100,42 @@
       "chromeReport": "qa-artifacts/vonix-c21/pr51/report.json",
       "realPayments": false,
       "externalRequestsBlocked": true
+    },
+    "afterRebrand": {
+      "targeted": {
+        "passed": 12,
+        "files": 3
+      },
+      "fullVitest": "627/627 PASS in 74 files",
+      "typescriptExit": 0,
+      "eslintNonformatExit": 0,
+      "buildExit": 0,
+      "ssr": {
+        "activeProducts": 42,
+        "failures": 0
+      },
+      "chrome": {
+        "passed": 3,
+        "failed": 0,
+        "viewports": [
+          320,
+          390,
+          1366
+        ],
+        "screenshots": 12,
+        "report": "qa-artifacts/vonix-c21/kit-brand/report.json",
+        "externalBlocked": true,
+        "noPayments": true
+      },
+      "catalog": {
+        "productRows": 43,
+        "activeProducts": 42,
+        "kitNames": 10,
+        "categoryLabels": 10,
+        "auditedShippingCaveatsPreserved": 43,
+        "pricesAndVariantsUnchanged": true
+      },
+      "releaseBlocked": true
     }
   },
   "files": [
@@ -112,15 +148,27 @@
     "qa-artifacts/vonix-c21/pr51/report.json",
     "docs/VONIX_AUDITORIA_CONTINUIDADE_C21_20261109.md",
     "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
-    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md",
+    "src/routes/index.tsx",
+    "src/components/product-details.tsx",
+    "src/components/site.tsx",
+    "src/data/products.json",
+    "src/test/catalog-kit-rebrand.test.tsx",
+    "qa-artifacts/vonix-c21/kit-brand/report.json"
   ],
   "sha256": {
-    "src/lib/store.ts": "02077D37D7F1696E0101E3E6FCFC7DDDD70B3A1DF2BA799B9038EEAA43D782F9",
-    "src/routes/loja.tsx": "4D379A2D018B47AF2FB75022D0AF357EFE0D277A4A00BE991D48D1EBB4B0EDB9",
+    "src/lib/store.ts": "42F240FA903AE57226E633B3BFF4333908D81E80C73B5497929FCA99466F8E16",
+    "src/routes/loja.tsx": "D5B01891F373E7948324C074ED23CF2608969AB28A11B11C1AFE90B7B24B08C3",
     "src/test/store-persistence-safety.test.tsx": "7E1404D81D40539784BAACD05709CDF74CBE690C4976D57403BBD39C3FB8A156",
-    "src/test/storefront-search-audit.test.tsx": "FF40D62D070B543F7A25A341C25AC641263B1E61091F60C9483D6BBF87E92AA4",
-    "scripts/qa-c21-multitab-storefront.mjs": "121031FC977C4FAD691EFBE5B55853C603162CF85E49B63244531147BDD4A88A",
-    "qa-artifacts/vonix-c21/dev/report.json": "370ECA204DA154CB6A7BF6D7BEB4594E8C7F974C2F4E03B53398275890CEABE4"
+    "src/test/storefront-search-audit.test.tsx": "AA7DED1B8800D15BD3CC58FA06650BB677368A06400F6CC911443F611EE1C1F5",
+    "scripts/qa-c21-multitab-storefront.mjs": "96216E377757AA73692A36DA9BB74AB8703EA4C9D885ECD54A790214315ED3BA",
+    "qa-artifacts/vonix-c21/dev/report.json": "370ECA204DA154CB6A7BF6D7BEB4594E8C7F974C2F4E03B53398275890CEABE4",
+    "src/routes/index.tsx": "239B4C0F6DC7BD5C2980C7A8F10CAA9DEC3F92C733D95CE3F44E353E4CF33939",
+    "src/components/product-details.tsx": "C419BB7209AAC3D02DAC576F292F86A4935B86462CE05602AA56C711E96617DF",
+    "src/components/site.tsx": "96A070C0C5CB8D6BDFCC4BFD593EDBAC42A2655815C5B4F5AA75E035CED75701",
+    "src/data/products.json": "9A7454D1EEA8580B01BCCA2727D9C3B54496DEC3FB1B201A53EC28DA971C3FE5",
+    "src/test/catalog-kit-rebrand.test.tsx": "E5225FA465783D0DD5584D2ACD37784B3B6502D96B54F796FD4F6AEA75D25C1D",
+    "qa-artifacts/vonix-c21/kit-brand/report.json": "5C8AAD6AC4CD91D61BE4425FFC701435B6DE7ECF7A7AD0753391712CB139CF23"
   },
   "limitations": [
     "Browser verified only local development, no worker hosted",
@@ -133,5 +181,15 @@
   "noLivePayments": true,
   "noProductionDatabaseAccess": true,
   "noDeploy": true,
-  "noOriginalMainMerge": true
+  "noOriginalMainMerge": true,
+  "mainRebrandIntegrated": {
+    "commit": "004ccf4201a041fb771a3b543dedbc27cffd4e76",
+    "description": "Rename Combo -> Kit reconciled manually; preserve 43 audited shipping disclaimers and old cart/checkout logic",
+    "codeConflictFiles": 5,
+    "transportClaimsPreserved": true,
+    "skuPriceVariantImagesChanged": false,
+    "legacyBookmarksSupported": true,
+    "legacyProductDetailSectionsSupported": true,
+    "production": "NOT_APPROVED"
+  }
 }

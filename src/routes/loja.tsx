@@ -40,6 +40,8 @@ export function normalizeStoreSearch(s: Record<string, unknown>): S {
     const safeValue = value.trim().slice(0, key === "q" ? 120 : 80);
     if (safeValue) normalized[key] = safeValue;
   }
+  // Keep bookmarks /loja?tiposProduto=Combos usable after the public rebrand.
+  if (normalized.tiposProduto === "Combos") normalized.tiposProduto = "Kits";
   return normalized;
 }
 /** Match Brazilian Portuguese queries with or without accent marks, case or extra spaces. */
@@ -55,7 +57,9 @@ export function matchesStoreQuery(
   product: Pick<Product, "name" | "categoryLabel" | "short">,
   query: string,
 ): boolean {
-  const term = searchKey(query);
+  const term = searchKey(query)
+    .replace(/^combos(?=\b| )/, "kits")
+    .replace(/^combo(?=\b| )/, "kit");
   if (!term) return true;
   return searchKey(`${product.name} ${product.categoryLabel} ${product.short}`).includes(term);
 }
@@ -67,7 +71,7 @@ export const Route = createFileRoute("/loja")({
       { title: "Loja — Vonix Hair" },
       {
         name: "description",
-        content: "Todos os produtos Vonix Hair: progressivas, botox, máscaras, shampoos e combos.",
+        content: "Todos os produtos Vonix Hair: progressivas, botox, máscaras, shampoos e kits.",
       },
       { property: "og:title", content: "Loja — Vonix Hair" },
       { property: "og:description", content: "Todos os produtos Vonix Hair em até 6x sem juros." },

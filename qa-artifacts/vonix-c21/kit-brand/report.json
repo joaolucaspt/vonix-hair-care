@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-09",
+  "scope": "C21 synthetic corrupted favorites, cross-tab cart/favorites and accent search; no payments or external network",
+  "origin": "http://127.0.0.1:43972",
+  "outcomes": [
+    {
+      "width": 320,
+      "passed": true,
+      "pageErrors": [],
+      "corruptFavoritesRecovered": true,
+      "crossTabFavoritesSync": true,
+      "cartAddedFromOtherTab": true,
+      "crossTabQuantity3": true,
+      "accentFreeMaskSearch": true,
+      "accentFreeCafeSearch": true,
+      "legacyCombosFilterCompatible": true,
+      "checkoutRecomputedWithoutPayment": true,
+      "externalBlocked": 8
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "pageErrors": [],
+      "corruptFavoritesRecovered": true,
+      "crossTabFavoritesSync": true,
+      "cartAddedFromOtherTab": true,
+      "crossTabQuantity3": true,
+      "accentFreeMaskSearch": true,
+      "accentFreeCafeSearch": true,
+      "legacyCombosFilterCompatible": true,
+      "checkoutRecomputedWithoutPayment": true,
+      "externalBlocked": 8
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "pageErrors": [],
+      "corruptFavoritesRecovered": true,
+      "crossTabFavoritesSync": true,
+      "cartAddedFromOtherTab": true,
+      "crossTabQuantity3": true,
+      "accentFreeMaskSearch": true,
+      "accentFreeCafeSearch": true,
+      "legacyCombosFilterCompatible": true,
+      "checkoutRecomputedWithoutPayment": true,
+      "externalBlocked": 8
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

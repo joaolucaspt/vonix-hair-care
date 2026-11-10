@@ -85,8 +85,13 @@ try {
       await page.getByText(/Máscara Efeito Teia C[oô]co Nutri/i).first().waitFor({ timeout: 10000 });
       result.accentFreeMaskSearch = true;
       await page.goto(origin + "/loja?q=cafe%20verde", { waitUntil: "domcontentloaded" });
-      await page.getByText(/Combo Café Verde/i).first().waitFor({ timeout: 10000 });
+      await page.getByText(/Kit Café Verde/i).first().waitFor({ timeout: 10000 });
       result.accentFreeCafeSearch = true;
+      await page.goto(origin + "/loja?tiposProduto=Combos", { waitUntil: "domcontentloaded" });
+      await page.getByText(/Kit Banana e Mel/i).first().waitFor({ timeout: 10000 });
+      if (await page.getByText(/Não encontramos produtos/i).count())
+        throw new Error("Legacy Combos bookmark no longer displays Kits");
+      result.legacyCombosFilterCompatible = true;
       await page.screenshot({ path: resolve(output, "search-" + width + ".png") });
 
       await page.goto(origin + "/checkout", { waitUntil: "domcontentloaded" });

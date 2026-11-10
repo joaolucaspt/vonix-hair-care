@@ -52,6 +52,8 @@ describe("busca e filtros do catálogo público", () => {
     expect(matchesStoreQuery(cafe, "cafe verde")).toBe(true);
     expect(matchesStoreQuery(cafe, "CAFÉ   VERDE")).toBe(true);
     expect(matchesStoreQuery(cafe, "produto inexistente")).toBe(false);
+    expect(matchesStoreQuery(cafe, "combo cafe verde")).toBe(true);
+    expect(matchesStoreQuery(cafe, "kit cafe verde")).toBe(true);
   });
 
   it("valida busca de URL com espaço excedente e limita entrada desnecessariamente longa", () => {
@@ -59,5 +61,6 @@ describe("busca e filtros do catálogo público", () => {
     expect(normalizeStoreSearch({ q: "   " })).toEqual({});
     expect(normalizeStoreSearch({ q: "a".repeat(900) })).toEqual({ q: "a".repeat(120) });
     expect(normalizeStoreSearch({ q: 999 })).toEqual({});
+    expect(normalizeStoreSearch({ tiposProduto: "Combos" })).toEqual({ tiposProduto: "Kits" });
   });
 });
