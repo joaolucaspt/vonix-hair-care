@@ -1,0 +1,32 @@
+{
+  "checkpoint": "C26",
+  "scope": "Home + catalog + schema; isolated localhost; external network denied; no payments",
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "errors": [],
+      "homeAudienceAndCarousel": true,
+      "catalogAnyWordOrder": true,
+      "stockClaimRemoved": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "errors": [],
+      "homeAudienceAndCarousel": true,
+      "catalogAnyWordOrder": true,
+      "stockClaimRemoved": true
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "errors": [],
+      "homeAudienceAndCarousel": true,
+      "catalogAnyWordOrder": true,
+      "stockClaimRemoved": true
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

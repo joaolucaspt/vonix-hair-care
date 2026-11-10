@@ -316,3 +316,15 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N100** | UX médio | Carrinho vazio só tinha texto e link genérico | Card com título e caminhos Explorar produtos / Explorar kits, sem cobrar ou prometer frete |
 
 **C25:** Vitest **659/659 em 81 arquivos**, TypeScript/ESLint sem Prettier histórico/build verdes, SSR 42/42, Chrome **3/3** 320/390/1366 com 9 screenshots finais `qa-artifacts/vonix-c25/final/`; redes externas bloqueadas, pagamentos inativos. `docs/VONIX_AUDITORIA_CONTINUIDADE_C25_20261110.md`. Produção **NOT_APPROVED**.
+
+## C26 — Home, catálogo e estoque no SEO (10/11/2026)
+
+| ID | Prioridade | Problema | Solução |
+| --- | --- | --- | --- |
+| **N101** | Média | Home enviava `uso=pessoal`, não aceito na loja | Corrigido para `uso=casa`; seis filtros preservados |
+| **N102** | Média | Busca exigia termos contíguos e na ordem original | Todas as palavras em qualquer ordem; Vitest + Chrome |
+| **N103** | Alta/SEO | JSON-LD anunciava `InStock` sem prova de Bling | Campo omitido, SSR 42/42 |
+| **N104** | A11y/UX | Destaques automáticos sem pausa e CTA claro | Controle Pausar/Reproduzir, reduced-motion, CTA Conhecer este kit |
+| **N105** | UX/comercial | Sem caminho explícito casa vs. salão na home | Dois cartões segmentados com links válidos |
+
+**C26:** 659/659 Vitest em 81 arquivos; TS/ESLint funcional/build exit 0; SSR 42/42; Chrome 3/3 (320, 390, 1366 px), 9 screenshots. `docs/VONIX_AUDITORIA_CONTINUIDADE_C26_20261110.md`. Testes isolados sem pagamentos. **NOT_APPROVED** sem Appmax, Supabase, Bling, frete, Cloudflare, LGPD e rastreio financeiro em staging.

@@ -95,7 +95,7 @@ export const Route = createFileRoute("/produto/$slug")({
               url,
               priceCurrency: "BRL",
               price: p.variants[0].price.toFixed(2),
-              availability: "https://schema.org/InStock",
+              // Omit availability until live Bling stock can be verified for this SKU.
               itemCondition: "https://schema.org/NewCondition",
               hasMerchantReturnPolicy: {
                 "@type": "MerchantReturnPolicy",

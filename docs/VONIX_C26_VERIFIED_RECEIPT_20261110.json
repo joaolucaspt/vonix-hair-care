@@ -1,0 +1,46 @@
+﻿{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C26",
+    "localDate":  "2026-11-10",
+    "baseHead":  "b52f397",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "scope":  "Ecommerce only, no affiliate application",
+    "changes":  [
+                    "N101 home links",
+                    "N102 tokenized search",
+                    "N103 remove unverified InStock",
+                    "N104 hero carousel control",
+                    "N105 audience discovery"
+                ],
+    "verification":  {
+                         "vitest":  "659/659 PASS in 81 files",
+                         "typescriptExit":  0,
+                         "eslintNonformatExit":  0,
+                         "buildExit":  0,
+                         "ssr":  "42/42 active, 1 excluded HTTP404",
+                         "chrome":  "3/3 at 320,390,1366, nine screenshots, no JS errors or overflow",
+                         "prettierChangedExit":  0,
+                         "gitDiffCheckExit":  0
+                     },
+    "safety":  {
+                   "realPayments":  false,
+                   "liveOrders":  false,
+                   "productionDatabase":  false,
+                   "deploy":  false,
+                   "mainMerge":  false
+               },
+    "production":  "NOT_APPROVED",
+    "sha256":  {
+                   "src/routes/index.tsx":  "3A75E1B8DEE94889B1472F53B650A4F4FF7451EAA52F08EC87E7FC5FA4AA3A5D",
+                   "src/routes/loja.tsx":  "62C8DEE4BB1336FECAD3DC0C8731BBB27B04C5E04186778FD9E823C9F6E19146",
+                   "src/routes/produto.$slug.tsx":  "EF0A5DAEFE806142786AA115A61A44906B898756E06C2B546986FC04E0D2E788",
+                   "src/test/storefront-search-audit.test.tsx":  "40A160BEBEE4C789D67D6F34A0945681642611D8C13853EB485B082F7718E9F6",
+                   "scripts/qa-c26-conversion-ui.mjs":  "B0C6BAA75AB40A53DC66113EE685FE041645C767C7907EE8018BB1AC1E73139E",
+                   "scripts/qa-c26-ssr-storefront.mjs":  "50449B71FEC43A7AF074B7CAAF14873381315D292DA38E7D08200318176412E9",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C26_20261110.md":  "5E4A9D937701E71A03A2C6E5976177D6507924CC744089D20B8A98A6596CB4A2",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "BEA43870D2746256BEB4EEF678ECD266A7B87B78D4953F05701910012963CEC6",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "3DDCD067FB9AE7FF1EB1571F13205EF7D4C53521BFDC17821D79AD91240FA912",
+                   "docs/VONIX_SSR_PREFLIGHT_C26_20261110.json":  "0F3C537CC95E55D495EDC517268F0969B6BF887AE01AF3A29B12C2719C1CDFBD",
+                   "qa-artifacts/vonix-c26/report.json":  "527A65CA72BC4BC56649C4825DE03F20C0DA5D140F87DAB4A4CE17BBF89422A9"
+               }
+}

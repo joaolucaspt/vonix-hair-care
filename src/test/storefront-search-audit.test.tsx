@@ -76,6 +76,9 @@ describe("busca e filtros do catálogo público", () => {
     expect(matchesStoreQuery(cafe, "produto inexistente")).toBe(false);
     expect(matchesStoreQuery(cafe, "combo cafe verde")).toBe(true);
     expect(matchesStoreQuery(cafe, "kit cafe verde")).toBe(true);
+    expect(matchesStoreQuery(cafe, "verde kit cafe")).toBe(true);
+    expect(matchesStoreQuery(cafe, "cafe kit")).toBe(true);
+    expect(matchesStoreQuery(cafe, "cafe produto inexistente")).toBe(false);
   });
 
   it("apresenta nome real da categoria filtrada em vez de anunciar todos os produtos", () => {

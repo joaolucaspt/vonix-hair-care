@@ -70,7 +70,9 @@ export function matchesStoreQuery(
     .replace(/^combos(?=\b| )/, "kits")
     .replace(/^combo(?=\b| )/, "kit");
   if (!term) return true;
-  return searchKey(`${product.name} ${product.categoryLabel} ${product.short}`).includes(term);
+  const haystack = searchKey(`${product.name} ${product.categoryLabel} ${product.short}`);
+  // All terms may occur in different fields, not necessarily beside one another.
+  return term.split(" ").every((word) => haystack.includes(word));
 }
 
 export const Route = createFileRoute("/loja")({
