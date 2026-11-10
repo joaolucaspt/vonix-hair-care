@@ -25,7 +25,13 @@ const pendingRow = z.object({
 });
 const grant = z.object({
   action_link: z.string().url().optional(),
-  properties: z.object({ action_link: z.string().url().optional() }).optional(),
+  hashed_token: z.string().min(32).max(256).optional(),
+  properties: z
+    .object({
+      action_link: z.string().url().optional(),
+      hashed_token: z.string().min(32).max(256).optional(),
+    })
+    .optional(),
 });
 
 type Database = NonNullable<ReturnType<typeof affiliateDatabaseConfig>>;
@@ -163,7 +169,13 @@ export async function generatePendingAffiliateOwnerActivationLink(email: string)
     ) {
       return denied;
     }
-    return { ok: true as const, link: actionLink, recipient: parsed.data };
+    const tokenHash = payload.data.properties?.hashed_token ?? payload.data.hashed_token;
+    if (!tokenHash || !/^[A-Za-z0-9_-]{32,256}$/.test(tokenHash)) return denied;
+    // Fragment never reaches servers or link preview crawlers. The recipient
+    // must explicitly click "Confirmar ativação" in our app to redeem the
+    // one-time hash via POST /auth/v1/verify.
+    const previewSafeLink = destination + "#vonix_invite=" + encodeURIComponent(tokenHash);
+    return { ok: true as const, link: previewSafeLink, recipient: parsed.data };
   } catch {
     return denied;
   }

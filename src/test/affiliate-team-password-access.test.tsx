@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   onAuthStateChange: vi.fn(),
   signOut: vi.fn(),
+  verifyOtp: vi.fn(),
+  from: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-functions", () => ({
@@ -20,7 +22,9 @@ vi.mock("@/lib/vonix-affiliate-auth", () => ({
       getUser: mocks.getUser,
       onAuthStateChange: mocks.onAuthStateChange,
       signOut: mocks.signOut,
+      verifyOtp: mocks.verifyOtp,
     },
+    from: mocks.from,
   },
 }));
 vi.mock("@/components/affiliate-shell", () => ({
@@ -51,6 +55,53 @@ afterEach(() => {
 });
 
 describe("Vonix affiliate already-activated owner password sign-in", () => {
+  it("requires a human click before redeeming a private owner-shared link", async () => {
+    const hash = "a".repeat(64);
+    window.history.replaceState({}, "", "/acesso-equipe-afiliadas#vonix_invite=" + hash);
+    mocks.verifyOtp.mockResolvedValue({ data: {}, error: { message: "expired" } });
+    render(<AffiliateTeamAccess />);
+    const confirm = await screen.findByRole("button", { name: "Confirmar ativação" });
+    expect(window.location.hash).toBe("");
+    expect(mocks.verifyOtp).not.toHaveBeenCalled();
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(mocks.verifyOtp).toHaveBeenCalledWith({ token_hash: hash, type: "magiclink" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("expirou");
+  });
+
+  it("requires a new personal password after manually verifying the one-use hash", async () => {
+    const hash = "b".repeat(64);
+    window.history.replaceState({}, "", "/acesso-equipe-afiliadas#vonix_invite=" + hash);
+    mocks.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    mocks.getUser.mockResolvedValue({
+      data: {
+        user: {
+          email: "pending.owner@example.invalid",
+          email_confirmed_at: "2026-11-10T22:00:00Z",
+        },
+      },
+      error: null,
+    });
+    mocks.from.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: { role: "owner", password_set_at: null },
+            error: null,
+          }),
+        }),
+      }),
+    });
+    render(<AffiliateTeamAccess />);
+    fireEvent.click(await screen.findByRole("button", { name: "Confirmar ativação" }));
+    expect(
+      await screen.findByRole("heading", { name: "Crie sua senha pessoal" }),
+    ).toBeInTheDocument();
+    expect(mocks.loginAffiliateAdminMember).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe("");
+  });
+
   it("opens the administrator shortcut directly on personal password sign-in", async () => {
     window.history.replaceState({}, "", "/acesso-equipe-afiliadas?login=senha");
     render(<AffiliateTeamAccess />);
