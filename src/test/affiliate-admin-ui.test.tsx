@@ -5,6 +5,7 @@ const server = vi.hoisted(() => ({
   getAffiliateAdminSession: vi.fn(),
   getAffiliateApplications: vi.fn(),
   getAffiliateApplicationPrivateDetail: vi.fn(),
+  resendAffiliateApplicantInvite: vi.fn(),
   loginAffiliateAdmin: vi.fn(),
   logoutAffiliateAdmin: vi.fn(),
   reviewAffiliateApplication: vi.fn(),
@@ -54,6 +55,7 @@ beforeEach(() => {
   server.logoutAffiliateAdmin.mockResolvedValue({ ok: true });
   server.loginAffiliateAdmin.mockResolvedValue({ ok: true });
   server.eraseAffiliateApplicationAdmin.mockResolvedValue({ ok: true });
+  server.resendAffiliateApplicantInvite.mockResolvedValue({ ok: true });
   server.getAffiliateOperationalReadiness.mockResolvedValue({
     ok: true,
     recruitmentOpen: false,
@@ -101,6 +103,71 @@ describe("Vonix affiliate private panel", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Ocultar respostas" }));
     expect(screen.queryByText("529.982.247-25")).not.toBeInTheDocument();
+  });
+
+  it("requires a second explicit confirmation and sends only the stored application ID", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    expect(server.resendAffiliateApplicantInvite).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reenviar acesso" }));
+    expect(screen.getByText(/Solicitar novo convite para/)).toBeInTheDocument();
+    expect(server.resendAffiliateApplicantInvite).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar tentativa de convite" }));
+    await waitFor(() =>
+      expect(server.resendAffiliateApplicantInvite).toHaveBeenCalledWith({
+        data: { id: candidate.id },
+      }),
+    );
+    expect(await screen.findByText(/O Supabase aceitou uma nova tentativa/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A entrega do e-mail e a ativação do acesso ainda precisam/),
+    ).toBeInTheDocument();
+  });
+
+  it("discards a delayed invite result when the reviewer logs out", async () => {
+    let finish!: (value: { ok: true }) => void;
+    server.resendAffiliateApplicantInvite.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reenviar acesso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar tentativa de convite" }));
+    await waitFor(() => expect(server.resendAffiliateApplicantInvite).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    await act(async () => finish({ ok: true }));
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText(/O Supabase aceitou uma nova tentativa/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+  });
+
+  it("allows cancelling an access resend without contacting the provider", async () => {
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reenviar acesso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar reenvio" }));
+    expect(server.resendAffiliateApplicantInvite).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Solicitar novo convite para/)).not.toBeInTheDocument();
+  });
+
+  it("does not claim a recovery email was sent when the provider rejected it", async () => {
+    server.resendAffiliateApplicantInvite.mockResolvedValueOnce({
+      ok: false,
+      reason: "O provedor não confirmou o convite.",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reenviar acesso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar tentativa de convite" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "O provedor não confirmou o convite.",
+    );
+    expect(screen.queryByText(/O Supabase aceitou uma nova tentativa/)).not.toBeInTheDocument();
   });
 
   it("returns to a populated page after approving the last pending candidate on the final page", async () => {

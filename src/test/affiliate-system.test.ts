@@ -5,6 +5,7 @@ import {
   affiliateAdminAuthorized,
   affiliateOperationalReadiness,
   createAffiliateApplication,
+  readAffiliateApplicantEmailForAccessRecovery,
   decideAffiliateApplication,
   eraseAffiliateApplication,
   previewAffiliateRetention,
@@ -234,6 +235,49 @@ describe("Acesso e decisões", () => {
     process.env["AFFILIATE_ADMIN_PASSWORD"] = "short";
     expect(affiliateAdminAuthorized("short")).toBe(false);
   });
+  it("consulta somente o e-mail de um registro existente por ID para recuperação de acesso", async () => {
+    const id = "00000000-0000-4000-8000-000000000123";
+    const request = vi.fn().mockResolvedValue(
+      Response.json([
+        {
+          id,
+          email: "Recovery.Person@Example.Invalid",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", request);
+    expect(await readAffiliateApplicantEmailForAccessRecovery(id)).toBe(
+      "recovery.person@example.invalid",
+    );
+    expect(request).toHaveBeenCalledOnce();
+    const [url, options] = request.mock.calls[0]!;
+    expect(url).toContain("vonix_affiliate_applications?select=id,email&id=eq.");
+    expect(url).toContain(id);
+    expect(url).not.toContain("questionnaire_encrypted");
+    expect(options.method).toBe("GET");
+  });
+
+  it("recusa recuperar acesso quando a candidatura não existe ou o ID diverge", async () => {
+    const id = "00000000-0000-4000-8000-000000000123";
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            id: "00000000-0000-4000-8000-000000000999",
+            email: "candidate@example.invalid",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", request);
+    expect(await readAffiliateApplicantEmailForAccessRecovery(id)).toBeNull();
+    expect(await readAffiliateApplicantEmailForAccessRecovery(id)).toBeNull();
+    expect(request).toHaveBeenCalledTimes(2);
+    await expect(readAffiliateApplicantEmailForAccessRecovery("not-a-uuid")).rejects.toThrow();
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
   it("aplica a decisão por RPC atômica e aceita resultado falso quando já analisada", async () => {
     const mock = vi
       .fn()

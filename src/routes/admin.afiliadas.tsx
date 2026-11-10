@@ -17,6 +17,7 @@ import {
   eraseAffiliateApplicationAdmin,
   getAffiliateApplications,
   getAffiliateApplicationPrivateDetail,
+  resendAffiliateApplicantInvite,
   getAffiliateOperationalReadiness,
   getAffiliateRetentionPreview,
   loginAffiliateAdmin,
@@ -162,6 +163,7 @@ export function AffiliateAdminPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [pendingAccessInviteId, setPendingAccessInviteId] = useState<string | null>(null);
   const [privateDetail, setPrivateDetail] = useState<
     (AffiliatePrivateDetail & { id: string }) | null
   >(null);
@@ -227,6 +229,7 @@ export function AffiliateAdminPage() {
     setTotal(0);
     setWorkingId(null);
     setPendingDecision(null);
+    setPendingAccessInviteId(null);
     setNotice("");
     setErasureId(null);
     setErasureEmail("");
@@ -275,6 +278,7 @@ export function AffiliateAdminPage() {
     setPrivateDetailError(null);
     setApplications([]);
     setTotal(0);
+    setPendingAccessInviteId(null);
     setLoading(true);
     setPendingDecision(null);
     setError("");
@@ -488,6 +492,40 @@ export function AffiliateAdminPage() {
         );
     } finally {
       if (sessionVersion.current === sessionId) setWorkingId(null);
+    }
+  }
+
+  async function retryApplicantAccess(app: AffiliateApplicationRecord) {
+    if (
+      !authorized ||
+      sessionRechecking ||
+      workingId ||
+      loading ||
+      pendingAccessInviteId !== app.id
+    )
+      return;
+    const sessionId = sessionVersion.current;
+    setWorkingId(app.id);
+    setPendingAccessInviteId(null);
+    setError("");
+    setNotice("");
+    try {
+      const result = await resendAffiliateApplicantInvite({ data: { id: app.id } });
+      if (sessionId !== sessionVersion.current) return;
+      if (!result.ok) {
+        if (sessionExpired(result.reason)) return;
+        setError(result.reason);
+      } else {
+        setNotice(
+          "O Supabase aceitou uma nova tentativa de convite. A entrega do e-mail e a ativação do acesso ainda precisam ser confirmadas pela candidata.",
+        );
+      }
+    } catch {
+      if (sessionId === sessionVersion.current) {
+        setError("Falha ao solicitar o convite. Nenhuma entrega foi confirmada.");
+      }
+    } finally {
+      if (sessionId === sessionVersion.current) setWorkingId(null);
     }
   }
 
@@ -1267,6 +1305,70 @@ export function AffiliateAdminPage() {
                               </div>
                             ))}
                           </dl>
+                        </div>
+                      )}
+                    </section>
+                    <section
+                      aria-label={"Acesso de acompanhamento de " + app.full_name}
+                      className="border-t border-[#f3e7e3] bg-white px-6 py-5"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-[#623b45]">Acesso à candidatura</h4>
+                          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#806a6c]">
+                            O acompanhamento continua disponível mesmo após aprovação ou recusa. Se
+                            um convite falhou, solicite um novo envio após verificar o e-mail.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-expanded={pendingAccessInviteId === app.id}
+                          disabled={workingId !== null || loading || sessionRechecking}
+                          onClick={() =>
+                            setPendingAccessInviteId(
+                              pendingAccessInviteId === app.id ? null : app.id,
+                            )
+                          }
+                          className="min-h-11 rounded-full border border-[#cfaeb4] px-5 text-sm font-semibold text-[#693440] hover:bg-[#fff5f3] disabled:opacity-50"
+                        >
+                          {workingId === app.id
+                            ? "Processando..."
+                            : pendingAccessInviteId === app.id
+                              ? "Cancelar reenvio"
+                              : "Reenviar acesso"}
+                        </button>
+                      </div>
+                      {pendingAccessInviteId === app.id && (
+                        <div
+                          role="group"
+                          aria-label="Confirmar tentativa de convite da candidata"
+                          className="mt-4 rounded-xl border border-[#e1c8cc] bg-[#fffaf8] p-5"
+                        >
+                          <p className="text-sm font-semibold text-[#5b343b]">
+                            Solicitar novo convite para {app.email}?
+                          </p>
+                          <p className="mt-2 text-xs leading-relaxed text-[#806a6c]">
+                            O envio usa exclusivamente o e-mail já armazenado nesta inscrição. A
+                            resposta do provedor não comprova a entrega. Se a candidata já possuir
+                            conta, ela pode pedir um código diretamente no portal.
+                          </p>
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              disabled={workingId !== null || loading}
+                              onClick={() => void retryApplicantAccess(app)}
+                              className="min-h-11 rounded-full bg-[#693440] px-5 text-sm font-bold text-white disabled:opacity-50"
+                            >
+                              Confirmar tentativa de convite
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingAccessInviteId(null)}
+                              className="min-h-11 rounded-full border border-[#dcc8c6] px-5 text-sm font-semibold text-[#68464e]"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
                         </div>
                       )}
                     </section>

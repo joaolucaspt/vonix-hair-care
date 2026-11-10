@@ -19,6 +19,7 @@ import {
   eraseAffiliateApplication,
   previewAffiliateRetention,
   createAffiliateApplication,
+  readAffiliateApplicantEmailForAccessRecovery,
   decideAffiliateApplication,
   listAffiliateApplications,
   readAffiliateApplicationPrivateDetail,
@@ -70,6 +71,43 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
       return {
         ok: false as const,
         reason: "Não foi possível receber sua inscrição agora. Tente novamente mais tarde.",
+      };
+    }
+  });
+
+/** Manual recovery: retry an applicant's Auth invite, by stored record ID only.
+ * A reviewer must confirm this action. No client-submitted email is trusted.
+ * Provider acceptance does not prove that the candidate received a message.
+ */
+export const resendAffiliateApplicantInvite = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid()) {
+      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    }
+    if (!(await consumeAffiliateRateLimit("admin"))) {
+      return {
+        ok: false as const,
+        reason: "Limite de solicitações alcançado. Tente novamente mais tarde.",
+      };
+    }
+    try {
+      const email = await readAffiliateApplicantEmailForAccessRecovery(data.id);
+      if (!email) return { ok: false as const, reason: "Candidatura não encontrada." };
+      const accepted = await invitePersistedAffiliateApplicant(email);
+      if (!accepted) {
+        return {
+          ok: false as const,
+          reason:
+            "O provedor não confirmou o convite. Se a conta já existir, oriente a candidata a solicitar um código no portal de acompanhamento.",
+        };
+      }
+      return { ok: true as const };
+    } catch {
+      return {
+        ok: false as const,
+        reason: "Não foi possível solicitar o acesso. Verifique a conexão com o Supabase.",
       };
     }
   });
