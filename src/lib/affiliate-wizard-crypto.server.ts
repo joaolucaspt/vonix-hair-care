@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { env } from "./env.server";
 import type { ValidatedAffiliateWizard } from "./affiliate-wizard";
@@ -6,6 +6,18 @@ import type { ValidatedAffiliateWizard } from "./affiliate-wizard";
 function encryptionKey(): Buffer | null {
   const supplied = env("AFFILIATE_QUESTIONNAIRE_KEY");
   if (/^[a-f0-9]{64}$/i.test(supplied)) return Buffer.from(supplied, "hex");
+  // Lovable Secrets Manager can generate a 64-character cryptographically
+  // random alphanumeric secret without exposing it to the application owner
+  // or an AI chat. Deterministically derive the AES-256 key with a dedicated
+  // domain separator. Existing hex and base64url keys keep their old meaning,
+  // so previously stored ciphertext remains decryptable with its original key.
+  // Production must preserve this original secret in a separate secure backup.
+  if (/^[A-Za-z0-9]{64}$/.test(supplied)) {
+    return createHash("sha256")
+      .update("vonix-hair/affiliate/questionnaire-key/v1\u0000", "utf8")
+      .update(supplied, "utf8")
+      .digest();
+  }
   // Node's base64 decoder silently ignores punctuation, padding and unused
   // trailing bits. Accept only the canonical 43-character representation to
   // avoid reporting a malformed, potentially miscopied data key as ready.
