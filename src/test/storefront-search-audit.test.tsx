@@ -13,7 +13,29 @@ vi.mock("@tanstack/react-router", async (original) => ({
     useSearch: () => mocks.search,
   }),
   useNavigate: () => mocks.navigate,
-  Link: ({ children }: { children: React.ReactNode }) => <a href="/loja">{children}</a>,
+  Link: ({
+    children,
+    to = "/loja",
+    search,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    to?: string;
+    search?: Record<string, string | undefined>;
+    "aria-label"?: string;
+    className?: string;
+  }) => {
+    const params = new URLSearchParams();
+    Object.entries(search ?? {}).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    const query = params.toString();
+    return (
+      <a href={query ? `${to}?${query}` : to} {...rest}>
+        {children}
+      </a>
+    );
+  },
 }));
 vi.mock("@/components/site", () => ({
   Shell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
@@ -56,11 +78,60 @@ describe("busca e filtros do catálogo público", () => {
     expect(matchesStoreQuery(cafe, "kit cafe verde")).toBe(true);
   });
 
+  it("apresenta nome real da categoria filtrada em vez de anunciar todos os produtos", () => {
+    mocks.search = { categoria: "kits" };
+    render(<Loja />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Kits");
+    expect(
+      screen.getByRole("link", { name: "Remover filtro Categoria: Kits" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/10 produtos/);
+  });
+
+  it("permite remover só a categoria que impediu a busca, preservando a consulta digitada", () => {
+    mocks.search = { q: "banana", categoria: "quimica" };
+    render(<Loja />);
+    expect(screen.getByText(/Nenhum produto encontrado/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Remover filtro Categoria: Química" })).toHaveAttribute(
+      "href",
+      "/loja?q=banana",
+    );
+    expect(screen.getByText(/Retire um filtro para ampliar/)).toBeInTheDocument();
+  });
+
+  it("não apresenta tipo inexistente como título mesmo se o roteador fornecer URL não normalizada", () => {
+    mocks.search = { tiposProduto: "tipo-invalido", ordem: "nao-existe" };
+    render(<Loja />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Todos os Produtos");
+    expect(screen.getByRole("status")).toHaveTextContent("42 produtos");
+    expect(screen.queryByRole("group", { name: "Filtros ativos" })).not.toBeInTheDocument();
+  });
+
+  it("remove buscas individuais, mantém outros filtros e oferece saída clara quando não há resultados", () => {
+    mocks.search = { q: "termo-muito-raro", tiposProduto: "Kits" };
+    render(<Loja />);
+    expect(
+      screen.getByRole("link", { name: "Remover filtro Busca: termo-muito-raro" }),
+    ).toHaveAttribute("href", "/loja?tiposProduto=Kits");
+    expect(screen.getByRole("link", { name: "Ver todos os produtos" })).toBeInTheDocument();
+  });
+
   it("valida busca de URL com espaço excedente e limita entrada desnecessariamente longa", () => {
     expect(normalizeStoreSearch({ q: "  banana   " })).toEqual({ q: "banana" });
     expect(normalizeStoreSearch({ q: "   " })).toEqual({});
     expect(normalizeStoreSearch({ q: "a".repeat(900) })).toEqual({ q: "a".repeat(120) });
     expect(normalizeStoreSearch({ q: 999 })).toEqual({});
     expect(normalizeStoreSearch({ tiposProduto: "Combos" })).toEqual({ tiposProduto: "Kits" });
+    expect(
+      normalizeStoreSearch({
+        q: "Banana",
+        categoria: "categoria-inexistente",
+        tiposProduto: "tipo-desconhecido",
+        necessidades: "preciso de tudo",
+        secao: "desconhecida",
+        ordem: "qualquer",
+        uso: "inventado",
+      }),
+    ).toEqual({ q: "Banana" });
   });
 });

@@ -1,0 +1,39 @@
+{
+  "scope": "C23 showroom filters, no-result recovery and favorites empty/saved — synthetic Chrome only; no payments",
+  "date": "2026-11-10",
+  "origin": "http://127.0.0.1:43972",
+  "passed": 0,
+  "failed": 3,
+  "results": [
+    {
+      "width": 320,
+      "passed": false,
+      "errors": [],
+      "categoryHeadingAndFilter": true,
+      "removeFilterKeepsSearch": true,
+      "invalidPageHeading": "tipo-invalido",
+      "error": "Error: Invalid filter heading: tipo-invalido",
+      "blockedExternal": 3
+    },
+    {
+      "width": 390,
+      "passed": false,
+      "errors": [],
+      "categoryHeadingAndFilter": true,
+      "removeFilterKeepsSearch": true,
+      "invalidPageHeading": "tipo-invalido",
+      "error": "Error: Invalid filter heading: tipo-invalido",
+      "blockedExternal": 3
+    },
+    {
+      "width": 1366,
+      "passed": false,
+      "errors": [],
+      "categoryHeadingAndFilter": true,
+      "removeFilterKeepsSearch": true,
+      "invalidPageHeading": "tipo-invalido",
+      "error": "Error: Invalid filter heading: tipo-invalido",
+      "blockedExternal": 3
+    }
+  ]
+}

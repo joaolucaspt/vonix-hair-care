@@ -280,3 +280,15 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 **Verificação C22 após PR53:** **638/638 Vitest em 75 arquivos**, TS, ESLint sem regra histórica Prettier, build Nitro, SSR 42/42, Chrome 3/3 pós-integração. Red/green: `qa-artifacts/vonix-c22/dev/` e `qa-artifacts/vonix-c22/after-pr53/`. Mapa para lojista: `docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md`. Produção **NOT_APPROVED**.
 
 **C22 pós-PR54:** `e3e3c59` incorporado sem conflitos, somente dentro da branch auditada. Gates pós-integração: **642/642 Vitest em 77 arquivos**, TypeScript, ESLint de código e build verdes, SSR 42/42, Chrome 3/3 em 320/390/1366 com 12 screenshots finais. O mapa visual permanece em `VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md`; nada homologado com pagamentos reais.
+
+## C23 — vitrine e favoritos (10/11)
+
+| ID | Impacto | Falha reproduzida | Correção |
+| --- | --- | --- | --- |
+| N90 | UX médio | Filtro de categoria Kits exibia H1 “Todos os Produtos” | H1 agora identifica categoria e contador de produtos |
+| N91 | Conversão médio | Busca sem resultado não orientava o cliente nem indicava filtros restritivos | Chips removíveis individualmente, preservando outras seleções, empty state com botão Ver todos os produtos |
+| N92 | Robustez médio | URL de filtro inválido era refletida como título apesar de não alterar a lista | Validação adicional na leitura dos parâmetros na tela, teste unitário e Chrome |
+| N93 | UX médio | Favoritos vazio apenas com texto/link discreto; salvos sem contador | Estado vazio com CTA Explorar produtos, explicação sobre este navegador e contagem |
+| N94 | Navegação médio | Remoção de filtro por botão podia não responder antes da hidratação, sobretudo em 320 px | Usar links SSR navegáveis com URL mantendo os demais filtros; Chrome 3/3 |
+
+**Evidências C23 (antes de PR55):** 648/648 Vitest em 78 arquivos, TypeScript/ESLint sem Prettier/build verdes, SSR 42/42, Chrome **3/3** (320,390,1366), com 15 screenshots `qa-artifacts/vonix-c23/link-safe`. PR55 upstream precisa reconciliação controlada, sem mexer no app independente de inscrições. Produção **NOT_APPROVED**. Detalhes: `docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md`.

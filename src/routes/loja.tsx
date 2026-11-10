@@ -42,6 +42,15 @@ export function normalizeStoreSearch(s: Record<string, unknown>): S {
   }
   // Keep bookmarks /loja?tiposProduto=Combos usable after the public rebrand.
   if (normalized.tiposProduto === "Combos") normalized.tiposProduto = "Kits";
+  // Avoid URLs that silently claim an invalid filter or ordering was applied.
+  if (normalized.secao && normalized.secao !== "mais-vendidos") delete normalized.secao;
+  if (normalized.categoria && !products.some((p) => p.category === normalized.categoria))
+    delete normalized.categoria;
+  if (normalized.tiposProduto && !TYPES[normalized.tiposProduto]) delete normalized.tiposProduto;
+  if (normalized.necessidades && !NEEDS[normalized.necessidades]) delete normalized.necessidades;
+  if (normalized.uso && !["casa", "salao"].includes(normalized.uso)) delete normalized.uso;
+  if (normalized.ordem && !["menor", "maior", "az"].includes(normalized.ordem))
+    delete normalized.ordem;
   return normalized;
 }
 /** Match Brazilian Portuguese queries with or without accent marks, case or extra spaces. */
@@ -89,7 +98,9 @@ export const Route = createFileRoute("/loja")({
 const CATS = Array.from(new Map(products.map((p) => [p.category, p.categoryLabel])));
 
 export function Loja() {
-  const s = Route.useSearch();
+  // Normalize at the UI boundary as well: a legacy or client-side route may
+  // still expose its raw query object before validation has propagated.
+  const s = normalizeStoreSearch(Route.useSearch() as Record<string, unknown>);
   const { audience } = useAudience();
   const uso = resolveAudience(audience, s.uso);
   const nav = useNavigate({ from: "/loja" });
@@ -126,6 +137,29 @@ export function Loja() {
     ),
   );
   const sel = "h-11 rounded-full border border-border bg-background px-4 text-body";
+  const categoryName = s.categoria ? CATS.find(([key]) => key === s.categoria)?.[1] : undefined;
+  const activeFilters: { key: keyof S; label: string }[] = [
+    ...(s.q ? [{ key: "q" as const, label: `Busca: ${s.q}` }] : []),
+    ...(s.categoria && categoryName
+      ? [{ key: "categoria" as const, label: `Categoria: ${categoryName}` }]
+      : []),
+    ...(s.tiposProduto ? [{ key: "tiposProduto" as const, label: `Tipo: ${s.tiposProduto}` }] : []),
+    ...(s.necessidades
+      ? [{ key: "necessidades" as const, label: `Necessidade: ${s.necessidades}` }]
+      : []),
+    ...(s.secao ? [{ key: "secao" as const, label: "Seção: Mais vendidos" }] : []),
+    ...(s.uso
+      ? [{ key: "uso" as const, label: `Público: ${s.uso === "salao" ? "Salão" : "Casa"}` }]
+      : []),
+    ...(s.ordem
+      ? [
+          {
+            key: "ordem" as const,
+            label: `Ordem: ${s.ordem === "menor" ? "Menor preço" : s.ordem === "maior" ? "Maior preço" : "A–Z"}`,
+          },
+        ]
+      : []),
+  ];
   return (
     <Shell>
       <div className="container-site py-10">
@@ -134,11 +168,13 @@ export function Loja() {
             ? `Busca: “${s.q}”`
             : s.secao
               ? "Mais Vendidos"
-              : uso === "casa"
-                ? "Para Mim — Cuidados em Casa"
-                : uso === "salao"
-                  ? "Para Cabeleireiras — Produtos para Salão"
-                  : (s.tiposProduto ?? s.necessidades ?? "Todos os Produtos")}
+              : categoryName
+                ? categoryName
+                : uso === "casa"
+                  ? "Para Mim — Cuidados em Casa"
+                  : uso === "salao"
+                    ? "Para Cabeleireiras — Produtos para Salão"
+                    : (s.tiposProduto ?? s.necessidades ?? "Todos os Produtos")}
         </h1>
         <div className="my-6 flex flex-wrap items-center gap-3">
           <form
@@ -217,10 +253,52 @@ export function Loja() {
           <Link to="/loja" className="text-body underline">
             Limpar filtros
           </Link>
-          <span className="ml-auto text-body text-muted-foreground">{list.length} produtos</span>
+          <span
+            role="status"
+            aria-live="polite"
+            className="ml-auto text-body text-muted-foreground"
+          >
+            {list.length} {list.length === 1 ? "produto" : "produtos"}
+          </span>
         </div>
+        {activeFilters.length > 0 && (
+          <div
+            role="group"
+            aria-label="Filtros ativos"
+            className="mb-6 flex flex-wrap items-center gap-2"
+          >
+            <span className="mr-1 text-small text-muted-foreground">Filtros ativos:</span>
+            {activeFilters.map((filter) => (
+              <Link
+                key={filter.key}
+                to="/loja"
+                search={{ ...s, [filter.key]: undefined }}
+                aria-label={`Remover filtro ${filter.label}`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-muted px-3 py-2 text-small font-semibold text-foreground transition hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                {filter.label}
+                <span aria-hidden="true" className="text-muted-foreground">
+                  ×
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
         {!list.length ? (
-          <p className="py-20 text-center text-muted-foreground">Nenhum produto encontrado.</p>
+          <div className="rounded-2xl border border-border bg-card px-5 py-14 text-center">
+            <h2 className="font-display text-h2">Nenhum produto encontrado.</h2>
+            <p className="mx-auto mt-3 max-w-xl text-body text-muted-foreground">
+              {activeFilters.length > 0
+                ? "Retire um filtro para ampliar a busca ou explore todos os produtos."
+                : "Experimente outros termos ou explore todos os produtos Vonix Hair."}
+            </p>
+            <Link
+              to="/loja"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-foreground px-6 py-3 text-body font-semibold text-background"
+            >
+              Ver todos os produtos
+            </Link>
+          </div>
         ) : browsing ? (
           // Same system in both areas: one swipeable row per category; scroll down to move between categories.
           <div className="space-y-10">

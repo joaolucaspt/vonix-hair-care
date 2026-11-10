@@ -1,0 +1,127 @@
+{
+  "project": "vonix-hair-care",
+  "checkpoint": "C23",
+  "localDate": "2026-11-10",
+  "repo": "C:\\Users\\JL\\code\\vonix-hair-care",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "baseHead": "6fb6a8efb5544a3ae1b8a8909aaf36235be113a2",
+  "workloop": {
+    "id": "6be36f8d-d824-441e-b50a-2e7dceaf4c75",
+    "runId": "76793741-0eb9-4d79-b704-ff8601ee829c"
+  },
+  "findings": [
+    {
+      "id": "N90",
+      "where": "/loja?categoria=kits",
+      "result": "Show correct category heading, live count"
+    },
+    {
+      "id": "N91",
+      "where": "/loja filtered search no-results",
+      "result": "Show active filters and recovery, remove one preserving other filters"
+    },
+    {
+      "id": "N92",
+      "where": "/loja with invalid search URL",
+      "result": "Normalize at UI boundary; no unvalidated query reflected as heading"
+    },
+    {
+      "id": "N93",
+      "where": "/favoritos",
+      "result": "Prominent empty state, clear CTA and saved count"
+    },
+    {
+      "id": "N94",
+      "where": "/loja active chips",
+      "result": "SSR navigable anchor links even before hydration"
+    }
+  ],
+  "validation": {
+    "tddRed": "3 storefront UX failures + 2 favorites UX failures + 1 raw route query failure; Chrome invalid heading reproduced",
+    "focused": {
+      "passed": 9,
+      "files": 2,
+      "exitCode": 0
+    },
+    "fullVitest": {
+      "passed": 648,
+      "files": 78,
+      "exitCode": 0
+    },
+    "typescriptExit": 0,
+    "eslintNonformatExit": 0,
+    "targetPrettierExit": 0,
+    "build": {
+      "exitCode": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "productCount": 42,
+      "failures": 0,
+      "exitCode": 0
+    },
+    "chrome": {
+      "passed": 3,
+      "failed": 0,
+      "widths": [
+        320,
+        390,
+        1366
+      ],
+      "screenshots": 15,
+      "pageErrors": 0,
+      "externalBlocked": true,
+      "livePayments": false,
+      "report": "qa-artifacts/vonix-c23/link-safe/report.json",
+      "red": "qa-artifacts/vonix-c23/debug-headings/report.json"
+    },
+    "gitDiffCheck": 0
+  },
+  "files": [
+    "src/routes/loja.tsx",
+    "src/routes/favoritos.tsx",
+    "src/test/storefront-search-audit.test.tsx",
+    "src/test/favorites-page-ux.test.tsx",
+    "scripts/qa-c23-storefront-favorites.mjs",
+    "qa-artifacts/vonix-c23/debug-headings/report.json",
+    "qa-artifacts/vonix-c23/link-safe/report.json",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md"
+  ],
+  "sha256": {
+    "src/routes/loja.tsx": "C3F9E6D793325EEFBE7E3BF6B55CF54DE7E2CF6387F5872166A0C084B014ABC6",
+    "src/routes/favoritos.tsx": "C74D28C88AD04BAF5864E30699E071F74F0ABAD90E5E0667A894F9B2584B826D",
+    "src/test/storefront-search-audit.test.tsx": "D547442125EDFE20AFFE75EA9D50DCED18923743B8C9E846EA3FD54433D1A9ED",
+    "src/test/favorites-page-ux.test.tsx": "9239E02DCC33CB07ACA9769C720A3349401E53AB85A81D5206AABBFB4BFD2E63",
+    "scripts/qa-c23-storefront-favorites.mjs": "9C8F0151416B75853B0F96E799D522A88C5739441AF646866A3987C3B38BE8BE",
+    "qa-artifacts/vonix-c23/debug-headings/report.json": "F2014BF1244A980CB9EC20D55868A260E0434BC01D5A92901565BB08B341AB5C",
+    "qa-artifacts/vonix-c23/link-safe/report.json": "8958376E397E3F12C47B0D527CA16377AA624FE791F2D702CF29C3CA659FE408",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md": "949F9757702A221C86C4D1DA6B2C4E472C91021C96680CB3E358B3D24F4C233C"
+  },
+  "pendingUpstream": {
+    "pr": 55,
+    "head": "90d527d1d6f4b7f389be8d303bcf068881df424c",
+    "readOnlyConflict": "src/components/site.tsx",
+    "mergeCompleted": false
+  },
+  "safety": {
+    "independentAffiliateSignupApplicationTouched": false,
+    "payments": false,
+    "orders": false,
+    "reviews": false,
+    "productionDB": false,
+    "deploy": false,
+    "originalMainMerge": false
+  },
+  "production": "NOT_APPROVED",
+  "operationalBlockers": [
+    "Appmax sandbox paid_at/duplicate/expiry/antifraud",
+    "Supabase isolated staging RLS/backups/restore",
+    "Bling real inventory and dimensions",
+    "real carrier quote and fulfillment",
+    "LGPD postpurchase revocation",
+    "Cloudflare Worker hosted smoke",
+    "WAF and distributed rate limiting",
+    "paid analytics reconciliation",
+    "legacy global Prettier/CRLF formatting debt"
+  ]
+}
