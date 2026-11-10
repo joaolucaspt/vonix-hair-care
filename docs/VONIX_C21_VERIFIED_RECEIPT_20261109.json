@@ -1,0 +1,122 @@
+{
+  "project": "vonix-hair-care",
+  "dateLocal": "2026-11-09",
+  "scope": "Ecommerce audit branch only; independent affiliate signup application not accessed",
+  "workloop": {
+    "definitionId": "0823c12e-9320-4af4-9e26-451b4d68054d",
+    "runId": "f56e893e-9869-4aea-bddf-d612a3b23d13"
+  },
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "baseHead": "f04a8af35aec98c9835d63facb17159c3bf0b952",
+  "originMainAtStart": "96296d42ba4c382ec485091139c182726997a60a",
+  "mainNewlyDetected": {
+    "commit": "dd1fae0886424f40fdee7b522a072618604a1670",
+    "pr": 51,
+    "integrated": false,
+    "note": "To be merged into audited branch only after commit of safe C21 changes"
+  },
+  "findings": [
+    {
+      "id": "N79",
+      "result": "Sanitize stored favorites to active catalog slugs, deduplicate, bound scanning"
+    },
+    {
+      "id": "N80",
+      "result": "Cross-tab browser storage event reconciles cart, favorites and audience, updates React subscribers and checkout"
+    },
+    {
+      "id": "N81",
+      "result": "Persisted audience values constrained to casa, salao or null"
+    },
+    {
+      "id": "N82",
+      "result": "Accent-insensitive catalog search using Unicode normalization and whitespace folding"
+    }
+  ],
+  "verification": {
+    "red": {
+      "persistentStorageFailedBeforeFix": 4,
+      "searchFailedBeforeFix": 1
+    },
+    "targeted": {
+      "passed": 9,
+      "files": 2,
+      "exitCode": 0
+    },
+    "fullVitest": {
+      "passed": 621,
+      "files": 73,
+      "exitCode": 0
+    },
+    "typescript": {
+      "exitCode": 0
+    },
+    "eslintAllWithoutPrettier": {
+      "exitCode": 0
+    },
+    "prettierChangedFiles": {
+      "exitCode": 0
+    },
+    "build": {
+      "exitCode": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "productCount": 42,
+      "failures": 0,
+      "exitCode": 0
+    },
+    "chrome": {
+      "passed": 3,
+      "failed": 0,
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "screenshots": 12,
+      "externalRequestsBlockedPerViewport": 7,
+      "realPaymentsSubmitted": false,
+      "cartSynchronized": true,
+      "checkoutSummarySynchronized": true,
+      "favoritesRecovered": true,
+      "accentFreeSearch": true,
+      "pageErrors": 0,
+      "report": "qa-artifacts/vonix-c21/dev/report.json"
+    },
+    "gitDiffCheck": {
+      "exitCode": 0
+    }
+  },
+  "files": [
+    "src/lib/store.ts",
+    "src/routes/loja.tsx",
+    "src/test/store-persistence-safety.test.tsx",
+    "src/test/storefront-search-audit.test.tsx",
+    "scripts/qa-c21-multitab-storefront.mjs",
+    "qa-artifacts/vonix-c21/dev/report.json",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C21_20261109.md",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
+  ],
+  "sha256": {
+    "src/lib/store.ts": "02077D37D7F1696E0101E3E6FCFC7DDDD70B3A1DF2BA799B9038EEAA43D782F9",
+    "src/routes/loja.tsx": "4D379A2D018B47AF2FB75022D0AF357EFE0D277A4A00BE991D48D1EBB4B0EDB9",
+    "src/test/store-persistence-safety.test.tsx": "7E1404D81D40539784BAACD05709CDF74CBE690C4976D57403BBD39C3FB8A156",
+    "src/test/storefront-search-audit.test.tsx": "FF40D62D070B543F7A25A341C25AC641263B1E61091F60C9483D6BBF87E92AA4",
+    "scripts/qa-c21-multitab-storefront.mjs": "121031FC977C4FAD691EFBE5B55853C603162CF85E49B63244531147BDD4A88A",
+    "qa-artifacts/vonix-c21/dev/report.json": "370ECA204DA154CB6A7BF6D7BEB4594E8C7F974C2F4E03B53398275890CEABE4"
+  },
+  "limitations": [
+    "Browser verified only local development, no worker hosted",
+    "No real Appmax/Supabase/Bling/transport provider testing",
+    "Strict repo Prettier/CRLF existing debt",
+    "Cross-tab cache sync is not a transactional lock across devices or server-order deduplication"
+  ],
+  "production": "NOT_APPROVED",
+  "noLiveOrders": true,
+  "noLivePayments": true,
+  "noProductionDatabaseAccess": true,
+  "noDeploy": true,
+  "noOriginalMainMerge": true
+}

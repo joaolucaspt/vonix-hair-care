@@ -242,3 +242,14 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero conflitos; não editar app independente de afiliadas. C20: 611/611 Vitest em 72 arquivos, TypeScript/ESLint sem Prettier/build/Prettier alterados verdes, SSR 42/42, Chrome 3/3 (320/390/1366, 9 imagens), sem pagamentos ou reviews reais. Produção **NOT_APPROVED**. Documentação: `VONIX_AUDITORIA_CONTINUIDADE_C20_20261109.md`.
 
 **C20, atualização da origem PR #50:** `96296d4` incorporado sem conflitos na branch auditada; nenhuma nova alteração aos módulos de e-commerce deste ciclo. Gates finais locais: **614/614 Vitest em 72 arquivos**, Chrome 3/3 em três resoluções após PR50, TypeScript, build e ESLint não formatação verdes. Homologação de serviços reais e `npm run lint` estrito permanecem pendentes.
+
+## C21 — navegação entre abas e pesquisa normalizada (09/11)
+
+| ID | Severidade | Defeito comprovado | Resultado |
+| --- | --- | --- | --- |
+| N79 | Média/alta | Favoritos em cache com JSON objeto causavam `favs.includes is not a function`; favoritos antigos/inexistentes não eram saneados | Corrigido: `migrateFavorites` valida e deduplica slugs ativos do catálogo, migração do cache, teste RED/GREEN e Chrome |
+| N80 | Alta | Alteração de sacola e favoritos em outra aba não atualizava a tela, induzindo revisão de compra desatualizada | Corrigido: listener `storage` com assinaturas e revalidação, React notificado, checkout recalculado, **sem emitir pagamento** |
+| N81 | Média | Público `sessionStorage` aceitava objeto JSON inválido como audiência | Corrigido: `migrateAudience` aceita somente `casa`, `salao` ou `null` |
+| N82 | Média | Pesquisa ignorava diferenças de caixa, mas não acentos nem espaços extras: `mascara` versus **Máscara** | Corrigido: normalização Unicode e espaços, mantendo preço/ranking e limites da URL |
+
+**C21:** base C20 `f04a8af`; QA de foco 9/9, integral **621/621 Vitest em 73 arquivos**, TypeScript, ESLint sem Prettier, build Cloudflare, SSR 42/42 e Chrome 3/3 em três resoluções, 12 screenshots, rede externa bloqueada. Produção **NOT_APPROVED**. Ver `VONIX_AUDITORIA_CONTINUIDADE_C21_20261109.md`.

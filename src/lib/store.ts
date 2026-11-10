@@ -27,11 +27,10 @@ export const WHATSAPP =
   "https://wa.me/5531990086296?text=Ol%C3%A1%2C+vim+do+site+e+preciso+de+ajuda.";
 
 export const SITE_URL = "https://vonixhair.com";
-export const INSTAGRAM ="https://www.instagram.com/vonixhairoficial";
+export const INSTAGRAM = "https://www.instagram.com/vonixhairoficial";
 export const FACEBOOK = "https://www.facebook.com/vonixhairoficial";
 
-export const brl = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+export const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const cents = (v: number) => Math.round(v * 100);
 
@@ -76,7 +75,18 @@ export const missingForFreeShipping = (subtotal: number) =>
 
 /** What the customer gets in the item: kit piece count (from "O QUE VEM NO KIT") and/or the size(s). */
 export function contentLabel(p: Product, short = false) {
-  const sizes = [...new Set(p.variants.map((v) => v.label.replace(/^[^\d]*/, "").replace(/\s+/g, "").trim()).filter(Boolean))];
+  const sizes = [
+    ...new Set(
+      p.variants
+        .map((v) =>
+          v.label
+            .replace(/^[^\d]*/, "")
+            .replace(/\s+/g, "")
+            .trim(),
+        )
+        .filter(Boolean),
+    ),
+  ];
   const sizeText = sizes.join(" · ");
   if (p.category === "kits") {
     const block = p.description.match(/\*\*O QUE VEM NO (?:KIT|COMBO)\*\*\s*([\s\S]*?)\n---/)?.[1];
@@ -87,7 +97,7 @@ export function contentLabel(p: Product, short = false) {
   return sizeText;
 }
 
-export const discountPct =(compare: number | null, price: number) =>
+export const discountPct = (compare: number | null, price: number) =>
   compare && compare > price ? Math.round((1 - price / compare) * 100) : 0;
 
 /* ---------- professional classification (explicit metadata) ---------- */
@@ -137,11 +147,16 @@ export function lineTotals(price: number, qty: number, offer?: Offer) {
     return { gross: (u * qty) / 100, net: (unit * qty) / 100, units: qty };
   }
   const gross = u * qty;
-  return { gross: gross / 100, net: Math.round((gross * (100 - volumePct(qty))) / 100) / 100, units: qty };
+  return {
+    gross: gross / 100,
+    net: Math.round((gross * (100 - volumePct(qty))) / 100) / 100,
+    units: qty,
+  };
 }
 
 /** A line is "on offer" when it carries a line offer OR the volume discount made it cheaper: then Pix 5% and coupons do not stack. */
-export const lineHasOffer = (l: { net: number; gross: number; offer?: Offer | undefined }) => !!l.offer || l.net < l.gross;
+export const lineHasOffer = (l: { net: number; gross: number; offer?: Offer | undefined }) =>
+  !!l.offer || l.net < l.gross;
 
 /* ---------- persistent cart & favorites ---------- */
 export type CartItem = { slug: string; variant: string; qty: number; offer?: Offer };
@@ -162,13 +177,20 @@ export function migrateCart(items: unknown): CartItem[] {
       typeof i.qty !== "number" ||
       !Number.isSafeInteger(i.qty) ||
       i.qty <= 0
-    ) continue;
+    )
+      continue;
     // Do not keep unavailable catalog items, retired variants or bad entries.
     const p = getProduct(i.slug);
     if (!p || !p.variants.some((v) => v.label === i.variant)) continue;
-    const offer = i.offer === "kit2" || i.offer === "kit3" || i.offer === "comp5" ? i.offer : undefined;
+    const offer =
+      i.offer === "kit2" || i.offer === "kit3" || i.offer === "comp5" ? i.offer : undefined;
     const units = Math.min(99, i.qty * (offer === "kit2" ? 2 : offer === "kit3" ? 3 : 1));
-    valid.push({ slug: i.slug, variant: i.variant, qty: units, ...(offer === "comp5" ? { offer } : {}) });
+    valid.push({
+      slug: i.slug,
+      variant: i.variant,
+      qty: units,
+      ...(offer === "comp5" ? { offer } : {}),
+    });
   }
 
   // A complement offer is valid only if the remaining base basket qualifies.
@@ -177,11 +199,17 @@ export function migrateCart(items: unknown): CartItem[] {
   const normalized: CartItem[] = [];
   for (const i of valid) {
     const offer = i.offer === "comp5" && eligible.has(i.slug) ? "comp5" : undefined;
-    const existing = normalized.find((o) =>
-      o.slug === i.slug && o.variant === i.variant && o.offer === offer,
+    const existing = normalized.find(
+      (o) => o.slug === i.slug && o.variant === i.variant && o.offer === offer,
     );
     if (existing) existing.qty = Math.min(99, existing.qty + i.qty);
-    else normalized.push({ slug: i.slug, variant: i.variant, qty: i.qty, ...(offer ? { offer } : {}) });
+    else
+      normalized.push({
+        slug: i.slug,
+        variant: i.variant,
+        qty: i.qty,
+        ...(offer ? { offer } : {}),
+      });
   }
   return normalized;
 }
@@ -190,7 +218,12 @@ export function migrateCart(items: unknown): CartItem[] {
 export const CART_REVALIDATED_KEY = "vonix-cart-revalidated-v1";
 
 /** "session" storage forgets the choice when the visit ends, so the visitor chooses again next time. */
-function createStore<T>(key: string, initial: T, kind: "local" | "session" = "local", migrate?: (s: T) => T) {
+function createStore<T>(
+  key: string,
+  initial: T,
+  kind: "local" | "session" = "local",
+  migrate?: (s: T) => T,
+) {
   let state = initial;
   let loaded = false;
   const subs = new Set<() => void>();
@@ -216,6 +249,29 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
       /* ignore */
     }
   };
+  /** Reconcile edits from other tabs before allowing another cart action. */
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== key && event.key !== null) return;
+    try {
+      if (event.storageArea !== storage()) return;
+      const parsed: T = event.newValue === null ? initial : JSON.parse(event.newValue);
+      const updated = migrate ? migrate(parsed) : parsed;
+      if (key === "vonix-cart" && migrate && JSON.stringify(parsed) !== JSON.stringify(updated)) {
+        try {
+          sessionStorage.setItem(CART_REVALIDATED_KEY, "1");
+        } catch {
+          /* optional notice */
+        }
+      }
+      if (JSON.stringify(updated) === JSON.stringify(state)) return;
+      state = updated;
+    } catch {
+      // Browser storage can be malformed or unavailable. Never crash the shop.
+      if (JSON.stringify(state) === JSON.stringify(initial)) return;
+      state = initial;
+    }
+    subs.forEach((notify) => notify());
+  };
   return {
     get: () => {
       load();
@@ -227,7 +283,11 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
       const proposed = fn(state);
       state = migrate ? migrate(proposed) : proposed;
       if (migrate && JSON.stringify(proposed) !== JSON.stringify(state)) {
-        try { sessionStorage.setItem(CART_REVALIDATED_KEY, "1"); } catch { /* private mode */ }
+        try {
+          sessionStorage.setItem(CART_REVALIDATED_KEY, "1");
+        } catch {
+          /* private mode */
+        }
       }
       try {
         storage().setItem(key, JSON.stringify(state));
@@ -239,16 +299,40 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
     },
     sub: (f: () => void) => {
       subs.add(f);
-      return () => subs.delete(f);
+      if (subs.size === 1 && typeof window !== "undefined")
+        window.addEventListener("storage", onStorage);
+      return () => {
+        subs.delete(f);
+        if (!subs.size && typeof window !== "undefined")
+          window.removeEventListener("storage", onStorage);
+      };
     },
   };
 }
 
 const cartStore = createStore<CartItem[]>("vonix-cart", [], "local", migrateCart);
-const favStore = createStore<string[]>("vonix-favs", []);
+/** Only active catalog slugs may be restored as favorites from untrusted browser storage. */
+export function migrateFavorites(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of value.slice(0, 500)) {
+    if (typeof entry !== "string" || seen.has(entry) || !getProduct(entry)) continue;
+    seen.add(entry);
+    result.push(entry);
+    if (result.length >= products.length) break;
+  }
+  return result;
+}
+const favStore = createStore<string[]>("vonix-favs", [], "local", migrateFavorites);
 
 /** False while the page is server-rendered/hydrating, so pages that depend on localStorage don't flash an empty state. */
-export const useHydrated = () => useSyncExternalStore(() => () => undefined, () => true, () => false);
+export const useHydrated = () =>
+  useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
 export function useCart() {
   const items = useSyncExternalStore(cartStore.sub, cartStore.get, cartStore.server);
@@ -259,13 +343,23 @@ export function useCart() {
       if (!p || !v) return null;
       const t = lineTotals(v.price, i.qty, i.offer);
       const pct = t.gross > 0 ? Math.round((1 - t.net / t.gross) * 100) : 0;
-      return { ...i, product: p, price: v.price, gross: t.gross, net: t.net, units: t.units, total: t.net, pct };
+      return {
+        ...i,
+        product: p,
+        price: v.price,
+        gross: t.gross,
+        net: t.net,
+        units: t.units,
+        total: t.net,
+        pct,
+      };
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
   const subtotal = cents(lines.reduce((s, l) => s + l.gross, 0)) / 100;
   const netSubtotal = cents(lines.reduce((s, l) => s + l.net, 0)) / 100;
   const count = lines.reduce((s, l) => s + l.units, 0);
-  const key = (i: { slug: string; variant: string; offer?: Offer | undefined }) => `${i.slug}|${i.variant}|${i.offer ?? ""}`;
+  const key = (i: { slug: string; variant: string; offer?: Offer | undefined }) =>
+    `${i.slug}|${i.variant}|${i.offer ?? ""}`;
   return {
     lines,
     subtotal,
@@ -306,22 +400,31 @@ export function useFavorites() {
 }
 
 export const NEEDS: Record<string, RegExp> = {
-  "Hidratação": /hidrat/i,
-  "Reconstrução": /reconstru|reparação|repair|queratina/i,
+  Hidratação: /hidrat/i,
+  Reconstrução: /reconstru|reparação|repair|queratina/i,
   "Controle de Frizz": /frizz/i,
   "Definição de Cachos": /cacho/i,
   "Cabelos com Química": /química|quimica|loir|coloração|matiz/i,
-  "Nutrição": /nutri/i,
+  Nutrição: /nutri/i,
 };
 export const TYPES: Record<string, (p: Product) => boolean> = {
   Progressiva: (p) => /progressiva/i.test(p.name),
-  "Máscara": (p) => /máscara/i.test(p.name),
+  Máscara: (p) => /máscara/i.test(p.name),
   Combos: (p) => p.category === "kits",
   Finalizadores: (p) => p.category === "finalizadores",
 };
-export const BEST_SELLERS = ["progressiva-fio-de-luz", "kit-banana-e-mel", "kit-coco-nutri", "botox-vonix", "botox-line", "mascara-efeito-teia-coco-nutri"];
+export const BEST_SELLERS = [
+  "progressiva-fio-de-luz",
+  "kit-banana-e-mel",
+  "kit-coco-nutri",
+  "botox-vonix",
+  "botox-line",
+  "mascara-efeito-teia-coco-nutri",
+];
 
-export const MAX_DISCOUNT = Math.max(...products.map((p) => discountPct(p.compareBase, p.variants[0].price)));
+export const MAX_DISCOUNT = Math.max(
+  ...products.map((p) => discountPct(p.compareBase, p.variants[0].price)),
+);
 
 /**
  * Order totals in cents, line-aware.
@@ -338,7 +441,10 @@ export function checkoutTotals(
   const net = cents(lines.reduce((s, l) => s + l.net, 0));
   const eligible = cents(lines.reduce((s, l) => s + (lineHasOffer(l) ? 0 : l.net), 0));
   const couponDisc = Math.round(eligible * couponPct);
-  const pixDisc = method === "pix" ? Math.round(((eligible - couponDisc) * 95) / 100) - (eligible - couponDisc) : 0;
+  const pixDisc =
+    method === "pix"
+      ? Math.round(((eligible - couponDisc) * 95) / 100) - (eligible - couponDisc)
+      : 0;
   const total = net - couponDisc + pixDisc;
   return {
     gross: gross / 100,
@@ -366,12 +472,21 @@ export const hasProPromo = (_p: Product) => true;
 /** Display only: price is always the catalog price; the buy-more promotions are chosen on the product page. */
 export function cardPricing(p: Product, _audience: Audience) {
   const price = p.variants[0].price;
-  return { professional: hasProPromo(p), price, pix: pixPrice(price), parcels: installments(price) };
+  return {
+    professional: hasProPromo(p),
+    price,
+    pix: pixPrice(price),
+    parcels: installments(price),
+  };
 }
-const audienceStore = createStore<Audience>("vonix-audience", null, "session");
+/** A cached audience must never become an arbitrary object or obsolete value. */
+export const migrateAudience = (value: unknown): Audience =>
+  value === "casa" || value === "salao" ? value : null;
+const audienceStore = createStore<Audience>("vonix-audience", null, "session", migrateAudience);
 
 /** Chemical-service products (progressivas, botox, selagem): they go last in the home area. */
-const isChemicalLine = (p: Product) => isProOnly(p.slug) || p.category === "quimica" || p.slug.startsWith("selagem");
+const isChemicalLine = (p: Product) =>
+  isProOnly(p.slug) || p.category === "quimica" || p.slug.startsWith("selagem");
 
 /**
  * Both areas list every product; only the order changes (stable within each group):
@@ -397,20 +512,58 @@ export function useAudience() {
 /** Usage filters based only on indications confirmed in the catalog descriptions. */
 /** Home / salon indications, fixed explicitly so editing a product's copy never changes where it is listed. */
 const CASA_TEXT = new Set([
-  "progressiva-fio-de-luz", "mascara-reparacao-nutri-repair", "kit-banana-e-mel", "kit-cronograma-capilar", "kit-whey-protein", "kit-desmaia",
-  "mascara-hidratacao-lanolina-karite", "mascara-efeito-teia-tomba-cabelo", "mascara-efeito-teia-coco-nutri", "mascara-efeito-teia-anabolizante",
-  "kit-coco-nutri", "mousse-flash", "mascara-efeito-teia-desmaia-cabelo", "kit-matizador-shampoo-e-mascara", "shampoo-hidratante-dep-toc",
-  "kit-cachos", "reparador-de-pontas", "serum-argan",
+  "progressiva-fio-de-luz",
+  "mascara-reparacao-nutri-repair",
+  "kit-banana-e-mel",
+  "kit-cronograma-capilar",
+  "kit-whey-protein",
+  "kit-desmaia",
+  "mascara-hidratacao-lanolina-karite",
+  "mascara-efeito-teia-tomba-cabelo",
+  "mascara-efeito-teia-coco-nutri",
+  "mascara-efeito-teia-anabolizante",
+  "kit-coco-nutri",
+  "mousse-flash",
+  "mascara-efeito-teia-desmaia-cabelo",
+  "kit-matizador-shampoo-e-mascara",
+  "shampoo-hidratante-dep-toc",
+  "kit-cachos",
+  "reparador-de-pontas",
+  "serum-argan",
 ]);
 const SALAO_TEXT = new Set([
-  "progressiva-fio-de-luz", "botox-vonix", "mascara-reparacao-nutri-repair", "plex-vonix", "kit-cauterizacao", "mascara-hidratacao-lanolina-karite",
-  "botox-line-matizador", "mascara-efeito-teia-tomba-cabelo", "mascara-efeito-teia-coco-nutri", "mascara-efeito-teia-anabolizante", "botox-vonix-matizador",
-  "mascara-whey-protein", "mousse-flash", "progressiva-diamond", "shampoo-diamond-anti-residuo", "mascara-efeito-teia-desmaia-cabelo",
-  "kit-matizador-shampoo-e-mascara", "progressiva-lift-em-gel", "progressiva-vonix-special-matizadora", "kit-cachos", "defrizante", "serum-argan",
+  "progressiva-fio-de-luz",
+  "botox-vonix",
+  "mascara-reparacao-nutri-repair",
+  "plex-vonix",
+  "kit-cauterizacao",
+  "mascara-hidratacao-lanolina-karite",
+  "botox-line-matizador",
+  "mascara-efeito-teia-tomba-cabelo",
+  "mascara-efeito-teia-coco-nutri",
+  "mascara-efeito-teia-anabolizante",
+  "botox-vonix-matizador",
+  "mascara-whey-protein",
+  "mousse-flash",
+  "progressiva-diamond",
+  "shampoo-diamond-anti-residuo",
+  "mascara-efeito-teia-desmaia-cabelo",
+  "kit-matizador-shampoo-e-mascara",
+  "progressiva-lift-em-gel",
+  "progressiva-vonix-special-matizadora",
+  "kit-cachos",
+  "defrizante",
+  "serum-argan",
 ]);
 export const USAGE: Record<string, (p: Product) => boolean> = {
-  casa: (p) => !isProOnly(p.slug) && (p.category === "kits" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
-  salao: (p) => isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || SALAO_TEXT.has(p.slug),
+  casa: (p) =>
+    !isProOnly(p.slug) &&
+    (p.category === "kits" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
+  salao: (p) =>
+    isProOnly(p.slug) ||
+    (p.category === "quimica" && p.slug.startsWith("botox-")) ||
+    p.category === "kits" ||
+    SALAO_TEXT.has(p.slug),
 };
 
 /** Professional relevance only; stable families based on catalog identifiers, never kit text. */
@@ -432,18 +585,31 @@ export const professionalRelevance = (items: Product[]) =>
  * (kits don't get the 5% complement offer).
  */
 const COMPLEMENT_RULES: [RegExp, string[]][] = [
-  [/progressiva-fio-de-luz/, ["shampoo-fio-de-luz-anti-residuo", "serum-argan", "reparador-de-pontas"]],
-  [/progressiva|botox|selagem|cauterizacao/, ["shampoo-diamond-anti-residuo", "defrizante", "mascara-efeito-teia-tomba-cabelo"]],
-  [/kit-banana-e-mel|kit-cafe-verde|kit-coco-nutri|kit-cachos|kit-cronograma|kit-whey|kit-desmaia/, ["serum-argan", "defrizante", "perfume-capilar-vonix"]],
+  [
+    /progressiva-fio-de-luz/,
+    ["shampoo-fio-de-luz-anti-residuo", "serum-argan", "reparador-de-pontas"],
+  ],
+  [
+    /progressiva|botox|selagem|cauterizacao/,
+    ["shampoo-diamond-anti-residuo", "defrizante", "mascara-efeito-teia-tomba-cabelo"],
+  ],
+  [
+    /kit-banana-e-mel|kit-cafe-verde|kit-coco-nutri|kit-cachos|kit-cronograma|kit-whey|kit-desmaia/,
+    ["serum-argan", "defrizante", "perfume-capilar-vonix"],
+  ],
   [/cacho/, ["mascara-efeito-teia-coco-nutri", "defrizante", "serum-argan"]],
-  [/mascara|hidrat|nutri|reconstru|queratina|whey/, ["reparador-de-pontas", "serum-argan", "ampola-de-hidratacao-mousse-flash"]],
+  [
+    /mascara|hidrat|nutri|reconstru|queratina|whey/,
+    ["reparador-de-pontas", "serum-argan", "ampola-de-hidratacao-mousse-flash"],
+  ],
   [/matiz/, ["kit-matizador-shampoo-e-mascara", "serum-argan"]],
 ];
 
 export function complementsFor(cartSlugs: string[], max = 3): Product[] {
   const inCart = new Set(cartSlugs);
   const ordered: string[] = [];
-  for (const [re, slugs] of COMPLEMENT_RULES) if (cartSlugs.some((s) => re.test(s))) ordered.push(...slugs);
+  for (const [re, slugs] of COMPLEMENT_RULES)
+    if (cartSlugs.some((s) => re.test(s))) ordered.push(...slugs);
   ordered.push(...BEST_SELLERS);
   const seen = new Set<string>();
   const out: Product[] = [];

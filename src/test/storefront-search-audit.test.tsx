@@ -24,7 +24,8 @@ vi.mock("@/lib/store", async (original) => ({
   useAudience: () => ({ audience: null }),
 }));
 
-import { Loja, normalizeStoreSearch } from "@/routes/loja";
+import { Loja, normalizeStoreSearch, matchesStoreQuery } from "@/routes/loja";
+import { getProduct } from "@/lib/store";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -42,6 +43,15 @@ describe("busca e filtros do catálogo público", () => {
     expect(mocks.navigate).toHaveBeenCalledOnce();
     const action = mocks.navigate.mock.calls[0]![0];
     expect(action.search({})).toEqual({ q: "Banana" });
+  });
+
+  it("encontra produtos com busca sem acentos, com maiúsculas e espaços múltiplos", () => {
+    const mascara = getProduct("mascara-efeito-teia-coco-nutri")!;
+    const cafe = getProduct("kit-cafe-verde")!;
+    expect(matchesStoreQuery(mascara, "  MASCARA  ")).toBe(true);
+    expect(matchesStoreQuery(cafe, "cafe verde")).toBe(true);
+    expect(matchesStoreQuery(cafe, "CAFÉ   VERDE")).toBe(true);
+    expect(matchesStoreQuery(cafe, "produto inexistente")).toBe(false);
   });
 
   it("valida busca de URL com espaço excedente e limita entrada desnecessariamente longa", () => {

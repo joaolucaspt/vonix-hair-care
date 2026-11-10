@@ -6,6 +6,7 @@ import {
   NEEDS,
   SITE_URL,
   products,
+  type Product,
   TYPES,
   forAudience,
   resolveAudience,
@@ -41,6 +42,24 @@ export function normalizeStoreSearch(s: Record<string, unknown>): S {
   }
   return normalized;
 }
+/** Match Brazilian Portuguese queries with or without accent marks, case or extra spaces. */
+const searchKey = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export function matchesStoreQuery(
+  product: Pick<Product, "name" | "categoryLabel" | "short">,
+  query: string,
+): boolean {
+  const term = searchKey(query);
+  if (!term) return true;
+  return searchKey(`${product.name} ${product.categoryLabel} ${product.short}`).includes(term);
+}
+
 export const Route = createFileRoute("/loja")({
   validateSearch: normalizeStoreSearch,
   head: () => ({
@@ -83,8 +102,8 @@ export function Loja() {
     )
       return false;
     if (s.q) {
-      const q = s.q.toLowerCase();
-      if (!(p.name + " " + p.categoryLabel + " " + p.short).toLowerCase().includes(q)) return false;
+      const q = s.q;
+      if (!matchesStoreQuery(p, q)) return false;
     }
     return true;
   });
