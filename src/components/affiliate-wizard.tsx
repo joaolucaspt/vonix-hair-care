@@ -213,6 +213,36 @@ function maskCpf(value: string) {
     digits.slice(0, 3) + "." + digits.slice(3, 6) + "." + digits.slice(6, 9) + "-" + digits.slice(9)
   );
 }
+function maskCnpj(value: string) {
+  const digits = onlyDigits(value).slice(0, 14);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return digits.slice(0, 2) + "." + digits.slice(2);
+  if (digits.length <= 8) {
+    return digits.slice(0, 2) + "." + digits.slice(2, 5) + "." + digits.slice(5);
+  }
+  if (digits.length <= 12) {
+    return (
+      digits.slice(0, 2) +
+      "." +
+      digits.slice(2, 5) +
+      "." +
+      digits.slice(5, 8) +
+      "/" +
+      digits.slice(8)
+    );
+  }
+  return (
+    digits.slice(0, 2) +
+    "." +
+    digits.slice(2, 5) +
+    "." +
+    digits.slice(5, 8) +
+    "/" +
+    digits.slice(8, 12) +
+    "-" +
+    digits.slice(12)
+  );
+}
 function maskZip(value: string) {
   const v = onlyDigits(value).slice(0, 8);
   return v.length > 5 ? v.slice(0, 5) + "-" + v.slice(5) : v;
@@ -628,6 +658,7 @@ export function AffiliateWizard({
                 placeholder: "Opcional",
                 inputMode: "numeric",
                 maxLength: 18,
+                transform: maskCnpj,
               })}
               {field("birthDate", "Data de nascimento", { type: "date", autoComplete: "bday" })}
               {field("birthCity", "Cidade de nascimento", { placeholder: "Onde você nasceu?" })}
