@@ -7,6 +7,10 @@ const gates = vi.hoisted(() => ({
   sameOrigin: vi.fn(),
   quota: vi.fn(),
   create: vi.fn(),
+  session: vi.fn(),
+  allowed: vi.fn(),
+  decide: vi.fn(),
+  email: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -24,13 +28,13 @@ vi.mock("@/lib/affiliate-admin-auth.server", () => ({
   attemptAffiliateAdminLogin: vi.fn(),
 }));
 vi.mock("@/lib/affiliate-admin-session.server", () => ({
-  affiliateAdminSameOrigin: vi.fn(),
+  affiliateAdminSameOrigin: gates.sameOrigin,
   affiliateMutationSameOrigin: gates.sameOrigin,
-  affiliateAdminSessionValid: vi.fn(),
+  affiliateAdminSessionValid: gates.session,
   destroyAffiliateAdminSession: vi.fn(),
 }));
 vi.mock("@/lib/affiliate-throttle.server", () => ({
-  affiliateRateLimitAllowed: vi.fn(),
+  affiliateRateLimitAllowed: gates.allowed,
   consumeAffiliateRateLimit: gates.quota,
 }));
 vi.mock("@/lib/affiliate-applications.server", () => ({
@@ -39,12 +43,12 @@ vi.mock("@/lib/affiliate-applications.server", () => ({
   eraseAffiliateApplication: vi.fn(),
   previewAffiliateRetention: vi.fn(),
   createAffiliateApplication: gates.create,
-  decideAffiliateApplication: vi.fn(),
+  decideAffiliateApplication: gates.decide,
   listAffiliateApplications: vi.fn(),
-  processAffiliateEmails: vi.fn(),
+  processAffiliateEmails: gates.email,
 }));
 
-import { submitAffiliateApplication } from "@/lib/affiliate-functions";
+import { reviewAffiliateApplication, submitAffiliateApplication } from "@/lib/affiliate-functions";
 
 // Validation takes place in the framework before the handler. These synthetic
 // values only exercise whether the side-effect is reached, never external I/O.
@@ -58,6 +62,10 @@ beforeEach(() => {
   gates.sameOrigin.mockReturnValue(true);
   gates.quota.mockResolvedValue(true);
   gates.create.mockResolvedValue({ ok: true });
+  gates.session.mockReturnValue(true);
+  gates.allowed.mockResolvedValue(true);
+  gates.decide.mockResolvedValue(true);
+  gates.email.mockResolvedValue({ sent: 0, failed: 0, configured: false });
 });
 
 describe("Public affiliate submission origin policy", () => {
@@ -102,5 +110,56 @@ describe("Public affiliate submission origin policy", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Muitas tentativas/);
     expect(gates.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("Admin decision notification semantics", () => {
+  const review = reviewAffiliateApplication as unknown as (args: {
+    data: { id: string; decision: "aprovada" | "recusada" };
+  }) => Promise<{
+    ok: boolean;
+    emailSent?: boolean;
+    notification?: string;
+  }>;
+
+  const data = { id: "00000000-0000-4000-8000-000000000999", decision: "aprovada" as const };
+
+  it("does not tell the operator an unconfigured email sender delivered a decision", async () => {
+    gates.email.mockResolvedValueOnce({ sent: 0, failed: 0, configured: false });
+    expect(await review({ data })).toMatchObject({
+      ok: true,
+      emailSent: false,
+      notification: "unconfigured",
+    });
+    expect(gates.decide).toHaveBeenCalledOnce();
+    expect(gates.email).toHaveBeenCalledWith(1, data.id);
+  });
+
+  it("distinguishes acceptance, queued and uncertain notification outcomes", async () => {
+    for (const [mail, outcome] of [
+      [{ sent: 1, failed: 0, configured: true }, "accepted"],
+      [{ sent: 0, failed: 0, configured: true }, "queued"],
+      [{ sent: 0, failed: 1, configured: true }, "review"],
+    ] as const) {
+      gates.email.mockResolvedValueOnce(mail);
+      expect((await review({ data })).notification).toBe(outcome);
+    }
+    gates.email.mockRejectedValueOnce(new Error("synthetic provider outage"));
+    expect(await review({ data })).toMatchObject({
+      ok: true,
+      notification: "review",
+      emailSent: false,
+    });
+    expect(gates.decide).toHaveBeenCalledTimes(4);
+  });
+
+  it("requires same origin and signed admin session before recording decisions", async () => {
+    gates.session.mockReturnValue(false);
+    expect(await review({ data })).toMatchObject({ ok: false });
+    expect(gates.decide).not.toHaveBeenCalled();
+    gates.session.mockReturnValue(true);
+    gates.sameOrigin.mockReturnValue(false);
+    expect(await review({ data })).toMatchObject({ ok: false });
+    expect(gates.decide).not.toHaveBeenCalled();
   });
 });

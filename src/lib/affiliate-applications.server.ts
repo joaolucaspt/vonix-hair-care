@@ -133,8 +133,21 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify(record),
   });
-  // A duplicate e-mail/profile gets the same public response to prevent account enumeration.
-  if (response.status === 409) return { ok: true as const };
+  // Only a PostgreSQL uniqueness violation is a duplicate submission.
+  // Other HTTP 409 responses can mean a broken schema or another operational
+  // conflict. Reporting those as received would silently lose applications.
+  // Never expose the database error body to the candidate.
+  if (response.status === 409) {
+    let duplicate = false;
+    try {
+      const error: unknown = await response.json();
+      duplicate =
+        typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+    } catch {
+      // Malformed/conflicting responses are not proof of an existing signup.
+    }
+    if (duplicate) return { ok: true as const };
+  }
   if (!response.ok) throw new Error("Falha ao salvar inscrição: HTTP " + response.status);
   return { ok: true as const };
 }
