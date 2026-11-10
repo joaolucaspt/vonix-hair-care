@@ -21,7 +21,10 @@ export const vonixAffiliateAuth = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      flowType: "pkce",
+      // Supabase Admin invite/generate_link verification redirects with an
+      // implicit #access_token session. PKCE rejects that callback without
+      // the browser-local code verifier and silently returns to e-mail entry.
+      flowType: "implicit",
     },
   },
 );
