@@ -63,6 +63,54 @@ export function affiliateRecruitmentOpen(): boolean {
   );
 }
 
+/**
+ * Alternate, owner-controlled intake toggle for campaign traffic. The operator
+ * acknowledges the data-collection notice in the dedicated Supabase DB.
+ * It does NOT grant any administrative session and does not weaken RLS.
+ * Legacy full-readiness configuration remains supported unchanged.
+ */
+export async function affiliateOperatorIntakeEnabled(): Promise<boolean> {
+  if (affiliateRecruitmentOpen()) return true;
+  const config = affiliateDatabaseConfig();
+  if (
+    !config ||
+    env("AFFILIATE_GOVERNANCE_MIGRATED") !== "true" ||
+    env("AFFILIATE_TRAFFIC_PEPPER").length < 32 ||
+    !affiliateTrustedIpHeaderValid() ||
+    !affiliateQuestionnaireEncryptionReady()
+  )
+    return false;
+  try {
+    const response = await fetch(
+      config.url +
+        "/rest/v1/vonix_affiliate_operator_intake?select=enabled,owner_acknowledged_at&singleton=eq.true&limit=1",
+      {
+        method: "GET",
+        headers: config.headers,
+        redirect: "manual",
+        signal: AbortSignal.timeout(4000),
+      },
+    );
+    if (!response.ok) return false;
+    const records = z
+      .array(
+        z.object({
+          enabled: z.boolean(),
+          owner_acknowledged_at: z.string().datetime({ offset: true }).nullable(),
+        }),
+      )
+      .max(1)
+      .parse(await response.json());
+    return (
+      records.length === 1 &&
+      records[0]!.enabled === true &&
+      records[0]!.owner_acknowledged_at !== null
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function secureEqual(actual: string, expected: string) {
   if (!actual || !expected) return false;
   const a = createHash("sha256").update(actual).digest();

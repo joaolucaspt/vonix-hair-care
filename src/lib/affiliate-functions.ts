@@ -19,6 +19,7 @@ import {
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
 import {
   affiliateRecruitmentOpen,
+  affiliateOperatorIntakeEnabled,
   affiliateOperationalReadiness,
   eraseAffiliateApplication,
   previewAffiliateRetention,
@@ -109,8 +110,11 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
     }
   }
   const cfConnectingIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
+  const operatorIntakeReady = storageReachable && (await affiliateOperatorIntakeEnabled());
+  const rateLimitReady = operatorIntakeReady && (await affiliateRateLimitAllowed("submit"));
   return {
-    open: storageReachable && affiliateRecruitmentOpen(),
+    open: rateLimitReady,
+    rateLimitReady,
     storageReachable,
     storageDiagnostic,
     publicNetworkDiagnostic,
@@ -122,7 +126,7 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
   .validator(affiliateApplicationSchema)
   .handler(async ({ data }) => {
-    if (!affiliateRecruitmentOpen()) {
+    if (!(await affiliateOperatorIntakeEnabled())) {
       return {
         ok: false as const,
         reason: "Inscrições ainda não disponíveis. Consulte os canais oficiais da Vonix Hair.",
