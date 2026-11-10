@@ -38,6 +38,14 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
   setResponseHeader("Cache-Control", "no-store");
   const config = affiliateDatabaseConfig();
   let storageReachable = false;
+  let storageDiagnostic:
+    | "not-configured"
+    | "reachable"
+    | "unauthorized"
+    | "forbidden"
+    | "not-found"
+    | "server-error"
+    | "network-error" = config ? "network-error" : "not-configured";
   if (config) {
     try {
       const response = await fetch(
@@ -50,14 +58,25 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
         },
       );
       storageReachable = response.ok;
+      storageDiagnostic = response.ok
+        ? "reachable"
+        : response.status === 401
+          ? "unauthorized"
+          : response.status === 403
+            ? "forbidden"
+            : response.status === 404
+              ? "not-found"
+              : "server-error";
     } catch {
       storageReachable = false;
+      storageDiagnostic = "network-error";
     }
   }
   const cfConnectingIp = getRequestHeader("cf-connecting-ip")?.trim() ?? "";
   return {
     open: storageReachable && affiliateRecruitmentOpen(),
     storageReachable,
+    storageDiagnostic,
     cfConnectingIpPresent: isIP(cfConnectingIp) !== 0,
     encryptionReady: affiliateQuestionnaireEncryptionReady(),
   };

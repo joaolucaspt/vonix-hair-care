@@ -33,6 +33,7 @@ export function AffiliateApplicationPage() {
   const [preview, setPreview] = useState(false);
   const [backendDiagnostics, setBackendDiagnostics] = useState({
     storage: false,
+    storageDiagnostic: "checking",
     ingress: false,
     encryption: false,
   });
@@ -49,11 +50,17 @@ export function AffiliateApplicationPage() {
     async function refreshStatus() {
       const requestId = ++latestRequest;
       try {
-        const { open, storageReachable, cfConnectingIpPresent, encryptionReady } =
-          await getAffiliateRecruitmentStatus();
+        const {
+          open,
+          storageReachable,
+          storageDiagnostic,
+          cfConnectingIpPresent,
+          encryptionReady,
+        } = await getAffiliateRecruitmentStatus();
         if (!active || requestId !== latestRequest) return;
         setBackendDiagnostics({
           storage: storageReachable,
+          storageDiagnostic,
           ingress: cfConnectingIpPresent,
           encryption: encryptionReady,
         });
@@ -108,6 +115,7 @@ export function AffiliateApplicationPage() {
         <section
           id="inscricao"
           data-storage-check={backendDiagnostics.storage ? "ok" : "unavailable"}
+          data-storage-diagnostic={backendDiagnostics.storageDiagnostic}
           data-ingress-check={backendDiagnostics.ingress ? "ok" : "unavailable"}
           data-encryption-check={backendDiagnostics.encryption ? "ok" : "unavailable"}
           className="mx-auto max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20"
