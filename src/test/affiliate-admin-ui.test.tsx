@@ -12,6 +12,8 @@ const server = vi.hoisted(() => ({
   eraseAffiliateApplicationAdmin: vi.fn(),
   getAffiliateOperationalReadiness: vi.fn(),
   getAffiliateRetentionPreview: vi.fn(),
+  getPendingAffiliateOwnerActivations: vi.fn(),
+  createPendingAffiliateOwnerActivationLink: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-functions", () => server);
@@ -52,6 +54,7 @@ function list(applications: unknown[] = [candidate]) {
 beforeEach(() => {
   vi.resetAllMocks();
   server.getAffiliateAdminSession.mockResolvedValue({ authenticated: true });
+  server.getPendingAffiliateOwnerActivations.mockResolvedValue({ ok: false, owners: [] });
   server.logoutAffiliateAdmin.mockResolvedValue({ ok: true });
   server.loginAffiliateAdmin.mockResolvedValue({ ok: true });
   server.eraseAffiliateApplicationAdmin.mockResolvedValue({ ok: true });

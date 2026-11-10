@@ -8,6 +8,10 @@ import { affiliateQuestionnaireEncryptionReady } from "./affiliate-wizard-crypto
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
+import {
+  generatePendingAffiliateOwnerActivationLink,
+  listPendingAffiliateOwnerActivations,
+} from "./affiliate-owner-activation.server";
 import { invitePersistedAffiliateApplicant } from "./affiliate-invites.server";
 import {
   affiliateCustomAuthEmailReady,
@@ -243,6 +247,27 @@ export const resendAffiliateApplicantInvite = createServerFn({ method: "POST" })
         reason: "Não foi possível solicitar o acesso. Verifique a conexão com o Supabase.",
       };
     }
+  });
+
+/**
+ * Authorized owner-only manual invitation recovery. Links are never logged,
+ * cached or persisted. The owner must deliver them privately to the intended
+ * recipient, who still verifies the token and creates an individual password.
+ */
+export const getPendingAffiliateOwnerActivations = createServerFn({ method: "POST" }).handler(
+  async () => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
+    return listPendingAffiliateOwnerActivations();
+  },
+);
+
+export const createPendingAffiliateOwnerActivationLink = createServerFn({ method: "POST" })
+  .validator(z.object({ email: z.string().trim().toLowerCase().email().max(180) }))
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
+    return generatePendingAffiliateOwnerActivationLink(data.email);
   });
 
 export const loginAffiliateAdminMember = createServerFn({ method: "POST" })
