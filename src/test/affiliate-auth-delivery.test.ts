@@ -114,6 +114,25 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
+  it("logs only an HTTP status class when the mail provider refuses a generated code", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(true))
+        .mockResolvedValueOnce(generate())
+        .mockResolvedValueOnce(new Response("sensitive-provider-message", { status: 403 }));
+      vi.stubGlobal("fetch", fetcher);
+      expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+      expect(warn).toHaveBeenCalledWith("[vonix-affiliate-auth-mail] resend-api-http http=403");
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(inbox);
+      expect(JSON.stringify(warn.mock.calls)).not.toContain("123456");
+      expect(JSON.stringify(warn.mock.calls)).not.toContain("sensitive-provider-message");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("rejects malformed recipient addresses and invalid delivery receipts", async () => {
     vi.stubGlobal("fetch", vi.fn());
     expect(await sendAffiliateAuthEmailWithResend("wrong-email", "applicant")).toBe(false);
