@@ -267,3 +267,14 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 **Rebrand e auditoria até `004ccf4`:** 627/627 testes em 74 arquivos, SSR 42/42, Chrome 3/3 em três resoluções, sem operações reais. Novo PR52 ainda precisa conciliação separada. Produção **NOT_APPROVED**.
 
 **C21 / PR52:** integração de `430eb07` sem conflitos após `004ccf4`. Gates locais repetidos: **631/631 Vitest em 74 arquivos**, TypeScript, build e ESLint não formatação verdes, SSR 42/42 e Chrome **3/3**, com 12 screenshots em `qa-artifacts/vonix-c21/kit-pr52`. Sem gateway, produção ou aplicativo externo de inscrição.
+
+## C22 — alterações visíveis em PDP e carrinho celular (10/11)
+
+| ID | Gravidade | Falha validada | Correção e prova |
+| --- | --- | --- | --- |
+| N86 | **Alta** | Cliente escolhe 3 unidades de `kit-cachos` e, ao navegar para `kit-banana-e-mel`, quantidade indevida de 3 persiste no preço e no CTA | Corrigido: estado de compra reinicializado por SKU. Chrome antes **0/3**, depois **3/3** em 320/390/1366 px; Vitest testa inclusão de 1 un. do novo SKU |
+| N87 | Média/UX | Botões +/- do produto menores que 44 px, rótulos genéricos, sem desabilitar nos limites | Corrigido: 44×44 px medidos, rótulos com nome do SKU, limites 1 e 99 |
+| N88 | Média/a11y | Favorito só tinha label estático, sem estado | Corrigido: `aria-pressed` e rótulo dinâmico adicionar/remover, navegador e Vitest |
+| N89 | Média/UX | Barra fixa da sacola no celular só mostrava CTA, sem subtotal no campo visual | Corrigido: `Produtos, sem frete` e subtotal dinâmico no mobile, sem alegar valor final/frete contratado |
+
+**Verificação C22 após PR53:** **638/638 Vitest em 75 arquivos**, TS, ESLint sem regra histórica Prettier, build Nitro, SSR 42/42, Chrome 3/3 pós-integração. Red/green: `qa-artifacts/vonix-c22/dev/` e `qa-artifacts/vonix-c22/after-pr53/`. Mapa para lojista: `docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md`. Produção **NOT_APPROVED**.

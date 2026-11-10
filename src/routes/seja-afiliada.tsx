@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, Heart, Sparkles, UsersRound } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Shell } from "@/components/site";
 import { getAffiliateRecruitmentStatus } from "@/lib/affiliate-functions";
 import { AffiliateWizard } from "@/components/affiliate-wizard";
+import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
 import { SITE_URL } from "@/lib/store";
 
 export const Route = createFileRoute("/seja-afiliada")({
@@ -91,75 +92,7 @@ export function AffiliateApplicationPage() {
   return (
     <Shell>
       <div className="bg-[#faf6f2] text-[#311f23]">
-        <section className="relative overflow-hidden bg-[#30191e] px-5 py-16 text-[#fff8f0] sm:py-24">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-24 -top-36 h-96 w-96 rounded-full bg-[#ad6669]/30 blur-[90px]"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute -bottom-44 left-0 h-80 w-80 rounded-full bg-[#d1b18a]/20 blur-[95px]"
-          />
-          <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center">
-            <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#e1bba4]/30 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[.2em] text-[#ecd2bd]">
-                <Sparkles className="h-4 w-4" /> Programa de afiliados
-              </div>
-              <h1 className="max-w-2xl font-display text-5xl leading-[1.06] sm:text-6xl lg:text-7xl">
-                SEJA UM <span className="italic text-[#e6bca7]">AFILIADO</span> VONIX HAIR
-              </h1>
-              <p className="mt-7 max-w-xl text-lg leading-relaxed text-[#f4e5dd]">
-                Seu amor por cabelos pode ir além de uma rotina de cuidados. Queremos conhecer
-                criadoras que compartilham experiências reais e se identificam com o universo Vonix
-                Hair.
-              </p>
-              <a
-                href="#inscricao"
-                className="mt-8 inline-flex min-h-12 items-center gap-3 rounded-full bg-[#f5e0ce] px-7 py-3 text-sm font-bold text-[#361f25] transition hover:bg-white"
-              >
-                {recruitment === "open" ? "Quero me inscrever" : "Conhecer o programa"}{" "}
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-            <div className="rounded-[2rem] border border-white/15 bg-white/10 p-7 shadow-2xl backdrop-blur-sm sm:p-10">
-              <p className="text-xs font-semibold uppercase tracking-[.18em] text-[#f0cbaf]">
-                Uma nova história começa aqui
-              </p>
-              <div className="mt-7 grid gap-7">
-                <div className="flex gap-4">
-                  <Heart className="mt-1 h-7 w-7 shrink-0 text-[#e6bca7]" />
-                  <div>
-                    <h2 className="text-lg font-semibold">Beleza com identidade</h2>
-                    <p className="mt-1 text-sm leading-relaxed text-[#eddbd3]">
-                      Um espaço para quem gosta de criar conteúdo de beleza e falar sobre cuidados
-                      capilares.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <UsersRound className="mt-1 h-7 w-7 shrink-0 text-[#e6bca7]" />
-                  <div>
-                    <h2 className="text-lg font-semibold">Faça parte da comunidade</h2>
-                    <p className="mt-1 text-sm leading-relaxed text-[#eddbd3]">
-                      As inscrições selecionadas avançam para a próxima etapa e recebem as
-                      orientações do programa.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <Sparkles className="mt-1 h-7 w-7 shrink-0 text-[#e6bca7]" />
-                  <div>
-                    <h2 className="text-lg font-semibold">Conte sua história</h2>
-                    <p className="mt-1 text-sm leading-relaxed text-[#eddbd3]">
-                      Nossa inscrição tem cinco etapas para você apresentar seu perfil e sua conexão
-                      com a Vonix Hair. A equipe avaliará cada candidatura.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <AffiliateLandingIntro recruitmentStatus={recruitment} />
 
         <section id="inscricao" className="mx-auto max-w-5xl px-5 py-14 sm:py-20">
           <div className="mb-10 text-center">
@@ -279,6 +212,7 @@ export function AffiliateApplicationPage() {
             </>
           )}
         </section>
+        <AffiliateLandingFAQ />
       </div>
     </Shell>
   );

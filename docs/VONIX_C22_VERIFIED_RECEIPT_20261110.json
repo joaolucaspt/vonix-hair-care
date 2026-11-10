@@ -1,0 +1,152 @@
+{
+  "project": "vonix-hair-care",
+  "checkpoint": "C22",
+  "dateLocal": "2026-11-10",
+  "repo": "C:\\Users\\JL\\code\\vonix-hair-care",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "baseCommit": "29c87de8c13e1f2fcc258d53bdfa9fabb3541adc",
+  "workloop": {
+    "definitionId": "22b47e9f-d6a2-407b-be69-3e5733cbb13d",
+    "runId": "250e19e4-f3ec-4baa-b862-5d03aca9cd73"
+  },
+  "upstreamReconciled": {
+    "pr": 53,
+    "mainCommit": "c0d78a709266f99032aec7d2cfe741bbe2a603f6",
+    "zeroConflicts": true,
+    "scope": "existing affiliate landing inside original ecommerce repo; independent affiliate app untouched"
+  },
+  "findings": [
+    {
+      "id": "N86",
+      "severity": "high",
+      "page": "/produto/$slug",
+      "problem": "PDP quantity/variant leaked across SPA SKU change",
+      "fix": "key child ProductPurchase by SKU",
+      "red": "3/3 browser scenarios inherited qty=3",
+      "green": "3/3 set qty=1 before buy"
+    },
+    {
+      "id": "N87",
+      "severity": "medium",
+      "page": "/produto/$slug",
+      "problem": "touch targets <44px, unlabeled qty",
+      "fix": "44x44 buttons, SKU names and bounds 1..99"
+    },
+    {
+      "id": "N88",
+      "severity": "medium",
+      "page": "/produto/$slug",
+      "problem": "favorite state unannounced",
+      "fix": "aria-pressed and dynamic add/remove"
+    },
+    {
+      "id": "N89",
+      "severity": "medium",
+      "page": "/carrinho",
+      "problem": "mobile CTA missed subtotal",
+      "fix": "live products subtotal labeled sans shipping"
+    }
+  ],
+  "quality": {
+    "focusedVitest": {
+      "passed": 52,
+      "files": 2,
+      "exitCode": 0
+    },
+    "fullVitest": {
+      "passed": 638,
+      "files": 75,
+      "exitCode": 0,
+      "afterUpstreamPr": 53
+    },
+    "typescript": {
+      "exitCode": 0
+    },
+    "eslintNoLegacyPrettier": {
+      "exitCode": 0
+    },
+    "prettierTarget": {
+      "exitCode": 0
+    },
+    "build": {
+      "exitCode": 0,
+      "preset": "Cloudflare module"
+    },
+    "ssr": {
+      "activeProducts": 42,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "chrome": {
+      "before": {
+        "passed": 0,
+        "failed": 3,
+        "qtyAfterSwitch": "3"
+      },
+      "after": {
+        "passed": 3,
+        "failed": 0,
+        "widths": [
+          320,
+          390,
+          1366
+        ],
+        "qtyAfterSwitch": "1",
+        "minTouchTarget": "44x44",
+        "favoriteToggle": true,
+        "mobileCartSubtotalUpdates": true,
+        "externalRequestsBlocked": true,
+        "paymentSubmitted": false,
+        "jsErrors": 0
+      },
+      "afterPr53": {
+        "passed": 3,
+        "failed": 0,
+        "widths": [
+          320,
+          390,
+          1366
+        ],
+        "screenshots": 12
+      }
+    }
+  },
+  "artifacts": [
+    "src/routes/produto.$slug.tsx",
+    "src/routes/carrinho.tsx",
+    "src/test/product-page-navigation-audit.test.tsx",
+    "src/test/checkout-audit.test.tsx",
+    "scripts/qa-c22-product-switch.mjs",
+    "qa-artifacts/vonix-c22/dev/report.json",
+    "qa-artifacts/vonix-c22/green-verified/report.json",
+    "qa-artifacts/vonix-c22/after-pr53/report.json",
+    "docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C22_20261110.md"
+  ],
+  "hashes": {
+    "src/routes/produto.$slug.tsx": "544B5A8783ECC923F2EC2160FB7CE3CA7D10B8FBBBC12A7FD2239A2DD5DA43D5",
+    "src/routes/carrinho.tsx": "78872908371C15C4FBDDE40163CA82A5C6E08B710201228EACF8A986061B054B",
+    "src/test/product-page-navigation-audit.test.tsx": "D624EB1DDFDB65D912E5B8CCFD4F9AAEB1E089C34A3F607BEFE7F855DD5D355E",
+    "src/test/checkout-audit.test.tsx": "21CCD1C4217CEB0E436B52A38F837529AD019E99BDEE673A7BED26BF6434E8CD",
+    "scripts/qa-c22-product-switch.mjs": "48A06EA1C392F5FEAA4B6B11595C532EEA83385B7EF8146348029929501D53A8",
+    "qa-artifacts/vonix-c22/dev/report.json": "F0CABA7874C7F40C9D5DCB6147C201FD672F1C3A7CD1E1F58AE927BFFDF441DF",
+    "qa-artifacts/vonix-c22/green-verified/report.json": "861C4CEDACDA5C755FF73D60E80516885D2DC88E6818BE0CFF0C0461D2AB5E98",
+    "qa-artifacts/vonix-c22/after-pr53/report.json": "861C4CEDACDA5C755FF73D60E80516885D2DC88E6818BE0CFF0C0461D2AB5E98",
+    "docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md": "452957EA06607AE2DDCD2FFB6F8238986909FF4948BB90724F8F9359D6E6FEEC",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C22_20261110.md": "8D70CD9BBD851C52AE809F583E0EDE96BA76363D0CF5682DAA1223B131D09D1E"
+  },
+  "readiness": "NOT_APPROVED",
+  "notes": [
+    "C22 is a visible targeted UX safety improvement, not a site-wide premium redesign.",
+    "Tests and Chrome use synthetic local development; no real payments, emails, ads or production data.",
+    "Appmax sandbox, Supabase isolated staging, Bling inventory/shipping, privacy/WAF and paid analytics remain P0.",
+    "Historical repository Prettier/CRLF debt exists; only changed files and nonformat ESLint passed."
+  ],
+  "safety": {
+    "mainMergeRemote": false,
+    "deploy": false,
+    "realPayments": false,
+    "prodDatabase": false,
+    "independentAffiliateAppTouched": false
+  }
+}
