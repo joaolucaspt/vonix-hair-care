@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
 import { env } from "./env.server";
+import { VONIX_AFFILIATE_PUBLIC_KEY } from "./vonix-affiliate-auth";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(180);
 export type AffiliateAuthEmailPurpose = "applicant" | "owner";
@@ -50,6 +51,45 @@ export async function affiliateEmailAuthorizedForPortal(
     .max(1)
     .parse(await response.json());
   return rows.length === 1 && rows[0]!.email.toLowerCase() === parsed.data;
+}
+
+/**
+ * Last-resort delivery fallback after recipient authorization and recipient cooldown.
+ * This is NOT an alternate authentication system: the dedicated Supabase Auth
+ * project still issues and validates the OTP. The managed provider may be rate
+ * limited, so its success only means it accepted the request, not delivered it.
+ * Do not log addresses, tokens, links, response bodies or key material.
+ */
+async function requestAffiliateSupabaseManagedOtp(
+  email: string,
+  redirectUrl: string,
+  authUrl: string,
+): Promise<boolean> {
+  try {
+    const response = await fetch(
+      authUrl + "/auth/v1/otp?redirect_to=" + encodeURIComponent(redirectUrl),
+      {
+        method: "POST",
+        headers: {
+          apikey: VONIX_AFFILIATE_PUBLIC_KEY,
+          Authorization: "Bearer " + VONIX_AFFILIATE_PUBLIC_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, create_user: false }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!response.ok) {
+      auditAffiliateAuthMailFailure("supabase-managed-fallback-http", response.status);
+      return false;
+    }
+    console.info("[vonix-affiliate-auth-mail] supabase-managed-fallback-accepted");
+    return true;
+  } catch {
+    auditAffiliateAuthMailFailure("supabase-managed-fallback-network");
+    return false;
+  }
 }
 
 /** Send a Supabase-generated OTP + magic link via the already-configured
@@ -161,29 +201,40 @@ export async function sendAffiliateAuthEmailWithResend(
     "Não compartilhe códigos, links ou senhas.",
   ].join("\n");
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + env("RESEND_API_KEY"),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: env("AFFILIATE_FROM_EMAIL"),
-      to: [address.data],
-      subject,
-      text,
-    }),
-    redirect: "manual",
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!response.ok) {
-    auditAffiliateAuthMailFailure("resend-api-http", response.status);
-    return false;
+  let accepted = false;
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + env("RESEND_API_KEY"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env("AFFILIATE_FROM_EMAIL"),
+        to: [address.data],
+        subject,
+        text,
+      }),
+      redirect: "manual",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) {
+      auditAffiliateAuthMailFailure("resend-api-http", response.status);
+    } else {
+      const receipt: unknown = await response.json();
+      accepted = z.object({ id: z.string().min(1).max(128) }).safeParse(receipt).success;
+      if (!accepted) auditAffiliateAuthMailFailure("resend-api-invalid-receipt");
+    }
+  } catch {
+    auditAffiliateAuthMailFailure("resend-api-network");
   }
-  const receipt: unknown = await response.json();
-  const accepted = z.object({ id: z.string().min(1).max(128) }).safeParse(receipt).success;
-  if (!accepted) auditAffiliateAuthMailFailure("resend-api-invalid-receipt");
-  return accepted;
+
+  if (accepted) return true;
+  // Do not bypass the recipient cooldown: the fallback runs only after the
+  // same authorization, quota and Supabase OTP-generation gates above.
+  // A managed Supabase e-mail is a temporary alternative while Resend is
+  // rejected, NOT proof that the custom provider is configured correctly.
+  return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
 }
 
 /** Per-email HMAC identifier, with no plaintext email in throttle storage. */
