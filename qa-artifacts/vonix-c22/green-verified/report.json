@@ -1,0 +1,65 @@
+{
+  "purpose": "C22: navigate between two real product pages without carrying old quantity; announce favorites and 44px touch targets",
+  "date": "2026-11-10",
+  "environment": "localhost synthetic; external requests blocked; no payments or orders",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "quantityAfterSwitch": "1",
+      "favoriteAccessibleToggle": true,
+      "quantityTouchTargets": [
+        {
+          "width": 44,
+          "height": 44
+        },
+        {
+          "width": 44,
+          "height": 44
+        }
+      ],
+      "mobileStickySubtotalChanges": true,
+      "blockedExternalRequests": 2,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "quantityAfterSwitch": "1",
+      "favoriteAccessibleToggle": true,
+      "quantityTouchTargets": [
+        {
+          "width": 44,
+          "height": 44
+        },
+        {
+          "width": 44,
+          "height": 44
+        }
+      ],
+      "mobileStickySubtotalChanges": true,
+      "blockedExternalRequests": 2,
+      "pageErrors": []
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "quantityAfterSwitch": "1",
+      "favoriteAccessibleToggle": true,
+      "quantityTouchTargets": [
+        {
+          "width": 44,
+          "height": 44
+        },
+        {
+          "width": 44,
+          "height": 44
+        }
+      ],
+      "blockedExternalRequests": 2,
+      "pageErrors": []
+    }
+  ]
+}

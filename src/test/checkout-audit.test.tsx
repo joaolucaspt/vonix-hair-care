@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getProduct, lineTotals } from "@/lib/store";
+import { brl, getProduct, lineTotals } from "@/lib/store";
 import { savePendingCard } from "@/lib/pending-card";
 import { savePendingPix } from "@/lib/pending-pix";
 import { UNCERTAIN_PAYMENT_KEY } from "@/lib/uncertain-payment";
@@ -146,6 +146,20 @@ describe("checkout auditado sem chamadas reais", () => {
     const retry = screen.getByRole("button", { name: "Tentar calcular frete novamente" });
     expect(alert.parentElement).toContainElement(retry);
     expect(container.querySelector("p button")).toBeNull();
+  });
+
+  it("mostra subtotal de produtos no CTA fixo do carrinho móvel sem anunciar frete fechado", () => {
+    render(<Cart />);
+    const sticky = screen.getByRole("region", { name: "Resumo do carrinho no celular" });
+    expect(sticky).toHaveTextContent("Produtos, sem frete");
+    expect(sticky.textContent?.replace(/\s/g, " ")).toContain(
+      brl(mocks.cart.netSubtotal).replace(/\s/g, " "),
+    );
+    expect(sticky).toContainElement(
+      screen.getAllByRole("link", { name: "Finalizar minha compra" }).at(-1)!,
+    );
+    expect(sticky).not.toHaveTextContent("Total final");
+    expect(mocks.payment).not.toHaveBeenCalled();
   });
 
   it("CPF recusado destaca o campo correspondente sem chamar pagamento", async () => {

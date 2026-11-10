@@ -245,14 +245,24 @@ function Cart() {
           </div>
         )}
       </div>
-      {c.lines.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background p-3 lg:hidden">
-          <Link
-            to="/checkout"
-            className="block rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5 text-center"
-          >
-            Finalizar minha compra
-          </Link>
+      {hydrated && c.lines.length > 0 && (
+        <div
+          role="region"
+          aria-label="Resumo do carrinho no celular"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background p-3 shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.3)] lg:hidden"
+        >
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 shrink-0" aria-live="polite">
+              <span className="block text-small text-muted-foreground">Produtos, sem frete</span>
+              <strong className="money block text-name">{brl(c.netSubtotal)}</strong>
+            </div>
+            <Link
+              to="/checkout"
+              className="ml-auto flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-md bg-emerald-600 px-3 py-3 text-center text-body font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              Finalizar minha compra
+            </Link>
+          </div>
         </div>
       )}
     </Shell>

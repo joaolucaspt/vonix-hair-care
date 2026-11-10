@@ -31,6 +31,7 @@ import {
   useCart,
   useFavorites,
   volumePct,
+  type Product,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/produto/$slug")({
@@ -271,6 +272,13 @@ const QTY_OPTIONS: { n: number; label: string }[] = [
 
 function ProductPage() {
   const p = Route.useLoaderData();
+  // TanStack Router may retain the same route component while only the slug
+  // changes. Keying its purchase state by product prevents a previous SKU's
+  // size, quantity or buy drawer from leaking into the next product.
+  return <ProductPurchase key={p.slug} p={p} />;
+}
+
+function ProductPurchase({ p }: { p: Product }) {
   const cart = useCart();
   const fav = useFavorites();
   const { audience } = useAudience();
@@ -449,7 +457,8 @@ function ProductPage() {
                     <button
                       key={x.label}
                       onClick={() => setVi(k)}
-                      className={`rounded-full border px-4 py-2 text-body ${k === vi ? "border-foreground bg-foreground text-background" : "border-border"}`}
+                      type="button"
+                      className={`min-h-11 rounded-full border px-4 py-2 text-body focus-visible:outline-2 focus-visible:outline-offset-2 ${k === vi ? "border-foreground bg-foreground text-background" : "border-border"}`}
                     >
                       {x.label} · {brl(x.price)}
                     </button>
@@ -463,8 +472,10 @@ function ProductPage() {
             <div className="mt-6 flex items-center gap-3">
               <div className="flex items-center rounded-full border border-border">
                 <button
-                  aria-label="Diminuir"
-                  className="p-3"
+                  type="button"
+                  aria-label={`Diminuir quantidade de ${p.name}`}
+                  disabled={qty <= 1}
+                  className="grid min-h-11 min-w-11 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40"
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                 >
                   <Minus className="h-4 w-4" />
@@ -473,8 +484,10 @@ function ProductPage() {
                   {qty}
                 </span>
                 <button
-                  aria-label="Aumentar"
-                  className="p-3"
+                  type="button"
+                  aria-label={`Aumentar quantidade de ${p.name}`}
+                  disabled={qty >= 99}
+                  className="grid min-h-11 min-w-11 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40"
                   onClick={() => setQty((q) => Math.min(99, q + 1))}
                 >
                   <Plus className="h-4 w-4" />
@@ -482,7 +495,9 @@ function ProductPage() {
               </div>
               <span className="text-small text-muted-foreground">unidade(s)</span>
               <button
-                aria-label="Favoritar"
+                type="button"
+                aria-label={`${fav.has(p.slug) ? "Remover" : "Adicionar"} ${p.name} ${fav.has(p.slug) ? "dos" : "aos"} favoritos`}
+                aria-pressed={fav.has(p.slug)}
                 onClick={() => fav.toggle(p.slug)}
                 className="grid h-11 w-11 place-items-center rounded-full border border-border"
               >
