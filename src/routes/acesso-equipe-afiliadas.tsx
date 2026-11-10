@@ -4,6 +4,10 @@ import { ArrowRight, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRoundCheck } 
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { loginAffiliateAdminMember, requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
 import { vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
+import {
+  affiliateLinkRecoveryMessage,
+  affiliateLinkRecoveryReason,
+} from "@/lib/affiliate-auth-recovery";
 
 export const Route = createFileRoute("/acesso-equipe-afiliadas")({
   head: () => ({
@@ -55,6 +59,13 @@ export function AffiliateTeamAccess() {
   }, []);
 
   useEffect(() => {
+    const recoveryReason = affiliateLinkRecoveryReason(window.location.href);
+    if (recoveryReason) {
+      setError(affiliateLinkRecoveryMessage(recoveryReason));
+      // Clear only a failed callback, never a valid authorization code or session.
+      // Never persist provider-supplied error text or token-bearing fragments.
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
     void inspectIdentity();
     const {
       data: { subscription },
@@ -78,7 +89,7 @@ export function AffiliateTeamAccess() {
       });
       if (alternate.status === "requested") {
         setNotice(
-          "Se seu e-mail está autorizado, solicitamos um código de acesso. Verifique entrada e spam. A entrega depende do provedor.",
+          "Se seu e-mail está autorizado, solicitamos um código de acesso. Verifique entrada e spam e digite o código aqui; não utilize um link antigo. A entrega depende do provedor.",
         );
         return;
       }
@@ -233,7 +244,9 @@ export function AffiliateTeamAccess() {
                 <Mail className="h-8 w-8 text-[#865766]" />
                 <h2 className="mt-4 font-display text-2xl">Confirmar e-mail da equipe</h2>
                 <p className="mt-2 text-sm text-[#806970]">
-                  Use exclusivamente um e-mail convidado pela administração Vonix Hair.
+                  Use exclusivamente um e-mail convidado pela administração Vonix Hair. Se um link
+                  anterior mostrar que expirou, solicite um novo acesso e digite o código numérico
+                  nesta página. Não reutilize links antigos.
                 </p>
                 <form onSubmit={requestInvitation} className="mt-6 space-y-3">
                   <label htmlFor="team-email" className="block text-sm font-semibold">

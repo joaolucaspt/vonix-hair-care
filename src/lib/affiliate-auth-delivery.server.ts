@@ -123,8 +123,13 @@ export async function sendAffiliateAuthEmailWithResend(
     "",
     "Seu código de verificação: " + safeOtp,
     "",
-    "Digite esse código na página oficial:",
+    "Abra esta página oficial e DIGITE o código acima no formulário:",
     redirectUrl,
+    "",
+    "Este endereço não confirma o acesso automaticamente. Não reutilize links de convites anteriores: eles podem ter expirado ou já ter sido utilizados.",
+    ...(purpose === "owner"
+      ? ["Depois de confirmar o código, crie sua senha pessoal para entrar na gestão da equipe."]
+      : ["Depois de confirmar o código, consulte o acompanhamento da candidatura."]),
     "",
     "Se você não solicitou este acesso, ignore esta mensagem.",
     "Não compartilhe códigos, links ou senhas.",

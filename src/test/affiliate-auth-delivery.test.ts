@@ -80,6 +80,8 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     expect(message.text).toContain("123456");
     expect(message.text).not.toContain("fake-token");
     expect(message.text).toContain("https://vonixhair.com/acompanhar-inscricao");
+    expect(message.text).toContain("DIGITE o código");
+    expect(message.text).toContain("Não reutilize links de convites anteriores");
   });
 
   it("does not forward a generated token to an untrusted host", async () => {
