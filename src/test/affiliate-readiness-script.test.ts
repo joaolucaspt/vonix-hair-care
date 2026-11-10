@@ -89,6 +89,19 @@ describe("Checklist do cadastro sem serviços de comissão", () => {
     expect(result.output.missing).toContain("database_pair");
   });
 
+  it("rejeita chave base64url não canônica embora tenha 43 caracteres válidos", () => {
+    const base64url = Buffer.from("0123456789abcdef0123456789abcdef").toString("base64url");
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const index = alphabet.indexOf(base64url.at(-1)!);
+    expect(index % 4).toBe(0);
+    const nonCanonical = base64url.slice(0, -1) + alphabet[index + 1];
+    expect(nonCanonical).toHaveLength(43);
+    const result = runReadiness({ AFFILIATE_QUESTIONNAIRE_KEY: nonCanonical });
+    expect(result.status).toBe(2);
+    expect(result.output.canOpenFromConfiguration).toBe(false);
+    expect(result.output.missing).toContain("encryption_key");
+  });
+
   it("mantém bloqueios de proteção de dados, migrações e HTTPS", () => {
     for (const overrides of [
       { AFFILIATE_PRIVACY_POLICY_APPROVED: "false" },

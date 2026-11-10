@@ -5,18 +5,24 @@ import type { ValidatedAffiliateWizard } from "./affiliate-wizard";
 
 function encryptionKey(): Buffer | null {
   const supplied = env("AFFILIATE_QUESTIONNAIRE_KEY");
-  if (!supplied) return null;
+  if (/^[a-f0-9]{64}$/i.test(supplied)) return Buffer.from(supplied, "hex");
+  // Node's base64 decoder silently ignores punctuation, padding and unused
+  // trailing bits. Accept only the canonical 43-character representation to
+  // avoid reporting a malformed, potentially miscopied data key as ready.
+  if (!/^[A-Za-z0-9_-]{43}$/.test(supplied)) return null;
   try {
-    const key = /^[a-f0-9]{64}$/i.test(supplied)
-      ? Buffer.from(supplied, "hex")
-      : Buffer.from(supplied, "base64url");
-    return key.length === 32 ? key : null;
+    const key = Buffer.from(supplied, "base64url");
+    return key.length === 32 && key.toString("base64url") === supplied ? key : null;
   } catch {
     return null;
   }
 }
 
 export const affiliateQuestionnaireEncryptionReady = () => encryptionKey() !== null;
+
+// A five-stage submission is bounded by field schemas. This is a defensive
+// cap for malformed historical database payloads, not a limit on applicants.
+export const MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH = 32_768;
 
 /** Stores personal documents and mailing address exclusively as authenticated ciphertext. */
 export function encryptAffiliateWizard(wizard: ValidatedAffiliateWizard): string {
@@ -82,7 +88,7 @@ const summaryFieldsSchema = z.object({
 export function affiliateWizardSummary(
   ciphertext: string | null | undefined,
 ): AffiliateWizardSummary | null {
-  if (!ciphertext) return null;
+  if (!ciphertext || ciphertext.length > MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH) return null;
   const key = encryptionKey();
   if (!key) return null;
   try {

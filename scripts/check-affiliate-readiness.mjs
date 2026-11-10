@@ -59,7 +59,11 @@ const db =
 const encryptionKey = (() => {
   const value = raw["AFFILIATE_QUESTIONNAIRE_KEY"] || "";
   if (/^[a-f0-9]{64}$/i.test(value)) return true;
-  return /^[A-Za-z0-9_-]{43}$/.test(value);
+  if (!/^[A-Za-z0-9_-]{43}$/.test(value)) return false;
+  // Match the server's canonical decoder check. Padding-bit variations and
+  // copied garbage must not make the production readiness report green.
+  const decoded = Buffer.from(value, "base64url");
+  return decoded.length === 32 && decoded.toString("base64url") === value;
 })();
 const checks = [
   {

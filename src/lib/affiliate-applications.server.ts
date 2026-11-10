@@ -18,6 +18,7 @@ import {
   affiliateQuestionnaireEncryptionReady,
   affiliateWizardSummary,
   encryptAffiliateWizard,
+  MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH,
 } from "./affiliate-wizard-crypto.server";
 
 const nonNegativeCount = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -285,7 +286,11 @@ const affiliateAdminRowSchema = z.object({
   status: z.enum(["pendente", "aprovada", "recusada"]),
   created_at: z.string().datetime({ offset: true }).max(64),
   reviewed_at: z.string().datetime({ offset: true }).max(64).nullable(),
-  questionnaire_encrypted: z.string().nullable().optional(),
+  questionnaire_encrypted: z
+    .string()
+    .max(MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH)
+    .nullable()
+    .optional(),
   vonix_affiliate_mail_outbox: z
     .array(z.object({ status: validMailStatus, sent_at: z.string().max(64).nullable() }))
     .nullable()

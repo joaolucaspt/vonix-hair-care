@@ -324,6 +324,33 @@ describe("Acesso e decisões", () => {
     }
   });
 
+  it("fails closed when privileged search returns excessive encrypted questionnaire payload", async () => {
+    const ciphertext = "v2." + "A".repeat(40000);
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          total: 1,
+          applications: [{ ...listedCandidate, questionnaire_encrypted: ciphertext }],
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 1,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 0,
+        }),
+      );
+    vi.stubGlobal("fetch", mock);
+    await expect(listAffiliateApplications({ status: "pendente", page: 0 })).rejects.toThrow();
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
   it("accepts a full bounded page with valid PostgreSQL timestamp offsets", async () => {
     const fullPage = Array.from({ length: 40 }, (_, i) => ({
       ...listedCandidate,
