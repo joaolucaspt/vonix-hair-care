@@ -417,6 +417,31 @@ export async function readAffiliateApplicationPrivateDetail(applicationId: strin
   return detail;
 }
 
+/**
+ * Recover an existing candidate's login without trusting an e-mail submitted
+ * by the browser. Always call through an authenticated admin server action.
+ * Return only the e-mail, not any encrypted questionnaire fields.
+ */
+export async function readAffiliateApplicantEmailForAccessRecovery(applicationId: string) {
+  const id = z.string().uuid().parse(applicationId);
+  const response = await requestSupabase(
+    "vonix_affiliate_applications?select=id,email&id=eq." + encodeURIComponent(id) + "&limit=1",
+    { method: "GET" },
+  );
+  if (!response.ok) throw new Error("Candidatura não disponível.");
+  const rows = z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        email: z.string().email().max(180),
+      }),
+    )
+    .max(1)
+    .parse(await response.json());
+  if (rows.length !== 1 || rows[0]!.id !== id) return null;
+  return rows[0]!.email.toLowerCase();
+}
+
 export async function decideAffiliateApplication(id: string, decision: "aprovada" | "recusada") {
   const response = await requestSupabase("rpc/vonix_affiliate_decide", {
     method: "POST",
