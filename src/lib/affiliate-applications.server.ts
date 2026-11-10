@@ -18,6 +18,7 @@ import {
   affiliateQuestionnaireEncryptionReady,
   affiliateWizardSummary,
   encryptAffiliateWizard,
+  decryptAffiliateWizardForAdmin,
   MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH,
 } from "./affiliate-wizard-crypto.server";
 
@@ -380,6 +381,40 @@ export async function listAffiliateApplications(input: {
       incerto: counters.email_incerto,
     },
   };
+}
+
+/**
+ * Privileged, one-record lookup for the protected admin detail panel only.
+ * This is intentionally separate from the paginated listing: no document or
+ * full address is ever returned as part of a search or dashboard summary.
+ */
+export async function readAffiliateApplicationPrivateDetail(applicationId: string) {
+  const id = z.string().uuid().parse(applicationId);
+  const response = await requestSupabase(
+    "vonix_affiliate_applications?select=id,questionnaire_encrypted&id=eq." +
+      encodeURIComponent(id) +
+      "&limit=1",
+    { method: "GET" },
+  );
+  if (!response.ok) throw new Error("Consulta de detalhe indisponível.");
+  const rows = z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        questionnaire_encrypted: z
+          .string()
+          .max(MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH)
+          .nullable(),
+      }),
+    )
+    .max(1)
+    .parse(await response.json());
+  if (rows.length !== 1 || rows[0]!.id !== id) {
+    throw new Error("Questionário indisponível.");
+  }
+  const detail = decryptAffiliateWizardForAdmin(rows[0]!.questionnaire_encrypted);
+  if (!detail) throw new Error("Questionário indisponível ou ilegível.");
+  return detail;
 }
 
 export async function decideAffiliateApplication(id: string, decision: "aprovada" | "recusada") {

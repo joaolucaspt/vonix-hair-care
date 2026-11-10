@@ -18,6 +18,7 @@ import {
   createAffiliateApplication,
   decideAffiliateApplication,
   listAffiliateApplications,
+  readAffiliateApplicationPrivateDetail,
   processAffiliateEmails,
 } from "./affiliate-applications.server";
 
@@ -77,6 +78,28 @@ export const logoutAffiliateAdmin = createServerFn({ method: "POST" }).handler(a
   destroyAffiliateAdminSession();
   return { ok: true as const };
 });
+
+/** On-demand confidential answers: authenticated/TOTP session and same-origin only. */
+export const getAffiliateApplicationPrivateDetail = createServerFn({ method: "POST" })
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid()) {
+      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    }
+    if (!(await affiliateRateLimitAllowed("admin"))) {
+      return { ok: false as const, reason: "Acesso temporariamente indisponível." };
+    }
+    try {
+      const detail = await readAffiliateApplicationPrivateDetail(data.id);
+      return { ok: true as const, detail };
+    } catch {
+      return {
+        ok: false as const,
+        reason: "Não foi possível ler o questionário protegido. Verifique o banco e a chave.",
+      };
+    }
+  });
 
 export const getAffiliateApplications = createServerFn({ method: "POST" })
   .validator(
