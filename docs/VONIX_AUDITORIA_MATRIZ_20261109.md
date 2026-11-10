@@ -406,3 +406,21 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N140 — média/alta** | Loading e abandono | Consulta CEP que não respondia mantinha indicação de carregamento sem limite | Timeout de 10s, aviso de entrada manual e botão de retry explícito; resposta antiga ignorada |
 
 **QA C33:** 3 testes novos demonstrados **RED** antes e **GREEN** após; **683/683 Vitest em 83 arquivos**, TS/lint funcional/build PASS, SSR **42/42**, Chrome **3/3** e checkout **3/3** com rede externa bloqueada. A primeira tentativa no Vite antigo e a tentativa `vite preview` não são evidências positivas (falha de ambiente descrita no handoff). Documentação: `docs/VONIX_AUDITORIA_CONTINUIDADE_C33_20261110.md`. **Produção NOT_APPROVED.**
+
+## C34 — nova auditoria integral rigorosa (10/11/2026)
+
+| ID | Prioridade | Achado comprovado | Resultado / próximo bloqueio |
+| --- | --- | --- | --- |
+| **N141** | P1 checkout | WhatsApp com DDD inválido acionava submit de pagamento em teste RED | Validador compartilhado browser/servidor, aceita celulares e WhatsApp Business fixos legítimos e prefixo +55; testes GREEN |
+| **N142** | P1 cadastro | Rua/num/bairro/cidade com somente espaços passavam pela validação inicial | Campos significativos com trim antes de aceitar endereço; foco e mensagem de erro na UI |
+| **N143** | P1 cadastro | UF inexistente XX era aceita por validação baseada apenas em comprimento | Validar 27 UFs, normalizar para maiúsculas no servidor |
+| **N144** | P1 cadastro | Nome apenas de espaços progredia até servidor | Mensagem e foco antes de qualquer pagamento, Zod trim+min |
+| **N145** | P1 PDP | Cálculo do frete travava se a busca de endereço não respondesse | Separar chamadas independentes; cotação fica disponível sem esperar CEP/address externo |
+| **N146** | P1 PDP | Transportadora sem resposta deixava loading e botão desativado indefinidamente | Watchdog local 12 s, retry manual, descarta respostas antigas; não cancela provedor remoto |
+| **N147** | P2 acessibilidade | Sem JS, carrinho e checkout mostravam área vazia no HTML SSR | `noscript` com orientação e link seguro, 3/3 verificações do markup; a visibilidade real no navegador com JS desativado não foi homologada |
+| **P0-ESTOQUE** | Crítico, NÃO resolvido | Meta CSV local e **público**: 42/42 produtos marcados `in stock`; sem inventário Bling por SKU nesta auditoria | Confirmar saldos, reservas, variantes e sincronização; mudanças no feed requerem aprovação comercial |
+| **P0-PAGAMENTO** | Crítico, NÃO resolvido | Mocks/CI não comprovam Appmax Pix/cartão reais, antifraude, conciliação de pedido pago | Testar sandbox autorizado com registros de aprovação/recusa, idempotência, webhook e `paid_at` |
+| **P0-FRETE-STAGING** | Crítico, NÃO resolvido | Medidas default de pacote não verificadas por SKU; runtime Cloudflare/Supabase staging sem homologaçāo | Aferir pesos/dimensões e CEP; staging isolado RLS/backup/restore/rollback e observabilidade |
+| **P1-PUBLICAÇÃO** | Alta, NÃO resolvido | Publicamente carrinho e conta sem meta/header `noindex`; branch auditada já contém noindex | Confirmar pós-deploy autorizado; o PR ainda não foi mesclado nem publicado |
+
+**Evidência C34:** `docs/VONIX_AUDITORIA_INTEGRAL_C34_20261110.md`, `docs/VONIX_C34_VERIFIED_RECEIPT_20261110.json`. Testes: 690/690 em 83 arquivos; checkout 115/115; TypeScript, ESLint funcional, build PASS; SSR 42/42; 15 rotas, 129 imagens; Chrome 3/3 + checkout 3/3; noJS SSR markup 3/3; feed Meta público/local 42/42 sem divergência. **Produção NOT_APPROVED**. Não alterar sistema separado de candidaturas de afiliadas.

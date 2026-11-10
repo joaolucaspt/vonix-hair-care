@@ -1,0 +1,74 @@
+{
+  "checkpoint": "C34",
+  "scope": "Read-only local SSR/asset/sitemap structural audit. No third-party inventory or billing.",
+  "base": "http://127.0.0.1:43976",
+  "sourceProducts": 43,
+  "activeProducts": 42,
+  "imageReferences": 129,
+  "distinctImages": 129,
+  "routeChecks": 15,
+  "routes": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/loja",
+      "status": 200
+    },
+    {
+      "path": "/sobre",
+      "status": 200
+    },
+    {
+      "path": "/contato",
+      "status": 200
+    },
+    {
+      "path": "/politica-de-trocas-e-devolucoes",
+      "status": 200
+    },
+    {
+      "path": "/politica-de-frete",
+      "status": 200
+    },
+    {
+      "path": "/politica-de-privacidade",
+      "status": 200
+    },
+    {
+      "path": "/termos-de-uso",
+      "status": 200
+    },
+    {
+      "path": "/carrinho",
+      "status": 200
+    },
+    {
+      "path": "/checkout",
+      "status": 200
+    },
+    {
+      "path": "/favoritos",
+      "status": 200
+    },
+    {
+      "path": "/conta",
+      "status": 200
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200
+    },
+    {
+      "path": "/robots.txt",
+      "status": 200
+    },
+    {
+      "path": "/produto/plex-vonix",
+      "status": 404
+    }
+  ],
+  "errors": [],
+  "passed": true
+}

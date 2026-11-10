@@ -141,7 +141,23 @@ function Cart() {
           </div>
         )}
         {!hydrated ? (
-          <div className="min-h-[40vh]" aria-busy="true" />
+          <div className="min-h-[40vh]" aria-busy="true">
+            <noscript>
+              <section className="mx-auto max-w-xl rounded-xl border border-border bg-card p-6 text-center">
+                <h2 className="font-display text-h2">Sua sacola depende do navegador</h2>
+                <p className="mt-3 text-body">
+                  Ative o JavaScript para conferir sua sacola, ajustar quantidades e finalizar a
+                  compra.
+                </p>
+                <a
+                  href="/loja"
+                  className="mt-5 inline-flex min-h-11 items-center rounded-full bg-emerald-600 px-6 font-semibold text-white"
+                >
+                  Voltar à loja
+                </a>
+              </section>
+            </noscript>
+          </div>
         ) : c.lines.length === 0 ? (
           <section
             aria-label="Sua sacola"

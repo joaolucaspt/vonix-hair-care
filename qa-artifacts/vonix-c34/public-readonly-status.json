@@ -1,0 +1,44 @@
+﻿[
+    {
+        "path":  "/",
+        "status":  200,
+        "bytes":  168107,
+        "title":  "Vonix Hair — Cosméticos Capilares Profissionais",
+        "contentType":  "text/html; charset=utf-8"
+    },
+    {
+        "path":  "/loja",
+        "status":  200,
+        "bytes":  233014,
+        "title":  "Loja — Vonix Hair",
+        "contentType":  "text/html; charset=utf-8"
+    },
+    {
+        "path":  "/produto/kit-banana-e-mel",
+        "status":  200,
+        "bytes":  88932,
+        "title":  "Kit Banana e Mel — Vonix Hair",
+        "contentType":  "text/html; charset=utf-8"
+    },
+    {
+        "path":  "/carrinho",
+        "status":  200,
+        "bytes":  35583,
+        "title":  "Carrinho — Vonix Hair",
+        "contentType":  "text/html; charset=utf-8"
+    },
+    {
+        "path":  "/checkout",
+        "status":  200,
+        "bytes":  25565,
+        "title":  "Checkout — Vonix Hair",
+        "contentType":  "text/html; charset=utf-8"
+    },
+    {
+        "path":  "/api/public/meta-catalog",
+        "status":  200,
+        "bytes":  11981,
+        "title":  "",
+        "contentType":  "text/csv; charset=utf-8"
+    }
+]

@@ -4,6 +4,11 @@ import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import * as appmax from "./appmax.server";
 import { isValidCpf } from "./cpf";
+import {
+  isValidBrazilUF,
+  isValidBrazilWhatsapp,
+  normalizeBrazilWhatsapp,
+} from "./checkout-input-validation";
 import { env } from "./env.server";
 import { orderStatusToken, validOrderStatusToken } from "./order-status-token.server";
 import { loadOrderSnapshot, saveOrderSnapshot, snapshotTotalCents } from "./order-snapshot.server";
@@ -165,25 +170,30 @@ export const getPaymentConfig = createServerFn({ method: "GET" }).handler(async 
     env("CHECKOUT_IDEMPOTENCY_SECRET").length >= 32,
 }));
 
-const customerSchema = z.object({
-  nome: z.string().min(3).max(120),
-  email: z.string().email().max(160),
+export const checkoutCustomerSchema = z.object({
+  nome: z.string().trim().min(3).max(120),
+  email: z.string().trim().email().max(160),
   cpf: z.string().min(11).max(14).refine(isValidCpf, "CPF inválido. Confira os números."),
-  whatsapp: z.string().min(10).max(20),
+  whatsapp: z
+    .string()
+    .min(10)
+    .max(30)
+    .refine(isValidBrazilWhatsapp, "Informe um WhatsApp com DDD válido.")
+    .transform(normalizeBrazilWhatsapp),
 });
-const addressSchema = z.object({
+export const checkoutAddressSchema = z.object({
   cep: cepSchema,
-  rua: z.string().min(1).max(160),
-  numero: z.string().min(1).max(20),
-  complemento: z.string().max(80).optional().default(""),
-  bairro: z.string().min(1).max(100),
-  cidade: z.string().min(1).max(100),
-  uf: z.string().length(2),
+  rua: z.string().trim().min(1).max(160),
+  numero: z.string().trim().min(1).max(20),
+  complemento: z.string().trim().max(80).optional().default(""),
+  bairro: z.string().trim().min(1).max(100),
+  cidade: z.string().trim().min(1).max(100),
+  uf: z.string().trim().toUpperCase().refine(isValidBrazilUF, "Informe uma UF válida."),
 });
 
 const paySchema = z.object({
-  customer: customerSchema,
-  address: addressSchema,
+  customer: checkoutCustomerSchema,
+  address: checkoutAddressSchema,
   items: z.array(itemSchema).min(1).max(40),
   serviceId: z.number().int(),
   // The amount the buyer actually reviewed. Optional for older checkout clients.

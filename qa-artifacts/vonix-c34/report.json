@@ -1,0 +1,36 @@
+{
+  "checkpoint": "C34",
+  "environment": "http://127.0.0.1:43977",
+  "scope": "Local Chrome with external blocked; simulated navigation and in-browser cart only; no checkout/payment",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "blockedExternal": 5,
+      "errors": [],
+      "audienceOverride": true,
+      "drawerControlsAndScroll": true,
+      "cartPreserved": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "blockedExternal": 4,
+      "errors": [],
+      "audienceOverride": true,
+      "drawerControlsAndScroll": true,
+      "cartPreserved": true
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "blockedExternal": 4,
+      "errors": [],
+      "audienceOverride": true,
+      "drawerControlsAndScroll": true,
+      "cartPreserved": true
+    }
+  ]
+}

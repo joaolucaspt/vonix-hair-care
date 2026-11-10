@@ -164,43 +164,58 @@ export function ShippingCalc({
     }
     setLoading(true);
     saveCep(cep);
-    // Neither request depends on the other; freight survives address outages.
-    await Promise.all([
-      addressLookup({ data: { cep: d } })
-        .then((r) => {
-          if (current !== request.current) return;
-          if (r.ok) setDest({ city: r.address.city, uf: r.address.uf });
-          else setErr(r.message);
-        })
-        .catch(() => {
-          if (current === request.current)
-            setErr("Endereço indisponível. Você pode preenchê-lo manualmente no checkout.");
-        }),
-      shippingLookup({ data: { cep: d, items: [{ slug, variant, qty }] } })
-        .then((q) => {
-          if (current !== request.current) return;
-          setOpts(q.ok ? q.options : []);
-          if (q.ok && q.options.length === 0)
-            setErr((old) =>
-              [
-                old,
-                "Não há opções de entrega para este CEP. Confira o endereço ou fale com nosso atendimento.",
-              ]
-                .filter(Boolean)
-                .join(" "),
-            );
-          if (!q.ok) setErr((old) => [old, q.message].filter(Boolean).join(" "));
-        })
-        .catch(() => {
-          if (current === request.current)
-            setErr((old) =>
-              [old, "Não foi possível calcular o frete agora. Tente novamente."]
-                .filter(Boolean)
-                .join(" "),
-            );
-        }),
-    ]);
-    if (current === request.current) setLoading(false);
+    // Address and carrier requests are independent. A hung address lookup
+    // must never prevent a successful freight result from being actionable.
+    void addressLookup({ data: { cep: d } })
+      .then((r) => {
+        if (current !== request.current) return;
+        if (r.ok) setDest({ city: r.address.city, uf: r.address.uf });
+        else setErr((old) => [old, r.message].filter(Boolean).join(" "));
+      })
+      .catch(() => {
+        if (current === request.current)
+          setErr((old) =>
+            [old, "Endereço indisponível. Você pode preenchê-lo manualmente no checkout."]
+              .filter(Boolean)
+              .join(" "),
+          );
+      });
+
+    // Even if the local API or a carrier never replies, restore the
+    // calculation button and ignore any outdated result after the deadline.
+    const watchdog = window.setTimeout(() => {
+      if (current !== request.current) return;
+      request.current += 1;
+      setLoading(false);
+      setOpts([]);
+      setDest(null);
+      setErr("O cálculo de frete demorou demais. Tente novamente ou consulte o atendimento.");
+    }, 12000);
+    try {
+      const q = await shippingLookup({ data: { cep: d, items: [{ slug, variant, qty }] } });
+      if (current !== request.current) return;
+      setOpts(q.ok ? q.options : []);
+      if (q.ok && q.options.length === 0)
+        setErr((old) =>
+          [
+            old,
+            "Não há opções de entrega para este CEP. Confira o endereço ou fale com nosso atendimento.",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+      if (!q.ok) setErr((old) => [old, q.message].filter(Boolean).join(" "));
+    } catch {
+      if (current === request.current)
+        setErr((old) =>
+          [old, "Não foi possível calcular o frete agora. Tente novamente."]
+            .filter(Boolean)
+            .join(" "),
+        );
+    } finally {
+      window.clearTimeout(watchdog);
+      if (current === request.current) setLoading(false);
+    }
   };
   return (
     <div className="mt-6 rounded-xl border border-border bg-card p-4">

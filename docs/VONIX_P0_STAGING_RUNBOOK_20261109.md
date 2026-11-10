@@ -149,3 +149,15 @@ No staging seguro, com cesta sintética e cotação inicial válida, testar (1) 
 2. Consultar CEP B com API de endereço lenta. Digitar rua corrigida antes da resposta; retorno automático **não pode sobrescrever** essa rua, mas pode completar bairro/cidade/UF vazios. Emendar novo CEP durante request; ignorar resposta antiga. Sem garantir que a cidade retornada reflete cobertura real do frete.
 3. Simular serviço de CEP sem resposta por **10s**. O loading deve terminar e permitir entrada manual. Clicar `Tentar buscar CEP novamente`; uma resposta nova deve complementar campos vazios sem desfazer ajustes. Resposta antiga que chega após timeout ou retry não pode repor dados obsoletos.
 4. Esses testes foram feitos com mocks/Chrome local externo bloqueado. Em staging aprovado, conferir busca postal real, cobertura e validação de frete/pagamento sem dados pessoais e sem cobranças. A prévia `vite preview` do adaptador atual falha por expectativa de `dist/server/server.js`; testar runtime Cloudflare Worker staging antes de publicar.
+
+### C34 — fechar os problemas da auditoria integral antes de qualquer liberação
+
+**Fase 1 — bloqueios comerciais (requer responsável de operação e autorização):** obter do Bling a disponibilidade vendável por SKU/variante com saldos e reservas, conciliar os **42** IDs do catálogo Meta no site publicado (todos atualmente `in stock`) e revisar campanhas antes de ajustar o feed. Não inferir estoque 0. Obter as dimensões/peso reais dos kits e produtos; confirmar embalagem por pedido e origem CEP para cotação Melhor Envio, preço e SLA, em staging.
+
+**Fase 2 — financeiro (somente sandbox Appmax aprovado):** testar cliente/endereço, WhatsApp com DDD, UF válida, cartão tokenizado, Pix, antifraude, recusa, webhook de atraso e duplicidade, estado `paid_at`, snapshots e idempotência de cotação/pagamento. Exigir que números inválidos e endereços compostos de espaços sejam rejeitados sem criar cliente, ordem, cobrança ou pagamento; casos de WhatsApp Business com linha fixa e +55 devem continuar válidos. Dados sintéticos ou autorizados, sem PII de clientes reais.
+
+**Fase 3 — staging e publicação:** validar migrations/RLS Supabase, restore/backup, Cloudflare Worker real, WAF/CSP, scripts/canonical/SEO, mobile e timeouts. Comparar a branch com as seis rotas públicas: o cart/conta publicados hoje não emitem `noindex` enquanto a branch emitia; só conferir correção após deploy autorizado. Sem autorizar deploy, manter PR #26 OPEN e produção NOT_APPROVED.
+
+**Fase 4 — rastreio financeiro/Meta:** reconciliar GA4/Meta Purchase por sessão/consentimento e pedido confirmado (sem PII); somente atribuir abandono ou ROAS a uma causa quando houver evidência. Provar procedência de reviews e LGPD. Fechar apenas quando houver recibo real de cada dependência.
+
+**Auditoria local C34 verificada:** 690/690 testes, 42/42 PDP, 15/15 rotas, 129/129 assets, Meta CSV 42/42 sem divergência, Chrome 6/6, `noscript` SSR markup 3/3 (não visualmente provado com JavaScript desligado). Arquivos de entrega: `docs/VONIX_AUDITORIA_INTEGRAL_C34_20261110.md`, `docs/VONIX_C34_VERIFIED_RECEIPT_20261110.json`, `qa-artifacts/vonix-c34/`.

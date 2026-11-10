@@ -73,6 +73,8 @@ import {
   quoteShipping,
   getPaymentConfig,
   lookupCoupon,
+  checkoutCustomerSchema,
+  checkoutAddressSchema,
 } from "@/lib/checkout.functions";
 
 const p = getProduct("kit-banana-e-mel")!;
@@ -132,6 +134,38 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("valida DDD, UF brasileira e campos significativos antes de criar cliente", () => {
+    expect(
+      checkoutCustomerSchema.safeParse({ ...data.customer, whatsapp: "00000000000" }).success,
+    ).toBe(false);
+    expect(
+      checkoutCustomerSchema.safeParse({ ...data.customer, whatsapp: "11912345678" }).success,
+    ).toBe(true);
+    expect(
+      checkoutCustomerSchema.safeParse({ ...data.customer, whatsapp: "+55 (31) 98888-7777" }),
+    ).toMatchObject({
+      success: true,
+      data: { whatsapp: "31988887777" },
+    });
+    expect(
+      checkoutCustomerSchema.safeParse({ ...data.customer, whatsapp: "(31) 3333-4444" }),
+    ).toMatchObject({
+      success: true,
+      data: { whatsapp: "3133334444" },
+    });
+    expect(
+      checkoutCustomerSchema.safeParse({ ...data.customer, whatsapp: "abc31988887777" }).success,
+    ).toBe(false);
+    expect(checkoutCustomerSchema.safeParse({ ...data.customer, nome: "   " }).success).toBe(false);
+    expect(checkoutAddressSchema.safeParse({ ...data.address, uf: "XX" }).success).toBe(false);
+    expect(checkoutAddressSchema.safeParse({ ...data.address, rua: "   " }).success).toBe(false);
+    expect(checkoutAddressSchema.safeParse({ ...data.address, numero: "   " }).success).toBe(false);
+    expect(checkoutAddressSchema.safeParse({ ...data.address, cidade: "   " }).success).toBe(false);
+    expect(checkoutAddressSchema.safeParse({ ...data.address, uf: "mg" })).toMatchObject({
+      success: true,
+      data: { uf: "MG" },
+    });
+  });
   it("não confia em cupom de afiliada sem confirmação no servidor", async () => {
     const couponCode = "MARISSOL10";
     expect(await lookupCoupon({ data: { code: couponCode } })).toEqual({ ok: false });

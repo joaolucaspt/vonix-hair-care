@@ -21,6 +21,11 @@ import { useCepAddress } from "@/hooks/use-cep-address";
 import { toItem, track } from "@/lib/analytics";
 import { hasTrackingConsent } from "@/lib/tracking-consent";
 import { isValidCpf } from "@/lib/cpf";
+import {
+  hasDeliveryAddress,
+  isValidBrazilUF,
+  isValidBrazilWhatsapp,
+} from "@/lib/checkout-input-validation";
 import { getRef } from "@/lib/affiliate-ref";
 import {
   createPayment,
@@ -229,6 +234,10 @@ function Checkout() {
   });
   const numeroRef = useRef<HTMLInputElement>(null);
   const cpfRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const whatsappRef = useRef<HTMLInputElement>(null);
+  const streetRef = useRef<HTMLInputElement>(null);
+  const ufRef = useRef<HTMLInputElement>(null);
   const [cpfInvalid, setCpfInvalid] = useState(false);
   const [pay, setPay] = useState<"pix" | "card">("pix");
   const [showCoupon, setShowCoupon] = useState(false);
@@ -885,11 +894,35 @@ function Checkout() {
       setError("O CEP ou a sacola mudou. Aguarde uma nova cotação de frete antes de pagar.");
       return;
     }
+    if (f.nome.trim().length < 3) {
+      track("checkout_error", { step: "customer", reason: "invalid_name" });
+      setError("Informe um nome completo válido para continuar.");
+      nameRef.current?.focus();
+      return;
+    }
     if (!isValidCpf(f.cpf)) {
       track("checkout_error", { step: "customer", reason: "invalid_cpf" });
       setCpfInvalid(true);
       setError("CPF inválido. Confira os números.");
       cpfRef.current?.focus();
+      return;
+    }
+    if (!isValidBrazilWhatsapp(f.whatsapp)) {
+      track("checkout_error", { step: "customer", reason: "invalid_whatsapp" });
+      setError("Informe um WhatsApp com DDD válido.");
+      whatsappRef.current?.focus();
+      return;
+    }
+    if (!hasDeliveryAddress(f)) {
+      track("checkout_error", { step: "delivery", reason: "empty_address" });
+      setError("Preencha o endereço de entrega: rua, número, bairro e cidade.");
+      (f.rua.trim() ? numeroRef.current : streetRef.current)?.focus();
+      return;
+    }
+    if (!isValidBrazilUF(f.uf)) {
+      track("checkout_error", { step: "delivery", reason: "invalid_uf" });
+      setError("Informe uma UF válida, como MG, SP ou RJ.");
+      ufRef.current?.focus();
       return;
     }
     // A delayed affiliate lookup must not change the coupon once this payment
@@ -1061,7 +1094,23 @@ function Checkout() {
   if (!hydrated)
     return (
       <Shell>
-        <div className="container-site min-h-[50vh] py-20" aria-busy="true" />
+        <div className="container-site min-h-[50vh] py-20" aria-busy="true">
+          <noscript>
+            <section className="mx-auto max-w-xl rounded-xl border border-border bg-card p-6 text-center">
+              <h1 className="font-display text-h1">Checkout precisa de JavaScript</h1>
+              <p className="mt-3 text-body">
+                Ative o JavaScript para finalizar sua compra com segurança. Sua sacola não será
+                enviada sem sua confirmação.
+              </p>
+              <a
+                href="/loja"
+                className="mt-5 inline-flex min-h-11 items-center rounded-full bg-emerald-600 px-6 font-semibold text-white"
+              >
+                Voltar à loja
+              </a>
+            </section>
+          </noscript>
+        </div>
       </Shell>
     );
 
@@ -1199,6 +1248,7 @@ function Checkout() {
               <StepTitle n={1}>Contato</StepTitle>
               <input
                 required
+                ref={nameRef}
                 aria-label="Nome completo"
                 placeholder="Nome completo"
                 value={f.nome}
@@ -1220,6 +1270,7 @@ function Checkout() {
               <input
                 required
                 inputMode="tel"
+                ref={whatsappRef}
                 aria-label="WhatsApp com DDD"
                 placeholder="WhatsApp com DDD"
                 value={f.whatsapp}
@@ -1306,6 +1357,7 @@ function Checkout() {
               )}
               <input
                 required
+                ref={streetRef}
                 aria-label="Rua"
                 placeholder="Rua"
                 value={f.rua}
@@ -1355,6 +1407,7 @@ function Checkout() {
                 />
                 <input
                   required
+                  ref={ufRef}
                   aria-label="UF"
                   placeholder="UF"
                   value={f.uf}

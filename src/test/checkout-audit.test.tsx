@@ -130,6 +130,48 @@ const fill = async () => {
 };
 
 describe("checkout auditado sem chamadas reais", () => {
+  it("impede pagamento com nome composto apenas por espaços e informa como corrigir", async () => {
+    render(<Checkout />);
+    await fill();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "   " } });
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/nome completo válido/i);
+  });
+
+  it("não envia Pix com WhatsApp brasileiro malformado ou DDD inexistente", async () => {
+    render(<Checkout />);
+    await fill();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("WhatsApp com DDD"), {
+      target: { value: "00000000000" },
+    });
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/WhatsApp.*DDD.*válido/i);
+  });
+
+  it("não envia pagamento com rua, número, bairro ou cidade só com espaços", async () => {
+    render(<Checkout />);
+    await fill();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("Rua"), { target: { value: "   " } });
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/endereço de entrega/i);
+  });
+
+  it("não envia pagamento com UF que não seja estado brasileiro", async () => {
+    render(<Checkout />);
+    await fill();
+    await waitFor(() => expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("UF"), { target: { value: "XX" } });
+    fireEvent.submit(document.getElementById("checkout-form")!);
+    expect(mocks.payment).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/UF válida/i);
+  });
+
   it("não libera dados pessoais nem pagamento enquanto a configuração ainda não respondeu", () => {
     mocks.config.mockReturnValueOnce(new Promise(() => undefined));
     render(<Checkout />);
@@ -1207,6 +1249,41 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(screen.queryByText(/Correios PAC/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
   });
+  it("cotação no produto não fica travada quando endereço não responde, com frete disponível", async () => {
+    mocks.address.mockImplementationOnce(() => new Promise(() => undefined));
+    render(<ShippingCalc subtotal={169.9} slug="kit-banana-e-mel" variant="Kit" qty={1} />);
+    fireEvent.change(screen.getByLabelText("CEP de entrega"), { target: { value: "30140010" } });
+    fireEvent.click(screen.getByRole("button", { name: "Calcular" }));
+    expect(await screen.findByText("Correios PAC")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Calcular" })).toBeEnabled());
+    expect(mocks.quote).toHaveBeenCalledOnce();
+  });
+
+  it("frete do produto termina após 12s sem resposta e ignora transportadora tardia", async () => {
+    let resolveLate: (value: { ok: true; options: (typeof option)[] }) => void = () => undefined;
+    mocks.quote.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveLate = resolve;
+        }),
+    );
+    render(<ShippingCalc subtotal={169.9} slug="kit-banana-e-mel" variant="Kit" qty={1} />);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("CEP de entrega"), { target: { value: "30140010" } });
+      fireEvent.click(screen.getByRole("button", { name: "Calcular" }));
+      expect(screen.getByRole("button", { name: "..." })).toBeDisabled();
+      await act(async () => vi.advanceTimersByTime(12000));
+      expect(screen.getByRole("button", { name: "Calcular" })).toBeEnabled();
+      expect(screen.getByText(/O cálculo de frete demorou demais/)).toBeInTheDocument();
+      await act(async () => resolveLate({ ok: true, options: [option] }));
+      expect(screen.queryByText("Correios PAC")).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
+
   it("não promete frete grátis no produto quando nenhuma transportadora atende o CEP", async () => {
     mocks.quote.mockResolvedValueOnce({ ok: true, options: [] });
     render(<ShippingCalc subtotal={200} slug="kit-banana-e-mel" variant="Kit" qty={1} />);
