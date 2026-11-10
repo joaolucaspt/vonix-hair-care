@@ -96,12 +96,23 @@ export function AffiliateShell({ children }: { children: ReactNode }) {
               aria-label="Ir para o e-commerce Vonix Hair"
               className="inline-block rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
             >
-              <img
-                src={logoUrl}
-                alt="Vonix Hair"
-                width={115}
-                height={45}
-                className="h-12 w-auto rounded bg-white p-1.5"
+              <span
+                role="img"
+                aria-label="Vonix Hair"
+                className="block h-12 w-[7.8rem]"
+                style={{
+                  aspectRatio: "420 / 163",
+                  background:
+                    "linear-gradient(135deg, #b8862b 0%, #f3d98a 38%, #c9992f 62%, #f0cf7a 100%)",
+                  WebkitMaskImage: "url(" + logoUrl + ")",
+                  maskImage: "url(" + logoUrl + ")",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskSize: "contain",
+                  maskSize: "contain",
+                  WebkitMaskPosition: "left center",
+                  maskPosition: "left center",
+                }}
               />
             </Link>
             <p className="mt-4 max-w-lg text-sm leading-[1.8] text-[#ead5d3]">

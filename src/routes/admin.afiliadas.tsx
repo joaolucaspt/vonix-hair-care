@@ -16,12 +16,14 @@ import {
   getAffiliateAdminSession,
   eraseAffiliateApplicationAdmin,
   getAffiliateApplications,
+  getAffiliateApplicationPrivateDetail,
   getAffiliateOperationalReadiness,
   getAffiliateRetentionPreview,
   loginAffiliateAdmin,
   logoutAffiliateAdmin,
   reviewAffiliateApplication,
 } from "@/lib/affiliate-functions";
+import type { AffiliatePrivateDetail } from "@/lib/affiliate-wizard-crypto.server";
 import type {
   AffiliateApplicationRecord,
   AffiliateStatus,
@@ -69,6 +71,41 @@ const mailLabels: Record<AffiliateMailStatus, string> = {
   falhou: "Falha no envio — verificar",
   incerto: "Envio incerto — conciliar antes de reenviar",
 };
+
+const PRIVATE_ANSWER_FIELDS: ReadonlyArray<{
+  key: keyof AffiliatePrivateDetail["answers"];
+  label: string;
+}> = [
+  { key: "firstName", label: "Nome" },
+  { key: "lastName", label: "Sobrenome" },
+  { key: "phone", label: "Celular" },
+  { key: "email", label: "E-mail informado" },
+  { key: "cpf", label: "CPF" },
+  { key: "cnpj", label: "CNPJ (opcional)" },
+  { key: "birthDate", label: "Data de nascimento" },
+  { key: "birthCity", label: "Cidade de nascimento" },
+  { key: "postalCode", label: "CEP" },
+  { key: "city", label: "Cidade" },
+  { key: "state", label: "Estado" },
+  { key: "street", label: "Logradouro" },
+  { key: "district", label: "Bairro" },
+  { key: "number", label: "Número" },
+  { key: "complement", label: "Complemento" },
+  { key: "instagramUsername", label: "Usuário Instagram" },
+  { key: "tiktokUsername", label: "Usuário TikTok" },
+  { key: "xUsername", label: "Usuário X" },
+  { key: "youtubeUsername", label: "Canal YouTube" },
+  { key: "niche", label: "Nicho" },
+  { key: "otherNiche", label: "Outro nicho" },
+  { key: "instagramFollowers", label: "Seguidores Instagram" },
+  { key: "tiktokFollowers", label: "Seguidores TikTok" },
+  { key: "municipalRegistration", label: "Possui inscrição municipal" },
+  { key: "municipalNumber", label: "Número inscrição municipal" },
+  { key: "dependents", label: "Dependentes" },
+  { key: "preferredLine", label: "Linha Vonix preferida" },
+  { key: "couponSuggestion", label: "Nome sugerido para cupom" },
+  { key: "hairType", label: "Tipo de cabelo" },
+];
 
 function safeProfileLink(value: string | null | undefined, platform: "instagram" | "tiktok") {
   try {
@@ -125,6 +162,14 @@ export function AffiliateAdminPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [privateDetail, setPrivateDetail] = useState<
+    (AffiliatePrivateDetail & { id: string }) | null
+  >(null);
+  const [privateDetailLoading, setPrivateDetailLoading] = useState<string | null>(null);
+  const [privateDetailError, setPrivateDetailError] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
   const [pendingDecision, setPendingDecision] = useState<{
     id: string;
     decision: "aprovada" | "recusada";
@@ -160,11 +205,17 @@ export function AffiliateAdminPage() {
   const loadVersion = useRef(0);
   // A preview becomes obsolete as soon as the operator changes either interval.
   const retentionVersion = useRef(0);
+  // Invalidate pending confidential reads on logout, tab hide or filter changes.
+  const privateDetailVersion = useRef(0);
 
   function clearPrivateData() {
     setSessionRechecking(false);
     setSessionRecheckFailed(false);
     setSessionRecheckRetry(0);
+    privateDetailVersion.current++;
+    setPrivateDetail(null);
+    setPrivateDetailLoading(null);
+    setPrivateDetailError(null);
     setApplications([]);
     setStatus("pendente");
     setPage(0);
@@ -217,8 +268,11 @@ export function AffiliateAdminPage() {
     const sessionId = sessionVersion.current;
     const isCurrent = () =>
       requestId === loadVersion.current && sessionId === sessionVersion.current;
-    // Clear old applicant cards immediately when a different page/filter
-    // begins loading; never display an outdated result as the current one.
+    // Clear old applicant cards and confidential detail when filters change.
+    privateDetailVersion.current++;
+    setPrivateDetail(null);
+    setPrivateDetailLoading(null);
+    setPrivateDetailError(null);
     setApplications([]);
     setTotal(0);
     setLoading(true);
@@ -322,6 +376,10 @@ export function AffiliateAdminPage() {
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
+        privateDetailVersion.current++;
+        setPrivateDetail(null);
+        setPrivateDetailLoading(null);
+        setPrivateDetailError(null);
         setSessionRechecking(true);
         setSessionRecheckFailed(false);
       } else if (document.visibilityState === "visible") {
@@ -464,6 +522,43 @@ export function AffiliateAdminPage() {
         setError("Falha na exclusão. Nenhum resultado foi confirmado.");
     } finally {
       if (sessionId === sessionVersion.current) setWorkingId(null);
+    }
+  }
+
+  async function inspectPrivateAnswers(app: AffiliateApplicationRecord) {
+    if (!authorized || sessionRechecking || workingId || loading) return;
+    if (privateDetail?.id === app.id) {
+      privateDetailVersion.current++;
+      setPrivateDetail(null);
+      setPrivateDetailError(null);
+      return;
+    }
+    const requestId = ++privateDetailVersion.current;
+    const sessionId = sessionVersion.current;
+    const isCurrent = () =>
+      requestId === privateDetailVersion.current &&
+      sessionId === sessionVersion.current &&
+      document.visibilityState === "visible";
+    setPrivateDetail(null);
+    setPrivateDetailError(null);
+    setPrivateDetailLoading(app.id);
+    try {
+      const result = await getAffiliateApplicationPrivateDetail({ data: { id: app.id } });
+      if (!isCurrent()) return;
+      if (!result.ok) {
+        if (sessionExpired(result.reason)) return;
+        setPrivateDetailError({ id: app.id, message: result.reason });
+        return;
+      }
+      setPrivateDetail({ id: app.id, ...result.detail });
+    } catch {
+      if (isCurrent())
+        setPrivateDetailError({
+          id: app.id,
+          message: "Falha ao consultar dados protegidos. A candidatura permanece no banco.",
+        });
+    } finally {
+      if (isCurrent()) setPrivateDetailLoading(null);
     }
   }
 
@@ -1111,6 +1206,61 @@ export function AffiliateAdminPage() {
                         </dl>
                       </section>
                     )}
+                    <section
+                      aria-label={"Consulta protegida de " + app.full_name}
+                      className="border-t border-[#f3e7e3] bg-[#fcf8f5] px-6 py-5"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-sm font-bold text-[#623b45]">
+                            Questionário completo
+                          </h4>
+                          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#806a6c]">
+                            CPF, contato e endereço são carregados apenas sob demanda, com sessão
+                            administrativa autenticada. Não compartilhe estes dados.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-expanded={privateDetail?.id === app.id}
+                          disabled={privateDetailLoading !== null || loading || workingId !== null}
+                          onClick={() => void inspectPrivateAnswers(app)}
+                          className="min-h-11 rounded-full border border-[#cfaeb4] bg-white px-5 text-sm font-semibold text-[#693440] hover:bg-[#f8ebed] disabled:opacity-50"
+                        >
+                          {privateDetailLoading === app.id
+                            ? "Carregando respostas..."
+                            : privateDetail?.id === app.id
+                              ? "Ocultar respostas"
+                              : "Ver todas as respostas"}
+                        </button>
+                      </div>
+                      {privateDetailError?.id === app.id && (
+                        <p role="alert" className="mt-4 text-sm text-red-700">
+                          {privateDetailError.message}
+                        </p>
+                      )}
+                      {privateDetail?.id === app.id && (
+                        <div
+                          className="mt-5 rounded-2xl border border-[#dfc7ca] bg-white p-5"
+                          aria-label={"Respostas confidenciais de " + app.full_name}
+                        >
+                          <p className="mb-4 text-xs font-bold uppercase tracking-wide text-[#905e69]">
+                            Informações confidenciais · Inscrição enviada em{" "}
+                            {new Date(privateDetail.acceptedAt).toLocaleString("pt-BR")}
+                          </p>
+                          <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                            {PRIVATE_ANSWER_FIELDS.map(({ key, label }) => (
+                              <div key={key} className="min-w-0 border-b border-[#f2e6e5] pb-3">
+                                <dt className="text-xs font-semibold text-[#98757b]">{label}</dt>
+                                <dd className="mt-1 whitespace-pre-wrap break-words font-medium text-[#392930]">
+                                  {privateDetail.answers[key] || "Não informado"}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </div>
+                      )}
+                    </section>
                     {app.status === "pendente" ? (
                       <div className="flex flex-wrap gap-3 border-t border-[#f3e7e3] bg-[#fffaf7] px-6 py-5">
                         <button

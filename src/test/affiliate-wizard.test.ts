@@ -15,11 +15,13 @@ import {
   affiliateQuestionnaireEncryptionReady,
   encryptAffiliateWizard,
   affiliateWizardSummary,
+  decryptAffiliateWizardForAdmin,
 } from "@/lib/affiliate-wizard-crypto.server";
 import { affiliateApplicationSchema } from "@/lib/affiliate-application";
 import {
   createAffiliateApplication,
   listAffiliateApplications,
+  readAffiliateApplicationPrivateDetail,
 } from "@/lib/affiliate-applications.server";
 
 const fixture = {
@@ -342,6 +344,53 @@ describe("Private encrypted questionnaire storage", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("reads one protected encrypted candidate record without exposing a bulk list", async () => {
+    const id = "00000000-0000-4000-8000-000000000321";
+    const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
+    const mock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([{ id, questionnaire_encrypted: packed }]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", mock);
+    const result = await readAffiliateApplicationPrivateDetail(id);
+    expect(result.answers).toMatchObject({
+      cpf: fixture.cpf,
+      phone: fixture.phone,
+      street: fixture.street,
+      preferredLine: fixture.preferredLine,
+    });
+    const [url, request] = mock.mock.calls[0]!;
+    expect(String(url)).toContain("vonix_affiliate_applications?select=id,questionnaire_encrypted");
+    expect(String(url)).toContain("limit=1");
+    expect(request.method).toBe("GET");
+    expect(request.headers).not.toHaveProperty("Authorization", "");
+    expect(JSON.stringify(result)).not.toContain("emailConfirmation");
+  });
+
+  it("decrypts every stored answer only in the privileged detail helper and rejects tampering", () => {
+    const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
+    const detail = decryptAffiliateWizardForAdmin(packed);
+    expect(detail?.answers).toMatchObject({
+      firstName: "Marina",
+      lastName: "Exemplo",
+      cpf: "529.982.247-25",
+      phone: "(31) 99999-9999",
+      street: "Rua da Bahia",
+      number: "150",
+      postalCode: "30110-012",
+      couponSuggestion: "MARINA10",
+    });
+    expect(Date.parse(detail!.acceptedAt)).toBeGreaterThan(0);
+    expect(detail?.answers).not.toHaveProperty("emailConfirmation");
+    expect(detail?.answers).not.toHaveProperty("termsAccepted");
+    expect(decryptAffiliateWizardForAdmin(null)).toBeNull();
+    const parts = packed.split(".");
+    parts[2] = (parts[2]!.startsWith("A") ? "B" : "A") + parts[2]!.slice(1);
+    expect(decryptAffiliateWizardForAdmin(parts.join("."))).toBeNull();
   });
 
   it("encrypts PII with authentication and returns only business-relevant summary", () => {

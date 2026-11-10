@@ -122,3 +122,87 @@ export function affiliateWizardSummary(
     return null;
   }
 }
+
+/**
+ * On-demand, authenticated detail view only. Unlike the list projection, it
+ * contains identifying answers. The server route must enforce session/TOTP
+ * and Same-Origin, and the client must never cache this document persistently.
+ */
+// Read-only historical projection: do not revalidate age, catalogue values or
+// present-day registration rules when decrypting an already accepted record.
+const privateAnswersSchema = z.object({
+  firstName: z.string().max(70),
+  lastName: z.string().max(70),
+  phone: z.string().max(20),
+  email: z.string().max(180),
+  cpf: z.string().max(14),
+  cnpj: z.string().max(18),
+  birthDate: z.string().max(10),
+  birthCity: z.string().max(90),
+  postalCode: z.string().max(9),
+  city: z.string().max(90),
+  state: z.string().max(2),
+  street: z.string().max(120),
+  district: z.string().max(90),
+  number: z.string().max(15),
+  complement: z.string().max(120),
+  instagramUsername: z.string().max(31),
+  tiktokUsername: z.string().max(31),
+  xUsername: z.string().max(100),
+  youtubeUsername: z.string().max(100),
+  niche: z.string().max(120),
+  otherNiche: z.string().max(120),
+  instagramFollowers: z.string().max(100),
+  tiktokFollowers: z.string().max(100),
+  municipalRegistration: z.string().max(4),
+  municipalNumber: z.string().max(40),
+  dependents: z.string().max(100),
+  preferredLine: z.string().max(120),
+  couponSuggestion: z.string().max(40),
+  hairType: z.string().max(50),
+});
+export type AffiliatePrivateAnswers = z.infer<typeof privateAnswersSchema>;
+export type AffiliatePrivateDetail = {
+  acceptedAt: string;
+  answers: AffiliatePrivateAnswers;
+};
+
+export function decryptAffiliateWizardForAdmin(
+  ciphertext: string | null | undefined,
+): AffiliatePrivateDetail | null {
+  if (!ciphertext || ciphertext.length > MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH) {
+    return null;
+  }
+  const key = encryptionKey();
+  if (!key) return null;
+  try {
+    const parts = ciphertext.split(".");
+    if (parts.length !== 4) return null;
+    const [version, iv64, tag64, encrypted64] = parts;
+    if (version !== "v2" || !iv64 || !tag64 || !encrypted64) return null;
+    const iv = Buffer.from(iv64, "base64url");
+    const tag = Buffer.from(tag64, "base64url");
+    if (iv.length !== 12 || tag.length !== 16) return null;
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    const payload = JSON.parse(
+      Buffer.concat([
+        decipher.update(Buffer.from(encrypted64, "base64url")),
+        decipher.final(),
+      ]).toString("utf8"),
+    ) as unknown;
+    const parsed = z
+      .object({
+        version: z.literal(2),
+        acceptedAt: z.string().datetime({ offset: true }),
+        answers: privateAnswersSchema,
+      })
+      .safeParse(payload);
+    return parsed.success
+      ? { acceptedAt: parsed.data.acceptedAt, answers: parsed.data.answers }
+      : null;
+  } catch {
+    // No ciphertext, plaintext or decryption failure details in logs or API.
+    return null;
+  }
+}
