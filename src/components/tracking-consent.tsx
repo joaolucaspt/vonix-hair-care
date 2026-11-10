@@ -15,6 +15,7 @@ export function TrackingConsentBanner() {
   const path = useLocation({ select: (location) => location.pathname });
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<TrackingConsent | null>(null);
+  const [explicitlyOpened, setExplicitlyOpened] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export function TrackingConsentBanner() {
     setOpen(current === null);
     const reopen = () => {
       setError("");
+      setExplicitlyOpened(true);
       setOpen(true);
     };
     window.addEventListener(TRACKING_PREFERENCES_EVENT, reopen);
@@ -47,13 +49,15 @@ export function TrackingConsentBanner() {
     setError("");
     setChoice(next);
     setOpen(false);
+    setExplicitlyOpened(false);
     // Discard scripts already loaded when revoking; enable them only after
     // accepting. Consent is read synchronously before any vendor bootstrap.
     window.location.reload();
   };
 
-  // Checkout remains usable without answering a cookie prompt.
-  if (!open || path === "/checkout") return null;
+  // Never block checkout with an unsolicited banner, but let the buyer
+  // explicitly reopen preferences from the footer even while checking out.
+  if (!open || (path === "/checkout" && !explicitlyOpened)) return null;
 
   return (
     <section
@@ -63,16 +67,31 @@ export function TrackingConsentBanner() {
     >
       <h2 className="text-name font-semibold">Privacidade e cookies</h2>
       <p className="mt-2 text-small leading-relaxed text-muted-foreground">
-        Usamos recursos necessários para o carrinho e a compra. Com a sua permissão,
-        também usamos Google Analytics, Microsoft Clarity e Meta Pixel para medir
-        visitas e melhorar a loja. Você pode recusar sem perder acesso aos produtos
-        ou ao checkout.
+        Usamos recursos necessários para o carrinho e a compra. Com a sua permissão, também usamos
+        Google Analytics, Microsoft Clarity e Meta Pixel para medir visitas e melhorar a loja. Você
+        pode recusar sem perder acesso aos produtos ou ao checkout.
       </p>
       <p className="mt-1 text-small text-muted-foreground">
-        Sua escolha atual: {choice === "accepted" ? "opcionais ativados" : choice === "rejected" ? "somente necessários" : "não definida"}.
-        {" "}<Link to="/$page" params={{ page: "politica-de-privacidade" }} className="underline underline-offset-2">Política de Privacidade</Link>
+        Sua escolha atual:{" "}
+        {choice === "accepted"
+          ? "opcionais ativados"
+          : choice === "rejected"
+            ? "somente necessários"
+            : "não definida"}
+        .{" "}
+        <Link
+          to="/$page"
+          params={{ page: "politica-de-privacidade" }}
+          className="underline underline-offset-2"
+        >
+          Política de Privacidade
+        </Link>
       </p>
-      {error && <p role="alert" className="mt-2 text-small text-red-700">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-2 text-small text-red-700">
+          {error}
+        </p>
+      )}
       <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"

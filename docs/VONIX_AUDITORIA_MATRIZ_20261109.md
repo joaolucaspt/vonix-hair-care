@@ -218,3 +218,13 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N72 | Média | CI não rodava regras de ESLint fora da dívida de formatação CRLF | **Corrigido**: job de ESLint real em CI, sem `--fix` global; formatação legada segue pendente |
 
 **C18:** PR45 (`ed23f7e`) + PR46 (`cd91784`) integrados na branch auditada, não na main. 590/590 Vitest em 70 arquivos, TypeScript/build/ESLint sem Prettier aprovados, 42 SSR, 3 Chrome. Check de CI remoto/PR após push. P0 operacional segue **NOT_APPROVED**.
+
+## C19 — busca na vitrine e controle explícito de privacidade (09/11)
+
+| ID | Severidade | Problema reproduzido | Correção verificável |
+| --- | --- | --- | --- |
+| N73 | Média/privacidade | Checkout ocultava o banner até quando a pessoa abria voluntariamente as preferências pelo rodapé | **Corrigido:** sem pop-up automático na compra; preferência explicitamente reaberta, recusa preservada após reload; React/Chrome |
+| N74 | Média/conversão | Busca na loja tinha somente Enter no teclado, sem botão de envio acessível em celulares | **Corrigido:** formulário `role=search`, botão Buscar 44px, Enter/teclado virtual e navegação interna por query |
+| N75 | Baixa/robustez | Filtros de URL refletiam strings vazias, espaços externos e consultas sem limite no título e render | **Corrigido:** trim, descarte de vazio e limites de 120 caracteres para `q`, 80 para outros filtros |
+
+**C19:** base C18 `3e03fcf`; PR #47 da `main` original sincronizado na branch de auditoria, sem tocar aplicativo de afiliadas separado. Após PR47: 596/596 Vitest em 71 arquivos, Chrome 3/3 (320/390/1366), SSR 42/42, TypeScript/ESLint sem Prettier/build exit 0. Pagamentos, banco operacional e deploy seguem bloqueados. Ver `VONIX_AUDITORIA_CONTINUIDADE_C19_20261109.md`.

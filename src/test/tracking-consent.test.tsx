@@ -14,7 +14,9 @@ const route = vi.hoisted(() => ({ path: "/" }));
 vi.mock("@tanstack/react-router", async (original) => ({
   ...(await original<typeof import("@tanstack/react-router")>()),
   useLocation: () => route.path,
-  Link: ({ children }: { children: React.ReactNode }) => <a href="/politica-de-privacidade">{children}</a>,
+  Link: ({ children }: { children: React.ReactNode }) => (
+    <a href="/politica-de-privacidade">{children}</a>
+  ),
 }));
 
 beforeEach(() => {
@@ -69,7 +71,9 @@ describe("preferências de privacidade", () => {
     });
     render(<TrackingConsentBanner />);
     fireEvent.click(await screen.findByRole("button", { name: "Recusar opcionais" }));
-    expect(screen.queryByRole("region", { name: "Preferências de privacidade" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Preferências de privacidade" }),
+    ).not.toBeInTheDocument();
     expect(hasTrackingConsent()).toBe(false);
     fireEvent(window, new Event(TRACKING_PREFERENCES_EVENT));
     expect(await screen.findByText(/somente necessários/i)).toBeInTheDocument();
@@ -86,7 +90,9 @@ describe("preferências de privacidade", () => {
 
   it("permite recusar sem obrigar uma decisão para acessar a loja", async () => {
     render(<TrackingConsentBanner />);
-    expect(await screen.findByRole("region", { name: "Preferências de privacidade" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Preferências de privacidade" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recusar opcionais" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Aceitar opcionais" })).toBeInTheDocument();
     expect(screen.getByText(/pode recusar sem perder acesso/i)).toBeInTheDocument();
@@ -95,16 +101,40 @@ describe("preferências de privacidade", () => {
   it("reabre escolhas salvas pelo link do rodapé", async () => {
     window.localStorage.setItem(TRACKING_CONSENT_KEY, "rejected");
     render(<TrackingConsentBanner />);
-    await waitFor(() => expect(screen.queryByRole("region", { name: "Preferências de privacidade" })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Preferências de privacidade" }),
+      ).not.toBeInTheDocument(),
+    );
     fireEvent(window, new Event(TRACKING_PREFERENCES_EVENT));
-    expect(await screen.findByRole("region", { name: "Preferências de privacidade" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Preferências de privacidade" }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/somente necessários/i)).toBeInTheDocument();
   });
 
   it("não sobrepõe o checkout com banner de cookies", async () => {
     route.path = "/checkout";
     render(<TrackingConsentBanner />);
-    await waitFor(() => expect(screen.queryByRole("region", { name: "Preferências de privacidade" })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Preferências de privacidade" }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("permite reabrir explicitamente as preferências durante o checkout, sem exibir banner automático", async () => {
+    route.path = "/checkout";
+    window.localStorage.setItem(TRACKING_CONSENT_KEY, "accepted");
+    render(<TrackingConsentBanner />);
+    expect(
+      screen.queryByRole("region", { name: "Preferências de privacidade" }),
+    ).not.toBeInTheDocument();
+    fireEvent(window, new Event(TRACKING_PREFERENCES_EVENT));
+    const region = await screen.findByRole("region", { name: "Preferências de privacidade" });
+    expect(region).toHaveTextContent(/opcionais ativados/i);
+    expect(screen.getByRole("button", { name: "Recusar opcionais" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aceitar opcionais" })).toBeInTheDocument();
   });
 
   it("não inventa consentimento quando o navegador bloqueia a gravação", async () => {
@@ -113,7 +143,9 @@ describe("preferências de privacidade", () => {
     });
     render(<TrackingConsentBanner />);
     fireEvent.click(await screen.findByRole("button", { name: "Aceitar opcionais" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/rastreamento opcional permanece desativado/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /rastreamento opcional permanece desativado/i,
+    );
     expect(hasTrackingConsent()).toBe(false);
   });
 });

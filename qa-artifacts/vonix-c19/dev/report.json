@@ -1,0 +1,56 @@
+{
+  "scope": "C19 local search, checkout privacy preferences and safe cart/checkout; external network blocked; no real payments",
+  "date": "2026-11-09",
+  "origin": "http://127.0.0.1:43972",
+  "outcomes": [
+    {
+      "viewport": 320,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 4,
+      "searchByButton": true,
+      "quickSummary": true,
+      "couponEnterAppliedWithoutPayment": true,
+      "checkoutPrivacyReopen": true,
+      "privacyRejectionPreserved": true,
+      "cartTouchTargets44px": true,
+      "metrics": {
+        "overflow": false,
+        "cartStored": true
+      }
+    },
+    {
+      "viewport": 390,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 3,
+      "searchByButton": true,
+      "quickSummary": true,
+      "couponEnterAppliedWithoutPayment": true,
+      "checkoutPrivacyReopen": true,
+      "privacyRejectionPreserved": true,
+      "cartTouchTargets44px": true,
+      "metrics": {
+        "overflow": false,
+        "cartStored": true
+      }
+    },
+    {
+      "viewport": 1366,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 3,
+      "searchByButton": true,
+      "couponEnterAppliedWithoutPayment": true,
+      "checkoutPrivacyReopen": true,
+      "privacyRejectionPreserved": true,
+      "cartTouchTargets44px": true,
+      "metrics": {
+        "overflow": false,
+        "cartStored": true
+      }
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

@@ -1,0 +1,120 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce audit branch only; independent affiliate application excluded",
+  "dateLocal": "2026-11-09",
+  "workloop": {
+    "definitionId": "a6a83742-6b03-47a6-acdb-f7537bd5baa9",
+    "runId": "a3c3342b-4a11-4222-9ce5-cb7521676a32"
+  },
+  "baseHead": "3e03fcfa88cd61ce0aaf266f31c09c735e2b9a54",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "pr": 26,
+  "mainIntegrated": [
+    {
+      "commit": "266763f07ea58d46fddc1c31553a0e8831a2cdc7",
+      "pr": 47,
+      "mergeConflicts": 0
+    }
+  ],
+  "findings": [
+    {
+      "id": "N73",
+      "change": "Explicit privacy preferences reopen on checkout without mandatory initial banner"
+    },
+    {
+      "id": "N74",
+      "change": "Accessible search form with visible button, touch targets and keyboard support"
+    },
+    {
+      "id": "N75",
+      "change": "Normalized and bounded public URL query and filter lengths"
+    }
+  ],
+  "tests": {
+    "tddRed": {
+      "failedAsExpected": 3
+    },
+    "focused": {
+      "passed": 12,
+      "files": 2,
+      "exitCode": 0
+    },
+    "full": {
+      "passed": 596,
+      "files": 71,
+      "exitCode": 0
+    },
+    "typescript": {
+      "exitCode": 0
+    },
+    "eslintAllWithoutLegacyPrettier": {
+      "exitCode": 0
+    },
+    "prettierTargeted": {
+      "exitCode": 0
+    },
+    "build": {
+      "exitCode": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "activeProducts": 42,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "chrome": {
+      "viewports": [
+        320,
+        390,
+        1366
+      ],
+      "passed": 3,
+      "failed": 0,
+      "screenshots": 12,
+      "localDev": true,
+      "externalRequestsBlocked": true,
+      "noPageErrors": true,
+      "noHorizontalOverflow": true,
+      "cartPreserved": true,
+      "catalogSearchButton": true,
+      "privacyExplicitReopen": true,
+      "privacyRejectionPersisted": true,
+      "paymentSubmitted": false
+    },
+    "gitDiffCheck": {
+      "exitCode": 0
+    }
+  },
+  "sha256": {
+    "src/components/tracking-consent.tsx": "15D8B93A969FA462C18BEFD8710722CFFA9A117A4BBAF12DE6CF782AE3880523",
+    "src/routes/loja.tsx": "3228FE3C09B18016141BF1657C0BB5CE962375709103AF96B6DBA8649246D24E",
+    "src/test/tracking-consent.test.tsx": "AC6787BF60CE105F0827F40134D439A31CF09D8288E136C9B664EDF883BAFC54",
+    "src/test/storefront-search-audit.test.tsx": "FE6710D7028113CF33128FB449C08FD55ECE86BAD5060FD85328E1037F837778",
+    "scripts/qa-c19-storefront-privacy.mjs": "4EB1CFE271725AC3B14F69268B58447B1A65C4FB736DD2CAA9932D0EDFAB3197",
+    "qa-artifacts/vonix-c19/dev/report.json": "1E7DE365267F6D982A936560B10B311DD5F76CCA3B5C568324DEDD595D8D7741"
+  },
+  "artifacts": [
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C19_20261109.md",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md",
+    "scripts/qa-c19-storefront-privacy.mjs",
+    "qa-artifacts/vonix-c19/dev/report.json",
+    "qa-artifacts/vonix-c19/dev/search-{320,390,1366}.png",
+    "qa-artifacts/vonix-c19/dev/drawer-{320,390,1366}.png",
+    "qa-artifacts/vonix-c19/dev/checkout-{320,390,1366}.png",
+    "qa-artifacts/vonix-c19/dev/cart-{320,390,1366}.png"
+  ],
+  "runtimeLimitations": [
+    "Cloudflare worker staging not tested",
+    "Appmax sandbox and Supabase isolated staging not tested",
+    "Bling shipment and stock SKUs not tested",
+    "GA4 Meta paid-order attribution not verified",
+    "Strict legacy Prettier CRLF debt"
+  ],
+  "readiness": "NOT_APPROVED",
+  "realPayments": false,
+  "realDatabaseWrites": false,
+  "affiliateAppTouched": false,
+  "productionDeployed": false,
+  "mergedMainRemotely": false
+}
