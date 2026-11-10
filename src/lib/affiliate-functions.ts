@@ -85,7 +85,9 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
         {
           method: "GET",
           headers: config.headers,
-          redirect: "error",
+          // Strict redirect:error throws on some Worker fetch adapters.
+          // Manual mode never forwards privileged credentials to a new host.
+          redirect: "manual",
           signal: AbortSignal.timeout(4000),
         },
       );
@@ -98,7 +100,9 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
             ? "forbidden"
             : response.status === 404
               ? "not-found"
-              : "server-error";
+              : response.status >= 300 && response.status < 400
+                ? "redirect-blocked"
+                : "server-error";
     } catch (error) {
       storageReachable = false;
       storageDiagnostic = classifyAffiliateFetchFailure(error);
