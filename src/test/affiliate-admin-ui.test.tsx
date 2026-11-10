@@ -711,6 +711,11 @@ describe("Vonix affiliate private panel", () => {
   it("requires a six-digit authenticator code before enabling sign-in", async () => {
     server.getAffiliateAdminSession.mockResolvedValueOnce({ authenticated: false });
     render(<Page />);
+    expect(
+      await screen.findByRole("link", { name: /Entrar com e-mail e senha pessoal/i }),
+    ).toHaveAttribute("href", "/acesso-equipe-afiliadas?login=senha");
+    expect(screen.getByText(/Os seis dígitos NÃO são enviados por e-mail/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Acesso antigo com aplicativo autenticador (uso restrito)"));
     expect(await screen.findByRole("heading", { name: "Acesso da equipe" })).toBeInTheDocument();
     const login = screen.getByRole("button", { name: /Acessar inscrições/i });
     fireEvent.change(screen.getByLabelText("Senha administrativa"), {

@@ -716,66 +716,100 @@ export function AffiliateAdminPage() {
             Verificando acesso da equipe...
           </div>
         ) : !authorized ? (
-          <form
-            onSubmit={(e) => void login(e)}
-            className="max-w-lg rounded-[2rem] border border-[#e8dcd8] bg-white p-7 shadow-sm sm:p-10"
-          >
-            <LockKeyhole className="mb-5 h-9 w-9 text-[#864a56]" />
-            <h2 className="font-display text-3xl">Acesso da equipe</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#806c6e]">
-              Informe a senha administrativa para consultar e analisar as inscrições.
-            </p>
-            <label className="mt-7 block text-sm font-semibold" htmlFor="admin-password">
-              Senha administrativa
-            </label>
-            <input
-              id="admin-password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 outline-none focus:ring-2 focus:ring-[#e8c9c5]"
-            />
-            <label className="mt-5 block text-sm font-semibold" htmlFor="admin-otp">
-              Código do autenticador
-            </label>
-            <input
-              id="admin-otp"
-              type="text"
-              required
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              pattern="[0-9]{6}"
-              placeholder="6 dígitos obrigatórios"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 tracking-[.3em] outline-none focus:ring-2 focus:ring-[#e8c9c5]"
-            />
-            {error && (
-              <p role="alert" className="mt-4 text-sm text-red-700">
-                {error}
+          <div className="max-w-lg space-y-5">
+            <section className="rounded-[2rem] border border-[#e7cece] bg-white p-7 shadow-[0_12px_42px_rgba(88,40,54,.08)] sm:p-10">
+              <ShieldCheck className="mb-5 h-9 w-9 text-[#864a56]" />
+              <h2 className="font-display text-3xl">Entrar com sua conta pessoal</h2>
+              <p className="mt-3 text-sm leading-relaxed text-[#806c6e]">
+                Se você já ativou seu convite, entre usando seu próprio e-mail e sua senha pessoal.
+                Não é necessário receber outro código por e-mail. Não compartilhe a conta de outra
+                pessoa: cada membro da equipe deve usar o próprio convite.
               </p>
-            )}
-            <button
-              type="submit"
-              disabled={loading || !password || otp.length !== 6}
-              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#693440] px-6 font-semibold text-white disabled:opacity-50"
-            >
-              {loading ? "Verificando acesso..." : "Acessar inscrições"}{" "}
-              {!loading && <ArrowRight className="h-4 w-4" />}
-            </button>
-            <p className="mt-6 text-center text-sm text-[#785960]">
-              Foi convidado para a equipe?{" "}
-              <Link
-                to="/acesso-equipe-afiliadas"
-                className="font-semibold underline underline-offset-4"
+              <a
+                href="/acesso-equipe-afiliadas?login=senha"
+                className="mt-6 flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#693440] px-6 text-center text-sm font-bold text-white"
               >
-                Ativar ou acessar sua conta pessoal
-              </Link>
-            </p>
-          </form>
+                Entrar com e-mail e senha pessoal <ArrowRight className="h-4 w-4" />
+              </a>
+              <p className="mt-4 text-sm text-[#806c6e]">
+                Ainda não criou sua senha?{" "}
+                <Link
+                  to="/acesso-equipe-afiliadas"
+                  className="font-semibold text-[#693440] underline underline-offset-4"
+                >
+                  Ativar convite ou recuperar acesso
+                </Link>
+                .
+              </p>
+            </section>
+            <details className="rounded-[1.5rem] border border-[#e8dcd8] bg-white">
+              <summary className="cursor-pointer px-7 py-5 text-sm font-semibold text-[#785960] sm:px-10">
+                Acesso antigo com aplicativo autenticador (uso restrito)
+              </summary>
+              <form
+                onSubmit={(e) => void login(e)}
+                className="border-t border-[#e8dcd8] p-7 pt-6 sm:p-10"
+              >
+                <LockKeyhole className="mb-5 h-9 w-9 text-[#864a56]" />
+                <h2 className="font-display text-3xl">Acesso da equipe</h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#806c6e]">
+                  Este acesso legado exige a senha administrativa e um código TOTP do aplicativo
+                  autenticador previamente configurado. Os seis dígitos NÃO são enviados por e-mail.
+                  Se você possui uma conta individual, use a opção principal acima.
+                </p>
+                <label className="mt-7 block text-sm font-semibold" htmlFor="admin-password">
+                  Senha administrativa
+                </label>
+                <input
+                  id="admin-password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 outline-none focus:ring-2 focus:ring-[#e8c9c5]"
+                />
+                <label className="mt-5 block text-sm font-semibold" htmlFor="admin-otp">
+                  Código do autenticador
+                </label>
+                <input
+                  id="admin-otp"
+                  type="text"
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  placeholder="6 dígitos obrigatórios"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[#e3d1ce] px-4 tracking-[.3em] outline-none focus:ring-2 focus:ring-[#e8c9c5]"
+                />
+                {error && (
+                  <p role="alert" className="mt-4 text-sm text-red-700">
+                    {error}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading || !password || otp.length !== 6}
+                  className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#693440] px-6 font-semibold text-white disabled:opacity-50"
+                >
+                  {loading ? "Verificando acesso..." : "Acessar inscrições"}{" "}
+                  {!loading && <ArrowRight className="h-4 w-4" />}
+                </button>
+                <p className="mt-6 text-center text-sm text-[#785960]">
+                  Foi convidado para a equipe?{" "}
+                  <Link
+                    to="/acesso-equipe-afiliadas"
+                    className="font-semibold underline underline-offset-4"
+                  >
+                    Ativar ou acessar sua conta pessoal
+                  </Link>
+                </p>
+              </form>
+            </details>
+          </div>
         ) : sessionRechecking ? (
           <section
             role="status"
