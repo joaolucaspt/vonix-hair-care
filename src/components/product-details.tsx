@@ -23,10 +23,10 @@ function specs(p: Product) {
   const salao = !!USAGE["salao"]?.(p);
   const uso = isProOnly(p.slug) ? "Profissional (salão)" : casa && salao ? "Casa e salão" : salao ? "Profissional (salão)" : "Cuidado em casa";
   const sizes = [...new Set(p.variants.map((v) => v.label.replace(/^[^\d]*/, "").replace(/\s+/g, "")).filter(Boolean))].join(" · ");
-  const items = (parse(p.description).sections["O QUE VEM NO COMBO"] ?? "").split("\n").filter((l) => l.trim().startsWith("**")).length;
+  const items = (parse(p.description).sections["O QUE VEM NO KIT"] ?? "").split("\n").filter((l) => l.trim().startsWith("**")).length;
   const rows: [string, string][] = [
     ["Categorias", `Cabelos › ${p.categoryLabel}`],
-    ["Este combo contém", items ? `${items} produtos` : ""],
+    ["Este kit contém", items ? `${items} produtos` : ""],
     ["Indicado para", needs.join(", ")],
     ["Tipo de produto", types.join(", ")],
     ["Tamanho", sizes],
@@ -54,7 +54,7 @@ export function ProductDetails({ p }: { p: Product }) {
   const blocks = intro.split(/\n{2,}/);
   const details = blocks.length > 1 ? blocks.slice(1).join("\n\n") : intro;
   const action = sections["AÇÃO / RESULTADO"];
-  const contains = sections["O QUE VEM NO COMBO"] ?? sections["O QUE VEM NO KIT"];
+  const contains = sections["O QUE VEM NO KIT"] ?? sections["O QUE VEM NO KIT"];
   const sizes = p.variants.map((v) => v.label.replace(/^[^\d]*/, "").replace(/\s+/g, "")).filter(Boolean).join(" · ");
   return (
     <section className="mx-auto mt-16 max-w-3xl" aria-label="Informações do produto">

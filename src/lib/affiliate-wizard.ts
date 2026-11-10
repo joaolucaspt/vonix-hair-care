@@ -40,7 +40,7 @@ export const PREFERRED_VONIX_LINES = [
   "Progressiva Fio de Luz",
   "Botox Vonix",
   "Máscara de Reparação Nutri Repair",
-  "Combo Cronograma Capilar",
+  "Kit Cronograma Capilar",
   "Outra linha Vonix",
 ] as const;
 export const WIZARD_HAIR_TYPES = ["Liso", "Cacheado", "Ondulado", "Crespo"] as const;

@@ -136,7 +136,7 @@ export function SignupCoupon({
           <p className="mt-1 text-small opacity-80">
             {kept
               ? `Você já tinha o cupom ${kept}, que é melhor ou igual e continua aplicado. O ${coupon.code} fica guardado para você digitar no checkout.`
-              : "Ele já entra sozinho no checkout, por 7 dias neste aparelho. Não soma com os combos Leve 2/Leve 3."}
+              : "Ele já entra sozinho no checkout, por 7 dias neste aparelho. Não soma com os kits Leve 2/Leve 3."}
           </p>
         </div>
       ) : (

@@ -39,7 +39,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Vonix Hair — Cosméticos Capilares Profissionais" },
-      { name: "description", content: "Progressivas, botox, máscaras e combos Vonix Hair. Até 6x sem juros e frete grátis acima de R$ 150,00." },
+      { name: "description", content: "Progressivas, botox, máscaras e kits Vonix Hair. Até 6x sem juros e frete grátis acima de R$ 150,00." },
       { property: "og:title", content: "Vonix Hair — Cosméticos Capilares Profissionais" },
       { property: "og:description", content: "Até 6x sem juros e frete grátis acima de R$ 150,00." },
       { property: "og:url", content: SITE_URL },
@@ -83,9 +83,9 @@ function Home() {
   const [i, setI] = useState(0);
   const { audience } = useAudience();
   const bestSellers = forAudience(BEST_SELLERS.map((s) => getProduct(s)!), audience);
-  const combos = forAudience(products.filter((p) => p.category === "kits"), audience);
+  const kits = forAudience(products.filter((p) => p.category === "kits"), audience);
   // "Todos os Produtos" não repete o que já apareceu nas duas vitrines de cima.
-  const shown = new Set([...bestSellers, ...combos].map((p) => p.slug));
+  const shown = new Set([...bestSellers, ...kits].map((p) => p.slug));
   const others = forAudience(products, audience).filter((p) => !shown.has(p.slug)).slice(0, 8);
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % BANNERS.length), 6000);
@@ -119,8 +119,8 @@ function Home() {
       </section>
 
       <section className="container-site mt-16">
-        <Title a="Todos os" b="Combos" to={{ tiposProduto: "Combos" }} />
-        <Grid carousel items={combos} />
+        <Title a="Todos os" b="Kits" to={{ tiposProduto: "Kits" }} />
+        <Grid carousel items={kits} />
       </section>
 
       <section className="container-site mt-20 text-center">

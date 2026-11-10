@@ -9,12 +9,13 @@ export const Route = createFileRoute("/loja")({
     const o: S = {};
     for (const k of ["q", "secao", "tiposProduto", "necessidades", "uso", "categoria", "ordem"] as const)
       if (typeof s[k] === "string" && s[k]) o[k] = s[k] as string;
+    if (o.tiposProduto === "Combos") o.tiposProduto = "Kits";
     return o;
   },
   head: () => ({
     meta: [
       { title: "Loja — Vonix Hair" },
-      { name: "description", content: "Todos os produtos Vonix Hair: progressivas, botox, máscaras, shampoos e combos." },
+      { name: "description", content: "Todos os produtos Vonix Hair: progressivas, botox, máscaras, shampoos e kits." },
       { property: "og:title", content: "Loja — Vonix Hair" },
       { property: "og:description", content: "Todos os produtos Vonix Hair em até 6x sem juros." },
       { property: "og:type", content: "website" },

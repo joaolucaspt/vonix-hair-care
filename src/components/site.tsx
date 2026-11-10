@@ -68,7 +68,7 @@ const NAV = [
   { label: "Produtos", search: {} },
   { label: "Progressiva", search: { tiposProduto: "Progressiva" } },
   { label: "Máscara", search: { tiposProduto: "Máscara" } },
-  { label: "Combos", search: { tiposProduto: "Combos" } },
+  { label: "Kits", search: { tiposProduto: "Kits" } },
   { label: "Cachos", search: { q: "cachos" } },
 ];
 
@@ -176,7 +176,7 @@ function SearchBox({ onDone, autoFocus = false }: { onDone?: () => void; autoFoc
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Buscar produtos, combos, tratamentos..."
+        placeholder="Buscar produtos, kits, tratamentos..."
         aria-label="Buscar"
         autoFocus={autoFocus}
         className="h-11 w-full rounded-full border border-border bg-background px-4 pr-10 text-body outline-none focus:border-foreground"
@@ -409,7 +409,7 @@ function Footer() {
         <div className="flex flex-col gap-1 [&_a]:py-1.5">
           <h4 className="mb-2 font-semibold">Comprar</h4>
           <Link to="/loja">Todos os Produtos</Link>
-          <Link to="/loja" search={{ tiposProduto: "Combos" }}>Combos</Link>
+          <Link to="/loja" search={{ tiposProduto: "Kits" }}>Kits</Link>
           <Link to="/loja" search={{ tiposProduto: "Finalizadores" }}>Finalizadores</Link>
           <Link to="/loja" search={{ necessidades: "Hidratação" }}>Hidratação</Link>
         </div>
