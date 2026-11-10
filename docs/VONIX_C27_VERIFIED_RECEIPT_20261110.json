@@ -1,0 +1,64 @@
+﻿{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C27",
+    "date":  "2026-11-10",
+    "root":  "C:\\Users\\JL\\code\\vonix-hair-care",
+    "baseHead":  "45e38f4",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "pullRequest":  26,
+    "scope":  "E-commerce audit only; separate affiliate app excluded",
+    "changes":  [
+                    "N106 audience precedence",
+                    "N107 audience state alignment",
+                    "N108 payment method fallback",
+                    "N109 offline checkout without PII fields",
+                    "N110 drawer quantity boundaries",
+                    "N111 mobile drawer scroll and layout"
+                ],
+    "verification":  {
+                         "vitest":  "662/662 PASS in 81 files",
+                         "typescript":  0,
+                         "eslintNonformat":  0,
+                         "buildCloudflareModule":  0,
+                         "prettierChanged":  0,
+                         "gitDiffCheck":  0,
+                         "ssr":  "42/42 products, plex-vonix excluded 404",
+                         "chrome":  {
+                                        "passed":  3,
+                                        "failed":  0,
+                                        "resolutions":  [
+                                                            320,
+                                                            390,
+                                                            1366
+                                                        ],
+                                        "screenshots":  12,
+                                        "blockedExternal":  true,
+                                        "jsErrors":  0
+                                    }
+                     },
+    "safety":  {
+                   "realPayments":  false,
+                   "liveOrders":  false,
+                   "prodDatabase":  false,
+                   "affiliateSignupTouched":  false,
+                   "deploy":  false
+               },
+    "production":  "NOT_APPROVED",
+    "sha256":  {
+                   "src/components/buy-drawer.tsx":  "4459CF279B60775941EF2FBAD84FDC06A603C19BEC625282FC4FFA835B10E244",
+                   "src/lib/store.ts":  "FCA17E861CDC59FB59BD8B82133E5D08BC82645A29CD86C50AF11C598FD43111",
+                   "src/routes/checkout.tsx":  "CFEBF485A72B24D0C84C1175CDFC63B1E5CD84339EA91C2539E6DB7F5810DF36",
+                   "src/routes/loja.tsx":  "E855C941D4BADF9FAD1258CFA783A635241F27E8645BCBB13E8A241717BE39ED",
+                   "src/test/buy-drawer-safety.test.tsx":  "F1656D696FBA50C6DE9ADB348A23048D32E7E7A9240E694D2778955B78B147CF",
+                   "src/test/checkout-audit.test.tsx":  "25976038891E117E18A6ADEE7790B42E18547982C05B0D22E120D7136F85898A",
+                   "src/test/pricing.test.ts":  "9C48DED538B8DFE9E917AEC84220E814DA850E962A48E74C48C9B5E527BFBE1E",
+                   "src/test/storefront-search-audit.test.tsx":  "3B872777A803CE84972481E4D1D8193C555B30AA165B575A78F66B804A057348",
+                   "scripts/qa-c27-crossflow.mjs":  "5935D7159906E07E342FC114FBE150CBEB50F158452747897E54204854CC0AFF",
+                   "scripts/qa-c27-ssr-storefront.mjs":  "37F6B6076AA23E500A619079FEDEED67153B8AB1BA314FE661BE29172D8870CA",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C27_20261110.md":  "94968EE0FC2E33520916F4AEBDBC693F1E9B5F5CE7932420BCEADA67AEA059BD",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "04810DA55C74F30E2E59EF2C0A458213DCF266B37F762E26FB104BF9CF2AB1F6",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "63E43FBEBEBFE8455C90A7325018F68908BB5F6FB94A7CD15CC33A5BEFAF0120",
+                   "docs/VONIX_SSR_PREFLIGHT_C27_20261110.json":  "7AD79B84D61873B63B8282CD33E0891F2DBD0E017BEB702FABCBCD22CB5E3CF8",
+                   "qa-artifacts/vonix-c27/report.json":  "551A8AFD6392AC9AC7B59AED97767176BFD71EAEC05579CBF51DF83106C94885"
+               }
+}

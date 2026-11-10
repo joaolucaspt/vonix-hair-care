@@ -28,6 +28,8 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
   useEffect(() => {
     const previouslyFocused =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     closeButton.current?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -54,6 +56,7 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus();
     };
   }, [onClose]);
@@ -112,7 +115,7 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
             {cart.lines.map((l) => (
               <li
                 key={l.slug + l.variant + (l.offer ?? "")}
-                className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 text-body"
+                className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 text-body"
               >
                 <img
                   src={l.product.images[0]}
@@ -124,37 +127,39 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{l.product.name}</span>
                   <span className="text-small text-muted-foreground">{l.variant}</span>
-                  <span className="mt-1 flex items-center gap-1">
-                    <button
-                      type="button"
-                      aria-label={`Diminuir quantidade de ${l.product.name}`}
-                      onClick={() => cart.setQty(l.slug, l.variant, l.qty - 1, l.offer)}
-                      className="grid h-11 w-11 place-items-center rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2"
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="w-6 text-center font-semibold" aria-live="polite">
-                      {l.qty}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={`Aumentar quantidade de ${l.product.name}`}
-                      onClick={() => cart.setQty(l.slug, l.variant, l.qty + 1, l.offer)}
-                      className="grid h-11 w-11 place-items-center rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Remover ${l.product.name}`}
-                      onClick={() => cart.remove(l.slug, l.variant, l.offer)}
-                      className="ml-2 flex min-h-11 items-center gap-1 text-small text-red-600 underline"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remover
-                    </button>
-                  </span>
                 </span>
-                <b>{brl(l.net)}</b>
+                <div className="col-span-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
+                  <button
+                    type="button"
+                    aria-label={`Diminuir quantidade de ${l.product.name}, ${l.variant}`}
+                    disabled={l.qty <= 1}
+                    onClick={() => cart.setQty(l.slug, l.variant, l.qty - 1, l.offer)}
+                    className="grid h-11 w-11 place-items-center rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="w-6 text-center font-semibold" aria-live="polite">
+                    {l.qty}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Aumentar quantidade de ${l.product.name}, ${l.variant}`}
+                    disabled={l.qty >= 99}
+                    onClick={() => cart.setQty(l.slug, l.variant, l.qty + 1, l.offer)}
+                    className="grid h-11 w-11 place-items-center rounded-md border border-border focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remover ${l.product.name}, ${l.variant}`}
+                    onClick={() => cart.remove(l.slug, l.variant, l.offer)}
+                    className="ml-2 flex min-h-11 items-center gap-1 text-small text-red-600 underline"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remover
+                  </button>
+                </div>
+                <b className="col-start-3 row-start-1 whitespace-nowrap">{brl(l.net)}</b>
               </li>
             ))}
           </ul>

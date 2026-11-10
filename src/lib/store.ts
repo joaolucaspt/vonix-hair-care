@@ -461,7 +461,7 @@ export function checkoutTotals(
 /* ---------- audience shortcut (casa / salão), persisted per browser ---------- */
 export type Audience = "casa" | "salao" | null;
 export const resolveAudience = (saved: Audience, uso?: string): Audience =>
-  saved ?? (uso === "casa" || uso === "salao" ? uso : null);
+  uso === "casa" || uso === "salao" ? uso : saved;
 
 /**
  * "Buy more" promotions (buy 2 = 12% off, buy 3 = 15% off) apply to every product on the whole site

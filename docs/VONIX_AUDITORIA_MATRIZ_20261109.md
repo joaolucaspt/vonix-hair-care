@@ -328,3 +328,14 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N105** | UX/comercial | Sem caminho explícito casa vs. salão na home | Dois cartões segmentados com links válidos |
 
 **C26:** 659/659 Vitest em 81 arquivos; TS/ESLint funcional/build exit 0; SSR 42/42; Chrome 3/3 (320, 390, 1366 px), 9 screenshots. `docs/VONIX_AUDITORIA_CONTINUIDADE_C26_20261110.md`. Testes isolados sem pagamentos. **NOT_APPROVED** sem Appmax, Supabase, Bling, frete, Cloudflare, LGPD e rastreio financeiro em staging.
+
+## C27 — continuidade de compra e público (10/11/2026)
+
+| ID | Impacto | Achado confirmado | Correção / comprovação |
+| --- | --- | --- | --- |
+| **N106–N107** | UX/conversão | URL `uso=salao` não sobrepunha `vonix-audience=casa`; cabeçalho e catálogo divergiam | `resolveAudience` prioriza opção explícita, estado salvo sincronizado após hidratação. Unitário + Chrome 320/390/1366 |
+| **N108** | Checkout/conversão | Se Pix não está habilitado e cartão sim, a escolha inicial inutilizável dificultava pagamento | Auto-fallback para método habilitado, outros rádios desativados com rótulo; testes com SDK mockado, sem cobrar |
+| **N109** | Privacidade/UX | Checkout continuava solicitando CPF/endereço mesmo sem nenhum método de pagamento | Página de indisponibilidade com suporte e retorno à sacola, sem formulário de PII |
+| **N110–N111** | Carrinho/UX mobile | Botão diminuir 1 podia remover; limite 99 não anunciado; drawer rolava fundo e apertava controles | Limites, rótulos de variante, controles responsivos, scroll-lock/restauração; Chrome final 3/3 |
+
+**C27:** Vitest **662/662 (81 arquivos)**, TypeScript/ESLint funcional/build PASS, SSR **42/42**, Chrome **3/3** em 320/390/1366, **12 screenshots**, rede externa bloqueada. `docs/VONIX_AUDITORIA_CONTINUIDADE_C27_20261110.md`. Produção continua **NOT_APPROVED** por Appmax, Supabase staging, Bling, frete real, Worker, LGPD e métricas pagas.

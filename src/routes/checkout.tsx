@@ -334,6 +334,16 @@ function Checkout() {
     if (!cfg.cardEnabled)
       track("checkout_error", { step: "payment_config", reason: "card_unavailable" });
   }, [cfg, hasLines]);
+  // Prefer an actually available method; never leave a buyer on an unavailable default.
+  // This changes presentation only and does not start tokenization or payment by itself.
+  useEffect(() => {
+    if (!cfg) return;
+    setPay((current) => {
+      if (current === "pix" && !cfg.pixEnabled && cfg.cardEnabled) return "card";
+      if (current === "card" && !cfg.cardEnabled && cfg.pixEnabled) return "pix";
+      return current;
+    });
+  }, [cfg]);
   const beginCheckoutTracked = useRef(false);
   useEffect(() => {
     if (hasLines && !beginCheckoutTracked.current) {
@@ -959,6 +969,46 @@ function Checkout() {
       </Shell>
     );
 
+  // No gateway available: do not invite the buyer to enter identity/address/card data
+  // into a form that cannot complete a payment. Existing orders are handled above.
+  if (cfg && !cfg.pixEnabled && !cfg.cardEnabled)
+    return (
+      <Shell>
+        <section className="container-site mx-auto max-w-2xl py-14 sm:py-20" role="status">
+          <div className="rounded-3xl border border-border bg-card px-6 py-12 text-center shadow-sm sm:px-12">
+            <span className="mx-auto mb-6 grid h-14 w-14 place-items-center rounded-full bg-muted text-foreground">
+              <Lock className="h-7 w-7" aria-hidden="true" />
+            </span>
+            <h1 className="font-display text-h1">Pagamento online indisponível</h1>
+            <p className="mx-auto mt-4 max-w-lg text-body text-muted-foreground">
+              Não é possível finalizar a compra pelo site agora. Sua sacola continua salva neste
+              navegador e nenhum pagamento foi solicitado.
+            </p>
+            <p className="mx-auto mt-2 max-w-lg text-body text-muted-foreground">
+              Para consultar uma alternativa de atendimento, fale diretamente com a equipe Vonix
+              Hair.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <a
+                href={WHATSAPP}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-body font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Falar com atendimento
+              </a>
+              <Link
+                to="/carrinho"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-border px-6 py-3 text-body font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Voltar à sacola
+              </Link>
+            </div>
+          </div>
+        </section>
+      </Shell>
+    );
+
   const inst = installments(total);
 
   return (
@@ -1195,9 +1245,11 @@ function Checkout() {
                     type="radio"
                     name="pay"
                     checked={pay === "pix"}
+                    disabled={cfg ? !cfg.pixEnabled : false}
                     onChange={() => setPay("pix")}
                   />{" "}
-                  Pix · até 5% em itens sem outra oferta
+                  Pix · até 5% em itens sem outra oferta{" "}
+                  {cfg && !cfg.pixEnabled && "(indisponível)"}
                 </span>
                 <b>{brl(tPix.net + shipping)}</b>
               </label>
@@ -1209,9 +1261,10 @@ function Checkout() {
                     type="radio"
                     name="pay"
                     checked={pay === "card"}
+                    disabled={cfg ? !cfg.cardEnabled : false}
                     onChange={() => setPay("card")}
                   />{" "}
-                  Cartão de crédito · até 6x sem juros
+                  Cartão de crédito · até 6x sem juros {cfg && !cfg.cardEnabled && "(indisponível)"}
                 </span>
                 <b>{brl(tCard.net + shipping)}</b>
               </label>

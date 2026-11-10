@@ -84,6 +84,43 @@ describe("gaveta de compra segura", () => {
     trigger.remove();
   });
 
+  it("trava rolagem de fundo no diálogo e a restaura ao sair", () => {
+    document.body.style.overflow = "auto";
+    const view = render(<BuyDrawer onClose={mocks.onClose} onPay={mocks.onPay} />);
+    expect(document.body.style.overflow).toBe("hidden");
+    view.unmount();
+    expect(document.body.style.overflow).toBe("auto");
+    document.body.style.overflow = "";
+  });
+
+  it("não permite diminuir 1 para 0 nem aumentar além de 99, mantendo remover separado", () => {
+    const p = arrange(1);
+    const view = render(<BuyDrawer onClose={mocks.onClose} onPay={mocks.onPay} />);
+    expect(
+      screen.getByRole("button", {
+        name: `Diminuir quantidade de ${p.name}, ${p.variants[0]!.label}`,
+      }),
+    ).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Diminuir quantidade de ${p.name}, ${p.variants[0]!.label}`,
+      }),
+    );
+    expect(mocks.setQty).not.toHaveBeenCalled();
+    view.unmount();
+    arrange(99);
+    render(<BuyDrawer onClose={mocks.onClose} onPay={mocks.onPay} />);
+    expect(
+      screen.getByRole("button", {
+        name: `Aumentar quantidade de ${p.name}, ${p.variants[0]!.label}`,
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: `Remover ${p.name}, ${p.variants[0]!.label}` }),
+    ).toBeEnabled();
+    expect(mocks.onPay).not.toHaveBeenCalled();
+  });
+
   it("bloqueia avançar com carrinho vazio, sem criar pagamento", () => {
     mocks.cart.lines = [];
     mocks.cart.subtotal = 0;
@@ -109,7 +146,11 @@ describe("gaveta de compra segura", () => {
   it("permite editar quantidade e seguir ao checkout apenas pela ação explícita", () => {
     const p = arrange();
     render(<BuyDrawer onClose={mocks.onClose} onPay={mocks.onPay} />);
-    fireEvent.click(screen.getByRole("button", { name: `Aumentar quantidade de ${p.name}` }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Aumentar quantidade de ${p.name}, ${p.variants[0]!.label}`,
+      }),
+    );
     expect(mocks.setQty).toHaveBeenCalledWith(p.slug, p.variants[0]!.label, 2, undefined);
     expect(mocks.onPay).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /ir para o pagamento/i }));

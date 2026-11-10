@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Grid, Shell } from "@/components/site";
 import {
   BEST_SELLERS,
@@ -103,8 +103,13 @@ export function Loja() {
   // Normalize at the UI boundary as well: a legacy or client-side route may
   // still expose its raw query object before validation has propagated.
   const s = normalizeStoreSearch(Route.useSearch() as Record<string, unknown>);
-  const { audience } = useAudience();
+  const { audience, set: setAudience } = useAudience();
   const uso = resolveAudience(audience, s.uso);
+  // An explicit audience link is a new choice, even if this tab saved another area.
+  // Keep the header and subsequent navigation consistent after hydration.
+  useEffect(() => {
+    if (s.uso && s.uso !== audience) setAudience(uso);
+  }, [s.uso, audience, uso, setAudience]);
   const nav = useNavigate({ from: "/loja" });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const set = (patch: Partial<S>) => nav({ search: (old: S) => ({ ...old, ...patch }) });

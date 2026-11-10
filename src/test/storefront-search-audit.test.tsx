@@ -4,6 +4,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 const mocks = vi.hoisted(() => ({
   search: {} as Record<string, string>,
   navigate: vi.fn(),
+  audience: null as "casa" | "salao" | null,
+  setAudience: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (original) => ({
@@ -43,7 +45,7 @@ vi.mock("@/components/site", () => ({
 }));
 vi.mock("@/lib/store", async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  useAudience: () => ({ audience: null }),
+  useAudience: () => ({ audience: mocks.audience, set: mocks.setAudience }),
 }));
 
 import { Loja, normalizeStoreSearch, matchesStoreQuery } from "@/routes/loja";
@@ -52,6 +54,7 @@ import { getProduct } from "@/lib/store";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.search = {};
+  mocks.audience = null;
 });
 
 describe("busca e filtros do catálogo público", () => {
@@ -117,6 +120,15 @@ describe("busca e filtros do catálogo público", () => {
       screen.getByRole("link", { name: "Remover filtro Busca: termo-muito-raro" }),
     ).toHaveAttribute("href", "/loja?tiposProduto=Kits");
     expect(screen.getByRole("link", { name: "Ver todos os produtos" })).toBeInTheDocument();
+  });
+
+  it("uma escolha explícita no link supera a área salva no navegador e sincroniza o cabeçalho", () => {
+    mocks.audience = "casa";
+    mocks.search = { uso: "salao" };
+    render(<Loja />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Para Cabeleireiras");
+    expect(mocks.setAudience).toHaveBeenCalledWith("salao");
+    expect(screen.getByRole("link", { name: "Remover filtro Público: Salão" })).toBeInTheDocument();
   });
 
   it("valida busca de URL com espaço excedente e limita entrada desnecessariamente longa", () => {

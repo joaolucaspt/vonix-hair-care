@@ -572,6 +572,12 @@ describe("checkout auditado sem chamadas reais", () => {
       step: "payment_config",
       reason: "card_unavailable",
     });
+    expect(
+      await screen.findByRole("heading", { name: "Pagamento online indisponível" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Voltar à sacola" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Falar com atendimento" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "CPF" })).not.toBeInTheDocument();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
   it("aceita cupom de afiliada somente com confirmação do servidor, sem chamar pagamento", async () => {
@@ -702,10 +708,11 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     render(<Checkout />);
     await fill();
-    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
-    expect(screen.getByRole("button", { name: /Pagar .* no cartão/ })).toBeDisabled();
-    expect(screen.getByText(/Estamos ativando os pagamentos desta loja/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
+    expect(screen.getByRole("radio", { name: /Cartão de crédito/ })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Pix/ })).toBeChecked();
+    expect(
+      screen.getByText(/Cartão de crédito · até 6x sem juros \(indisponível\)/),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeEnabled();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
@@ -719,7 +726,10 @@ describe("checkout auditado sem chamadas reais", () => {
     window.AppmaxScripts = { init: vi.fn() };
     render(<Checkout />);
     await fill();
-    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("radio", { name: /Cartão de crédito/ })).toBeChecked(),
+    );
+    expect(screen.getByRole("radio", { name: /Pix/ })).toBeDisabled();
     const sdk = await waitFor(() => {
       const element = document.querySelector('script[src*="appmax.min.js"]');
       expect(element).not.toBeNull();
@@ -733,8 +743,9 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(screen.getByRole("button", { name: /Pagar .* no cartão/ }).className).toContain(
       "bg-emerald-600",
     );
-    fireEvent.click(screen.getByRole("radio", { name: /Pix/ }));
-    expect(screen.getByRole("button", { name: /Gerar Pix/ })).toBeDisabled();
+    const pixRadio = screen.getByRole("radio", { name: /Pix/ });
+    expect(pixRadio).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Cartão de crédito/ })).toBeChecked();
     expect(mocks.payment).not.toHaveBeenCalled();
   });
   it("cartão e resumo precedem CTA; formulários separados, atributos e 6 parcelas preservados", async () => {
