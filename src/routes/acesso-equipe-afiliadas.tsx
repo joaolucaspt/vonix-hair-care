@@ -3,7 +3,10 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowRight, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { loginAffiliateAdminMember, requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
-import { vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
+import {
+  affiliateAuthInitialLinkRecoveryReason,
+  vonixAffiliateAuth,
+} from "@/lib/vonix-affiliate-auth";
 import {
   affiliateLinkRecoveryMessage,
   affiliateLinkRecoveryReason,
@@ -59,7 +62,8 @@ export function AffiliateTeamAccess() {
   }, []);
 
   useEffect(() => {
-    const recoveryReason = affiliateLinkRecoveryReason(window.location.href);
+    const recoveryReason =
+      affiliateAuthInitialLinkRecoveryReason ?? affiliateLinkRecoveryReason(window.location.href);
     if (recoveryReason) {
       setError(affiliateLinkRecoveryMessage(recoveryReason));
       // Clear only a failed callback, never a valid authorization code or session.
