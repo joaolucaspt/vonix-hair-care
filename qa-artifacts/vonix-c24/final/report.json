@@ -1,0 +1,36 @@
+{
+  "goal": "C24 keyboard accessible global menu, focus restoration, keyboard trap, scroll lock and safe navigation; no checkout calls",
+  "views": [
+    {
+      "width": 320,
+      "passed": true,
+      "initialFocus": "Fechar menu",
+      "scrollLock": "hidden",
+      "safeDirectProductReturn": true,
+      "blockedExternal": 3,
+      "jsErrors": []
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "initialFocus": "Fechar menu",
+      "scrollLock": "hidden",
+      "safeDirectProductReturn": true,
+      "blockedExternal": 3,
+      "jsErrors": []
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "initialFocus": "Fechar menu",
+      "scrollLock": "hidden",
+      "safeDirectProductReturn": true,
+      "blockedExternal": 3,
+      "jsErrors": []
+    }
+  ],
+  "passed": 3,
+  "failed": 0,
+  "externalBlocked": true,
+  "noPayments": true
+}

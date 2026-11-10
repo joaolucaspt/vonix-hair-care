@@ -347,12 +347,61 @@ function AudienceChoice() {
 export function Shell({ children }: { children: ReactNode }) {
   const { count } = useCart();
   const [open, setOpen] = useState(false);
+  const menuOpenerRef = useRef<HTMLButtonElement>(null);
+  const menuCloseRef = useRef<HTMLButtonElement>(null);
+  const menuDialogRef = useRef<HTMLElement>(null);
   const path = useLocation().pathname;
   const router = useRouter();
   const hideWhatsApp = path === "/carrinho" || path === "/checkout";
   const isProduct = path.startsWith("/produto/");
   const isCheckout = path === "/checkout";
   const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    menuCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = menuDialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      menuOpenerRef.current?.focus();
+    };
+  }, [open]);
+
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       <div
@@ -371,8 +420,12 @@ export function Shell({ children }: { children: ReactNode }) {
             <span aria-hidden="true" className="h-6 w-6 justify-self-start lg:hidden" />
           ) : (
             <button
+              ref={menuOpenerRef}
+              type="button"
               className="-m-2 justify-self-start p-2"
               aria-label="Abrir menu"
+              aria-expanded={open}
+              aria-controls="vonix-menu-rapido"
               onClick={() => setOpen(true)}
             >
               <Menu className="h-6 w-6" />
@@ -476,10 +529,18 @@ export function Shell({ children }: { children: ReactNode }) {
       {open && (
         <div className="fixed inset-0 z-50 bg-foreground/50" onClick={() => setOpen(false)}>
           <aside
-            aria-label="Menu rápido"
-            className="h-full w-80 max-w-[85vw] overflow-y-auto bg-background p-6"
+            ref={menuDialogRef}
+            id="vonix-menu-rapido"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vonix-menu-rapido-titulo"
+            tabIndex={-1}
+            className="h-full w-80 max-w-[85vw] overflow-y-auto bg-background p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            <h2 id="vonix-menu-rapido-titulo" className="sr-only">
+              Menu rápido
+            </h2>
             <div className="mb-6 flex items-center gap-3">
               <Link
                 to="/conta"
@@ -489,6 +550,8 @@ export function Shell({ children }: { children: ReactNode }) {
                 <User className="h-4 w-4 shrink-0" aria-hidden="true" /> Acompanhar pedido
               </Link>
               <button
+                ref={menuCloseRef}
+                type="button"
                 aria-label="Fechar menu"
                 onClick={() => setOpen(false)}
                 className="-m-2 shrink-0 p-2"
@@ -553,15 +616,23 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       )}
       {path !== "/" && (
-        <div className="container-site pt-3">
+        <div className="container-site flex flex-wrap items-center gap-3 pt-3">
           <button
             type="button"
             onClick={() => router.history.back()}
             aria-label="Voltar"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2.5 text-small transition-colors hover:bg-muted"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2.5 text-small transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
           </button>
+          {!isCheckout && (
+            <Link
+              to="/loja"
+              className="inline-flex min-h-11 items-center rounded-full px-3 py-2.5 text-small font-medium text-muted-foreground underline underline-offset-4 transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              Explorar loja
+            </Link>
+          )}
         </div>
       )}
       <main>{children}</main>

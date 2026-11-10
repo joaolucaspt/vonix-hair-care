@@ -1,0 +1,30 @@
+{
+  "goal": "C24 keyboard accessible global menu, focus restoration, keyboard trap, scroll lock and safe navigation; no checkout calls",
+  "views": [
+    {
+      "width": 320,
+      "passed": false,
+      "error": "Error: Menu lacks accessible dialog role/name",
+      "blockedExternal": 1,
+      "jsErrors": []
+    },
+    {
+      "width": 390,
+      "passed": false,
+      "error": "Error: Menu lacks accessible dialog role/name",
+      "blockedExternal": 1,
+      "jsErrors": []
+    },
+    {
+      "width": 1366,
+      "passed": false,
+      "error": "Error: Menu lacks accessible dialog role/name",
+      "blockedExternal": 1,
+      "jsErrors": []
+    }
+  ],
+  "passed": 0,
+  "failed": 3,
+  "externalBlocked": true,
+  "noPayments": true
+}

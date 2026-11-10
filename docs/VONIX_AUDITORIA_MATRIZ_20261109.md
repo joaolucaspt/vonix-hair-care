@@ -296,3 +296,13 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 **C23 / conciliação PR55:** código auditado do `site.tsx` preservado, quatro links de `/seja-afiliada` comparados com upstream e integrados, além de seção editorial da home. Six conflict markers resolvidos manualmente, mantendo controle LGPD de preferências de cookies. Validação **649/649 Vitest em 79 arquivos**, TS/build/ESLint sem Prettier/SSR 42/42, Chrome 3/3 em 320/390/1366 com navegação de afiliadas e filtros da loja. Sem merge na main original nem deploy.
 
 **C23 / PR56:** `15acf96` incorporado na branch auditada com **zero conflitos**, alterando somente administração de afiliadas já existente no repositório, sem interferir nas funcionalidades do e-commerce auditadas. Gates pós-merge: **653/653 Vitest em 79 arquivos**, TS/build/ESLint sem Prettier/SSR 42/42 e Chrome 3/3 (320/390/1366) incluindo navegação da home, menu móvel, rodapé e loja. Produção **NOT_APPROVED**.
+
+## C24 — Menu móvel e retorno ao catálogo (10/11/2026)
+
+| ID | Impacto | Antes | Solução / prova |
+| --- | --- | --- | --- |
+| **N95** | A11y alta | Menu hamburger sem diálogo acessível ou foco inicial | `role=dialog`, `aria-modal`, título/descrição acessíveis e `aria-expanded`, foco no X; Chrome RED 0/3 GREEN 3/3 em 320/390/1366 |
+| **N96** | UX/A11y alta | Escape não fechava, foco saía, fundo rolava, foco não retornava ao abridor | Escape, Tab/Shift+Tab, scroll-lock com restauração e foco devolvido ao opener; Vitest e Chrome |
+| **N97** | Navegação média | Produto aberto diretamente só tinha Voltar, sujeito ao histórico de site anterior | Link **Explorar loja** para /loja, omitido no checkout; Chrome 3/3 e Vitest |
+
+**Gates C24:** 656/656 Vitest em 80 arquivos; TypeScript, ESLint sem formatação, Prettier dos editados, build Nitro/Cloudflare, SSR 42/42; Chrome 3/3 (9 screenshots finais). Rede externa bloqueada, sem cobranças, sem deploy. Detalhes: `docs/VONIX_AUDITORIA_CONTINUIDADE_C24_20261110.md`. Produção: **NOT_APPROVED**.

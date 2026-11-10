@@ -1,0 +1,109 @@
+{
+  "project": "vonix-hair-care",
+  "checkpoint": "C24",
+  "dateLocal": "2026-11-10",
+  "path": "C:\\Users\\JL\\code\\vonix-hair-care",
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "baseHead": "18d6131c0c79852a2138bc2b53c89dc47a6cc2e0",
+  "workloop": {
+    "definitionId": "49a99d29-3fd8-4a86-be41-314c288a174f",
+    "runId": "c5d4822a-6dea-4b38-af62-b1f596a6a361"
+  },
+  "findings": [
+    {
+      "id": "N95",
+      "problem": "Global menu lacks accessible dialog and initial focus",
+      "result": "Modal labelled dialog, aria-expanded and close-button focus"
+    },
+    {
+      "id": "N96",
+      "problem": "Menu does not close with Escape or trap keyboard, background scroll remains",
+      "result": "Escape, Tab focus trap, scroll lock, restore initial focus"
+    },
+    {
+      "id": "N97",
+      "problem": "Direct product entry back button depends on browser history",
+      "result": "Non-checkout Explorer loja link always navigates to catalog"
+    }
+  ],
+  "verification": {
+    "redBrowser": "0/3 at 320 390 1366 (menu missing accessible dialog)",
+    "focused": {
+      "passed": 3,
+      "files": 1,
+      "exitCode": 0
+    },
+    "fullVitest": {
+      "passed": 656,
+      "files": 80,
+      "exitCode": 0
+    },
+    "typescriptExit": 0,
+    "eslintWithoutLegacyPrettierExit": 0,
+    "targetPrettierExit": 0,
+    "buildExit": 0,
+    "ssr": {
+      "products": 42,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "chrome": {
+      "passed": 3,
+      "failed": 0,
+      "widths": [
+        320,
+        390,
+        1366
+      ],
+      "screenshots": 9,
+      "report": "qa-artifacts/vonix-c24/final/report.json",
+      "keyboardEscape": true,
+      "focusRestored": true,
+      "backgroundScrollLocked": true,
+      "productFallback": true,
+      "externalBlocked": true,
+      "realPayments": false,
+      "jsErrors": 0
+    },
+    "gitDiffCheck": 0
+  },
+  "files": [
+    "src/components/site.tsx",
+    "src/test/ecommerce-menu-audit.test.tsx",
+    "scripts/qa-c24-menu.mjs",
+    "qa-artifacts/vonix-c24/red/report.json",
+    "qa-artifacts/vonix-c24/final/report.json",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C24_20261110.md",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
+  ],
+  "sha256": {
+    "src/components/site.tsx": "587A96F8F4368EC7F9DECF983C7B866914CDAAB73AA5179AF2F5F540D9E09B1C",
+    "src/test/ecommerce-menu-audit.test.tsx": "DF29FFF4E04746C6A529132C56564B1C24D6AE6FF05A2CBF20D3E3F4E26375BB",
+    "scripts/qa-c24-menu.mjs": "DD70C9D081D9665BA420EDD31C486467EA9A26103BC75AA27582E8E47FBF1451",
+    "qa-artifacts/vonix-c24/red/report.json": "0112A5976FB391B9EAC63331AB592891FB3A14FBF14EA5C42256B459D850D426",
+    "qa-artifacts/vonix-c24/final/report.json": "3A8CC3145DE62AADC56D364609AFB8895EA0809EF895FD7FB2F063C4ED688490",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C24_20261110.md": "8E396A1D75B7AAD849226CF53E4944959C3CB4C6EE70BDA6003660CE59EC3FF8",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md": "D1375963C0A8D929973424A8D4455C63F4EE78FD88A56BB4B3D4BAE66715CA59",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md": "E0AB549DFB5C97A9EC4D42130FF145ECF9BFE4E21FAE10F829DB20115D74F53A"
+  },
+  "safety": {
+    "externalAffiliateApplicationTouched": false,
+    "liveOrders": false,
+    "livePayments": false,
+    "productionDBAccess": false,
+    "deploy": false,
+    "mainUpstreamUnchanged": true
+  },
+  "readiness": "NOT_APPROVED",
+  "limitations": [
+    "Appmax sandbox Pix/card/expiry/idempotency/paid_at pending",
+    "Supabase isolated staging with RLS/backups/restore pending",
+    "Bling SKU and inventory/measurements pending",
+    "Real carrier quote and fulfillment pending",
+    "LGPD postpurchase revocation pending",
+    "WAF and paid analytics pending",
+    "Hosted Worker staging smoke pending",
+    "Global Prettier/CRLF legacy formatting debt remains"
+  ]
+}
