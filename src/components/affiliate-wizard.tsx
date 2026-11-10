@@ -40,6 +40,15 @@ const primary =
 const muted =
   "inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#dcc8c6] px-6 py-3 text-sm font-semibold text-[#68464e] transition hover:bg-[#fff6f3]";
 
+const ZIP_ADDRESS_FIELDS = ["city", "state", "street", "district"] as const;
+type ZipAddressField = (typeof ZIP_ADDRESS_FIELDS)[number];
+
+function safeAddressText(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed.length <= maxLength ? trimmed : "";
+}
+
 const initial: AffiliateWizardDraft = {
   firstName: "",
   lastName: "",
@@ -231,6 +240,9 @@ export function AffiliateWizard({
   const navigated = useRef(false);
   const pendingFieldFocus = useRef<WizardKey | null>(null);
   const zipLookupId = useRef(0);
+  // Only values inserted by the CEP lookup may be cleared when the CEP changes.
+  // Manual address edits are never erased by an automatic lookup.
+  const zipAutofilled = useRef<Partial<Record<ZipAddressField, string>>>({});
 
   // Focus after React has rendered the destination stage, not the old heading.
   useEffect(() => {
@@ -251,13 +263,24 @@ export function AffiliateWizard({
   );
 
   function update(key: WizardKey, value: string | boolean) {
+    let previousAutofill: Partial<Record<ZipAddressField, string>> | null = null;
     if (key === "postalCode") {
       // Stale asynchronous lookups must not overwrite a manually changed address.
       zipLookupId.current += 1;
       setZipLoading(false);
+      previousAutofill = zipAutofilled.current;
+      zipAutofilled.current = {};
+    } else if (ZIP_ADDRESS_FIELDS.some((field) => field === key)) {
+      // A field deliberately edited by the candidate is no longer auto-owned.
+      delete zipAutofilled.current[key as ZipAddressField];
     }
     setValues((old) => {
       const next = { ...old, [key]: value };
+      if (previousAutofill) {
+        for (const field of ZIP_ADDRESS_FIELDS) {
+          if (previousAutofill[field] && old[field] === previousAutofill[field]) next[field] = "";
+        }
+      }
       // Clear answers when their parent question makes them inapplicable.
       // Hidden personal information must not survive into a later submission.
       if (key === "niche" && value !== "Outro") next.otherNiche = "";
@@ -372,6 +395,7 @@ export function AffiliateWizard({
     if (sendingRef.current) return;
     // The pending ViaCEP reply must not repopulate discarded private data.
     zipLookupId.current += 1;
+    zipAutofilled.current = {};
     navigated.current = true;
     setZipLoading(false);
     setValues({ ...initial });
@@ -396,23 +420,36 @@ export function AffiliateWizard({
       if (!response.ok) return;
       const data = (await response.json()) as {
         erro?: boolean;
-        localidade?: string;
-        uf?: string;
-        logradouro?: string;
-        bairro?: string;
+        localidade?: unknown;
+        uf?: unknown;
+        logradouro?: unknown;
+        bairro?: unknown;
       };
       if (data.erro) return;
+      // Treat all third-party JSON as untrusted. Invalid UF must never be
+      // inserted into the state dropdown; oversized strings are ignored.
+      const uf = safeAddressText(data.uf, 2).toUpperCase();
+      if (!WIZARD_BRAZIL_STATES.some((state) => state === uf)) return;
+      const fromLookup = {
+        city: safeAddressText(data.localidade, 90),
+        state: uf,
+        street: safeAddressText(data.logradouro, 120),
+        district: safeAddressText(data.bairro, 90),
+      };
       setValues((old) => {
         if (requestId !== zipLookupId.current || onlyDigits(String(old.postalCode)) !== zip) {
           return old;
         }
-        return {
-          ...old,
-          city: old.city || data.localidade || "",
-          state: old.state || data.uf || "",
-          street: old.street || data.logradouro || "",
-          district: old.district || data.bairro || "",
-        };
+        const next = { ...old };
+        const autofilled: Partial<Record<ZipAddressField, string>> = {};
+        for (const field of ZIP_ADDRESS_FIELDS) {
+          if (!old[field] && fromLookup[field]) {
+            next[field] = fromLookup[field];
+            autofilled[field] = fromLookup[field];
+          }
+        }
+        zipAutofilled.current = autofilled;
+        return next;
       });
     } catch {
       // Postal-code lookup is optional: manual entry remains available.
@@ -606,7 +643,11 @@ export function AffiliateWizard({
                   transform: maskZip,
                   onBlur: () => void lookupPostalCode(),
                 })}
-                <div className="flex items-end text-xs text-[#92777b]">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-end text-xs text-[#92777b]"
+                >
                   {zipLoading
                     ? "Consultando CEP..."
                     : "Preenchimento automático opcional. Você pode corrigir os dados."}

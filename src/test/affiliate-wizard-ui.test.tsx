@@ -255,6 +255,123 @@ describe("Vonix five-stage browser wizard", () => {
     );
   });
 
+  it("announces optional CEP lookup progress to screen readers without making the provider mandatory", async () => {
+    let complete!: (response: Response) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            complete = resolve;
+          }),
+      ),
+    );
+    render(<AffiliateWizard />);
+    expect(screen.getByText(/Preenchimento automático opcional/)).toHaveAttribute("role", "status");
+    field("postalCode", "30110012");
+    fireEvent.blur(document.getElementById("wizard-postalCode")!);
+    expect(screen.getByRole("status")).toHaveTextContent("Consultando CEP...");
+    await act(async () => {
+      complete(
+        Response.json({
+          localidade: "Belo Horizonte",
+          uf: "MG",
+          logradouro: "Rua de Teste",
+          bairro: "Centro",
+        }),
+      );
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Preenchimento automático opcional");
+    expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe(
+      "Belo Horizonte",
+    );
+  });
+
+  it("updates stale ViaCEP-autofilled address when the applicant changes CEP, without deleting manually edited fields", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          localidade: "Cidade Antiga",
+          uf: "MG",
+          logradouro: "Rua Original",
+          bairro: "Bairro Original",
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          localidade: "Cidade Nova",
+          uf: "SP",
+          logradouro: "Rua do Novo CEP",
+          bairro: "Bairro Novo",
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<AffiliateWizard />);
+
+    field("postalCode", "30110012");
+    fireEvent.blur(document.getElementById("wizard-postalCode")!);
+    await waitFor(() => {
+      expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe(
+        "Cidade Antiga",
+      );
+    });
+    expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe(
+      "Rua Original",
+    );
+    field("street", "Rua informada manualmente");
+    field("number", "150");
+
+    field("postalCode", "01001000");
+    expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-state") as HTMLSelectElement).value).toBe("");
+    expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe(
+      "Rua informada manualmente",
+    );
+    expect((document.getElementById("wizard-number") as HTMLInputElement).value).toBe("150");
+    fireEvent.blur(document.getElementById("wizard-postalCode")!);
+    await waitFor(() => {
+      expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe(
+        "Cidade Nova",
+      );
+    });
+    expect((document.getElementById("wizard-state") as HTMLSelectElement).value).toBe("SP");
+    expect((document.getElementById("wizard-district") as HTMLInputElement).value).toBe(
+      "Bairro Novo",
+    );
+    expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe(
+      "Rua informada manualmente",
+    );
+    expect((document.getElementById("wizard-number") as HTMLInputElement).value).toBe("150");
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      "https://viacep.com.br/ws/30110012/json/",
+      "https://viacep.com.br/ws/01001000/json/",
+    ]);
+  });
+
+  it("ignores unexpected or oversized CEP provider fields instead of inserting invalid state and city", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          localidade: "Cidade ".repeat(400),
+          uf: "XX",
+          logradouro: "Rua ".repeat(400),
+          bairro: "Bairro ".repeat(400),
+        }),
+      ),
+    );
+    render(<AffiliateWizard />);
+    field("postalCode", "30110012");
+    fireEvent.blur(document.getElementById("wizard-postalCode")!);
+    await waitFor(() =>
+      expect((document.getElementById("wizard-city") as HTMLInputElement).value).toBe(""),
+    );
+    expect((document.getElementById("wizard-state") as HTMLSelectElement).value).toBe("");
+    expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe("");
+    expect((document.getElementById("wizard-district") as HTMLInputElement).value).toBe("");
+  });
+
   it("discards a postal-code lookup response after the user changes the CEP", async () => {
     let answer: ((value: Response) => void) | undefined;
     const fetchMock = vi.fn(

@@ -141,6 +141,8 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
 
 export async function affiliateOperationalReadiness() {
   const dbConfigured = Boolean(affiliateDatabaseConfig());
+  const recruitmentOpen = affiliateRecruitmentOpen();
+  const otp = env("AFFILIATE_ADMIN_TOTP_SECRET").replace(/\s/g, "");
   const checks = [
     {
       id: "database",
@@ -173,7 +175,7 @@ export async function affiliateOperationalReadiness() {
     {
       id: "totp",
       label: "Autenticador de dois fatores",
-      ok: /^[A-Z2-7]{32,128}$/i.test(env("AFFILIATE_ADMIN_TOTP_SECRET")),
+      ok: /^[A-Z2-7]{32,128}$/i.test(otp),
     },
     {
       id: "proxy",
@@ -196,8 +198,8 @@ export async function affiliateOperationalReadiness() {
     },
     {
       id: "launch",
-      label: "Abertura de inscrições habilitada",
-      ok: env("AFFILIATE_RECRUITMENT_OPEN") === "true",
+      label: "Abertura operacional efetivamente liberada",
+      ok: recruitmentOpen,
     },
   ];
   let databaseResponding = false;
@@ -227,7 +229,7 @@ export async function affiliateOperationalReadiness() {
     governanceResponding = governanceHealthy;
   }
   return {
-    recruitmentOpen: affiliateRecruitmentOpen(),
+    recruitmentOpen,
     checks,
     databaseResponding,
     governanceResponding,
