@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   shipping: vi.fn(),
   status: vi.fn(),
   affiliate: vi.fn(),
+  resolveAffiliateCoupon: vi.fn(),
   saveSnapshot: vi.fn(),
   loadSnapshot: vi.fn(),
   claimIntent: vi.fn(),
@@ -62,12 +63,16 @@ vi.mock("@/lib/appmax.server", () => ({
     ["aprovado", "integrado", "pendente_integracao"].includes(o.data.order.status),
 }));
 vi.mock("@/lib/affiliate-notify.server", () => ({ notifyAffiliateSale: mocks.affiliate }));
+vi.mock("@/lib/affiliate-coupon.server", () => ({
+  resolveAffiliateCoupon: mocks.resolveAffiliateCoupon,
+}));
 
 import {
   createPayment,
   getOrderStatus,
   quoteShipping,
   getPaymentConfig,
+  lookupCoupon,
 } from "@/lib/checkout.functions";
 
 const p = getProduct("kit-banana-e-mel")!;
@@ -112,6 +117,7 @@ beforeEach(() => {
   mocks.advanceIntent.mockResolvedValue(undefined);
   mocks.finalizeIntent.mockResolvedValue(undefined);
   mocks.affiliate.mockResolvedValue(undefined);
+  mocks.resolveAffiliateCoupon.mockResolvedValue(undefined);
   mocks.validStatus.mockReturnValue(false);
   mocks.idempotencySecret = "test-idempotency-secret-that-is-at-least-32-bytes";
   mocks.externalId = "test-external-id";
@@ -126,6 +132,38 @@ beforeEach(() => {
 });
 
 describe("server authoritative checkout", () => {
+  it("não confia em cupom de afiliada sem confirmação no servidor", async () => {
+    const couponCode = "MARISSOL10";
+    expect(await lookupCoupon({ data: { code: couponCode } })).toEqual({ ok: false });
+    const payment = await createPayment({ data: { ...data, coupon: couponCode } });
+    expect(payment).toMatchObject({ ok: false, retrySafe: true });
+    expect(mocks.resolveAffiliateCoupon).toHaveBeenCalledWith(couponCode);
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+
+  it("revalida no servidor cupom de afiliada e rejeita preço inferior ao cotado antes da reserva", async () => {
+    const couponCode = "MARISSOL10";
+    mocks.resolveAffiliateCoupon.mockResolvedValue({
+      code: couponCode,
+      label: "Cupom confirmado no teste isolado",
+      percent: 10,
+    });
+    expect(await lookupCoupon({ data: { code: couponCode } })).toMatchObject({
+      ok: true,
+      code: couponCode,
+      percent: 10,
+    });
+    const result = await createPayment({
+      data: { ...data, coupon: couponCode, quotedTotalCents: 1 },
+    });
+    expect(result).toMatchObject({ ok: false, retrySafe: true, reason: "price_changed" });
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+
   it("rejeita total informado que ficou defasado", async () => {
     const result = await createPayment({ data: { ...data, quotedTotalCents: 100 } });
     expect(result).toMatchObject({ ok: false, retrySafe: true });

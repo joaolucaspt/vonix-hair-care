@@ -35,6 +35,9 @@ export const WHEEL: { code: string; weight: number }[] = [
   { code: "GIRA6", weight: 25 },
 ];
 
+/** Cupom de afiliada tem o nome dela + 10 (MARISSOL10). Só o formato é conferido aqui; quem confirma que ela existe é o servidor. */
+export const isAffiliateCouponCode = (code?: string | null) => /^[A-Z0-9-]{1,30}10$/.test((code ?? "").trim().toUpperCase());
+
 export const findCoupon = (code?: string | null) => {
   const c = (code ?? "").trim().toUpperCase();
   return c ? COUPONS.find((x) => x.code === c) : undefined;

@@ -195,18 +195,27 @@ function maskPhone(value: string) {
   return "(" + v.slice(0, 2) + ") " + v.slice(2, 7) + "-" + v.slice(7);
 }
 function maskCpf(value: string) {
-  const v = onlyDigits(value).slice(0, 11);
-  return v
-    .replace(/^(\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)$/, ".$1-$2");
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return digits.slice(0, 3) + "." + digits.slice(3);
+  if (digits.length <= 9)
+    return digits.slice(0, 3) + "." + digits.slice(3, 6) + "." + digits.slice(6);
+  return (
+    digits.slice(0, 3) + "." + digits.slice(3, 6) + "." + digits.slice(6, 9) + "-" + digits.slice(9)
+  );
 }
 function maskZip(value: string) {
   const v = onlyDigits(value).slice(0, 8);
   return v.length > 5 ? v.slice(0, 5) + "-" + v.slice(5) : v;
 }
 
-export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
+export function AffiliateWizard({
+  preview = false,
+  onDraftChange,
+}: {
+  preview?: boolean;
+  onDraftChange?: (hasDraft: boolean) => void;
+}) {
   const [values, setValues] = useState<AffiliateWizardDraft>({ ...initial });
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -247,7 +256,14 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
       zipLookupId.current += 1;
       setZipLoading(false);
     }
-    setValues((old) => ({ ...old, [key]: value }));
+    setValues((old) => {
+      const next = { ...old, [key]: value };
+      // Clear answers when their parent question makes them inapplicable.
+      // Hidden personal information must not survive into a later submission.
+      if (key === "niche" && value !== "Outro") next.otherNiche = "";
+      if (key === "municipalRegistration" && value !== "sim") next.municipalNumber = "";
+      return next;
+    });
     setConfirmDiscard(false);
     setErrors((old) => ({ ...old, [key]: "" }));
     setMessage("");
@@ -256,6 +272,25 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
   const hasDraft =
     Object.keys(initial).some((key) => values[key as WizardKey] !== initial[key as WizardKey]) ||
     website.length > 0;
+
+  // Expose only a boolean to the parent so leaving a preview can be confirmed
+  // without propagating the candidate's personal data outside this component.
+  useEffect(() => {
+    onDraftChange?.(hasDraft && !sent);
+  }, [hasDraft, sent, onDraftChange]);
+
+  // Warn before a full-page navigation closes an unsent five-stage draft.
+  // Sensitive answers remain in React memory; never persist them to browser storage.
+  useEffect(() => {
+    if (!hasDraft || sent) return;
+    const warnBeforeExit = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeExit);
+    return () => window.removeEventListener("beforeunload", warnBeforeExit);
+  }, [hasDraft, sent]);
+
   const value = (key: WizardKey) => String(values[key] ?? "");
   const field = (
     key: WizardKey,
@@ -746,11 +781,14 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
                     <Link
                       to="/$page"
                       params={{ page: "politica-de-privacidade" }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Política de Privacidade (abre em nova aba)"
                       className="font-semibold underline"
                     >
                       Política de Privacidade
-                    </Link>
-                    .
+                    </Link>{" "}
+                    (abre em nova aba, sem perder o formulário).
                   </p>
                 </div>
               </div>
@@ -762,6 +800,9 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
                   checked={values["termsAccepted"] === true}
                   onChange={(e) => update("termsAccepted", e.target.checked)}
                   aria-invalid={Boolean(errors["termsAccepted"])}
+                  aria-describedby={
+                    errors["termsAccepted"] ? "wizard-error-termsAccepted" : undefined
+                  }
                   className="mt-1 h-5 w-5 accent-[#7a4350]"
                 />
                 <span>
@@ -770,7 +811,11 @@ export function AffiliateWizard({ preview = false }: { preview?: boolean }) {
                 </span>
               </label>
               {errors["termsAccepted"] && (
-                <p role="alert" className="mt-2 text-xs text-red-700">
+                <p
+                  id="wizard-error-termsAccepted"
+                  role="alert"
+                  className="mt-2 text-xs text-red-700"
+                >
                   {errors["termsAccepted"]}
                 </p>
               )}

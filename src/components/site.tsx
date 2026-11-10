@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import logoUrl from "@/assets/vonix-logo.webp";
 import { PrizeWheel } from "@/components/prize-wheel";
+import { AffiliatePopup } from "@/components/affiliate-popup";
 import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
 import { useVisitorSummary } from "@/lib/review-summary";
@@ -374,6 +375,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <main>{children}</main>
       <Footer />
       <PrizeWheel />
+      <AffiliatePopup />
       {!hideWhatsApp && (
         <a
           href={WHATSAPP}

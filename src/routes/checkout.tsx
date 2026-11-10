@@ -26,6 +26,7 @@ import {
   createPayment,
   getOrderStatus,
   getPaymentConfig,
+  lookupCoupon,
   quoteShipping,
 } from "@/lib/checkout.functions";
 import {
@@ -40,7 +41,14 @@ import {
   useCart,
   useHydrated,
 } from "@/lib/store";
-import { couponCheck, couponPercent, findCoupon, getPrize, type Coupon } from "@/lib/coupons";
+import {
+  couponCheck,
+  couponPercent,
+  findCoupon,
+  getPrize,
+  isAffiliateCouponCode,
+  type Coupon,
+} from "@/lib/coupons";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -226,6 +234,9 @@ function Checkout() {
   const [showCoupon, setShowCoupon] = useState(false);
   const [coupon, setCoupon] = useState("");
   const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  const [couponChecking, setCouponChecking] = useState(false);
+  const couponLookupSequence = useRef(0);
+  const couponEdited = useRef(false);
   const [applied, setApplied] = useState<Coupon | null>(null);
   const [options, setOptions] = useState<ShipOption[]>([]);
   const [quoting, setQuoting] = useState(false);
@@ -275,6 +286,23 @@ function Checkout() {
       setCouponMsg(
         `Cupom ${prize.code} disponível. O desconto será calculado apenas nos itens sem outra oferta.`,
       );
+    }
+    // A referral discount is not trusted until the server verifies its coupon.
+    // Never override a prize-wheel coupon or a code the buyer typed manually.
+    const ref = getRef();
+    if (ref && !prize) {
+      const code = `${ref.toUpperCase()}10`;
+      lookupCoupon({ data: { code } })
+        .then((resolved) => {
+          if (!resolved.ok || couponEdited.current) return;
+          setApplied({ code: resolved.code, label: resolved.label, percent: resolved.percent });
+          setCoupon(resolved.code);
+          setShowCoupon(true);
+          setCouponMsg(
+            `Cupom ${resolved.code} confirmado. O desconto só vale para itens sem outra oferta.`,
+          );
+        })
+        .catch(() => undefined);
     }
   }, []);
 
@@ -418,9 +446,27 @@ function Checkout() {
   const shipping = chosen ? chosen.price : 0;
   const total = t.net + shipping;
 
-  const applyCoupon = () => {
-    if (!coupon.trim()) return setCouponMsg("Digite um código de cupom.");
-    const found = findCoupon(coupon);
+  const applyCoupon = async () => {
+    const sequence = ++couponLookupSequence.current;
+    couponEdited.current = true;
+    const code = coupon.trim().toUpperCase();
+    if (!code) return setCouponMsg("Digite um código de cupom.");
+    let found = findCoupon(code);
+    if (!found && isAffiliateCouponCode(code)) {
+      setCouponChecking(true);
+      setCouponMsg("Conferindo cupom de afiliada…");
+      try {
+        const verified = await lookupCoupon({ data: { code } });
+        if (sequence !== couponLookupSequence.current) return;
+        if (verified.ok)
+          found = { code: verified.code, label: verified.label, percent: verified.percent };
+      } catch {
+        // Failure to verify is not permission to apply the promotion.
+      } finally {
+        if (sequence === couponLookupSequence.current) setCouponChecking(false);
+      }
+    }
+    if (sequence !== couponLookupSequence.current) return;
     if (!found) return setCouponMsg("Cupom não encontrado. Confira o código.");
     const chk = couponCheck(found, gross);
     if (!chk.ok) {
@@ -1185,18 +1231,27 @@ function Checkout() {
                       onKeyDown={(event) => {
                         if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                           event.preventDefault();
-                          applyCoupon();
+                          void applyCoupon();
                         }
                       }}
                       placeholder="Código do cupom"
+                      maxLength={40}
                       value={coupon}
-                      onChange={(e) => setCoupon(e.target.value)}
+                      onChange={(e) => {
+                        couponEdited.current = true;
+                        couponLookupSequence.current += 1;
+                        setCouponChecking(false);
+                        setCoupon(e.target.value);
+                      }}
                       className={inp}
                     />
                     <button
                       type="button"
-                      onClick={applyCoupon}
-                      className="shrink-0 rounded-lg border border-foreground px-4 text-body"
+                      onClick={() => {
+                        void applyCoupon();
+                      }}
+                      disabled={couponChecking}
+                      className="shrink-0 rounded-lg border border-foreground px-4 text-body disabled:cursor-wait disabled:opacity-60"
                     >
                       Aplicar
                     </button>
@@ -1204,6 +1259,9 @@ function Checkout() {
                       type="button"
                       aria-label="Remover cupom"
                       onClick={() => {
+                        couponEdited.current = true;
+                        couponLookupSequence.current += 1;
+                        setCouponChecking(false);
                         setShowCoupon(false);
                         setCoupon("");
                         setCouponMsg(null);

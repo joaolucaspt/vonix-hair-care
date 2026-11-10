@@ -5,11 +5,13 @@ import { savePendingCard } from "@/lib/pending-card";
 import { savePendingPix } from "@/lib/pending-pix";
 import { UNCERTAIN_PAYMENT_KEY } from "@/lib/uncertain-payment";
 import { TRACKING_CONSENT_KEY } from "@/lib/tracking-consent";
+import { captureRef } from "@/lib/affiliate-ref";
 
 const mocks = vi.hoisted(() => ({
   address: vi.fn(),
   quote: vi.fn(),
   config: vi.fn(),
+  couponLookup: vi.fn(),
   payment: vi.fn(),
   status: vi.fn(),
   cart: { lines: [] as unknown[], netSubtotal: 0, subtotal: 0, clear: vi.fn(), add: vi.fn() },
@@ -35,6 +37,7 @@ vi.mock("@/lib/checkout.functions", () => ({
   getPaymentConfig: mocks.config,
   createPayment: mocks.payment,
   getOrderStatus: mocks.status,
+  lookupCoupon: mocks.couponLookup,
 }));
 vi.mock("@/lib/store", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -78,6 +81,7 @@ beforeEach(() => {
   mocks.cart.subtotal = variant.price;
   mocks.address.mockResolvedValue(address);
   mocks.quote.mockResolvedValue({ ok: true, options: [option] });
+  mocks.couponLookup.mockResolvedValue({ ok: false });
   mocks.config.mockResolvedValue({
     externalId: "test-only",
     sandbox: true,
@@ -541,6 +545,47 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     expect(mocks.payment).not.toHaveBeenCalled();
   });
+  it("aceita cupom de afiliada somente com confirmação do servidor, sem chamar pagamento", async () => {
+    mocks.couponLookup.mockResolvedValueOnce({
+      ok: true,
+      code: "MARISSOL10",
+      label: "Cupom validado em QA",
+      percent: 10,
+    });
+    render(<Checkout />);
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    fireEvent.change(screen.getByLabelText("Código do cupom"), { target: { value: "marissol10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(await screen.findByText(/Cupom ativo: MARISSOL10/)).toBeInTheDocument();
+    expect(mocks.couponLookup).toHaveBeenCalledWith({ data: { code: "MARISSOL10" } });
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("falha na validação remota de cupom de afiliada não aplica desconto nem tenta pagar", async () => {
+    mocks.couponLookup.mockResolvedValueOnce({ ok: false });
+    render(<Checkout />);
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    fireEvent.change(screen.getByLabelText("Código do cupom"), { target: { value: "MARISSOL10" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(await screen.findByText(/Cupom não encontrado/)).toBeInTheDocument();
+    expect(screen.queryByText(/Cupom ativo: MARISSOL10/)).not.toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("aplica cupom de afiliada capturado no link só depois da confirmação do servidor", async () => {
+    captureRef("?ref=marissol");
+    mocks.couponLookup.mockResolvedValueOnce({
+      ok: true,
+      code: "MARISSOL10",
+      label: "Cupom de indicação confirmado",
+      percent: 10,
+    });
+    render(<Checkout />);
+    expect(await screen.findByText(/Cupom ativo: MARISSOL10/)).toBeInTheDocument();
+    expect(mocks.couponLookup).toHaveBeenCalledWith({ data: { code: "MARISSOL10" } });
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("Enter no campo de cupom aplica desconto sem submeter o formulário de pagamento", async () => {
     render(<Checkout />);
     await fill();

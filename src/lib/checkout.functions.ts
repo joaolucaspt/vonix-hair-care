@@ -19,7 +19,14 @@ import { pickFreeShipping, pickTwoShipping } from "./shipping-pick";
 import { normalizeRef, refCampaign } from "./affiliate-ref";
 import { notifyAffiliateSale } from "./affiliate-notify.server";
 import { checkoutTotals, complementsFor, getProduct, lineTotals, type Offer } from "./store";
-import { couponCheck, couponFreeShipping, couponPercent, findCoupon } from "./coupons";
+import {
+  couponCheck,
+  couponFreeShipping,
+  couponPercent,
+  findCoupon,
+  isAffiliateCouponCode,
+} from "./coupons";
+import { resolveAffiliateCoupon } from "./affiliate-coupon.server";
 
 const itemSchema = z.object({
   slug: z.string().min(1).max(120),
@@ -53,7 +60,35 @@ const staleCartMessage =
 
 const cents = (v: number) => Math.round(v * 100);
 
-const couponSchema = z.string().max(30).optional();
+const couponSchema = z.string().max(40).optional();
+
+/** Resolve coupons on the server, never trusting a browser-supplied percent. */
+async function resolveCoupon(code?: string) {
+  const normalized = code?.trim().toUpperCase() ?? "";
+  return (
+    findCoupon(normalized) ??
+    (isAffiliateCouponCode(normalized) ? await resolveAffiliateCoupon(normalized) : undefined)
+  );
+}
+
+/** Public read-only coupon confirmation. Errors deliberately expose no provider details. */
+export const lookupCoupon = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ code: z.string().min(1).max(40) }))
+  .handler(async ({ data }) => {
+    try {
+      const coupon = await resolveCoupon(data.code);
+      return coupon
+        ? {
+            ok: true as const,
+            code: coupon.code,
+            label: coupon.label,
+            percent: coupon.percent ?? 0,
+          }
+        : { ok: false as const };
+    } catch {
+      return { ok: false as const };
+    }
+  });
 
 async function shippingOptions(
   cep: string,
@@ -292,7 +327,7 @@ export const createPayment = createServerFn({ method: "POST" })
           message: "Escolha uma opção de entrega válida.",
         };
       }
-      const coupon = findCoupon(data.coupon);
+      const coupon = await resolveCoupon(data.coupon);
       const gross = checkoutTotals(lines, "card").gross;
       if (data.coupon && !coupon) {
         const previous = await recoverWithoutNewQuote(fingerprint);

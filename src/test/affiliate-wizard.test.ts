@@ -1,3 +1,4 @@
+import { createDecipheriv } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   affiliateWizardSchema,
@@ -90,6 +91,28 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(PREFERRED_VONIX_LINES).toContain("Progressiva Fio de Luz");
     expect(PREFERRED_VONIX_LINES.join(" ")).not.toContain("Nuala");
   });
+  it("rejects social URLs with query parameters, hashes, credentials or non-standard ports", () => {
+    const base = affiliateApplicationSchema.parse(
+      buildAffiliatePayload(affiliateWizardSchema.parse(fixture)),
+    );
+    for (const url of [
+      "https://instagram.com/marina.exemplo?redirect=https://example.invalid",
+      "https://instagram.com/marina.exemplo#tracking",
+      "https://instagram.com:8443/marina.exemplo",
+      "https://user:pass@instagram.com/marina.exemplo",
+    ]) {
+      expect(affiliateApplicationSchema.safeParse({ ...base, instagram: url }).success).toBe(false);
+    }
+    for (const url of [
+      "https://tiktok.com/@creator?campaign=1",
+      "https://tiktok.com/@creator#tracking",
+      "https://tiktok.com:8443/@creator",
+    ]) {
+      expect(affiliateApplicationSchema.safeParse({ ...base, tiktok: url }).success).toBe(false);
+    }
+    expect(affiliateApplicationSchema.safeParse(base).success).toBe(true);
+  });
+
   it("validates a full profile, deriving normalized data rather than asking for age twice", () => {
     const wizard = affiliateWizardSchema.parse(fixture);
     expect(ageFromBirthDate("1998-09-14", new Date("2026-11-09T12:00:00Z"))).toBe(28);
@@ -105,6 +128,29 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     expect(ageFromBirthDate(born, new Date("2026-11-09T02:59:59Z"))).toBe(17);
     expect(ageFromBirthDate(born, new Date("2026-11-09T03:00:00Z"))).toBe(18);
     expect(ageFromBirthDate("2008-11-10", new Date("2026-11-09T23:00:00Z"))).toBe(17);
+  });
+
+  it("bounds and formats sensitive identity/contact fields before encryption", () => {
+    expect(affiliateWizardSchema.safeParse(fixture).success).toBe(true);
+    for (const bad of [
+      { phone: "x".repeat(25000) + "31999999999" },
+      { phone: "abc(31) 99999-9999" },
+      { cpf: "garbage".repeat(2000) + "529.982.247-25" },
+      { cpf: "52998224725..." },
+      { postalCode: "debug".repeat(3000) + "30110-012" },
+      { postalCode: "CEP 30110-012" },
+    ]) {
+      const parsed = affiliateWizardSchema.safeParse({ ...fixture, ...bad });
+      expect(parsed.success, "oversized or malformed personal field: " + Object.keys(bad)[0]).toBe(
+        false,
+      );
+    }
+    for (const valid of [
+      { phone: "31999999999", cpf: "52998224725", postalCode: "30110012" },
+      { phone: "(31) 99999-9999", cpf: "529.982.247-25", postalCode: "30110-012" },
+    ]) {
+      expect(affiliateWizardSchema.safeParse({ ...fixture, ...valid }).success).toBe(true);
+    }
   });
 
   it("rejects invalid Brazilian documents and implausible birthdates", () => {
@@ -190,6 +236,34 @@ describe("Private encrypted questionnaire storage", () => {
     expect(affiliateQuestionnaireEncryptionReady()).toBe(false);
     expect(() => encryptAffiliateWizard(affiliateWizardSchema.parse(fixture))).toThrow();
   });
+  it("does not persist inapplicable conditional answers in encrypted questionnaires", () => {
+    const sensitive = affiliateWizardSchema.parse({
+      ...fixture,
+      otherNiche: "STALE-NICHE-SYNTHETIC-PII",
+      municipalNumber: "STALE-MUNICIPAL-SYNTHETIC-PII",
+    });
+    const packed = encryptAffiliateWizard(sensitive);
+    const [, iv64, tag64, encrypted64] = packed.split(".");
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      Buffer.from(process.env["AFFILIATE_QUESTIONNAIRE_KEY"]!, "base64url"),
+      Buffer.from(iv64!, "base64url"),
+    );
+    decipher.setAuthTag(Buffer.from(tag64!, "base64url"));
+    const decrypted = Buffer.concat([
+      decipher.update(Buffer.from(encrypted64!, "base64url")),
+      decipher.final(),
+    ]).toString("utf8");
+    const parsed = JSON.parse(decrypted);
+    expect(parsed.answers.niche).toBe("Lifestyle");
+    expect(parsed.answers.municipalRegistration).toBe("nao");
+    expect(parsed.answers.otherNiche).toBe("");
+    expect(parsed.answers.municipalNumber).toBe("");
+    expect(decrypted).not.toContain("STALE-NICHE-SYNTHETIC-PII");
+    expect(decrypted).not.toContain("STALE-MUNICIPAL-SYNTHETIC-PII");
+    expect(affiliateWizardSummary(packed)?.preferredLine).toBe("Botox Vonix");
+  });
+
   it("encrypts PII with authentication and returns only business-relevant summary", () => {
     const packed = encryptAffiliateWizard(affiliateWizardSchema.parse(fixture));
     expect(packed).toMatch(/^v2\.[\w-]+\.[\w-]+\.[\w-]+$/);
@@ -222,7 +296,7 @@ describe("Private encrypted questionnaire storage", () => {
     const rows = [
       {
         ...body,
-        id: "synthetic-id",
+        id: "00000000-0000-4000-8000-000000000321",
         status: "pendente",
         created_at: new Date().toISOString(),
         reviewed_at: null,
@@ -231,7 +305,18 @@ describe("Private encrypted questionnaire storage", () => {
     const db = vi
       .fn()
       .mockResolvedValueOnce(Response.json({ total: 1, applications: rows }))
-      .mockResolvedValueOnce(Response.json({ pendente: 1, aprovada: 0, recusada: 0 }));
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 1,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 0,
+        }),
+      );
     vi.stubGlobal("fetch", db);
     const result = await listAffiliateApplications({ status: "pendente", page: 0 });
     expect(result.applications[0]?.questionnaireSummary?.preferredLine).toBe("Botox Vonix");
