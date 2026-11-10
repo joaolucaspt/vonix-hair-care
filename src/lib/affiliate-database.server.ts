@@ -19,6 +19,8 @@ export function affiliateDatabaseConfig(): {
     !rawUrl ||
     key.length < 16 ||
     (checkoutKey.length > 0 && key === checkoutKey) ||
+    // Publishable/unknown opaque keys cannot authorize admin data operations.
+    (key.startsWith("sb_") && !key.startsWith("sb_secret_")) ||
     !/^[a-z0-9]{20}$/.test(expectedRef)
   )
     return null;
@@ -50,7 +52,9 @@ export function affiliateDatabaseConfig(): {
       url: url.origin,
       headers: {
         apikey: key,
-        authorization: "Bearer " + key,
+        // Modern sb_secret_* is an API key, NOT a JWT Bearer token.
+        // Legacy service_role JWTs retain their Bearer authentication.
+        ...(key.startsWith("sb_secret_") ? {} : { authorization: "Bearer " + key }),
         "content-type": "application/json",
         "cache-control": "no-store",
       },
