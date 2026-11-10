@@ -279,6 +279,63 @@ describe("Acesso e decisões", () => {
     }
   });
 
+  it("rejects oversized or malformed pages returned by privileged search RPC", async () => {
+    const counters = {
+      pendente: 45,
+      aprovada: 0,
+      recusada: 0,
+      email_pendente: 0,
+      email_processando: 0,
+      email_enviado: 0,
+      email_falhou: 0,
+      email_incerto: 0,
+    };
+    for (const rows of [
+      Array.from({ length: 41 }, (_, i) => ({
+        ...listedCandidate,
+        id: "00000000-0000-4000-8000-" + String(i + 1).padStart(12, "0"),
+      })),
+      [{ ...listedCandidate, created_at: "not-a-timestamp" }],
+      [{ ...listedCandidate, reviewed_at: "yesterday" }],
+    ]) {
+      const mock = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ total: 45, applications: rows }))
+        .mockResolvedValueOnce(Response.json(counters));
+      vi.stubGlobal("fetch", mock);
+      await expect(listAffiliateApplications({ status: "pendente", page: 0 })).rejects.toThrow();
+      expect(mock).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it("accepts a full bounded page with valid PostgreSQL timestamp offsets", async () => {
+    const fullPage = Array.from({ length: 40 }, (_, i) => ({
+      ...listedCandidate,
+      id: "00000000-0000-4000-8000-" + String(i + 1).padStart(12, "0"),
+      created_at: "2026-11-09T12:00:00.123456+00:00",
+      reviewed_at: "2026-11-09T13:00:00.123456+00:00",
+    }));
+    const mock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ total: 40, applications: fullPage }))
+      .mockResolvedValueOnce(
+        Response.json({
+          pendente: 40,
+          aprovada: 0,
+          recusada: 0,
+          email_pendente: 0,
+          email_processando: 0,
+          email_enviado: 0,
+          email_falhou: 0,
+          email_incerto: 0,
+        }),
+      );
+    vi.stubGlobal("fetch", mock);
+    const result = await listAffiliateApplications({ status: "pendente", page: 0 });
+    expect(result.applications).toHaveLength(40);
+    expect(result.total).toBe(40);
+  });
+
   it("fails closed on malformed applicant rows rather than exposing arbitrary RPC objects", async () => {
     const fetchMock = vi
       .fn()
@@ -677,6 +734,35 @@ describe("Tratamento de resultados ambíguos do Resend", () => {
       p_permanent: true,
     });
   });
+  it("does not record a successful email for blank, oversized or control-character provider receipts", async () => {
+    process.env["RESEND_API_KEY"] = "synthetic-api-test-key";
+    process.env["AFFILIATE_FROM_EMAIL"] = "afiliadas@example.invalid";
+    const claimed = {
+      mail_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      application_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      recipient: "maria@example.com",
+      decision: "aprovada",
+      attempt: 1,
+    };
+    for (const providerId of ["   ", "x".repeat(2048), "id\nheader"]) {
+      const mock = vi
+        .fn()
+        .mockResolvedValueOnce(Response.json([claimed]))
+        .mockResolvedValueOnce(Response.json({ id: providerId }))
+        .mockResolvedValueOnce(Response.json(true));
+      vi.stubGlobal("fetch", mock);
+      const result = await processAffiliateEmails(1);
+      expect(result).toMatchObject({ sent: 0, failed: 1, configured: true });
+      const finish = JSON.parse(String(mock.mock.calls[2]![1].body));
+      expect(finish).toMatchObject({
+        p_success: false,
+        p_unknown: true,
+        p_provider_id: null,
+      });
+      expect(mock).toHaveBeenCalledTimes(3);
+    }
+  });
+
   it("HTTP 200 sem identificador não pode ser classificado como entregue", async () => {
     const mock = vi
       .fn()
