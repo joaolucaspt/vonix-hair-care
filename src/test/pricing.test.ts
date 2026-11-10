@@ -19,6 +19,69 @@ import {
 } from "@/lib/store";
 
 describe("ambiente e preços dos cards", () => {
+  it("troca o desconto de complemento pelo desconto maior de volume com 2 ou 3 unidades", () => {
+    const base = getProduct("kit-banana-e-mel")!;
+    const complement = getProduct("serum-argan")!;
+    const variant = complement.variants[0]!;
+    for (const qty of [2, 3]) {
+      const cart = migrateCart([
+        { slug: base.slug, variant: base.variants[0].label, qty: 1 },
+        { slug: complement.slug, variant: variant.label, qty, offer: "comp5" },
+      ]);
+      const line = cart.find((item) => item.slug === complement.slug);
+      expect(line).toEqual({ slug: complement.slug, variant: variant.label, qty });
+      expect(lineTotals(variant.price, qty, "comp5").net).toBe(lineTotals(variant.price, qty).net);
+    }
+  });
+
+  it("mantém o desconto maior por volume nas 46 variantes mesmo com oferta legada de complemento", () => {
+    let checked = 0;
+    let improved = 0;
+    for (const product of products) {
+      for (const variant of product.variants) {
+        for (const qty of [2, 3, 4, 99]) {
+          const volume = lineTotals(variant.price, qty);
+          const legacyComplement = lineTotals(variant.price, qty, "comp5");
+          expect(legacyComplement).toEqual(volume);
+          if (legacyComplement.net < variant.price * qty * 0.95 - 0.01) improved++;
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBe(184);
+    expect(improved).toBeGreaterThan(0);
+  });
+
+  it("reúne dois complementos individuais e passa à promoção maior de duas unidades", () => {
+    const base = getProduct("kit-banana-e-mel")!;
+    const complement = getProduct("serum-argan")!;
+    const variant = complement.variants[0]!;
+    const cart = migrateCart([
+      { slug: base.slug, variant: base.variants[0].label, qty: 1 },
+      { slug: complement.slug, variant: variant.label, qty: 1, offer: "comp5" },
+      { slug: complement.slug, variant: variant.label, qty: 1, offer: "comp5" },
+    ]);
+    const line = cart.find((item) => item.slug === complement.slug);
+    expect(line).toEqual({ slug: complement.slug, variant: variant.label, qty: 2 });
+    expect(lineTotals(variant.price, line!.qty, line!.offer).net).toBe(
+      lineTotals(variant.price, 2).net,
+    );
+  });
+
+  it("junta unidades do mesmo SKU mesmo quando uma entrou pela oferta complementar", () => {
+    const base = getProduct("kit-banana-e-mel")!;
+    const complement = getProduct("serum-argan")!;
+    const variant = complement.variants[0]!;
+    const cart = migrateCart([
+      { slug: base.slug, variant: base.variants[0].label, qty: 1 },
+      { slug: complement.slug, variant: variant.label, qty: 1, offer: "comp5" },
+      { slug: complement.slug, variant: variant.label, qty: 1 },
+    ]);
+    expect(
+      cart.filter((item) => item.slug === complement.slug && item.variant === variant.label),
+    ).toEqual([{ slug: complement.slug, variant: variant.label, qty: 2 }]);
+  });
+
   it("links sem uso ou com uso legado não limpam o ambiente escolhido", () => {
     expect(resolveAudience("casa")).toBe("casa");
     expect(resolveAudience("casa", "pessoal")).toBe("casa");

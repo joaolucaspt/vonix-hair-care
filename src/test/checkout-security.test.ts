@@ -231,6 +231,49 @@ describe("server authoritative checkout", () => {
     expect(mocks.createOrder).not.toHaveBeenCalled();
     expect(mocks.pix).not.toHaveBeenCalled();
   });
+  it("recalcula complemento de duas unidades com 12% e não marca falso SKU comp5 no pedido", async () => {
+    const complement = getProduct("serum-argan")!;
+    const variant = complement.variants[0]!;
+    const items = [
+      item,
+      { slug: complement.slug, variant: variant.label, qty: 2, offer: "comp5" as const },
+    ];
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items } });
+    expect(quote.ok).toBe(true);
+    const packageItems = mocks.shipping.mock.calls[0]?.[1] as {
+      id: string;
+      unitPrice: number;
+      quantity: number;
+    }[];
+    expect(packageItems.find((i) => i.id === complement.slug)).toMatchObject({
+      id: complement.slug,
+      unitPrice: lineTotals(variant.price, 2).net / 2,
+      quantity: 2,
+    });
+    const payment = await createPayment({ data: { ...data, items } });
+    expect(payment).toMatchObject({ ok: true, method: "pix" });
+    const appmaxProducts = mocks.createOrder.mock.calls[0]?.[0]?.products as {
+      sku: string;
+      name: string;
+      unit_value: number;
+    }[];
+    expect(appmaxProducts.find((i) => i.name.includes(complement.name))?.sku).toBe(complement.slug);
+    expect(appmaxProducts.find((i) => i.name.includes(complement.name))?.unit_value).toBe(
+      Math.round(lineTotals(variant.price, 2).net * 100),
+    );
+  });
+
+  it("rejeita SKU/variante repetidos no payload direto para evitar preço divergente", async () => {
+    const items = [item, { ...item }];
+    const quote = await quoteShipping({ data: { cep: data.address.cep, items } });
+    expect(quote).toMatchObject({ ok: false, message: expect.stringMatching(/Revise a sacola/) });
+    const payment = await createPayment({ data: { ...data, items } });
+    expect(payment).toMatchObject({ ok: false, retrySafe: true });
+    expect(mocks.shipping).not.toHaveBeenCalled();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+  });
+
   it("rejeita complemento sem produto-base como erro seguro, sem tentativa de cobrança", async () => {
     const orphan = { slug: "serum-argan", variant: "60ml", qty: 1, offer: "comp5" as const };
     const quote = await quoteShipping({ data: { cep: data.address.cep, items: [orphan] } });

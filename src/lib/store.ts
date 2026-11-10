@@ -46,7 +46,7 @@ export function installments(total: number, n = MAX_INSTALLMENTS) {
   return { count: n, value: base / 100, first: first / 100 };
 }
 
-/** Free shipping strictly ABOVE R$ 150,00 of product subtotal (after discounts). */
+/** Free shipping strictly ABOVE R$ 150,00 of product subtotal BEFORE discounts, subject to carrier availability. */
 export const hasFreeShipping = (subtotal: number) => subtotal > FREE_SHIPPING_ABOVE;
 
 const CEP_KEY = "vonix-cep";
@@ -143,7 +143,9 @@ export function lineTotals(price: number, qty: number, offer?: Offer) {
     const kit = Math.round((u * 3 * 85) / 100);
     return { gross: (u * 3 * qty) / 100, net: (kit * qty) / 100, units: 3 * qty };
   }
-  if (offer === "comp5") {
+  // A complement earns 5% only as a single unit. From two units onward,
+  // the 12%/15% volume offer is better and must always take precedence.
+  if (offer === "comp5" && qty === 1) {
     const unit = Math.round((u * 95) / 100);
     return { gross: (u * qty) / 100, net: (unit * qty) / 100, units: qty };
   }
@@ -199,12 +201,14 @@ export function migrateCart(items: unknown): CartItem[] {
   const eligible = new Set(bases.length ? complementsFor(bases).map((p) => p.slug) : []);
   const normalized: CartItem[] = [];
   for (const i of valid) {
-    const offer = i.offer === "comp5" && eligible.has(i.slug) ? "comp5" : undefined;
+    const offer = i.offer === "comp5" && eligible.has(i.slug) && i.qty === 1 ? "comp5" : undefined;
     const existing = normalized.find(
       (o) => o.slug === i.slug && o.variant === i.variant && o.offer === offer,
     );
-    if (existing) existing.qty = Math.min(99, existing.qty + i.qty);
-    else
+    if (existing) {
+      existing.qty = Math.min(99, existing.qty + i.qty);
+      if (existing.qty >= 2) delete existing.offer;
+    } else
       normalized.push({
         slug: i.slug,
         variant: i.variant,

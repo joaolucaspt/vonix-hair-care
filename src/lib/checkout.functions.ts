@@ -43,15 +43,30 @@ const cepSchema = z.string().regex(/^\d{5}-?\d{3}$/);
 
 /** Prices always come from the catalog on the server; the browser only sends what is in the cart. */
 function buildLines(items: z.infer<typeof itemSchema>[]) {
-  // Validate that complement discounts are among recommendations for the other items.
-  const baseProducts = items.filter((i) => i.offer !== "comp5").map((i) => i.slug);
+  // The cart represents one physical SKU/variant per line. Reject duplicate
+  // browser payloads rather than charging separate single-unit prices for
+  // a pair of units that would qualify for a volume discount.
+  const seen = new Set<string>();
+  for (const i of items) {
+    const key = JSON.stringify([i.slug, i.variant]);
+    if (seen.has(key)) throw new Error("Linhas repetidas para a mesma variante");
+    seen.add(key);
+  }
+
+  // Old checkout tabs may still send a complement offer with multiple units.
+  // The 12%/15% volume price is better and becomes the sole line promotion.
+  const normalized = items.map((i) => ({
+    ...i,
+    offer: i.offer === "comp5" && i.qty >= 2 ? undefined : i.offer,
+  }));
+  const baseProducts = normalized.filter((i) => i.offer !== "comp5").map((i) => i.slug);
   const eligible = new Set(
     baseProducts.length ? complementsFor(baseProducts).map((p) => p.slug) : [],
   );
-  if (items.some((i) => i.offer === "comp5" && !eligible.has(i.slug))) {
+  if (normalized.some((i) => i.offer === "comp5" && !eligible.has(i.slug))) {
     throw new Error("Complemento promocional indisponível para este carrinho");
   }
-  return items.map((i) => {
+  return normalized.map((i) => {
     const p = getProduct(i.slug);
     const v = p?.variants.find((x) => x.label === i.variant);
     if (!p || !v) throw new Error(`Produto indisponível: ${i.slug}`);

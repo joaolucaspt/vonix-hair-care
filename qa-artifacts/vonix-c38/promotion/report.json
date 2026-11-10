@@ -1,0 +1,71 @@
+{
+  "checkpoint": "C38",
+  "scope": "Real Chrome UI/cart pricing for complementary promotion, external blocked; no checkout charge",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "blockedExternal": 2,
+      "volume1": {
+        "qty": 1,
+        "offer": "comp5"
+      },
+      "volume2": {
+        "qty": 2,
+        "offer": null,
+        "gross": 185.8,
+        "net": 163.5
+      },
+      "volume3": {
+        "qty": 3,
+        "offer": null,
+        "gross": 278.7,
+        "net": 236.9
+      }
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "blockedExternal": 2,
+      "volume1": {
+        "qty": 1,
+        "offer": "comp5"
+      },
+      "volume2": {
+        "qty": 2,
+        "offer": null,
+        "gross": 185.8,
+        "net": 163.5
+      },
+      "volume3": {
+        "qty": 3,
+        "offer": null,
+        "gross": 278.7,
+        "net": 236.9
+      }
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "blockedExternal": 2,
+      "volume1": {
+        "qty": 1,
+        "offer": "comp5"
+      },
+      "volume2": {
+        "qty": 2,
+        "offer": null,
+        "gross": 185.8,
+        "net": 163.5
+      },
+      "volume3": {
+        "qty": 3,
+        "offer": null,
+        "gross": 278.7,
+        "net": 236.9
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "checkpoint": "C38",
+  "scope": "Checkout readiness and cart preservation, never click payment; external blocked",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "errors": [],
+      "state": "no gateway: form unavailable",
+      "cartPreserved": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "errors": [],
+      "state": "no gateway: form unavailable",
+      "cartPreserved": true
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "errors": [],
+      "state": "no gateway: form unavailable",
+      "cartPreserved": true
+    }
+  ]
+}
