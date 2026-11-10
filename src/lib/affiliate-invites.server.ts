@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
+import {
+  affiliateCustomAuthEmailReady,
+  sendAffiliateAuthEmailWithResend,
+} from "./affiliate-auth-delivery.server";
 
 const invitedEmailSchema = z.string().email().max(180);
 
@@ -16,6 +20,13 @@ export async function invitePersistedAffiliateApplicant(email: string): Promise<
   // Reject all whitespace and malformed addresses before contacting Supabase.
   const validated = invitedEmailSchema.safeParse(email);
   if (!db || !validated.success) return false;
+  if (affiliateCustomAuthEmailReady()) {
+    try {
+      return await sendAffiliateAuthEmailWithResend(validated.data.toLowerCase(), "applicant");
+    } catch {
+      return false;
+    }
+  }
   try {
     const response = await fetch(
       db.url +
