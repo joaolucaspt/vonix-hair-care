@@ -728,6 +728,15 @@ export function AffiliateAdminPage() {
               {loading ? "Verificando acesso..." : "Acessar inscrições"}{" "}
               {!loading && <ArrowRight className="h-4 w-4" />}
             </button>
+            <p className="mt-6 text-center text-sm text-[#785960]">
+              Foi convidado para a equipe?{" "}
+              <Link
+                to="/acesso-equipe-afiliadas"
+                className="font-semibold underline underline-offset-4"
+              >
+                Ativar ou acessar sua conta pessoal
+              </Link>
+            </p>
           </form>
         ) : sessionRechecking ? (
           <section

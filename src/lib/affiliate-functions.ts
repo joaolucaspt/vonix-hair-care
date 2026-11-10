@@ -3,10 +3,13 @@ import { z } from "zod";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
+import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
+import { invitePersistedAffiliateApplicant } from "./affiliate-invites.server";
 import {
   affiliateAdminSameOrigin,
   affiliateMutationSameOrigin,
   affiliateAdminSessionValid,
+  affiliateAdminMayErase,
   destroyAffiliateAdminSession,
 } from "./affiliate-admin-session.server";
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
@@ -55,7 +58,14 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
       };
     }
     try {
-      return await createAffiliateApplication(data);
+      const result = await createAffiliateApplication(data);
+      if (result.ok && !data.website && data.wizard) {
+        // A successful durable insert or a verified email duplicate precedes
+        // any Auth invitation. Never provision a login for honeypots.
+        const inviteSent = await invitePersistedAffiliateApplicant(data.wizard.email);
+        return { ...result, inviteSent };
+      }
+      return result;
     } catch {
       return {
         ok: false as const,
@@ -63,6 +73,15 @@ export const submitAffiliateApplication = createServerFn({ method: "POST" })
       };
     }
   });
+
+export const loginAffiliateAdminMember = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      email: z.string().email().max(180),
+      password: z.string().min(12).max(128),
+    }),
+  )
+  .handler(async ({ data }) => loginAffiliateTeamWithPassword(data.email, data.password));
 
 export const loginAffiliateAdmin = createServerFn({ method: "POST" })
   .validator(affiliateAdminSchema.extend({ otp: z.string().max(6).optional() }))
@@ -160,7 +179,7 @@ export const eraseAffiliateApplicationAdmin = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
-    if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
+    if (!affiliateAdminSameOrigin() || !affiliateAdminMayErase())
       return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
     if (!(await affiliateRateLimitAllowed("admin")))
       return { ok: false as const, reason: "Acesso temporariamente indisponível." };

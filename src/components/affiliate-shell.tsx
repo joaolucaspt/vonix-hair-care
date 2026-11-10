@@ -9,7 +9,13 @@ import { INSTAGRAM } from "@/lib/store";
  * ticker and shopping popup distract from a five-step application on mobile.
  * Keep that commerce layout untouched for every other route.
  */
-export function AffiliateShell({ children }: { children: ReactNode }) {
+export function AffiliateShell({
+  children,
+  mode = "landing",
+}: {
+  children: ReactNode;
+  mode?: "landing" | "account";
+}) {
   return (
     <div
       data-testid="vonix-affiliate-shell"
@@ -43,44 +49,55 @@ export function AffiliateShell({ children }: { children: ReactNode }) {
             </span>
           </div>
 
-          <nav
-            aria-label="Navegação da seleção de afiliadas"
-            className="hidden items-center gap-7 lg:flex"
-          >
-            <a
-              href="#criterios"
-              className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
+          {mode === "landing" && (
+            <nav
+              aria-label="Navegação da seleção de afiliadas"
+              className="hidden items-center gap-7 lg:flex"
             >
-              Para quem é
-            </a>
-            <a
-              href="#como-funciona"
-              className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
-            >
-              Como funciona
-            </a>
-            <a
-              href="#formatos"
-              className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
-            >
-              Inspirações
-            </a>
-            <a
-              href="#duvidas"
-              className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
-            >
-              Dúvidas
-            </a>
-          </nav>
+              <a
+                href="#criterios"
+                className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
+              >
+                Para quem é
+              </a>
+              <a
+                href="#como-funciona"
+                className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
+              >
+                Como funciona
+              </a>
+              <a
+                href="#formatos"
+                className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
+              >
+                Inspirações
+              </a>
+              <a
+                href="#duvidas"
+                className="text-sm font-medium text-[#725760] transition hover:text-[#492c38] focus-visible:underline"
+              >
+                Dúvidas
+              </a>
+            </nav>
+          )}
 
-          <a
-            href="#inscricao"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#56303f] px-4 text-xs font-semibold text-white transition hover:bg-[#754959] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#56303f] sm:px-5 sm:text-sm"
-          >
-            <span className="sm:hidden">Ver inscrição</span>
-            <span className="hidden sm:inline">Conhecer a inscrição</span>
-            <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </a>
+          {mode === "landing" ? (
+            <a
+              href="#inscricao"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#56303f] px-4 text-xs font-semibold text-white transition hover:bg-[#754959] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#56303f] sm:px-5 sm:text-sm"
+            >
+              <span className="sm:hidden">Ver inscrição</span>
+              <span className="hidden sm:inline">Conhecer a inscrição</span>
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </a>
+          ) : (
+            <Link
+              to="/seja-afiliada"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#56303f] px-4 text-xs font-semibold text-white sm:px-5 sm:text-sm"
+            >
+              Programa de afiliadas <ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </header>
 
@@ -127,12 +144,20 @@ export function AffiliateShell({ children }: { children: ReactNode }) {
             >
               <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Visitar a loja oficial
             </Link>
-            <a
-              href="#duvidas"
+            <Link
+              to="/acompanhar-inscricao"
               className="underline decoration-[#bc9e9c] underline-offset-4 hover:text-white"
             >
-              Perguntas frequentes
-            </a>
+              Acompanhar candidatura
+            </Link>
+            {mode === "landing" && (
+              <a
+                href="#duvidas"
+                className="underline decoration-[#bc9e9c] underline-offset-4 hover:text-white"
+              >
+                Perguntas frequentes
+              </a>
+            )}
             <a
               href={INSTAGRAM}
               target="_blank"

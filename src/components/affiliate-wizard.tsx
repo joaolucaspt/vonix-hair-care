@@ -265,6 +265,7 @@ export function AffiliateWizard({
   const sendingRef = useRef(false);
   const [website, setWebsite] = useState("");
   const [sent, setSent] = useState(false);
+  const [accessNotice, setAccessNotice] = useState("");
   const [zipLoading, setZipLoading] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const navigated = useRef(false);
@@ -533,8 +534,15 @@ export function AffiliateWizard({
     try {
       const response = await submitAffiliateApplication({ data: payload.data });
       if (response.ok) {
+        // Persistence must succeed before creating an Auth identity.
+        // A failed email invite never re-labels a stored application as failed.
         setSent(true);
         setValues({ ...initial });
+        setAccessNotice(
+          "inviteSent" in response && response.inviteSent
+            ? "Sua inscrição foi gravada. Confira o convite enviado ao e-mail para ativar o acompanhamento."
+            : "Sua inscrição foi gravada. O convite de acesso não foi confirmado; a equipe poderá orientar a ativação.",
+        );
       } else {
         setMessage(response.reason);
       }
@@ -558,9 +566,19 @@ export function AffiliateWizard({
           A equipe Vonix Hair analisará seu perfil. O envio não garante aprovação, cupom, comissão
           ou recebimento de produtos.
         </p>
-        <Link to="/" className={muted + " mt-7"}>
-          Voltar à loja
-        </Link>
+        {accessNotice && (
+          <p className="mx-auto mt-5 max-w-lg rounded-xl border border-[#e5d1cc] bg-[#fff8f4] p-4 text-sm text-[#624b53]">
+            {accessNotice}
+          </p>
+        )}
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link to="/acompanhar-inscricao" className={primary}>
+            Acompanhar minha candidatura <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link to="/" className={muted}>
+            Voltar à loja
+          </Link>
+        </div>
       </div>
     );
 
