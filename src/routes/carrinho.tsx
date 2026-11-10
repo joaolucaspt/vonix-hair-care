@@ -3,7 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { toItem, track } from "@/lib/analytics";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
-import { CART_REVALIDATED_KEY, OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
+import {
+  CART_REVALIDATED_KEY,
+  OFFER_LABEL,
+  brl,
+  complementsFor,
+  pixPrice,
+  useCart,
+  useHydrated,
+} from "@/lib/store";
 import { ShippingBar, Summary } from "@/components/cart-summary";
 
 export const Route = createFileRoute("/carrinho")({
@@ -69,7 +77,9 @@ function Suggestions() {
                   c.add(p.slug, v.label, 1, "comp5");
                   track("add_to_cart", { value: offer, items: [toItem(p, v.label, offer)] });
                 }}
-                className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                type="button"
+                aria-label={`Adicionar ${p.name} à sacola`}
+                className="mt-3 min-h-11 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 Adicionar
               </button>
@@ -110,13 +120,21 @@ function Cart() {
       <div className="container-site py-10 pb-28 lg:pb-10">
         <h1 className="mb-8 font-display text-h1">Carrinho</h1>
         {hydrated && cartAdjusted && (
-          <div className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-body text-amber-950" role="status">
+          <div
+            className="mb-5 flex items-start justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-body text-amber-950"
+            role="status"
+          >
             <p>
-              Atualizamos sua sacola conforme os produtos e ofertas disponíveis.
-              Itens indisponíveis são removidos e ofertas sem elegibilidade são recalculadas, quando aplicável.
-              Confira os valores antes de finalizar.
+              Atualizamos sua sacola conforme os produtos e ofertas disponíveis. Itens indisponíveis
+              são removidos e ofertas sem elegibilidade são recalculadas, quando aplicável. Confira
+              os valores antes de finalizar.
             </p>
-            <button type="button" aria-label="Dispensar aviso do carrinho" className="shrink-0 rounded-md border border-amber-500 px-3 py-1 text-small font-semibold" onClick={() => setCartAdjusted(false)}>
+            <button
+              type="button"
+              aria-label="Dispensar aviso do carrinho"
+              className="shrink-0 rounded-md border border-amber-500 px-3 py-1 text-small font-semibold"
+              onClick={() => setCartAdjusted(false)}
+            >
               Fechar
             </button>
           </div>
@@ -167,26 +185,32 @@ function Cart() {
                           Leve 2 e ganhe 12% OFF · leve 3 ou mais e ganhe 15% OFF
                         </div>
                       )}
-                      <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         <button
-                          aria-label="Diminuir"
+                          type="button"
+                          aria-label={`Diminuir quantidade de ${l.product.name}, ${l.variant}${l.offer ? `, ${OFFER_LABEL[l.offer]}` : ""}`}
                           onClick={() => c.setQty(l.slug, l.variant, l.qty - 1, l.offer)}
-                          className="rounded-full border border-border p-1.5"
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                           <Minus className="h-3 w-3" />
                         </button>
-                        <span className="w-6 text-center">{l.qty}</span>
+                        <span className="w-6 text-center" aria-live="polite">
+                          {l.qty}
+                        </span>
                         <button
-                          aria-label="Aumentar"
+                          type="button"
+                          aria-label={`Aumentar quantidade de ${l.product.name}, ${l.variant}${l.offer ? `, ${OFFER_LABEL[l.offer]}` : ""}`}
                           onClick={() => c.setQty(l.slug, l.variant, l.qty + 1, l.offer)}
-                          className="rounded-full border border-border p-1.5"
+                          disabled={l.qty >= 99}
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                           <Plus className="h-3 w-3" />
                         </button>
                         <button
-                          aria-label="Remover"
+                          type="button"
+                          aria-label={`Remover ${l.product.name}, ${l.variant}${l.offer ? `, ${OFFER_LABEL[l.offer]}` : ""}`}
                           onClick={() => c.remove(l.slug, l.variant, l.offer)}
-                          className="ml-3 text-muted-foreground"
+                          className="grid min-h-11 min-w-11 place-items-center rounded-full text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

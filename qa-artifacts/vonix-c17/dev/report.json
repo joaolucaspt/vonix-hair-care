@@ -1,0 +1,47 @@
+{
+  "scope": "C17 local checkout coupon Enter/cart touch QA, no real payments, all external traffic blocked",
+  "date": "2026-11-09",
+  "origin": "http://127.0.0.1:43972",
+  "outcomes": [
+    {
+      "viewport": 320,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 2,
+      "quickSummary": true,
+      "couponEnterAppliedWithoutPayment": true,
+      "cartTouchTargets44px": true,
+      "metrics": {
+        "overflow": false,
+        "cartStored": true
+      }
+    },
+    {
+      "viewport": 390,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 1,
+      "quickSummary": true,
+      "couponEnterAppliedWithoutPayment": true,
+      "cartTouchTargets44px": true,
+      "metrics": {
+        "overflow": false,
+        "cartStored": true
+      }
+    },
+    {
+      "viewport": 1366,
+      "passed": true,
+      "pageErrors": [],
+      "externalBlocked": 1,
+      "couponEnterAppliedWithoutPayment": true,
+      "cartTouchTargets44px": true,
+      "metrics": {
+        "overflow": false,
+        "cartStored": true
+      }
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

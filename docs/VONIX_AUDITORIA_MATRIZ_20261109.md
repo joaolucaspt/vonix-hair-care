@@ -196,3 +196,14 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N64 | Média | Checkout mobile apresentava total detalhado somente após o formulário longo; frete ainda não cotado pouco claro | **Corrigido**: faixa de resumo rápido com frete condicionado ao CEP, total dinâmico e link editar sacola |
 
 **C16:** 539/539 testes PASS, 66 arquivos, build/TS/lint exit 0, SSR 42/42, Chrome local 3/3 (320/390/1366), sem operações financeiras. **Cinco conflitos de merge com `origin/main` 4d77dc2** e homologação real P0 permanecem pendentes. Ver `VONIX_AUDITORIA_CONTINUIDADE_C16_20261109.md`.
+
+## C17 — cupom por teclado e controles de sacola (09/11)
+
+| ID | Severidade | Achado reproduzido | Situação |
+| --- | --- | --- | --- |
+| N65 | Alta | Enter no campo de cupom dentro do checkout podia acionar submit de pagamento em vez de aplicar desconto | **Corrigido na branch auditada:** Enter aplica cupom local e evita submit; teste sem cobrança e Chrome 3/3 |
+| N66 | Média | Carrinho usava nomes acessíveis ambíguos de controle, alvos pequenos e aumento além do limite sem feedback | **Corrigido:** identificações por produto/variante/oferta, 44px, limite 99 e layout flexível |
+| N67 | Média | Vários botões "Adicionar" sem identificar sugestão no carrinho/gaveta | **Corrigido:** nome acessível por sugestão, testes de adição sem pagamento |
+| N68 | Média | Cupom anterior permanecia ativo quando usuário testava código inválido sem mensagem explícita | **Corrigido:** Cupom ativo e economia elegível apresentados ao lado do erro, sem alterar cálculo server-side |
+
+**C17:** 545/545 Vitest, 66 arquivos, TypeScript/build e ESLint focado aprovados, SSR 42/42 e Chrome 3/3 (320/390/1366). **Lint global Prettier falha** por formatação legada (12.428 erros); ESLint integral com `prettier/prettier: off` passou (exit 0). Cinco conflitos persistem com a `main` ed23f7e, com Appmax/Supabase/Bling em staging ainda pendentes. Ver `VONIX_AUDITORIA_CONTINUIDADE_C17_20261109.md`.

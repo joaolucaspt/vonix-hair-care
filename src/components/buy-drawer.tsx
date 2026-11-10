@@ -224,6 +224,7 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
                         <button
                           type="button"
                           onClick={() => addExtra(p)}
+                          aria-label={`Adicionar ${p.name} ao carrinho`}
                           className="flex min-h-11 items-center gap-1 rounded-md bg-emerald-50 px-3 py-2 text-body font-bold text-emerald-800 ring-1 ring-emerald-300 transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                           <Plus className="h-4 w-4" aria-hidden="true" /> Adicionar

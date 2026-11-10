@@ -541,6 +541,39 @@ describe("checkout auditado sem chamadas reais", () => {
     });
     expect(mocks.payment).not.toHaveBeenCalled();
   });
+  it("Enter no campo de cupom aplica desconto sem submeter o formulário de pagamento", async () => {
+    render(<Checkout />);
+    await fill();
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    const couponInput = screen.getByLabelText("Código do cupom");
+    fireEvent.change(couponInput, { target: { value: "BEMVINDA5" } });
+    const acceptedNativeSubmit = fireEvent.keyDown(couponInput, {
+      key: "Enter",
+      code: "Enter",
+      charCode: 13,
+      keyCode: 13,
+    });
+    expect(acceptedNativeSubmit).toBe(false);
+    expect(
+      await screen.findByText(/Cupom BEMVINDA5 aplicado aos itens elegíveis/),
+    ).toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("cupom inválido digitado após um válido não esconde que o desconto anterior segue ativo", async () => {
+    render(<Checkout />);
+    fireEvent.click(screen.getByRole("button", { name: "Tem um cupom?" }));
+    const input = screen.getByLabelText("Código do cupom");
+    fireEvent.change(input, { target: { value: "BEMVINDA5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(await screen.findByText(/Cupom BEMVINDA5 aplicado/)).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "INEXISTENTE" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(screen.getByText(/Cupom ativo: BEMVINDA5/)).toBeInTheDocument();
+    expect(screen.getByText(/Cupom não encontrado/)).toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("não promete aplicar cupom a uma cesta totalmente promocional", async () => {
     const p = getProduct("kit-banana-e-mel")!;
     const v = p.variants[0];
@@ -874,10 +907,50 @@ describe("checkout auditado sem chamadas reais", () => {
   });
 });
 
+describe("acessibilidade da sacola", () => {
+  it("controles de quantidade e remoção identificam o produto e têm área de toque mínima", () => {
+    render(<Cart />);
+    const product = getProduct("kit-banana-e-mel")!;
+    const variant = product.variants[0]!.label;
+    for (const action of ["Diminuir quantidade", "Aumentar quantidade", "Remover"]) {
+      const control = screen.getByRole("button", {
+        name: new RegExp(
+          action === "Remover" ? `Remover ${product.name}` : `${action} de ${product.name}`,
+          "i",
+        ),
+      });
+      expect(control).toHaveAttribute("type", "button");
+      expect(control.className).toMatch(/min-h-11/);
+      expect(control.className).toMatch(/min-w-11/);
+      expect(control.getAttribute("aria-label")).toContain(variant);
+    }
+  });
+
+  it("limite de 99 unidades é anunciado ao desabilitar aumento da sacola", () => {
+    const item = mocks.cart.lines[0] as { qty: number };
+    item.qty = 99;
+    render(<Cart />);
+    const p = getProduct("kit-banana-e-mel")!;
+    expect(
+      screen.getByRole("button", { name: new RegExp(`Aumentar quantidade de ${p.name}`, "i") }),
+    ).toBeDisabled();
+    expect(mocks.cart.add).not.toHaveBeenCalled();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("sugestões usam nomes acessíveis únicos para adicionar produtos", () => {
+    render(<Cart />);
+    const suggested = screen.getAllByRole("button", { name: /Adicionar .* à sacola/ });
+    expect(suggested.length).toBeGreaterThan(0);
+    expect(new Set(suggested.map((b) => b.getAttribute("aria-label"))).size).toBe(suggested.length);
+    expect(suggested.every((b) => b.className.includes("min-h-11"))).toBe(true);
+  });
+});
+
 describe("complemento do carrinho", () => {
   it("registra AddToCart com o desconto realmente aplicado ao item", () => {
     render(<Cart />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Adicionar" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: /Adicionar .* à sacola/ })[0]!);
     expect(mocks.cart.add).toHaveBeenCalledTimes(1);
     const [slug, variant, qty, offer] = mocks.cart.add.mock.calls[0]!;
     expect(qty).toBe(1);

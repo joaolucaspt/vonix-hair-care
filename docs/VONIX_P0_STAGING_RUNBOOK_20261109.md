@@ -66,3 +66,7 @@ Na integração futura da nova `main`, exigir simultaneamente (1) testes de idem
 ### C16 — gate adicional de checkout acessível e recuperável
 
 Antes de liberar o PR #26, executar homologação do checkout real no runtime Cloudflare staging com frete e cartões simulados: (a) retentativa de CEP após erro, sem novo pagamento; (b) CPF inválido recebendo foco e sem cobrança; (c) total mobile refletindo Pix/cartão e cotação, sem prometer frete antes do CEP; (d) ida/volta sacola preservando itens; (e) idempotência e recuperação de tentativas ambíguas Pix/cartão mantidas após conciliação com a interface compacta da main. Sem Appmax sandbox/Supabase staging/estoque real validados, manter **NOT_APPROVED**.
+
+### C17 — gate de prevenção de envio acidental e acessibilidade
+
+Em staging, confirmar que Enter no campo "Código do cupom" **nunca** submete pedido e apenas aplica o código válido; conferir cupom anterior explicitamente ativo após tentativa inválida. No Chrome 320/390/1366 com tecnologias assistivas quando disponíveis, conferir botões de +/-/remover por SKU, variante e promoção e área mínima de 44px, inclusive em duas linhas do mesmo produto. Garantir cupom/sacola não altera proteção contra tentativas duplicadas após timeout, elegibilidade do desconto e frete por CEP. **Linter do repo:** baseline tem milhares de falhas Prettier/CRLF; não usar `eslint --fix .` indiscriminadamente como autorização de lançamento; auditar apenas diffs C17. PR #26 continua **NOT_APPROVED** até CI, resolução manual dos conflitos com main e homologação operacional.

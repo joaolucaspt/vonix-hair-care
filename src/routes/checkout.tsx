@@ -1182,6 +1182,12 @@ function Checkout() {
                   <div className="flex gap-2">
                     <input
                       aria-label="Código do cupom"
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                          event.preventDefault();
+                          applyCoupon();
+                        }
+                      }}
                       placeholder="Código do cupom"
                       value={coupon}
                       onChange={(e) => setCoupon(e.target.value)}
@@ -1211,6 +1217,12 @@ function Checkout() {
                   {couponMsg && (
                     <p role="alert" className="text-body text-muted-foreground">
                       {couponMsg}
+                    </p>
+                  )}
+                  {applied && couponProblem?.ok !== false && tCard.couponDiscount > 0 && (
+                    <p role="status" className="text-small font-medium text-emerald-800">
+                      Cupom ativo: {applied.code}. Desconto: {brl(tCard.couponDiscount)} nos itens
+                      elegíveis.
                     </p>
                   )}
                   {applied && couponNoSavings && (

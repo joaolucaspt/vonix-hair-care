@@ -93,6 +93,19 @@ describe("gaveta de compra segura", () => {
     expect(mocks.onPay).not.toHaveBeenCalled();
   });
 
+  it("sugestão informa qual produto será adicionado sem criar pagamento", () => {
+    const suggestion = getProduct("kit-cafe-verde")!;
+    const variant = suggestion.variants[0]!;
+    mocks.extras.mockReturnValue([suggestion]);
+    render(<BuyDrawer onClose={mocks.onClose} onPay={mocks.onPay} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: `Adicionar ${suggestion.name} ao carrinho` }),
+    );
+    expect(mocks.add).toHaveBeenCalledWith(suggestion.slug, variant.label, 1);
+    expect(mocks.track).toHaveBeenCalledTimes(1);
+    expect(mocks.onPay).not.toHaveBeenCalled();
+  });
+
   it("permite editar quantidade e seguir ao checkout apenas pela ação explícita", () => {
     const p = arrange();
     render(<BuyDrawer onClose={mocks.onClose} onPay={mocks.onPay} />);

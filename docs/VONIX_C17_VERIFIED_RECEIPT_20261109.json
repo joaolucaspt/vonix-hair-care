@@ -1,0 +1,120 @@
+{
+  "project": "vonix-hair-care",
+  "scope": "ecommerce only — affiliate project excluded",
+  "date": "2026-11-09",
+  "workloop": {
+    "definitionId": "953c7af1-d695-4405-b54d-84b1eca6aca1",
+    "runId": "ad0f44d5-d874-4ca7-8eb0-7b5bcf493f82"
+  },
+  "branch": "fix/vonix-ecommerce-auditoria-2026-11-09",
+  "baseCommit": "ec55413",
+  "pr": 26,
+  "fixes": [
+    "N65 Enter coupon safely applies discount without payment submit",
+    "N66 Accessible cart qty and remove controls min 44px per item, max 99 disabled",
+    "N67 Product specific add suggestion names in cart/drawer",
+    "N68 Existing coupon explicitly active after invalid replacement"
+  ],
+  "verification": {
+    "vitest": {
+      "passed": 545,
+      "files": 66,
+      "exitCode": 0
+    },
+    "targeted": {
+      "passed": 51,
+      "files": 2,
+      "exitCode": 0
+    },
+    "typescript": {
+      "exitCode": 0
+    },
+    "eslintTargeted": {
+      "exitCode": 0
+    },
+    "prettierTargeted": {
+      "exitCode": 0
+    },
+    "eslintAllWithoutPrettier": {
+      "exitCode": 0
+    },
+    "eslintAllWithPrettier": {
+      "exitCode": 1,
+      "formattingErrors": 12428,
+      "reason": "Existing CRLF and historical Prettier formatting across repo; no mass refactoring performed"
+    },
+    "build": {
+      "exitCode": 0,
+      "preset": "cloudflare-module"
+    },
+    "ssr": {
+      "activeProducts": 42,
+      "failures": 0,
+      "exitCode": 0
+    },
+    "browser": {
+      "passed": 3,
+      "failed": 0,
+      "widths": [
+        320,
+        390,
+        1366
+      ],
+      "jsErrors": 0,
+      "horizontalOverflow": false,
+      "cartPersisted": true,
+      "couponEnterAppliedWithoutPayment": true,
+      "touchTarget44px": true,
+      "externalNetworkBlocked": true,
+      "paymentSubmission": false
+    },
+    "gitDiffCheck": 0
+  },
+  "artifacts": [
+    "qa-artifacts/vonix-c17/dev/report.json",
+    "qa-artifacts/vonix-c17/dev/cart-320.png",
+    "qa-artifacts/vonix-c17/dev/cart-390.png",
+    "qa-artifacts/vonix-c17/dev/cart-1366.png",
+    "qa-artifacts/vonix-c17/dev/checkout-320.png",
+    "qa-artifacts/vonix-c17/dev/checkout-390.png",
+    "qa-artifacts/vonix-c17/dev/checkout-1366.png",
+    "qa-artifacts/vonix-c17/dev/drawer-320.png",
+    "qa-artifacts/vonix-c17/dev/drawer-390.png",
+    "qa-artifacts/vonix-c17/dev/drawer-1366.png",
+    "scripts/qa-c17-cart-coupon.mjs",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C17_20261109.md"
+  ],
+  "sha256": {
+    "src/routes/checkout.tsx": "1FF082E8E9D77E0635F999FD33A2A9AA214F5311BE2ECE78E0825FAEA5B87962",
+    "src/routes/carrinho.tsx": "DED1A3DBA88A090231A866F13317AC42E1F0C103CC910B26FEFFE8F1DD38F81F",
+    "src/components/buy-drawer.tsx": "FB8507F67805A95EE31BF977324C79A60470777606B07A9663BAF1B6EFE283D4",
+    "src/test/checkout-audit.test.tsx": "FA7FA2D733DAB07FE343B39BEDA02CC06B5181D67F27275C6AD4F5EF8219F9A2",
+    "src/test/buy-drawer-safety.test.tsx": "A5E82B12F453EE7F847411D34A0DA3CB119D5C52595533AB4E15AF0F8C120D60",
+    "scripts/qa-c17-cart-coupon.mjs": "67BD905885B77CF7CFEEF6EDF2B70B379BFBCCCC0DDD73D65675AC0D6CDA481C",
+    "qa-artifacts/vonix-c17/dev/report.json": "A84ECFE059EC0B5A7D4800E779CB415DA67D87D1DD9EC20394BBCCD5FB6E205A",
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C17_20261109.md": "1649EB710536C83BEA6C6E587651806BC1C8A134B15ABD16620B663D51B37289"
+  },
+  "mainAtAudit": "ed23f7e",
+  "mergeConflicts": [
+    "src/components/buy-drawer.tsx",
+    "src/lib/checkout.functions.ts",
+    "src/lib/upsell.ts",
+    "src/routes/checkout.tsx",
+    "src/routes/produto.$slug.tsx"
+  ],
+  "readyForProduction": false,
+  "affiliateFilesEdited": false,
+  "realPayments": false,
+  "realDatabaseAccess": false,
+  "mainMerged": false,
+  "deployed": false,
+  "blockers": [
+    "PR26 conflict with latest main, CI absent",
+    "Appmax sandbox and authenticated paid_at verification",
+    "Supabase isolated RLS/migrations/restore",
+    "Bling and physical stock/SKU weights",
+    "LGPD revocation and WAF distributed rate limiting",
+    "Paid sales / GA4 funnel analysis",
+    "Staging runtime Cloudflare Worker smoke testing"
+  ]
+}
