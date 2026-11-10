@@ -25,7 +25,8 @@ describe("Affiliate admin authentication link recovery", () => {
       ),
     ).toBe("failed");
     expect(affiliateLinkRecoveryMessage("failed")).not.toContain("Private");
-    expect(affiliateLinkRecoveryMessage("expired")).toContain("novo código");
+    expect(affiliateLinkRecoveryMessage("expired")).toContain("um código");
+    expect(affiliateLinkRecoveryMessage("expired")).toContain("um link");
   });
 
   it("does not falsely classify a valid session callback or normal navigation", () => {

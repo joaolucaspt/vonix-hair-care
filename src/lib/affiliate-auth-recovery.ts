@@ -28,7 +28,7 @@ export function affiliateLinkRecoveryReason(href: string): AffiliateLinkRecovery
 
 export function affiliateLinkRecoveryMessage(reason: Exclude<AffiliateLinkRecoveryReason, null>) {
   if (reason === "expired") {
-    return "Este link de acesso expirou ou já foi utilizado. Solicite um novo código pelo formulário abaixo e digite o código recebido, sem reutilizar links anteriores.";
+    return "Este link de acesso expirou ou já foi utilizado. Solicite um novo acesso abaixo. Se a nova mensagem trouxer um código, digite-o nesta página; se trouxer um link, use apenas o mais recente.";
   }
-  return "Não foi possível confirmar o link de acesso. Solicite um novo código abaixo e digite-o nesta página. Links antigos podem deixar de funcionar após um novo pedido.";
+  return "Não foi possível confirmar o link de acesso. Solicite novo acesso abaixo e use o código numérico ou o link mais recente que chegar por e-mail. Links antigos podem deixar de funcionar após um novo pedido.";
 }
