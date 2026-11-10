@@ -30,6 +30,7 @@ import {
   useAudience,
   useCart,
   useFavorites,
+  useHydrated,
   volumePct,
   type Product,
 } from "@/lib/store";
@@ -281,6 +282,7 @@ function ProductPage() {
 function ProductPurchase({ p }: { p: Product }) {
   const cart = useCart();
   const fav = useFavorites();
+  const hydrated = useHydrated();
   const { audience } = useAudience();
   const nav = useNavigate();
   const [vi, setVi] = useState(0);
@@ -369,6 +371,7 @@ function ProductPurchase({ p }: { p: Product }) {
                         type="button"
                         role="radio"
                         aria-checked={on}
+                        disabled={!hydrated}
                         onClick={() => setQty(o.n)}
                         className={`relative flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition-all sm:flex-col sm:items-start sm:gap-1.5 sm:p-4 ${on ? "border-[#c9992f] bg-[#fff8e8] shadow-[0_6px_18px_-8px_rgba(201,153,47,0.6)]" : "border-border bg-white hover:border-[#c9992f]/60"}`}
                       >
@@ -456,6 +459,7 @@ function ProductPurchase({ p }: { p: Product }) {
                   {p.variants.map((x, k) => (
                     <button
                       key={x.label}
+                      disabled={!hydrated}
                       onClick={() => setVi(k)}
                       type="button"
                       className={`min-h-11 rounded-full border px-4 py-2 text-body focus-visible:outline-2 focus-visible:outline-offset-2 ${k === vi ? "border-foreground bg-foreground text-background" : "border-border"}`}
@@ -474,7 +478,7 @@ function ProductPurchase({ p }: { p: Product }) {
                 <button
                   type="button"
                   aria-label={`Diminuir quantidade de ${p.name}`}
-                  disabled={qty <= 1}
+                  disabled={!hydrated || qty <= 1}
                   className="grid min-h-11 min-w-11 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40"
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                 >
@@ -486,7 +490,7 @@ function ProductPurchase({ p }: { p: Product }) {
                 <button
                   type="button"
                   aria-label={`Aumentar quantidade de ${p.name}`}
-                  disabled={qty >= 99}
+                  disabled={!hydrated || qty >= 99}
                   className="grid min-h-11 min-w-11 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40"
                   onClick={() => setQty((q) => Math.min(99, q + 1))}
                 >
@@ -498,6 +502,7 @@ function ProductPurchase({ p }: { p: Product }) {
                 type="button"
                 aria-label={`${fav.has(p.slug) ? "Remover" : "Adicionar"} ${p.name} ${fav.has(p.slug) ? "dos" : "aos"} favoritos`}
                 aria-pressed={fav.has(p.slug)}
+                disabled={!hydrated}
                 onClick={() => fav.toggle(p.slug)}
                 className="grid h-11 w-11 place-items-center rounded-full border border-border"
               >
@@ -506,7 +511,8 @@ function ProductPurchase({ p }: { p: Product }) {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <button
-                className="rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5"
+                className="rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55 py-3.5"
+                disabled={!hydrated}
                 onClick={() => {
                   add();
                   setBuyOpen(true);
@@ -515,7 +521,8 @@ function ProductPurchase({ p }: { p: Product }) {
                 Comprar agora
               </button>
               <button
-                className="rounded-md border-2 border-foreground py-3.5 font-medium"
+                className="rounded-md border-2 border-foreground py-3.5 font-medium disabled:cursor-wait disabled:opacity-55"
+                disabled={!hydrated}
                 onClick={() => {
                   add();
                   toast.success("Adicionado ao carrinho");
@@ -575,7 +582,8 @@ function ProductPurchase({ p }: { p: Product }) {
           )}
         </div>
         <button
-          className="ml-auto shrink-0 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] px-6 py-3 text-body"
+          className="ml-auto shrink-0 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55 px-6 py-3 text-body"
+          disabled={!hydrated}
           onClick={() => {
             add();
             setBuyOpen(true);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { SALES_SNAPSHOT_DATE } from "@/lib/sales";
 import { Grid, Shell } from "@/components/site";
 import {
   BEST_SELLERS,
@@ -129,12 +130,15 @@ export function Loja() {
     }
     return true;
   });
+  // A Most Sold section must keep its historical sales order, not audience relevance.
+  if (s.secao === "mais-vendidos" && !s.ordem)
+    list = [...list].sort((a, b) => BEST_SELLERS.indexOf(a.slug) - BEST_SELLERS.indexOf(b.slug));
   if (s.ordem === "menor")
     list = [...list].sort((a, b) => a.variants[0].price - b.variants[0].price);
   if (s.ordem === "maior")
     list = [...list].sort((a, b) => b.variants[0].price - a.variants[0].price);
   if (s.ordem === "az") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  if (!["menor", "maior", "az"].includes(s.ordem ?? "")) list = forAudience(list, uso);
+  if (!s.secao && !["menor", "maior", "az"].includes(s.ordem ?? "")) list = forAudience(list, uso);
   const browsing =
     !s.q && !s.categoria && !s.tiposProduto && !s.necessidades && !s.secao && !s.ordem;
   const rows = Array.from(
@@ -183,6 +187,12 @@ export function Loja() {
                     ? "Para Cabeleireiras — Produtos para Salão"
                     : (s.tiposProduto ?? s.necessidades ?? "Todos os Produtos")}
         </h1>
+        {s.secao === "mais-vendidos" && (
+          <p className="mt-3 text-small text-muted-foreground">
+            Ordenados por unidades registradas pela loja até {SALES_SNAPSHOT_DATE}; não é uma
+            medição em tempo real nem confirmação de estoque.
+          </p>
+        )}
         <div className="my-6 flex flex-wrap items-center gap-3">
           <form
             role="search"

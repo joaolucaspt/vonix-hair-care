@@ -1,0 +1,27 @@
+{
+  "checkpoint": "C28",
+  "network": "external denied",
+  "mode": "JavaScript disabled",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "nativeLinkWorks": true,
+      "buyButtonsDisabledWithoutJs": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "nativeLinkWorks": true,
+      "buyButtonsDisabledWithoutJs": true
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "nativeLinkWorks": true,
+      "buyButtonsDisabledWithoutJs": true
+    }
+  ]
+}

@@ -28,7 +28,7 @@ import logoUrl from "@/assets/vonix-logo.webp";
 import { PrizeWheel } from "@/components/prize-wheel";
 import { AffiliatePopup } from "@/components/affiliate-popup";
 import { reviewsFor } from "@/components/reviews";
-import { soldFor } from "@/lib/sales";
+import { soldFor, SALES_SNAPSHOT_DATE } from "@/lib/sales";
 import { useVisitorSummary } from "@/lib/review-summary";
 import { PaymentLogos } from "@/components/payment-logos";
 import { toItem, track } from "@/lib/analytics";
@@ -45,6 +45,7 @@ import {
   useAudience,
   useCart,
   useFavorites,
+  useHydrated,
   WHATSAPP,
   INSTAGRAM,
   FACEBOOK,
@@ -838,7 +839,7 @@ export function Stars({
     <div
       className="flex min-h-[1.25rem] items-center gap-2 text-small"
       role="img"
-      aria-label={count ? `Nota ${label} de 5` : "Ainda sem avaliações"}
+      aria-label={`${count ? `Nota ${label} de 5, ${count} avaliações` : "Ainda sem avaliações"}${sold > 0 ? `. ${sold} unidades vendidas conforme histórico informado até ${SALES_SNAPSHOT_DATE}` : ""}`}
     >
       {showStars && (
         <span className="relative inline-block text-[#d4a22f]" aria-hidden="true">
@@ -855,7 +856,10 @@ export function Stars({
       )}
       {count > 0 && !noRating && <b className="text-body">{label}</b>}
       {sold > 0 && (
-        <span className="text-muted-foreground">
+        <span
+          className="text-muted-foreground"
+          title={`Vendas históricas informadas pela loja até ${SALES_SNAPSHOT_DATE}; não são dados ao vivo`}
+        >
           {showStars ? "· " : ""}
           {sold} {sold === 1 ? "vendido" : "vendidos"}
         </span>
@@ -866,6 +870,7 @@ export function Stars({
 
 export function ProductCard({ p }: { p: Product }) {
   const fav = useFavorites();
+  const hydrated = useHydrated();
   const { audience } = useAudience();
   const pricing = cardPricing(p, audience);
   const off = discountPct(p.compareBase, pricing.price);
@@ -892,8 +897,9 @@ export function ProductCard({ p }: { p: Product }) {
           </span>
         )}
         <button
-          aria-label="Favoritar"
+          aria-label={`${fav.has(p.slug) ? "Remover" : "Adicionar"} ${p.name} ${fav.has(p.slug) ? "dos" : "aos"} favoritos`}
           aria-pressed={fav.has(p.slug)}
+          disabled={!hydrated}
           onClick={() => fav.toggle(p.slug)}
           className="absolute right-2 top-2 z-10 grid h-11 w-11 place-items-center rounded-full bg-background shadow-sm focus-visible:outline-2"
         >
@@ -930,7 +936,7 @@ export function ProductCard({ p }: { p: Product }) {
       <div className="mt-1.5">
         <Stars slug={p.slug} big hideEmpty />
       </div>
-      <div className="mt-1.5 flex items-end justify-between gap-1.5">
+      <div className="mt-1.5">
         <div className="min-w-0 leading-tight">
           {p.compareBase && p.compareBase > pricing.price && (
             <div className="text-small text-muted-foreground line-through">
@@ -943,16 +949,6 @@ export function ProductCard({ p }: { p: Product }) {
             <span className="hidden font-normal text-muted-foreground sm:inline"> sem juros</span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={bag}
-          aria-label={
-            p.variants.length > 1 ? `Escolher opções de ${p.name}` : `Adicionar ${p.name} à sacola`
-          }
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-sm transition-transform active:scale-95"
-        >
-          <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
-        </button>
       </div>
       <div className="mt-1.5 flex items-center gap-1 whitespace-nowrap rounded-full bg-[#eef8f2] px-1.5 py-1 text-[#2c6e55] md:gap-1.5 md:px-2">
         <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-small font-medium">
@@ -966,6 +962,29 @@ export function ProductCard({ p }: { p: Product }) {
         <p className="mt-1.5 line-clamp-2 flex-1 text-small leading-snug text-muted-foreground md:line-clamp-3 md:text-small">
           {p.short}
         </p>
+      )}
+      {hydrated ? (
+        <button
+          type="button"
+          onClick={bag}
+          aria-label={
+            p.variants.length > 1 ? `Escolher opções de ${p.name}` : `Adicionar ${p.name} à sacola`
+          }
+          className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-action px-3 py-3 text-center text-body font-semibold text-action-foreground shadow-sm transition hover:brightness-95 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <ShoppingBag className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          {p.variants.length > 1 ? "Escolher tamanho" : "Adicionar à sacola"}
+        </button>
+      ) : (
+        <Link
+          to="/produto/$slug"
+          params={{ slug: p.slug }}
+          aria-label={`Ver produto ${p.name}`}
+          className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-action px-3 py-3 text-center text-body font-semibold text-action-foreground shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <ShoppingBag className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          Ver produto
+        </Link>
       )}
     </div>
   );

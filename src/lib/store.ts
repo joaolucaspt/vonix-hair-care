@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import raw from "@/data/products.json";
+import { topSoldSlugs } from "@/lib/sales";
 
 export type Variant = { label: string; price: number };
 export type Product = {
@@ -413,14 +414,11 @@ export const TYPES: Record<string, (p: Product) => boolean> = {
   Kits: (p) => p.category === "kits",
   Finalizadores: (p) => p.category === "finalizadores",
 };
-export const BEST_SELLERS = [
-  "progressiva-fio-de-luz",
-  "kit-banana-e-mel",
-  "kit-coco-nutri",
-  "botox-vonix",
-  "botox-line",
-  "mascara-efeito-teia-coco-nutri",
-];
+/** Historical merchant-reported sales ranking: do not describe as live inventory or real-time best sellers. */
+export const BEST_SELLERS = topSoldSlugs(
+  products.map((p) => p.slug),
+  6,
+);
 
 export const MAX_DISCOUNT = Math.max(
   ...products.map((p) => discountPct(p.compareBase, p.variants[0].price)),

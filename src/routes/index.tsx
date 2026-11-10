@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ReviewCard, reviews } from "@/components/reviews";
 import { AffiliateHomeInvite } from "@/components/affiliate-home-invite";
 import { Benefits, Grid, Shell } from "@/components/site";
+import { SALES_SNAPSHOT_DATE } from "@/lib/sales";
 import {
   BEST_SELLERS,
   MAX_DISCOUNT,
@@ -130,10 +131,8 @@ function Home() {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const { audience } = useAudience();
-  const bestSellers = forAudience(
-    BEST_SELLERS.map((s) => getProduct(s)!),
-    audience,
-  );
+  // Sales order stays authentic regardless of the visitor's Casa/Salão preference.
+  const bestSellers = BEST_SELLERS.map((s) => getProduct(s)!);
   const kits = forAudience(
     products.filter((p) => p.category === "kits"),
     audience,
@@ -293,7 +292,11 @@ function Home() {
       </section>
 
       <section className="container-site mt-12">
-        <Title a="Mais" b="Desejados" to={{ secao: "mais-vendidos" }} />
+        <Title a="Mais" b="Vendidos" to={{ secao: "mais-vendidos" }} />
+        <p className="-mt-5 mb-5 text-small text-muted-foreground">
+          Ranking histórico de unidades informadas pela loja até {SALES_SNAPSHOT_DATE}. Não indica
+          estoque atual.
+        </p>
         <Grid carousel items={bestSellers} />
       </section>
 

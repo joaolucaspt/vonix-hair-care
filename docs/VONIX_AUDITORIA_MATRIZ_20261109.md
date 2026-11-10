@@ -339,3 +339,14 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N110–N111** | Carrinho/UX mobile | Botão diminuir 1 podia remover; limite 99 não anunciado; drawer rolava fundo e apertava controles | Limites, rótulos de variante, controles responsivos, scroll-lock/restauração; Chrome final 3/3 |
 
 **C27:** Vitest **662/662 (81 arquivos)**, TypeScript/ESLint funcional/build PASS, SSR **42/42**, Chrome **3/3** em 320/390/1366, **12 screenshots**, rede externa bloqueada. `docs/VONIX_AUDITORIA_CONTINUIDADE_C27_20261110.md`. Produção continua **NOT_APPROVED** por Appmax, Supabase staging, Bling, frete real, Worker, LGPD e métricas pagas.
+
+## C28 — ranking histórico real e CTA antes da hidratação (10/11/2026)
+
+| ID | Severidade | Falha observada | Correção | Evidência |
+| --- | --- | --- | --- | --- |
+| **N112–N113** | Comercial/confiança | Lista fixa `BEST_SELLERS` divergente das unidades `vendas.json`; contadores sem data | Ordenar só SKUs ativos por vendas informadas até 03/11/2026; mesma ordem em home e loja, rótulo histórico e contexto assistivo | Ranking unitário; Chrome 3/3 |
+| **N114** | Conversão/UX | Card dependia do ícone de sacola e favorito repetia rótulo sem SKU | CTA legível Adicionar/Escolher tamanho, favorito identificado por produto | Chrome 3/3 |
+| **N115–N116** | **Alta/conversão** | Em Vite frio, clique imediato no CTA não adicionava à sacola (RED **0/3**); após hidratação funcionava (**3/3**) | Fallback SSR de link navegável à ficha; PDP bloqueia botão até React pronto | Chrome sem JavaScript **3/3** e pós-hidratação **3/3** |
+| **N117** | Integridade de sacola | Conferir se Escolher tamanho altera carrinho antes de escolha | SKU com múltiplas variantes navega à ficha sem adicionar linha | Chrome 3/3, Kit Cachos |
+
+**C28 local:** 666/666 Vitest (82 arquivos), TypeScript/ESLint de código/build exit 0, SSR 42/42 e Chrome 6/6 (3 JS desativado + 3 JS ativo), 18 screenshots; nenhuma cobrança nem integração real. `docs/VONIX_AUDITORIA_CONTINUIDADE_C28_20261110.md`. Produção **NOT_APPROVED**; verificar volumes no ERP, Appmax sandbox e os demais P0 antes de merge/publicação.

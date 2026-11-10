@@ -1,0 +1,42 @@
+{
+  "checkpoint": "C28",
+  "network": "external denied",
+  "scope": "Home ranking, catalog ranking, card CTA, in-memory cart; no payment or PII",
+  "passed": 3,
+  "failed": 0,
+  "results": [
+    {
+      "width": 320,
+      "passed": true,
+      "errors": [],
+      "hydratedCardCTA": true,
+      "homeRank": true,
+      "listRank": true,
+      "afterClick": "[{\"slug\":\"botox-vonix\",\"variant\":\"1Kg\",\"qty\":1}]",
+      "cartCTA": "Adicionar Botox Vonix sem formol à sacola",
+      "variantChoice": true
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "errors": [],
+      "hydratedCardCTA": true,
+      "homeRank": true,
+      "listRank": true,
+      "afterClick": "[{\"slug\":\"botox-vonix\",\"variant\":\"1Kg\",\"qty\":1}]",
+      "cartCTA": "Adicionar Botox Vonix sem formol à sacola",
+      "variantChoice": true
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "errors": [],
+      "hydratedCardCTA": true,
+      "homeRank": true,
+      "listRank": true,
+      "afterClick": "[{\"slug\":\"botox-vonix\",\"variant\":\"1Kg\",\"qty\":1}]",
+      "cartCTA": "Adicionar Botox Vonix sem formol à sacola",
+      "variantChoice": true
+    }
+  ]
+}
