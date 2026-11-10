@@ -21,27 +21,29 @@ export function AffiliatePopup() {
   useEffect(() => {
     captureRef(window.location.search);
     const ref = getRef();
-    if (!ref || info) return;
+    if (!ref) return;
     try {
       if (localStorage.getItem(seenKey(ref)) === "1") return;
     } catch {
       /* sem armazenamento: mostra mesmo assim */
     }
     let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     lookupCoupon({ data: { code: `${ref.toUpperCase()}10` } })
       .then((r) => {
         if (alive && !r.ok) console.warn("[afiliada]", (r as { why?: string }).why);
         if (!alive || !r.ok) return;
         const name = /\(cupom da (.+)\)$/.exec(r.label)?.[1] ?? "";
         setInfo({ code: r.code, percent: r.percent, name });
-        setTimeout(() => alive && setOpen(true), 800);
+        timer = setTimeout(() => alive && setOpen(true), 800);
         track("affiliate_popup", { coupon: r.code });
       })
       .catch(() => undefined);
     return () => {
       alive = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [info]);
+  }, []);
 
   const close = () => {
     setOpen(false);
