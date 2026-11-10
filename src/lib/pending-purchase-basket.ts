@@ -1,8 +1,6 @@
 /**
- * A session-only, non-PII record of the exact basket submitted for an order.
- * This never authorizes payment or proves that an order was paid: Appmax's
- * authenticated status remains the source of truth. It only prevents a
- * delayed payment confirmation from deleting a newer, unrelated cart.
+ * Non-personal product identity recorded only in this browser tab. Payment
+ * approval still comes solely from Appmax's authenticated order status.
  */
 export type PurchaseBasketLine = {
   slug: string;
@@ -13,6 +11,13 @@ export type PurchaseBasketLine = {
 
 export const PENDING_PURCHASE_BASKET_KEY = "vonix-confirmed-basket-v1";
 const TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_ORDERS = 8;
+
+type BasketSnapshot = {
+  orderId: number;
+  lines: PurchaseBasketLine[];
+  savedAt: number;
+};
 
 function validLine(value: unknown): value is PurchaseBasketLine {
   if (!value || typeof value !== "object") return false;
@@ -35,6 +40,64 @@ function validLines(value: unknown): value is PurchaseBasketLine[] {
   return Array.isArray(value) && value.length > 0 && value.length <= 100 && value.every(validLine);
 }
 
+function normalizedLines(lines: PurchaseBasketLine[]): PurchaseBasketLine[] {
+  return lines.map((line) => ({
+    slug: line.slug,
+    variant: line.variant,
+    qty: line.qty,
+    ...(line.offer ? { offer: line.offer } : {}),
+  }));
+}
+
+function parseSnapshot(value: unknown, now?: number): BasketSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as { orderId?: unknown; lines?: unknown; savedAt?: unknown };
+  if (
+    !Number.isSafeInteger(item.orderId) ||
+    (item.orderId as number) <= 0 ||
+    typeof item.savedAt !== "number" ||
+    !Number.isFinite(item.savedAt) ||
+    (now !== undefined && (item.savedAt > now || now - item.savedAt >= TTL_MS)) ||
+    !validLines(item.lines)
+  )
+    return null;
+  return {
+    orderId: item.orderId as number,
+    savedAt: item.savedAt,
+    lines: normalizedLines(item.lines),
+  };
+}
+
+/** Read both the old single-order C37 format and the bounded C39 format.
+ * A corrupt or stale entry can never authorize clearing another order.
+ */
+function readSnapshots(now?: number): BasketSnapshot[] {
+  if (typeof sessionStorage === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(PENDING_PURCHASE_BASKET_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw) as unknown;
+    const value = data as { version?: unknown; entries?: unknown } | null;
+    const source =
+      value && value.version === 2 && Array.isArray(value.entries)
+        ? value.entries.slice(0, MAX_ORDERS * 4)
+        : [data];
+    const unique = new Map<number, BasketSnapshot>();
+    for (const entry of source) {
+      const parsed = parseSnapshot(entry, now);
+      if (!parsed) continue;
+      const previous = unique.get(parsed.orderId);
+      if (!previous || previous.savedAt <= parsed.savedAt) unique.set(parsed.orderId, parsed);
+    }
+    return [...unique.values()].sort((a, b) => b.savedAt - a.savedAt).slice(0, MAX_ORDERS);
+  } catch {
+    return [];
+  }
+}
+
+/** Remember a newly created Pix/card order without overwriting older orders.
+ * Keep at most eight 24-hour snapshots in sessionStorage to bound retention.
+ */
 export function savePurchaseBasket(
   orderId: number,
   lines: PurchaseBasketLine[],
@@ -43,13 +106,13 @@ export function savePurchaseBasket(
   if (typeof sessionStorage === "undefined") return;
   if (!Number.isSafeInteger(orderId) || orderId <= 0 || !validLines(lines)) return;
   try {
-    sessionStorage.setItem(
-      PENDING_PURCHASE_BASKET_KEY,
-      JSON.stringify({ orderId, lines, savedAt: now }),
-    );
+    const previous = readSnapshots(now).filter((entry) => entry.orderId !== orderId);
+    const entries = [{ orderId, savedAt: now, lines: normalizedLines(lines) }, ...previous]
+      .sort((a, b) => b.savedAt - a.savedAt)
+      .slice(0, MAX_ORDERS);
+    sessionStorage.setItem(PENDING_PURCHASE_BASKET_KEY, JSON.stringify({ version: 2, entries }));
   } catch {
-    // Private storage failure must not stop the payment result from displaying.
-    // Without a recorded snapshot, never clear the current cart automatically.
+    // Storage may be disabled; the checkout must never clear a cart by guess.
   }
 }
 
@@ -57,41 +120,30 @@ export function restorePurchaseBasket(
   orderId: number,
   now = Date.now(),
 ): PurchaseBasketLine[] | null {
-  if (typeof sessionStorage === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(PENDING_PURCHASE_BASKET_KEY);
-    if (!raw) return null;
-    const snapshot = JSON.parse(raw) as { orderId?: unknown; savedAt?: unknown; lines?: unknown };
-    if (
-      !Number.isSafeInteger(snapshot.orderId) ||
-      snapshot.orderId !== orderId ||
-      typeof snapshot.savedAt !== "number" ||
-      !Number.isFinite(snapshot.savedAt) ||
-      snapshot.savedAt > now ||
-      now - snapshot.savedAt >= TTL_MS ||
-      !validLines(snapshot.lines)
-    )
-      return null;
-    return snapshot.lines.map((line) => ({
-      slug: line.slug,
-      variant: line.variant,
-      qty: line.qty,
-      ...(line.offer ? { offer: line.offer } : {}),
-    }));
-  } catch {
-    return null;
-  }
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) return null;
+  const found = readSnapshots(now).find((entry) => entry.orderId === orderId);
+  return found ? normalizedLines(found.lines) : null;
 }
 
+/** Clear only the confirmed order's snapshot, preserving other pending orders.
+ * No TTL filter here: even synthetic historical timestamps cannot silently
+ * erase unrelated entries. Expiration is enforced on the next save/restore.
+ */
 export function clearPurchaseBasket(orderId: number): void {
   if (typeof sessionStorage === "undefined") return;
+  if (!Number.isSafeInteger(orderId) || orderId <= 0) return;
   try {
-    const raw = sessionStorage.getItem(PENDING_PURCHASE_BASKET_KEY);
-    if (!raw) return;
-    const value = JSON.parse(raw) as { orderId?: unknown };
-    if (value.orderId === orderId) sessionStorage.removeItem(PENDING_PURCHASE_BASKET_KEY);
+    const all = readSnapshots();
+    if (!all.some((entry) => entry.orderId === orderId)) return;
+    const remaining = all.filter((entry) => entry.orderId !== orderId);
+    if (remaining.length)
+      sessionStorage.setItem(
+        PENDING_PURCHASE_BASKET_KEY,
+        JSON.stringify({ version: 2, entries: remaining }),
+      );
+    else sessionStorage.removeItem(PENDING_PURCHASE_BASKET_KEY);
   } catch {
-    // Never throw during payment completion.
+    // Payment status remains authoritative even if private storage is blocked.
   }
 }
 

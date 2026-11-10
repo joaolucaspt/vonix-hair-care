@@ -903,6 +903,32 @@ describe("checkout auditado sem chamadas reais", () => {
     },
   );
 
+  it("confirma o pedido antigo sem eliminar o snapshot de uma segunda compra ainda pendente", async () => {
+    const first = getProduct("kit-banana-e-mel")!;
+    const second = getProduct("queratina-em-gel")!;
+    savePurchaseBasket(8871, [{ slug: first.slug, variant: first.variants[0].label, qty: 1 }]);
+    savePurchaseBasket(8872, [{ slug: second.slug, variant: second.variants[0].label, qty: 1 }]);
+    savePendingCard({
+      orderId: 8871,
+      statusToken: "signed-test-older-order-8871000000",
+      total: 169.9,
+      paid: false,
+      status: "autorizado",
+    });
+    mocks.status.mockResolvedValueOnce({ ok: true, paid: true, status: "aprovado" });
+    render(<Checkout />);
+    expect(await screen.findByRole("heading", { name: "Pagamento aprovado!" })).toBeInTheDocument();
+    expect(mocks.cart.clear).toHaveBeenCalledTimes(1);
+    expect(restorePurchaseBasket(8871)).toBeNull();
+    expect(restorePurchaseBasket(8872)).toEqual([
+      { slug: second.slug, variant: second.variants[0].label, qty: 1 },
+    ]);
+    const events = vi.mocked(window.gtag!).mock.calls.filter((call) => call[1] === "purchase");
+    expect(events).toHaveLength(1);
+    expect(JSON.stringify(events[0]?.[2])).not.toContain(second.slug.toUpperCase());
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("cartão pago em sessão só é confirmado após status autenticado", async () => {
     const purchased = getProduct("kit-banana-e-mel")!;
     savePurchaseBasket(766, [

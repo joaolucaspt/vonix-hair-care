@@ -1,0 +1,50 @@
+{
+    "checkpoint":  "C39",
+    "date":  "2026-11-10",
+    "initialConcurrentVitest":  {
+                                    "passed":  750,
+                                    "failed":  1,
+                                    "failureType":  "5s timeout in affiliate-readiness-script.test.ts under concurrent full tests, build and Chrome",
+                                    "log":  "logs/full-vitest.log"
+                                },
+    "isolatedVitest":  {
+                           "passed":  751,
+                           "failed":  0,
+                           "files":  88,
+                           "log":  "logs/full-vitest-isolated.log"
+                       },
+    "focused":  {
+                    "passed":  99,
+                    "failed":  0,
+                    "files":  4,
+                    "log":  "logs/focused-green.log"
+                },
+    "redReproduction":  {
+                            "failed":  2,
+                            "scope":  "two order snapshots and legacy C37 migration",
+                            "log":  "logs/multi-order-red.log"
+                        },
+    "browser":  {
+                    "crossflow":  "3/3 PASS",
+                    "checkout":  "3/3 PASS",
+                    "pendingOrderSnapshots":  "3/3 PASS",
+                    "noscriptMarkup":  "3/3 PASS but not visual proof",
+                    "photos":  21
+                },
+    "quality":  {
+                    "tscExit":  0,
+                    "eslintFunctionalExit":  0,
+                    "historicalWarnings":  12,
+                    "buildExit":  0,
+                    "prettierExit":  0,
+                    "diffCheckExit":  0
+                },
+    "externalOperations":  {
+                               "payments":  0,
+                               "orders":  0,
+                               "productionDB":  0,
+                               "deploy":  false,
+                               "merge":  false
+                           },
+    "note":  "Log files in logs/ may be ignored by Git; this summary and receipt distinguish committed from local-only evidence."
+}
