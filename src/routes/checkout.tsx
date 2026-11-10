@@ -6,7 +6,7 @@ import { ShippingBar } from "@/components/cart-summary";
 import { useCepAddress } from "@/hooks/use-cep-address";
 import { toItem, track } from "@/lib/analytics";
 import { isValidCpf } from "@/lib/cpf";
-import { getRef } from "@/lib/affiliate-ref";
+import { clearRef, getRef } from "@/lib/affiliate-ref";
 import {
   createPayment,
   getOrderStatus,
@@ -413,6 +413,7 @@ function Checkout() {
       items: c.lines.map((l) => toItem(l.product, l.variant, l.net / l.units, l.units)),
     });
     c.clear();
+    clearRef(); // o link da afiliada vale para uma compra só: depois de paga, as próximas são vendas normais
   };
   const finishRef = useRef(finish);
   finishRef.current = finish;
