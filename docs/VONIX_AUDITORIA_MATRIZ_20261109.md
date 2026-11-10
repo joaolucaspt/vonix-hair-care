@@ -278,3 +278,5 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | N89 | Média/UX | Barra fixa da sacola no celular só mostrava CTA, sem subtotal no campo visual | Corrigido: `Produtos, sem frete` e subtotal dinâmico no mobile, sem alegar valor final/frete contratado |
 
 **Verificação C22 após PR53:** **638/638 Vitest em 75 arquivos**, TS, ESLint sem regra histórica Prettier, build Nitro, SSR 42/42, Chrome 3/3 pós-integração. Red/green: `qa-artifacts/vonix-c22/dev/` e `qa-artifacts/vonix-c22/after-pr53/`. Mapa para lojista: `docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md`. Produção **NOT_APPROVED**.
+
+**C22 pós-PR54:** `e3e3c59` incorporado sem conflitos, somente dentro da branch auditada. Gates pós-integração: **642/642 Vitest em 77 arquivos**, TypeScript, ESLint de código e build verdes, SSR 42/42, Chrome 3/3 em 320/390/1366 com 12 screenshots finais. O mapa visual permanece em `VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md`; nada homologado com pagamentos reais.

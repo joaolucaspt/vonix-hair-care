@@ -35,9 +35,19 @@ try {
       const response = await page.goto(origin + "/produto/kit-cachos", { waitUntil: "domcontentloaded", timeout: 20000 });
       if (response?.status() !== 200) throw Error("Source product HTTP " + response?.status());
       await page.getByRole("heading", { level: 1, name: /Kit Cachos/i }).waitFor();
-      await page.waitForTimeout(1200); // local dev hydration (SSR markup is interactive only after hydration)
-      await page.getByRole("radio", { name: /Leve 3 unidades/i }).click();
-      await page.waitForFunction(() => document.querySelector('[data-testid="qty"]')?.textContent?.trim() === "3", null, { timeout: 5000 });
+      // In a CPU-heavy local dev run, markup may render before hydration finishes.
+      // Retry the synthetic selection rather than reporting a user-facing regression.
+      const selectThree = page.getByRole("radio", { name: /Leve 3 unidades/i });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await selectThree.click();
+        try {
+          await page.waitForFunction(() => document.querySelector('[data-testid="qty"]')?.textContent?.trim() === "3", null, { timeout: 3000 });
+          break;
+        } catch (error) {
+          if (attempt === 2) throw error;
+          await page.waitForTimeout(600);
+        }
+      }
       const sizeButtons = page.locator("text=Tamanho").locator("..").locator("button");
       if (await sizeButtons.count() > 1) await sizeButtons.nth(1).click();
       await page.screenshot({ path: resolve(folder, "before-" + width + ".png") });

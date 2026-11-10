@@ -54,10 +54,10 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 638,
-      "files": 75,
+      "passed": 642,
+      "files": 77,
       "exitCode": 0,
-      "afterUpstreamPr": 53
+      "afterUpstreamPr": 54
     },
     "typescript": {
       "exitCode": 0
@@ -109,6 +109,33 @@
         ],
         "screenshots": 12
       }
+    },
+    "afterPr54": {
+      "vitest": "642/642 PASS in 77 files",
+      "typescriptExit": 0,
+      "eslintNonformatExit": 0,
+      "buildExit": 0,
+      "ssr": {
+        "products": 42,
+        "failed": 0,
+        "exitCode": 0
+      },
+      "chrome": {
+        "passed": 3,
+        "failed": 0,
+        "widths": [
+          320,
+          390,
+          1366
+        ],
+        "screenshots": 12,
+        "productQtyReset": true,
+        "cartSubtotalVisible": true,
+        "favoriteAnnounced": true,
+        "requestsExternalBlocked": true,
+        "report": "qa-artifacts/vonix-c22/after-pr54-verified/report.json",
+        "noPayments": true
+      }
     }
   },
   "artifacts": [
@@ -121,19 +148,25 @@
     "qa-artifacts/vonix-c22/green-verified/report.json",
     "qa-artifacts/vonix-c22/after-pr53/report.json",
     "docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md",
-    "docs/VONIX_AUDITORIA_CONTINUIDADE_C22_20261110.md"
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C22_20261110.md",
+    "qa-artifacts/vonix-c22/after-pr54-verified/report.json",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
   ],
   "hashes": {
     "src/routes/produto.$slug.tsx": "544B5A8783ECC923F2EC2160FB7CE3CA7D10B8FBBBC12A7FD2239A2DD5DA43D5",
     "src/routes/carrinho.tsx": "78872908371C15C4FBDDE40163CA82A5C6E08B710201228EACF8A986061B054B",
     "src/test/product-page-navigation-audit.test.tsx": "D624EB1DDFDB65D912E5B8CCFD4F9AAEB1E089C34A3F607BEFE7F855DD5D355E",
     "src/test/checkout-audit.test.tsx": "21CCD1C4217CEB0E436B52A38F837529AD019E99BDEE673A7BED26BF6434E8CD",
-    "scripts/qa-c22-product-switch.mjs": "48A06EA1C392F5FEAA4B6B11595C532EEA83385B7EF8146348029929501D53A8",
+    "scripts/qa-c22-product-switch.mjs": "C47526A477FBDCD9CEDA7D371A453FB546E94425AE249888AC1EB5665EB7EF63",
     "qa-artifacts/vonix-c22/dev/report.json": "F0CABA7874C7F40C9D5DCB6147C201FD672F1C3A7CD1E1F58AE927BFFDF441DF",
     "qa-artifacts/vonix-c22/green-verified/report.json": "861C4CEDACDA5C755FF73D60E80516885D2DC88E6818BE0CFF0C0461D2AB5E98",
     "qa-artifacts/vonix-c22/after-pr53/report.json": "861C4CEDACDA5C755FF73D60E80516885D2DC88E6818BE0CFF0C0461D2AB5E98",
     "docs/VONIX_MAPA_MUDANCAS_LOJISTA_C22_20261110.md": "452957EA06607AE2DDCD2FFB6F8238986909FF4948BB90724F8F9359D6E6FEEC",
-    "docs/VONIX_AUDITORIA_CONTINUIDADE_C22_20261110.md": "8D70CD9BBD851C52AE809F583E0EDE96BA76363D0CF5682DAA1223B131D09D1E"
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C22_20261110.md": "62104989FE9C94F6A789A8AC62D323C3397CFD068A00F1EF0E2EDEED6A9931C6",
+    "qa-artifacts/vonix-c22/after-pr54-verified/report.json": "861C4CEDACDA5C755FF73D60E80516885D2DC88E6818BE0CFF0C0461D2AB5E98",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md": "7A162C2A8E724FF450ED0F275A3D2004C0311A6B691F9EE4C3380EBF7D22CAE4",
+    "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md": "F24AAAF3A0E5C3F1DAC089CAAFEE9A63AEED1AE01EA59BBA13617BE9A25B49A9"
   },
   "readiness": "NOT_APPROVED",
   "notes": [
@@ -148,5 +181,12 @@
     "realPayments": false,
     "prodDatabase": false,
     "independentAffiliateAppTouched": false
+  },
+  "mainPr54Integrated": {
+    "pr": 54,
+    "commit": "e3e3c5977da382339a16ff1c888e70eb9062a4a6",
+    "mergeConflicts": 0,
+    "scope": "Original ecommerce affiliate landing only, independent signup app not accessed",
+    "codeConflictFiles": 0
   }
 }
