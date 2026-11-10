@@ -90,6 +90,9 @@ export function validCpf(value: string): boolean {
 }
 
 export function validCnpj(value: string): boolean {
+  // Accept only digits or the official display mask; discarding letters or
+  // punctuation first would allow checksum-valid but corrupted identifiers.
+  if (!/^(?:\d{14}|\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})$/.test(value)) return false;
   const d = onlyDigits(value);
   if (d.length !== 14 || /^(\d)\1{13}$/.test(d)) return false;
   for (const [count, weights] of [
@@ -140,6 +143,84 @@ export function instagramProfileUrl(value: string): string {
 }
 export function tiktokProfileUrl(value: string): string {
   return value.trim() ? "https://www.tiktok.com/@" + normaliseUsername(value) : "";
+}
+
+const BRAZILIAN_DDDS = new Set([
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "21",
+  "22",
+  "24",
+  "27",
+  "28",
+  "31",
+  "32",
+  "33",
+  "34",
+  "35",
+  "37",
+  "38",
+  "41",
+  "42",
+  "43",
+  "44",
+  "45",
+  "46",
+  "47",
+  "48",
+  "49",
+  "51",
+  "53",
+  "54",
+  "55",
+  "61",
+  "62",
+  "63",
+  "64",
+  "65",
+  "66",
+  "67",
+  "68",
+  "69",
+  "71",
+  "73",
+  "74",
+  "75",
+  "77",
+  "79",
+  "81",
+  "82",
+  "83",
+  "84",
+  "85",
+  "86",
+  "87",
+  "88",
+  "89",
+  "91",
+  "92",
+  "93",
+  "94",
+  "95",
+  "96",
+  "97",
+  "98",
+  "99",
+]);
+
+export function validBrazilianMobilePhone(value: string): boolean {
+  // A mobile number uses a Brazilian DDD, nine local digits, starting with 9.
+  // Strict outer formatting prevents arbitrary text from being hidden inside.
+  if (!/^(?:\d{11}|\(\d{2}\) \d{5}-\d{4})$/.test(value)) return false;
+  const digits = onlyDigits(value);
+  return BRAZILIAN_DDDS.has(digits.slice(0, 2)) && digits[2] === "9";
 }
 
 const RESERVED_INSTAGRAM_ROUTES = new Set([
@@ -195,7 +276,7 @@ export const affiliateWizardFieldsSchema = z
       .string()
       .trim()
       .max(20, "Informe um celular com DDD.")
-      .regex(/^(?:\d{11}|\(\d{2}\) \d{5}-\d{4})$/, "Informe um celular com DDD."),
+      .refine(validBrazilianMobilePhone, "Informe um celular válido com DDD e nove dígitos."),
     email: z.string().trim().email("Informe um e-mail válido.").max(180),
     emailConfirmation: z.string().trim().email("Confirme seu e-mail.").max(180),
     cpf: z

@@ -265,3 +265,5 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | N85 | Média | Parser das especificações e da lista de produtos de um kit poderia perder conteúdo legado `O QUE VEM NO COMBO`; upstream repetia a chave `KIT` no fallback | **Corrigido**: leitura de ambas as seções, com 3 testes direcionados para descrição nova e antiga |
 
 **Rebrand e auditoria até `004ccf4`:** 627/627 testes em 74 arquivos, SSR 42/42, Chrome 3/3 em três resoluções, sem operações reais. Novo PR52 ainda precisa conciliação separada. Produção **NOT_APPROVED**.
+
+**C21 / PR52:** integração de `430eb07` sem conflitos após `004ccf4`. Gates locais repetidos: **631/631 Vitest em 74 arquivos**, TypeScript, build e ESLint não formatação verdes, SSR 42/42 e Chrome **3/3**, com 12 screenshots em `qa-artifacts/vonix-c21/kit-pr52`. Sem gateway, produção ou aplicativo externo de inscrição.

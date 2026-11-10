@@ -45,10 +45,10 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 627,
+      "passed": 631,
       "files": 74,
       "exitCode": 0,
-      "afterMainCommit": "004ccf4"
+      "afterMainPr": 52
     },
     "typescript": {
       "exitCode": 0
@@ -136,6 +136,31 @@
         "pricesAndVariantsUnchanged": true
       },
       "releaseBlocked": true
+    },
+    "afterPr52": {
+      "vitest": "631/631 PASS in 74 files",
+      "typescriptExit": 0,
+      "eslintWithoutLegacyPrettierExit": 0,
+      "buildExit": 0,
+      "ssr": {
+        "activeProducts": 42,
+        "failures": 0,
+        "exitCode": 0
+      },
+      "chrome": {
+        "passed": 3,
+        "failed": 0,
+        "widths": [
+          320,
+          390,
+          1366
+        ],
+        "screenshots": 12,
+        "report": "qa-artifacts/vonix-c21/kit-pr52/report.json",
+        "paymentSubmitted": false,
+        "externalRequestsBlocked": true
+      },
+      "production": "NOT_APPROVED"
     }
   },
   "files": [
@@ -154,7 +179,8 @@
     "src/components/site.tsx",
     "src/data/products.json",
     "src/test/catalog-kit-rebrand.test.tsx",
-    "qa-artifacts/vonix-c21/kit-brand/report.json"
+    "qa-artifacts/vonix-c21/kit-brand/report.json",
+    "qa-artifacts/vonix-c21/kit-pr52/report.json"
   ],
   "sha256": {
     "src/lib/store.ts": "42F240FA903AE57226E633B3BFF4333908D81E80C73B5497929FCA99466F8E16",
@@ -168,7 +194,8 @@
     "src/components/site.tsx": "96A070C0C5CB8D6BDFCC4BFD593EDBAC42A2655815C5B4F5AA75E035CED75701",
     "src/data/products.json": "9A7454D1EEA8580B01BCCA2727D9C3B54496DEC3FB1B201A53EC28DA971C3FE5",
     "src/test/catalog-kit-rebrand.test.tsx": "E5225FA465783D0DD5584D2ACD37784B3B6502D96B54F796FD4F6AEA75D25C1D",
-    "qa-artifacts/vonix-c21/kit-brand/report.json": "5C8AAD6AC4CD91D61BE4425FFC701435B6DE7ECF7A7AD0753391712CB139CF23"
+    "qa-artifacts/vonix-c21/kit-brand/report.json": "5C8AAD6AC4CD91D61BE4425FFC701435B6DE7ECF7A7AD0753391712CB139CF23",
+    "qa-artifacts/vonix-c21/kit-pr52/report.json": "5C8AAD6AC4CD91D61BE4425FFC701435B6DE7ECF7A7AD0753391712CB139CF23"
   },
   "limitations": [
     "Browser verified only local development, no worker hosted",
@@ -191,5 +218,12 @@
     "legacyBookmarksSupported": true,
     "legacyProductDetailSectionsSupported": true,
     "production": "NOT_APPROVED"
+  },
+  "mainPr52Integrated": {
+    "pr": 52,
+    "commit": "430eb079e043660ef65e6f7bec0006c52af3d112",
+    "mergeConflicts": 0,
+    "independentAffiliateAppTouched": false,
+    "originalMainMergedRemotely": false
   }
 }

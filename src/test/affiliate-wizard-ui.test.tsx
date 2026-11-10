@@ -140,6 +140,39 @@ describe("Vonix five-stage browser wizard", () => {
     expect((document.getElementById("wizard-street") as HTMLInputElement).value).toBe("");
   });
 
+  it("blocks impossible mobile numbers and invalid optional CNPJ before moving beyond personal data", () => {
+    render(<AffiliateWizard preview />);
+    field("phone", "00999999999");
+    field("cnpj", "11222333000100");
+    next();
+    expect(screen.getByText("Passo 1 de 5")).toBeInTheDocument();
+    expect(screen.getByText(/Informe um celular válido com DDD/)).toBeInTheDocument();
+    expect(screen.getByText(/Informe um CNPJ válido/)).toBeInTheDocument();
+    expect(document.getElementById("wizard-phone")).toHaveAttribute("aria-invalid", "true");
+    expect(document.getElementById("wizard-cnpj")).toHaveAttribute("aria-invalid", "true");
+
+    field("phone", "31999999999");
+    field("cnpj", "11222333000181");
+    expect(screen.queryByText(/Informe um celular válido com DDD/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Informe um CNPJ válido/)).not.toBeInTheDocument();
+    expect((document.getElementById("wizard-cnpj") as HTMLInputElement).value).toBe(
+      "11.222.333/0001-81",
+    );
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+
+  it("formats optional CNPJ without storing garbage or exceeding its visual mask", () => {
+    render(<AffiliateWizard preview />);
+    const input = document.getElementById("wizard-cnpj") as HTMLInputElement;
+    field("cnpj", "11222333000181");
+    expect(input.value).toBe("11.222.333/0001-81");
+    field("cnpj", "11.222.333/0001-81garbage");
+    expect(input.value).toBe("11.222.333/0001-81");
+    field("cnpj", "");
+    expect(input.value).toBe("");
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+
   it("keeps progress and blocks any real submission during a public preview", () => {
     render(<AffiliateWizard preview />);
     field("firstName", "Marina");

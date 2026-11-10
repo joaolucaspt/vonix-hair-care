@@ -153,6 +153,43 @@ describe("Nuala-inspired Vonix five-stage form (reference field inventory)", () 
     }
   });
 
+  it("rejects malformed but checksum-valid CNPJ without silently stripping garbage", () => {
+    for (const invalid of [
+      "x11222333000181",
+      "11222333000181!",
+      "11-222-333/0001-81",
+      "11222333000181/",
+      "11.222.333/0001-81?",
+    ]) {
+      expect(validCnpj(invalid), "CNPJ must reject: " + invalid).toBe(false);
+      expect(affiliateWizardSchema.safeParse({ ...fixture, cnpj: invalid }).success).toBe(false);
+    }
+    expect(validCnpj("11222333000181")).toBe(true);
+    expect(validCnpj("11.222.333/0001-81")).toBe(true);
+    expect(affiliateWizardSchema.safeParse({ ...fixture, cnpj: "11222333000181" }).success).toBe(
+      true,
+    );
+    expect(
+      affiliateWizardSchema.safeParse({ ...fixture, cnpj: "11.222.333/0001-81" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects impossible mobile area codes and numbers while accepting valid Brazilian DDDs", () => {
+    for (const phone of [
+      "00999999999",
+      "(00) 99999-9999",
+      "20999999999",
+      "(20) 99999-9999",
+      "31912345678".replace(/^31/, "30"),
+      "31812345678",
+    ]) {
+      expect(affiliateWizardSchema.safeParse({ ...fixture, phone }).success, phone).toBe(false);
+    }
+    for (const phone of ["11999999999", "(31) 99999-9999", "99999999999"]) {
+      expect(affiliateWizardSchema.safeParse({ ...fixture, phone }).success, phone).toBe(true);
+    }
+  });
+
   it("rejects invalid Brazilian documents and implausible birthdates", () => {
     expect(validCpf(fixture.cpf)).toBe(true);
     expect(validCpf("111.111.111-11")).toBe(false);
