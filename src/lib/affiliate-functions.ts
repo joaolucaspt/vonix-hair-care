@@ -159,6 +159,8 @@ export const requestAffiliateAccessEmail = createServerFn({ method: "POST" })
       // Do not expose account existence or provider-specific failures.
       return { status: "requested" as const };
     } catch {
+      // Fixed operator-only category: never log the address, code, link or error body.
+      console.warn("[vonix-affiliate-auth-mail] request-exception http=none");
       return { status: "requested" as const };
     }
   });

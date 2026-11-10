@@ -6,6 +6,14 @@ import { env } from "./env.server";
 const emailSchema = z.string().trim().toLowerCase().email().max(180);
 export type AffiliateAuthEmailPurpose = "applicant" | "owner";
 
+/** Log only fixed failure categories and HTTP status codes. Never log OTPs,
+ * magic links, recipient addresses, provider response bodies or credentials. */
+function auditAffiliateAuthMailFailure(phase: string, status?: number) {
+  const safeStatus =
+    status && Number.isInteger(status) && status >= 100 && status <= 599 ? String(status) : "none";
+  console.warn(`[vonix-affiliate-auth-mail] ${phase} http=${safeStatus}`);
+}
+
 export function affiliateCustomAuthEmailReady(): boolean {
   const key = env("RESEND_API_KEY");
   const sender = env("AFFILIATE_FROM_EMAIL");
@@ -69,7 +77,11 @@ export async function sendAffiliateAuthEmailWithResend(
     redirect: "manual",
     signal: AbortSignal.timeout(4500),
   });
-  if (!quota.ok || (await quota.json()) !== true) return false;
+  if (!quota.ok) {
+    auditAffiliateAuthMailFailure("recipient-cooldown-rpc-http", quota.status);
+    return false;
+  }
+  if ((await quota.json()) !== true) return false;
   const redirectUrl =
     purpose === "owner"
       ? "https://vonixhair.com/acesso-equipe-afiliadas"
@@ -85,7 +97,10 @@ export async function sendAffiliateAuthEmailWithResend(
     redirect: "manual",
     signal: AbortSignal.timeout(8000),
   });
-  if (!generation.ok) return false;
+  if (!generation.ok) {
+    auditAffiliateAuthMailFailure("supabase-generate-link-http", generation.status);
+    return false;
+  }
   const raw: unknown = await generation.json();
   const parsed = z
     .object({
@@ -99,10 +114,16 @@ export async function sendAffiliateAuthEmailWithResend(
         .optional(),
     })
     .safeParse(raw);
-  if (!parsed.success) return false;
+  if (!parsed.success) {
+    auditAffiliateAuthMailFailure("supabase-generate-link-invalid-payload");
+    return false;
+  }
   const link = parsed.data.action_link ?? parsed.data.properties?.action_link;
   const otp = parsed.data.email_otp ?? parsed.data.properties?.email_otp;
-  if (!link) return false;
+  if (!link) {
+    auditAffiliateAuthMailFailure("supabase-generate-link-missing-link");
+    return false;
+  }
   const parsedLink = new URL(link);
   // Never send a generated token if any upstream response points away from
   // the dedicated Auth project, even if an unexpected response was HTTP 200.
@@ -110,10 +131,15 @@ export async function sendAffiliateAuthEmailWithResend(
     parsedLink.origin !== db.url ||
     parsedLink.pathname !== "/auth/v1/verify" ||
     parsedLink.protocol !== "https:"
-  )
+  ) {
+    auditAffiliateAuthMailFailure("supabase-generate-link-unexpected-origin");
     return false;
+  }
   const safeOtp = otp && /^\d{6,8}$/.test(otp) ? otp : null;
-  if (!safeOtp) return false;
+  if (!safeOtp) {
+    auditAffiliateAuthMailFailure("supabase-generate-link-no-numeric-otp");
+    return false;
+  }
   const subject =
     purpose === "owner"
       ? "Vonix Hair — confirme seu acesso à equipe"
@@ -150,9 +176,14 @@ export async function sendAffiliateAuthEmailWithResend(
     redirect: "manual",
     signal: AbortSignal.timeout(10000),
   });
-  if (!response.ok) return false;
+  if (!response.ok) {
+    auditAffiliateAuthMailFailure("resend-api-http", response.status);
+    return false;
+  }
   const receipt: unknown = await response.json();
-  return z.object({ id: z.string().min(1).max(128) }).safeParse(receipt).success;
+  const accepted = z.object({ id: z.string().min(1).max(128) }).safeParse(receipt).success;
+  if (!accepted) auditAffiliateAuthMailFailure("resend-api-invalid-receipt");
+  return accepted;
 }
 
 /** Per-email HMAC identifier, with no plaintext email in throttle storage. */
