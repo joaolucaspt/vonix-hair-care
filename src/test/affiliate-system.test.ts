@@ -147,6 +147,22 @@ describe("Inscrição de afiliadas", () => {
       ok: true,
     });
   });
+  it("não confunde conflitos SQL diferentes de duplicidade com cadastro recebido", async () => {
+    for (const body of [
+      { code: "23503", message: "synthetic foreign key failure" },
+      { code: "23514", message: "synthetic constraint failure" },
+      { code: "PGRST204", message: "synthetic schema conflict" },
+      { message: "conflict without SQLSTATE" },
+    ]) {
+      const mock = vi.fn().mockResolvedValue(Response.json(body, { status: 409 }));
+      vi.stubGlobal("fetch", mock);
+      await expect(
+        createAffiliateApplication(affiliateApplicationSchema.parse(valid)),
+      ).rejects.toThrow(/Falha ao salvar inscrição/);
+      expect(mock).toHaveBeenCalledOnce();
+    }
+  });
+
   it("honeypot não persiste dados de robôs", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
