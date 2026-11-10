@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toItem, track } from "@/lib/analytics";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
 import {
   CART_REVALIDATED_KEY,
@@ -142,15 +142,34 @@ function Cart() {
         {!hydrated ? (
           <div className="min-h-[40vh]" aria-busy="true" />
         ) : c.lines.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-muted-foreground">Seu carrinho está vazio.</p>
-            <Link
-              to="/loja"
-              className="mt-6 inline-block rounded-full bg-action px-6 py-3 text-action-foreground"
-            >
-              Ver produtos
-            </Link>
-          </div>
+          <section
+            aria-label="Sua sacola"
+            className="mx-auto flex max-w-2xl flex-col items-center rounded-2xl border border-border bg-card px-6 py-12 text-center shadow-sm sm:py-16"
+          >
+            <span className="mb-5 grid h-16 w-16 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+              <ShoppingBag aria-hidden="true" className="h-8 w-8" strokeWidth={1.7} />
+            </span>
+            <h2 className="font-display text-h2">Sua sacola está vazia</h2>
+            <p className="mt-3 max-w-md text-body text-muted-foreground">
+              Explore os tratamentos Vonix Hair e escolha os produtos para sua rotina. Os valores e
+              a entrega serão conferidos antes do pagamento.
+            </p>
+            <div className="mt-7 flex w-full flex-wrap justify-center gap-3">
+              <Link
+                to="/loja"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-body font-semibold text-white transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Explorar produtos
+              </Link>
+              <Link
+                to="/loja"
+                search={{ tiposProduto: "Kits" }}
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-background px-6 py-3 text-body font-semibold transition hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Explorar kits
+              </Link>
+            </div>
+          </section>
         ) : (
           <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
             <div className="min-w-0">

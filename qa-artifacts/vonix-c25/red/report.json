@@ -1,0 +1,31 @@
+{
+  "purpose": "C25 product image zoom keyboard/focus and empty cart discovery, synthetic localhost only",
+  "passed": 0,
+  "failed": 3,
+  "widths": [
+    {
+      "width": 320,
+      "passed": false,
+      "error": "TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: /Kit Banana e Mel: imagem ampliada/i }) to be visible\u001b[22m\n",
+      "blockedExternal": 1,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "passed": false,
+      "error": "TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog', { name: /Kit Banana e Mel: imagem ampliada/i }) to be visible\u001b[22m\n",
+      "blockedExternal": 1,
+      "pageErrors": []
+    },
+    {
+      "width": 1366,
+      "passed": false,
+      "initialZoomFocus": "Ampliar imagem do produto",
+      "error": "Error: Zoom opens without focus on Fechar: Ampliar imagem do produto",
+      "blockedExternal": 1,
+      "pageErrors": []
+    }
+  ],
+  "noExternal": true,
+  "noPayments": true
+}

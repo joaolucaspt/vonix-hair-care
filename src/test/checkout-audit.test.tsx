@@ -148,6 +148,21 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(container.querySelector("p button")).toBeNull();
   });
 
+  it("reapresenta o catálogo e os kits quando o carrinho está vazio, sem permitir checkout", () => {
+    mocks.cart.lines = [];
+    mocks.cart.netSubtotal = 0;
+    mocks.cart.subtotal = 0;
+    render(<Cart />);
+    expect(screen.getByRole("heading", { name: "Sua sacola está vazia" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Explorar produtos" })).toHaveAttribute(
+      "href",
+      "/loja",
+    );
+    expect(screen.getByRole("link", { name: "Explorar kits" })).toHaveAttribute("href", "/loja");
+    expect(screen.queryByRole("link", { name: "Finalizar minha compra" })).not.toBeInTheDocument();
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
   it("mostra subtotal de produtos no CTA fixo do carrinho móvel sem anunciar frete fechado", () => {
     render(<Cart />);
     const sticky = screen.getByRole("region", { name: "Resumo do carrinho no celular" });

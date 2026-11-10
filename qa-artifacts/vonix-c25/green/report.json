@@ -1,0 +1,33 @@
+{
+  "purpose": "C25 product image zoom keyboard/focus and empty cart discovery, synthetic localhost only",
+  "passed": 3,
+  "failed": 0,
+  "widths": [
+    {
+      "width": 320,
+      "passed": true,
+      "initialZoomFocus": "Fechar",
+      "cartKitLink": "/loja?tiposProduto=Kits",
+      "blockedExternal": 2,
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "initialZoomFocus": "Fechar",
+      "cartKitLink": "/loja?tiposProduto=Kits",
+      "blockedExternal": 2,
+      "pageErrors": []
+    },
+    {
+      "width": 1366,
+      "passed": true,
+      "initialZoomFocus": "Fechar",
+      "cartKitLink": "/loja?tiposProduto=Kits",
+      "blockedExternal": 2,
+      "pageErrors": []
+    }
+  ],
+  "noExternal": true,
+  "noPayments": true
+}

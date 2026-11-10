@@ -306,3 +306,13 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | **N97** | Navegação média | Produto aberto diretamente só tinha Voltar, sujeito ao histórico de site anterior | Link **Explorar loja** para /loja, omitido no checkout; Chrome 3/3 e Vitest |
 
 **Gates C24:** 656/656 Vitest em 80 arquivos; TypeScript, ESLint sem formatação, Prettier dos editados, build Nitro/Cloudflare, SSR 42/42; Chrome 3/3 (9 screenshots finais). Rede externa bloqueada, sem cobranças, sem deploy. Detalhes: `docs/VONIX_AUDITORIA_CONTINUIDADE_C24_20261110.md`. Produção: **NOT_APPROVED**.
+
+## C25 — Galeria de fotos e carrinho vazio (10/11/2026)
+
+| ID | Impacto | Falha anterior | Correção e prova |
+| --- | --- | --- | --- |
+| **N98** | UX/A11y alto | Zoom do produto no desktop abria sem focar botão Fechar, sem contenção de Tab/Shift+Tab e restauração de foco | Botão nativo de foto, diálogo com foco inicial, Tab contido, Escape, foco e rolagem restaurados, alvo >=44px; Chrome 3/3 |
+| **N99** | A11y médio | Fotos navegáveis dentro de contêiner `role=button`, miniaturas sem estado | Botão principal separado das setas, miniaturas com `aria-pressed`, nome e posição |
+| **N100** | UX médio | Carrinho vazio só tinha texto e link genérico | Card com título e caminhos Explorar produtos / Explorar kits, sem cobrar ou prometer frete |
+
+**C25:** Vitest **659/659 em 81 arquivos**, TypeScript/ESLint sem Prettier histórico/build verdes, SSR 42/42, Chrome **3/3** 320/390/1366 com 9 screenshots finais `qa-artifacts/vonix-c25/final/`; redes externas bloqueadas, pagamentos inativos. `docs/VONIX_AUDITORIA_CONTINUIDADE_C25_20261110.md`. Produção **NOT_APPROVED**.

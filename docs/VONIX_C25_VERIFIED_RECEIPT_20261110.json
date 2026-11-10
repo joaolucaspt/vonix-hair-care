@@ -1,0 +1,102 @@
+{
+    "project":  "vonix-hair-care",
+    "checkpoint":  "C25",
+    "localDate":  "2026-11-10",
+    "projectRoot":  "C:\\Users\\JL\\code\\vonix-hair-care",
+    "branch":  "fix/vonix-ecommerce-auditoria-2026-11-09",
+    "baseHead":  "916d6e005db9c23093742ea9ef49c56e2d7363f7",
+    "workloop":  {
+                     "definitionId":  "5ce83c79-8ea4-41e0-9b41-7b8da9bb1496",
+                     "runId":  "9fd78175-d697-4267-b2d3-f30692d0eb1d"
+                 },
+    "changes":  [
+                    {
+                        "id":  "N98",
+                        "result":  "Image zoom accessible button and modal focus, Escape, Tab and 44px controls"
+                    },
+                    {
+                        "id":  "N99",
+                        "result":  "Thumbnails announce current selection and avoid nested interactive controls"
+                    },
+                    {
+                        "id":  "N100",
+                        "result":  "Cart empty state with catalog and Kits discovery, no payment call"
+                    }
+                ],
+    "verification":  {
+                         "focused":  "53/53 PASS in 2 test files",
+                         "fullVitest":  "659/659 PASS in 81 files",
+                         "typescriptExit":  0,
+                         "eslintNonformatExit":  0,
+                         "prettierChangedExit":  0,
+                         "buildCloudflareModuleExit":  0,
+                         "ssr":  {
+                                     "activeProducts":  42,
+                                     "failures":  0,
+                                     "exitCode":  0
+                                 },
+                         "chrome":  {
+                                        "passed":  3,
+                                        "failed":  0,
+                                        "widths":  [
+                                                       320,
+                                                       390,
+                                                       1366
+                                                   ],
+                                        "screenshots":  9,
+                                        "report":  "qa-artifacts/vonix-c25/final/report.json",
+                                        "externalBlocked":  true,
+                                        "pageErrors":  0,
+                                        "realPayments":  false
+                                    },
+                         "red":  {
+                                     "desktopZoomFocusIssueConfirmed":  true,
+                                     "mobileScriptHydrationRace":  true,
+                                     "cartEmptyTargetedTestFailedBeforeFix":  true,
+                                     "report":  "qa-artifacts/vonix-c25/red/report.json"
+                                 },
+                         "gitDiffCheckExit":  0
+                     },
+    "files":  [
+                  "src/components/product-gallery.tsx",
+                  "src/routes/carrinho.tsx",
+                  "src/test/product-gallery-audit.test.tsx",
+                  "src/test/checkout-audit.test.tsx",
+                  "scripts/qa-c25-gallery-cart.mjs",
+                  "qa-artifacts/vonix-c25/red/report.json",
+                  "qa-artifacts/vonix-c25/final/report.json",
+                  "docs/VONIX_AUDITORIA_CONTINUIDADE_C25_20261110.md",
+                  "docs/VONIX_AUDITORIA_MATRIZ_20261109.md",
+                  "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md"
+              ],
+    "sha256":  {
+                   "src/routes/carrinho.tsx":  "99B664A335AAD6BD37651DDF944EF95E8659351748E1B6DFC515F0F7D882A011",
+                   "qa-artifacts/vonix-c25/final/report.json":  "DAC718835CC2812D1859864C11AF09F4EC6BC014253FDA6F42DC6BF092E4E4DA",
+                   "src/test/checkout-audit.test.tsx":  "DE75467C913ACAFC3A981AB18C6CF8AB631B76335684631D434A57B8AD3BC34D",
+                   "docs/VONIX_P0_STAGING_RUNBOOK_20261109.md":  "C3395926AB426014B472FD65F63AEE16D4044F8887CE7BBB21B36638AC3F9274",
+                   "scripts/qa-c25-gallery-cart.mjs":  "6DEF2DC7537B7E770772E03C770063D04517BF6A9E868FA9E041080B365D0B80",
+                   "src/test/product-gallery-audit.test.tsx":  "73374D42FE529B868655E3EE793EA7FEB3B33265D6FB3B0034B037C3D685DE65",
+                   "src/components/product-gallery.tsx":  "D586250578A65EA574C0E30B04ABBCB6D1844D138B03FEAF72D9DE00459BBE3E",
+                   "docs/VONIX_AUDITORIA_MATRIZ_20261109.md":  "89F1EDEE2F68177FAB81983A9EBA335728F245B0F1E886F678886AD2EE6D751B",
+                   "qa-artifacts/vonix-c25/red/report.json":  "F25DAA77959F6738739D04CC4F2D2A78BD4897FBCC2DEF69A341CE36235526FA",
+                   "docs/VONIX_AUDITORIA_CONTINUIDADE_C25_20261110.md":  "618E287ACBBB139A63599B77A18359B43C49C784C3617C51A75ECC9673B893C7"
+               },
+    "safety":  {
+                   "independentAffiliateSignupApplicationTouched":  false,
+                   "livePayments":  false,
+                   "liveOrders":  false,
+                   "productionDatabaseAccess":  false,
+                   "deploy":  false,
+                   "upstreamMainMerged":  false
+               },
+    "limitations":  [
+                        "Appmax sandbox payment states untested",
+                        "Supabase isolated staging RLS/restore and concurrency untested",
+                        "Bling stock/SKUs/weights untested",
+                        "Real carrier quote and fulfillment untested",
+                        "Hosted Cloudflare Worker staging untested",
+                        "LGPD postpurchase WAF and paid analytics untested",
+                        "Historical repo-wide Prettier/CRLF debt remains"
+                    ],
+    "production":  "NOT_APPROVED"
+}
