@@ -270,8 +270,8 @@ const affiliateAdminRowSchema = z.object({
   tiktok_url: z.string().max(240).nullable(),
   motivation: z.string().max(3000).nullable(),
   status: z.enum(["pendente", "aprovada", "recusada"]),
-  created_at: z.string().max(64),
-  reviewed_at: z.string().max(64).nullable(),
+  created_at: z.string().datetime({ offset: true }).max(64),
+  reviewed_at: z.string().datetime({ offset: true }).max(64).nullable(),
   questionnaire_encrypted: z.string().nullable().optional(),
   vonix_affiliate_mail_outbox: z
     .array(z.object({ status: validMailStatus, sent_at: z.string().max(64).nullable() }))
@@ -310,7 +310,11 @@ export async function listAffiliateApplications(input: {
   const result = (await rows.json()) as { total?: unknown; applications?: unknown };
   const raw: unknown = await totals.json();
   const checkedTotal = nonNegativeCount.safeParse(result?.total);
-  if (!Array.isArray(result?.applications) || !checkedTotal.success) {
+  if (
+    !Array.isArray(result?.applications) ||
+    result.applications.length > 40 ||
+    !checkedTotal.success
+  ) {
     throw new Error("Formato inválido da consulta de inscrições.");
   }
   // The RPC is privileged and may evolve independently of the browser. Zod
@@ -483,7 +487,7 @@ export async function processAffiliateEmails(limit = 5, applicationId?: string) 
       if (response.ok) {
         const data = (await response.json()) as { id?: unknown };
         // HTTP 200 without a provider receipt is ambiguous; don't mark sent.
-        if (typeof data.id === "string" && data.id.length > 0) {
+        if (typeof data.id === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(data.id)) {
           providerId = data.id;
           successful = true;
         } else {
