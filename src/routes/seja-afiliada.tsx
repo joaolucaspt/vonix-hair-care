@@ -31,6 +31,11 @@ export const Route = createFileRoute("/seja-afiliada")({
 export function AffiliateApplicationPage() {
   const [recruitment, setRecruitment] = useState<"loading" | "open" | "closed">("loading");
   const [preview, setPreview] = useState(false);
+  const [backendDiagnostics, setBackendDiagnostics] = useState({
+    storage: false,
+    ingress: false,
+    encryption: false,
+  });
   const [previewHasDraft, setPreviewHasDraft] = useState(false);
   const [confirmPreviewExit, setConfirmPreviewExit] = useState(false);
   // Keep an already-started application mounted if the operator closes
@@ -44,8 +49,14 @@ export function AffiliateApplicationPage() {
     async function refreshStatus() {
       const requestId = ++latestRequest;
       try {
-        const { open } = await getAffiliateRecruitmentStatus();
+        const { open, storageReachable, cfConnectingIpPresent, encryptionReady } =
+          await getAffiliateRecruitmentStatus();
         if (!active || requestId !== latestRequest) return;
+        setBackendDiagnostics({
+          storage: storageReachable,
+          ingress: cfConnectingIpPresent,
+          encryption: encryptionReady,
+        });
         setRecruitment(open ? "open" : "closed");
         if (open) setLiveFormStarted(true);
       } catch {
@@ -94,7 +105,13 @@ export function AffiliateApplicationPage() {
       <div className="bg-[#faf6f2] text-[#311f23]">
         <AffiliateLandingIntro recruitmentStatus={recruitment} />
 
-        <section id="inscricao" className="mx-auto max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20">
+        <section
+          id="inscricao"
+          data-storage-check={backendDiagnostics.storage ? "ok" : "unavailable"}
+          data-ingress-check={backendDiagnostics.ingress ? "ok" : "unavailable"}
+          data-encryption-check={backendDiagnostics.encryption ? "ok" : "unavailable"}
+          className="mx-auto max-w-5xl scroll-mt-24 px-5 py-14 sm:py-20"
+        >
           <div className="mb-10 text-center">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-[#9e565e]">
               {recruitment === "open" ? "Inscrições abertas" : "Programa de afiliados"}
