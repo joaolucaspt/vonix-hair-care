@@ -109,6 +109,11 @@ jobs:
           docker cp supabase/vonix-affiliate-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-qa.sql
           docker cp supabase/vonix-affiliate-governance.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance.sql
           docker cp supabase/vonix-affiliate-governance-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-governance-qa.sql
+          # A mocked Supabase Auth schema exists ONLY in the disposable container.
+          docker cp supabase/vonix-affiliate-auth-qa-scaffold.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-auth-qa-scaffold.sql
+          docker cp supabase/vonix-affiliate-portal-status.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-portal-status.sql
+          docker cp supabase/vonix-affiliate-verified-email-rls.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-verified-email-rls.sql
+          docker cp supabase/vonix-affiliate-verified-email-rls-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-verified-email-rls-qa.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-applications.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
@@ -117,4 +122,13 @@ jobs:
             -f /tmp/vonix-affiliate-governance.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-governance-qa.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-auth-qa-scaffold.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-portal-status.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-verified-email-rls.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-verified-email-rls-qa.sql
+
           node scripts/qa-affiliate-concurrency.mjs
