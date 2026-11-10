@@ -22,7 +22,7 @@ export const Route = createFileRoute("/acesso-equipe-afiliadas")({
   component: AffiliateTeamAccess,
 });
 
-type Stage = "checking" | "email" | "password" | "first-password" | "denied";
+type Stage = "checking" | "email" | "existing-password" | "password" | "first-password" | "denied";
 type Invitation = { role: "reviewer" | "owner"; password_set_at: string | null };
 
 export function AffiliateTeamAccess() {
@@ -186,6 +186,10 @@ export function AffiliateTeamAccess() {
   async function loginPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    if (password.length < 12 || password.length > 128 || !email.trim()) {
+      setError("Informe o e-mail administrativo e sua senha pessoal de pelo menos 12 caracteres.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -274,6 +278,24 @@ export function AffiliateTeamAccess() {
                     {busy ? "Verificando..." : "Enviar acesso por e-mail"}
                   </button>
                 </form>
+                <div className="mt-5 border-t border-[#f1e5e2] pt-5">
+                  <p className="text-sm text-[#806970]">
+                    Já ativou sua conta e criou uma senha pessoal? Entre diretamente, sem solicitar
+                    outro código por e-mail.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-3 min-h-11 w-full rounded-full border border-[#c6a8ad] px-5 font-semibold text-[#6a3c4b]"
+                    onClick={() => {
+                      setStage("existing-password");
+                      setError("");
+                      setNotice("");
+                      setOtp("");
+                    }}
+                  >
+                    Já tenho senha — entrar na equipe
+                  </button>
+                </div>
                 {notice && (
                   <p role="status" className="mt-5 rounded-lg bg-[#faf1eb] p-3 text-sm">
                     {notice}
@@ -303,6 +325,65 @@ export function AffiliateTeamAccess() {
                     </button>
                   </div>
                 </form>
+              </>
+            )}
+            {stage === "existing-password" && (
+              <>
+                <UserRoundCheck className="h-8 w-8 text-[#865766]" />
+                <h2 className="mt-4 font-display text-2xl">Entrar com senha pessoal</h2>
+                <p className="mt-2 text-sm text-[#806970]">
+                  Para membros que já confirmaram o convite e ativaram a senha. O servidor valida a
+                  senha e a permissão individual antes de liberar o painel.
+                </p>
+                <form onSubmit={loginPassword} className="mt-6 space-y-4">
+                  <label htmlFor="team-existing-email" className="block text-sm font-semibold">
+                    E-mail administrativo
+                  </label>
+                  <input
+                    id="team-existing-email"
+                    type="email"
+                    autoComplete="username"
+                    required
+                    maxLength={180}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
+                  />
+                  <label htmlFor="team-existing-password" className="block text-sm font-semibold">
+                    Senha pessoal
+                  </label>
+                  <input
+                    id="team-existing-password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    minLength={12}
+                    maxLength={128}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#633847] font-bold text-white disabled:opacity-60"
+                  >
+                    {busy ? "Entrando..." : "Acessar candidaturas"}
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  className="mt-5 text-sm font-semibold text-[#79515d] underline"
+                  onClick={() => {
+                    setStage("email");
+                    setPassword("");
+                    setError("");
+                    setNotice("");
+                  }}
+                >
+                  Ainda não tenho senha ou preciso recuperar acesso
+                </button>
               </>
             )}
             {stage === "first-password" && (
