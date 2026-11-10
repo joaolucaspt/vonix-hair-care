@@ -152,6 +152,35 @@ describe("Vonix affiliate private panel", () => {
     expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
   });
 
+  it("does not promise an email was sent when the notification provider is unconfigured", async () => {
+    server.reviewAffiliateApplication.mockResolvedValueOnce({
+      ok: true,
+      emailSent: false,
+      notification: "unconfigured",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "APROVAR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aprovação" }));
+    expect(await screen.findByText(/Provedor de e-mails não configurado/)).toBeInTheDocument();
+    expect(screen.queryByText(/Notificação enviada/)).not.toBeInTheDocument();
+  });
+
+  it("distinguishes provider acceptance from actual delivery", async () => {
+    server.reviewAffiliateApplication.mockResolvedValueOnce({
+      ok: true,
+      emailSent: true,
+      notification: "accepted",
+    });
+    render(<Page />);
+    expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "RECUSAR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar recusa" }));
+    expect(
+      await screen.findByText(/Notificação aceita pelo provedor; entrega não confirmada/),
+    ).toBeInTheDocument();
+  });
+
   it("requires deliberate confirmation for each irreversible decision", async () => {
     server.reviewAffiliateApplication.mockResolvedValue({ ok: true, emailSent: false });
     render(<Page />);

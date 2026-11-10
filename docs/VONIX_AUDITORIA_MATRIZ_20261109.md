@@ -228,3 +228,5 @@ A integração da `main` até `06f15b6` preserva a seleção de entrega rápida 
 | N75 | Baixa/robustez | Filtros de URL refletiam strings vazias, espaços externos e consultas sem limite no título e render | **Corrigido:** trim, descarte de vazio e limites de 120 caracteres para `q`, 80 para outros filtros |
 
 **C19:** base C18 `3e03fcf`; PR #47 da `main` original sincronizado na branch de auditoria, sem tocar aplicativo de afiliadas separado. Após PR47: 596/596 Vitest em 71 arquivos, Chrome 3/3 (320/390/1366), SSR 42/42, TypeScript/ESLint sem Prettier/build exit 0. Pagamentos, banco operacional e deploy seguem bloqueados. Ver `VONIX_AUDITORIA_CONTINUIDADE_C19_20261109.md`.
+
+**Read-back C19 / main PR48:** `03df19a` incorporada sem conflitos à branch auditada, testes globais atualizados para **602/602, 71 arquivos**. Checkout e busca não receberam alterações adicionais; gates P0 reais permanecem pendentes.

@@ -207,9 +207,20 @@ export const reviewAffiliateApplication = createServerFn({ method: "POST" })
       // Failure to send never silently rolls back an approval.
       try {
         const send = await processAffiliateEmails(1, data.id);
-        return { ok: true as const, emailSent: send.sent === 1 };
+        // Provider acceptance is not delivery, and an unconfigured sender is
+        // different from a failed or ambiguous attempt requiring reconciliation.
+        const notification = (
+          send.sent === 1
+            ? "accepted"
+            : !send.configured
+              ? "unconfigured"
+              : send.failed > 0
+                ? "review"
+                : "queued"
+        ) as "accepted" | "unconfigured" | "review" | "queued";
+        return { ok: true as const, emailSent: send.sent === 1, notification };
       } catch {
-        return { ok: true as const, emailSent: false };
+        return { ok: true as const, emailSent: false, notification: "review" as const };
       }
     } catch {
       return {

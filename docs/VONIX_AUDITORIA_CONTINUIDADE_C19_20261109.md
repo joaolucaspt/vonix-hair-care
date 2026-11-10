@@ -35,3 +35,7 @@ O validador de URL agora remove espaços externos, descarta strings vazias e lim
 **NOT_APPROVED / SEM DEPLOY**. A homologação exige Appmax sandbox (Pix/cartão, confirmação `paid_at`, rejeição e timeout ambíguo), Supabase staging (RLS, idempotência, backups/restore, concorrência), Bling por SKU e dimensões físicas, cotação real, revogação LGPD pós-pedido, WAF/limite distribuído, GA4 + Meta baseados em pedidos efetivamente pagos e smoke no Worker Cloudflare. O `npm run lint` estrito histórico também conserva débito de Prettier/CRLF. Não se pode atribuir aumento de vendas somente a testes sintéticos.
 
 **Política de Git:** sem `reset`, `clean`, `restore`, `checkout`, `stash` ou substituição da branch `main`. A PR #26 só é considerada integrável segundo leitura efetiva do GitHub do commit final; alterações concorrentes na `main` podem exigir nova revisão.
+
+## Atualização de sincronização: PR #48
+
+A `main` do e-commerce avançou mais uma vez para **`03df19a` (PR #48)**, com alterações de resiliência das funcionalidades de afiliadas já existentes no mesmo repositório. Foi incorporada **sem conflitos** e sem alterar os arquivos funcionais de checkout/catálogo deste ciclo. Os testes globais foram repetidos após essa incorporação: **602/602 PASS em 71 arquivos**, TypeScript exit 0, ESLint não formatação exit 0, build Cloudflare exit 0. A medição de 42 SKUs e as três rodadas Chrome foram executadas após PR #47; PR #48 não mudou as rotas do e-commerce usadas nesses testes. A conclusão de prontidão permanece **NOT_APPROVED**.

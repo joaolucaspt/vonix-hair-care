@@ -14,6 +14,12 @@
       "commit": "266763f07ea58d46fddc1c31553a0e8831a2cdc7",
       "pr": 47,
       "mergeConflicts": 0
+    },
+    {
+      "commit": "03df19a0507f48d9ae9384b56f8a41b77233989c",
+      "pr": 48,
+      "mergeConflicts": 0,
+      "note": "Changes confined to affiliate features in original ecommerce repository; no independent affiliate app modifications"
     }
   ],
   "findings": [
@@ -40,9 +46,10 @@
       "exitCode": 0
     },
     "full": {
-      "passed": 596,
+      "passed": 602,
       "files": 71,
-      "exitCode": 0
+      "exitCode": 0,
+      "afterMainPR": 48
     },
     "typescript": {
       "exitCode": 0

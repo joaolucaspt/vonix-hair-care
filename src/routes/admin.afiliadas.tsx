@@ -65,7 +65,7 @@ const statusStyle: Record<AffiliateStatus, string> = {
 const mailLabels: Record<AffiliateMailStatus, string> = {
   pendente: "E-mail aguardando envio",
   processando: "E-mail em processamento",
-  enviado: "E-mail enviado",
+  enviado: "E-mail aceito pelo provedor (entrega não confirmada)",
   falhou: "Falha no envio — verificar",
   incerto: "Envio incerto — conciliar antes de reenviar",
 };
@@ -402,11 +402,16 @@ export function AffiliateAdminPage() {
         if (sessionExpired(result.reason)) return;
         setError(result.reason);
       } else {
+        const mailNotice =
+          result.notification === "accepted"
+            ? " Notificação aceita pelo provedor; entrega não confirmada."
+            : result.notification === "unconfigured"
+              ? " Provedor de e-mails não configurado. A notificação aguarda configuração."
+              : result.notification === "review"
+                ? " Envio não confirmado. Confira a fila antes de tentar novamente."
+                : " Notificação registrada na fila, ainda sem confirmação de envio.";
         setNotice(
-          (decision === "aprovada" ? "Inscrição aprovada." : "Inscrição recusada.") +
-            (result.emailSent
-              ? " Notificação enviada."
-              : " Notificação registrada para envio; confira a fila de e-mails."),
+          (decision === "aprovada" ? "Inscrição aprovada." : "Inscrição recusada.") + mailNotice,
         );
       }
       await load(status, page, search);
