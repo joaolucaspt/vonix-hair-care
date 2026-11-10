@@ -102,6 +102,17 @@
     "src/routes/checkout.tsx",
     "src/routes/produto.$slug.tsx"
   ],
+  "forkPushCI": {
+    "runId": 42725603025,
+    "headSha": "a6f2f443e7fdaa94c7f704e629b5790a72d761fc",
+    "conclusion": "success",
+    "url": "https://github.com/joaolucaspt/vonix-hair-care/actions/runs/42725603025",
+    "jobs": {
+      "verify": "success",
+      "Isolated PostgreSQL checkout deduplication": "success"
+    },
+    "note": "Fork push workflow succeeded; upstream PR #26 still reports no checks and remains conflicting. SQL QA is disposable/synthetic, not Supabase staging."
+  },
   "readyForProduction": false,
   "affiliateFilesEdited": false,
   "realPayments": false,
@@ -109,7 +120,7 @@
   "mainMerged": false,
   "deployed": false,
   "blockers": [
-    "PR26 conflict with latest main, CI absent",
+    "PR26 conflicts with latest main; upstream PR checks not reported although fork push CI is green",
     "Appmax sandbox and authenticated paid_at verification",
     "Supabase isolated RLS/migrations/restore",
     "Bling and physical stock/SKU weights",
