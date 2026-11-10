@@ -292,3 +292,5 @@ A `main` `0dc0dd8` (PR #49) foi incorporada **só** na branch auditada, zero con
 | N94 | Navegação médio | Remoção de filtro por botão podia não responder antes da hidratação, sobretudo em 320 px | Usar links SSR navegáveis com URL mantendo os demais filtros; Chrome 3/3 |
 
 **Evidências C23 (antes de PR55):** 648/648 Vitest em 78 arquivos, TypeScript/ESLint sem Prettier/build verdes, SSR 42/42, Chrome **3/3** (320,390,1366), com 15 screenshots `qa-artifacts/vonix-c23/link-safe`. PR55 upstream precisa reconciliação controlada, sem mexer no app independente de inscrições. Produção **NOT_APPROVED**. Detalhes: `docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md`.
+
+**C23 / conciliação PR55:** código auditado do `site.tsx` preservado, quatro links de `/seja-afiliada` comparados com upstream e integrados, além de seção editorial da home. Six conflict markers resolvidos manualmente, mantendo controle LGPD de preferências de cookies. Validação **649/649 Vitest em 79 arquivos**, TS/build/ESLint sem Prettier/SSR 42/42, Chrome 3/3 em 320/390/1366 com navegação de afiliadas e filtros da loja. Sem merge na main original nem deploy.

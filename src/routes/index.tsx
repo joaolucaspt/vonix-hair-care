@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewCard, reviews } from "@/components/reviews";
+import { AffiliateHomeInvite } from "@/components/affiliate-home-invite";
 import { Benefits, Grid, Shell } from "@/components/site";
 import {
   BEST_SELLERS,
@@ -222,6 +223,8 @@ function Home() {
         <Title a="Todos os" b="Produtos" to={{}} />
         <Grid carousel items={others} />
       </section>
+
+      <AffiliateHomeInvite />
 
       <section className="container-site mt-20">
         <Title a="Resultados que" b="Falam por Si" to={{ q: "botox vonix" }} />

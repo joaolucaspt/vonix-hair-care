@@ -44,9 +44,10 @@
       "exitCode": 0
     },
     "fullVitest": {
-      "passed": 648,
-      "files": 78,
-      "exitCode": 0
+      "passed": 649,
+      "files": 79,
+      "exitCode": 0,
+      "afterPR55": true
     },
     "typescriptExit": 0,
     "eslintNonformatExit": 0,
@@ -68,12 +69,20 @@
         390,
         1366
       ],
-      "screenshots": 15,
+      "screenshots": 20,
       "pageErrors": 0,
       "externalBlocked": true,
       "livePayments": false,
-      "report": "qa-artifacts/vonix-c23/link-safe/report.json",
-      "red": "qa-artifacts/vonix-c23/debug-headings/report.json"
+      "report": "qa-artifacts/vonix-c23/after-pr55/report.json",
+      "checks": [
+        "category title",
+        "remove filter retains search",
+        "invalid URL filter sanitation",
+        "favorites empty/saved",
+        "affiliate editorial invite on home",
+        "affiliate desktop/mobile navigation",
+        "affiliate footer links"
+      ]
     },
     "gitDiffCheck": 0
   },
@@ -85,23 +94,31 @@
     "scripts/qa-c23-storefront-favorites.mjs",
     "qa-artifacts/vonix-c23/debug-headings/report.json",
     "qa-artifacts/vonix-c23/link-safe/report.json",
-    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md"
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md",
+    "src/components/site.tsx",
+    "src/routes/index.tsx",
+    "src/components/affiliate-home-invite.tsx",
+    "qa-artifacts/vonix-c23/after-pr55/report.json",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md"
   ],
   "sha256": {
     "src/routes/loja.tsx": "C3F9E6D793325EEFBE7E3BF6B55CF54DE7E2CF6387F5872166A0C084B014ABC6",
     "src/routes/favoritos.tsx": "C74D28C88AD04BAF5864E30699E071F74F0ABAD90E5E0667A894F9B2584B826D",
     "src/test/storefront-search-audit.test.tsx": "D547442125EDFE20AFFE75EA9D50DCED18923743B8C9E846EA3FD54433D1A9ED",
     "src/test/favorites-page-ux.test.tsx": "9239E02DCC33CB07ACA9769C720A3349401E53AB85A81D5206AABBFB4BFD2E63",
-    "scripts/qa-c23-storefront-favorites.mjs": "9C8F0151416B75853B0F96E799D522A88C5739441AF646866A3987C3B38BE8BE",
+    "scripts/qa-c23-storefront-favorites.mjs": "AEB03803489488EE8C926947774747296615B6B00B6C70B2CA82A4607B062D67",
     "qa-artifacts/vonix-c23/debug-headings/report.json": "F2014BF1244A980CB9EC20D55868A260E0434BC01D5A92901565BB08B341AB5C",
     "qa-artifacts/vonix-c23/link-safe/report.json": "8958376E397E3F12C47B0D527CA16377AA624FE791F2D702CF29C3CA659FE408",
-    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md": "949F9757702A221C86C4D1DA6B2C4E472C91021C96680CB3E358B3D24F4C233C"
+    "docs/VONIX_AUDITORIA_CONTINUIDADE_C23_20261110.md": "C15E3DC4F850D8BED69BDA20DB85444507CB69C14787B1EDFF2D119EA1EE2C9B",
+    "src/components/site.tsx": "6CB4147F2D2D231E4DDD0F3904FAC808BF58955A574980FF5129A3BCF09B81B0",
+    "src/routes/index.tsx": "963211BF39288BD04AA8A28EA4A4704E07CCF84B81FFAD4DE9A7D3B3E2133356",
+    "src/components/affiliate-home-invite.tsx": "A85F0CCAB61C769CFFE30259B55B7AF11105FE0683FD22642F3AE3C8E86892CA",
+    "qa-artifacts/vonix-c23/after-pr55/report.json": "3CFED76DDBFDFA43C510397A87445F8A4D595158368608FC1F0B6879AB82FC10",
+    "docs/VONIX_AUDITORIA_MATRIZ_20261109.md": "2C8613BC6DA7A8101B7BAA5F532F9A2A3063E58DEFEF19B2E99E784C9CA970E0"
   },
   "pendingUpstream": {
-    "pr": 55,
-    "head": "90d527d1d6f4b7f389be8d303bcf068881df424c",
-    "readOnlyConflict": "src/components/site.tsx",
-    "mergeCompleted": false
+    "note": "PR55 merged in audit branch; remote upstream advanced again during C23 and needs a fresh fetch/review before final compatibility claim",
+    "upstreamRemoteAtCheck": "15acf9667eadc485aafdb6c5b3b2138b12e2e893"
   },
   "safety": {
     "independentAffiliateSignupApplicationTouched": false,
@@ -123,5 +140,16 @@
     "WAF and distributed rate limiting",
     "paid analytics reconciliation",
     "legacy global Prettier/CRLF formatting debt"
-  ]
+  ],
+  "upstreamReconciled": {
+    "pr": 55,
+    "mergedCommit": "90d527d1d6f4b7f389be8d303bcf068881df424c",
+    "mergeConflicts": 6,
+    "conflictingFile": "src/components/site.tsx",
+    "verifiedManualResolution": true,
+    "affiliateNavigationDestinations": 4,
+    "existingPrivacyCookiePreferencesRetained": true,
+    "independentSignupAppTouched": false,
+    "originalMainDeployed": false
+  }
 }

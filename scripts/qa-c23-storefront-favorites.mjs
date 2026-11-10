@@ -72,6 +72,30 @@ try {
       check.savedFavoritesCount = true;
       await page.screenshot({ path: resolve(folder, "favorites-saved-" + width + ".png") });
 
+      await page.goto(origin + "/", { waitUntil: "domcontentloaded" });
+      const affiliateInvite = page.getByTestId("vonix-affiliate-home-invite");
+      await affiliateInvite.waitFor({ timeout: 10000 });
+      await affiliateInvite.getByRole("link", { name: /Conhecer o programa de afiliadas/ }).waitFor();
+      await affiliateInvite.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: resolve(folder, "affiliate-home-" + width + ".png") });
+      const affiliateFooter = page.locator("footer").getByRole("link", { name: "Programa de afiliadas" });
+      await affiliateFooter.waitFor();
+      if (!(await affiliateFooter.getAttribute("href"))?.endsWith("/seja-afiliada"))
+        throw Error("Footer affiliate destination lost after merge");
+      if (width >= 1024) {
+        const affiliateDesktop = page.getByRole("navigation", { name: "Categorias" })
+          .getByRole("link", { name: "Seja afiliada" });
+        await affiliateDesktop.waitFor({ state: "visible" });
+      } else {
+        await page.waitForTimeout(1200);
+        await page.getByRole("button", { name: "Abrir menu" }).click();
+        const affiliateMobile = page.locator('aside[aria-label="Menu rápido"]')
+          .getByRole("link", { name: "Seja afiliada" });
+        await affiliateMobile.waitFor({ state: "visible", timeout: 10000 });
+        await page.screenshot({ path: resolve(folder, "affiliate-menu-" + width + ".png") });
+      }
+      check.affiliateNavigationPreserved = true;
+
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
       if (overflow || errors.length) throw Error("Overflow or JS errors: " + JSON.stringify({ overflow, errors }));
       check.passed = true;
