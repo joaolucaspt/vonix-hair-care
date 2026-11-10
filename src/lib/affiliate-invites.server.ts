@@ -25,7 +25,7 @@ export async function invitePersistedAffiliateApplicant(email: string): Promise<
         method: "POST",
         headers: db.headers,
         body: JSON.stringify({ email: validated.data.toLowerCase() }),
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(9000),
       },
     );

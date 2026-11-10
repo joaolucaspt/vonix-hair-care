@@ -52,7 +52,7 @@ export async function loginAffiliateTeamWithPassword(email: string, password: st
         "Cache-Control": "no-store",
       },
       body: JSON.stringify(parsed.data),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) throw new Error("Password grant rejected.");
@@ -72,7 +72,7 @@ export async function loginAffiliateTeamWithPassword(email: string, password: st
           Authorization: "Bearer " + auth.access_token,
           "Cache-Control": "no-store",
         },
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(8000),
       },
     );

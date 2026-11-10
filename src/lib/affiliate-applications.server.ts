@@ -81,7 +81,7 @@ async function requestSupabase(route: string, init?: RequestInit) {
     ...init,
     headers: { ...config.headers, ...init?.headers },
     // Do not follow unexpected redirects with privileged credentials.
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(8000),
   });
   return response;

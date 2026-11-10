@@ -49,7 +49,7 @@ async function affiliateRateRequest(
     const response = await fetch(config.url + "/rest/v1/rpc/vonix_affiliate_" + rpc, {
       method: "POST",
       headers: config.headers,
-      redirect: "error",
+      redirect: "manual",
       body: JSON.stringify({ p_scope: scope, p_fingerprint: digest }),
       signal: AbortSignal.timeout(4500),
     });
