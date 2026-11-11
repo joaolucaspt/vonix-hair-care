@@ -26,3 +26,15 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Checkout lido no código: 10 campos obrigatórios com preenchimento automático ligado. Nenhuma mudança hoje (sem evidência clara; pagamento é trava).
 - Mudança do dia: nenhuma no site e nenhuma nos anúncios.
 - Próxima ação: gravações do Clarity de quem chegou ao checkout (onde para); testar compra Pix no celular; ver se a queda do connect rate vem do navegador interno do Instagram.
+
+## Ordens extras do Lucas (uma por dia, na ordem; marcar aqui quando feita)
+- [ ] 1. Anúncio no destino certo: nenhum anúncio de venda deve levar a /seja-afiliada ou plex-vonix; direto ao produto (botox ou fio de luz).
+- [ ] 2. Velocidade no celular (meta: abrir em menos de 2,5 s no 4G). Sem mexer nos scripts do Meta e do Google.
+- [ ] 3. Prova social real perto do botão de comprar (nota média e quantidade). Parte já feita em 10/11 (PR 88 e 89).
+- [ ] 4. Frete antes do checkout (campo de CEP no produto) e barra "falta R$ X" (já existe no carrinho). Preço e regra de frete só com aprovação.
+- [ ] 5. Recuperação de carrinho na Appmax: ver se existe; se não, descrever como ativar.
+- [ ] 6. Teste de compra semanal sem pagar (botão, carrinho, checkout, evento Purchase).
+- [ ] 7. Ordem das seções da página de produto; manter a barra fixa de compra.
+- [ ] 8. Botão de WhatsApp de dúvidas com mensagem pronta.
+- [ ] 9. Criativos novos: pausar anúncio com 3+ dias de gasto e sem carrinho; propor 2 por semana.
+- [ ] 10. Regra de parar e pensar: com menos de 100 visitas pagas após uma mudança, não trocar outra coisa grande.
