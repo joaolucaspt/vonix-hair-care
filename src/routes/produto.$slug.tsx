@@ -7,6 +7,7 @@ import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews, ReviewStrip, reviewsFor } from "@/components/reviews";
 import { ProvasEmVideo } from "@/components/provas-em-video";
+import { ComentariosInstagram } from "@/components/comentarios-instagram";
 import { ShareButton } from "@/components/share-button";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
@@ -335,6 +336,7 @@ function ProductPage() {
               <p className="mb-2 text-small font-semibold">Veja em vídeo: afiliadas e embaixadoras Vonix</p>
               <ProvasEmVideo slug={p.slug} seed={p.slug} />
             </div>
+            <ComentariosInstagram slug={p.slug} max={4} />
             {
               <div className="mt-6">
                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
