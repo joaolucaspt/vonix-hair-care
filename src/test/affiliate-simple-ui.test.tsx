@@ -40,6 +40,8 @@ describe("Vonix short single-page application form", () => {
   it("shows ONLY requested questions plus legal data protection consent", () => {
     render(<AffiliateSimpleForm />);
     expect(screen.getByText("Endereço completo")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Telefone com DDD/)).toHaveAttribute("type", "tel");
+    expect(screen.getByLabelText(/Telefone com DDD/)).toBeRequired();
     expect(screen.getByLabelText(/CEP/)).toBeRequired();
     expect(screen.getByLabelText(/Número/)).toBeRequired();
     for (const removed of [
