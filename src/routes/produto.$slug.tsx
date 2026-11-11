@@ -6,6 +6,7 @@ import { BuyDrawer } from "@/components/buy-drawer";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews, ReviewStrip, reviewsFor } from "@/components/reviews";
+import { ProvasEmVideo } from "@/components/provas-em-video";
 import { ShareButton } from "@/components/share-button";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
@@ -330,6 +331,10 @@ function ProductPage() {
             </div>
             {p.short && <p className="mt-3 text-muted-foreground">{p.short}</p>}
             <ReviewStrip slug={p.slug} />
+            <div className="mt-4">
+              <p className="mb-2 text-small font-semibold">Veja em vídeo: afiliadas e embaixadoras Vonix</p>
+              <ProvasEmVideo slug={p.slug} />
+            </div>
             {
               <div className="mt-6">
                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">

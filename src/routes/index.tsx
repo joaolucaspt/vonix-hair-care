@@ -3,6 +3,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewCard, reviews } from "@/components/reviews";
 import { AffiliateHomeInvite } from "@/components/affiliate-home-invite";
+import { ProvasEmVideo } from "@/components/provas-em-video";
 import { Benefits, Grid, Shell } from "@/components/site";
 import { BEST_SELLERS, MAX_DISCOUNT, SITE_URL, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
 
@@ -144,6 +145,12 @@ function Home() {
       </section>
 
       <AffiliateHomeInvite />
+
+      <section className="container-site mt-20">
+        <Title a="Vídeos de quem" b="Usa Vonix" to={{ q: "botox vonix" }} />
+        <p className="-mt-4 mb-4 text-body text-muted-foreground">Afiliadas e embaixadoras da Vonix Hair usando os produtos. Toque para assistir.</p>
+        <ProvasEmVideo all />
+      </section>
 
       <section className="container-site mt-20">
         <Title a="Resultados que" b="Falam por Si" to={{ q: "botox vonix" }} />
