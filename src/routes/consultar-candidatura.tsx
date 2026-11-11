@@ -32,11 +32,13 @@ export function AffiliateTrackingCodePage() {
 
   async function copyPrivateCode() {
     if (!/^[A-Za-z0-9_-]{32}$/.test(code)) return;
+    const requestId = lookupVersion.current;
     try {
       await navigator.clipboard.writeText(code);
-      setCopied(true);
+      if (lookupVersion.current === requestId) setCopied(true);
     } catch {
-      // Copy can be blocked by browser permissions; select for manual copy.
+      // Never select another code due to an obsolete clipboard rejection.
+      if (lookupVersion.current !== requestId) return;
       setCopied(false);
       const field = document.getElementById("affiliate-private-code") as HTMLInputElement | null;
       field?.focus();
