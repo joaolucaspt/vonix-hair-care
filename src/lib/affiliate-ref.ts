@@ -1,4 +1,8 @@
-/** Código de indicação da afiliada (?ref=isabela). Fica salvo por 30 dias e vai junto do pedido para contar a venda dela. */
+/**
+ * Código de indicação da afiliada (?ref=isabela). Fica salvo por 30 dias (a pessoa pode demorar para comprar) e vai
+ * junto do pedido para contar a venda dela. Vale para UMA compra só: quando o pedido é pago, clearRef() apaga o código,
+ * e as compras seguintes da pessoa são vendas normais do site.
+ */
 const KEY = "vonix-ref";
 const DAYS = 30;
 
@@ -14,6 +18,12 @@ export function captureRef(search: string, now = Date.now()) {
   const ref = normalizeRef(new URLSearchParams(search).get("ref"));
   if (!ref) return;
   try { localStorage.setItem(KEY, JSON.stringify({ ref, until: now + DAYS * 86_400_000 })); } catch { /* sem armazenamento */ }
+}
+
+/** Gasta o código: chamado quando a compra feita pelo link é paga. */
+export function clearRef() {
+  if (typeof window === "undefined") return;
+  try { localStorage.removeItem(KEY); } catch { /* sem armazenamento */ }
 }
 
 export function getRef(now = Date.now()): string | null {
