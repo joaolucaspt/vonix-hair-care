@@ -18,3 +18,11 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Páginas mais vistas: botox-vonix 26, home 25, /seja-afiliada 25, /admin/afiliadas 17 (equipe), /produto/progressiva-fio-de-luz 12.
 - Mudança do dia: nenhuma no site (dados insuficientes para escolher com segurança). Feito: este diário, backup `backup-2026-11-11`, rotina diária às 7h37.
 - Próxima ação: medir de novo amanhã; achar os cliques mortos (mapa de cliques do Clarity); se a rolagem do Fio de Luz continuar baixa, subir as avaliações para antes do meio da página.
+
+## Dia 2 — Meta Ads (BM "Vonix Hair", conta 1034566721765909, últimos 30 dias até 09/11) + Clarity
+- Meta, total da conta: gasto R$ 992,77; 61.178 impressões; 861 cliques no link (CTR 1,41%); 467 visualizações da página de destino; **connect rate 54%** (46% dos cliques nunca chegam a carregar a página); 53 adições ao carrinho; 13 finalizações iniciadas; 2 compras (Black Friday CBO, R$ 281,30 por compra, ROAS 0,53).
+- Única campanha ativa: "VONIX | VENDAS | FRIO | Combo Banana e Mel | MG-SP | 31-10-2026" — gasto R$ 285,98; 6.609 impressões; CPM R$ 43,27; 103 visualizações da página (connect rate 70%); 26 carrinhos; 4 finalizações; 0 compras. Orçamento é do conjunto (compartilhado). Regra: R$ 30/dia; sem venda real, não aumentar.
+- Maior perda: do carrinho para o pagamento (26 → 4 → 0 na campanha ativa) e, antes disso, cliques que não carregam (connect rate 54% na conta). Amostra pequena: sem conclusão firme (precisa de 100+ visitas pagas após cada mudança).
+- Checkout lido no código: 10 campos obrigatórios com preenchimento automático ligado. Nenhuma mudança hoje (sem evidência clara; pagamento é trava).
+- Mudança do dia: nenhuma no site e nenhuma nos anúncios.
+- Próxima ação: gravações do Clarity de quem chegou ao checkout (onde para); testar compra Pix no celular; ver se a queda do connect rate vem do navegador interno do Instagram.
