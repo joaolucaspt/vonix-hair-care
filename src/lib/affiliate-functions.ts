@@ -7,6 +7,7 @@ import { VONIX_AFFILIATE_AUTH_URL, VONIX_AFFILIATE_PUBLIC_KEY } from "./vonix-af
 import { affiliateQuestionnaireEncryptionReady } from "./affiliate-wizard-crypto.server";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
 import { affiliateSimpleSchema } from "./affiliate-simple";
+import { affiliateRejectionReasonSchema } from "./affiliate-rejection";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
 import {
@@ -34,6 +35,7 @@ import {
   eraseAffiliateApplication,
   previewAffiliateRetention,
   createSimpleAffiliateApplication,
+  getAffiliateStatusWithCode,
   readAffiliateApplicantEmailForAccessRecovery,
   decideAffiliateApplication,
   listAffiliateApplications,
@@ -200,6 +202,33 @@ export const submitSimpleAffiliateApplication = createServerFn({ method: "POST" 
         ok: false as const,
         reason: "Não foi possível receber a inscrição agora. Tente novamente mais tarde.",
       };
+    }
+  });
+
+/** Secure, rate-limited status lookup for the new email-less applications. */
+export const getAffiliateStatusByCode = createServerFn({ method: "POST" })
+  .validator(z.object({ code: z.string().min(32).max(32) }))
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
+    if (!affiliateMutationSameOrigin()) return { ok: false as const, reason: "Acesso inválido." };
+    if (!(await consumeAffiliateRateLimit("submit")))
+      return { ok: false as const, reason: "Muitas consultas. Tente mais tarde." };
+    try {
+      const result = await getAffiliateStatusWithCode(data.code);
+      if (!result)
+        return { ok: false as const, reason: "Código não encontrado. Confira e tente novamente." };
+      return {
+        ok: true as const,
+        status: result.status,
+        rejectionReason: affiliateRejectionReasonSchema.safeParse(result.rejection_reason).success
+          ? result.rejection_reason
+          : null,
+        submittedAt: result.created_at,
+        reviewedAt: result.reviewed_at,
+      };
+    } catch {
+      return { ok: false as const, reason: "Não foi possível consultar agora. Tente novamente." };
     }
   });
 
@@ -425,10 +454,16 @@ export const getAffiliateRetentionPreview = createServerFn({ method: "POST" })
 
 export const reviewAffiliateApplication = createServerFn({ method: "POST" })
   .validator(
-    z.object({
-      id: z.string().uuid(),
-      decision: z.enum(["aprovada", "recusada"]),
-    }),
+    z
+      .object({
+        id: z.string().uuid(),
+        decision: z.enum(["aprovada", "recusada"]),
+        reason: affiliateRejectionReasonSchema.nullable(),
+      })
+      .refine(
+        ({ decision, reason }) => (decision === "recusada" ? reason !== null : reason === null),
+        "Selecione um motivo para a recusa.",
+      ),
   )
   .handler(async ({ data }) => {
     if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid()) {
@@ -441,7 +476,7 @@ export const reviewAffiliateApplication = createServerFn({ method: "POST" })
       };
     }
     try {
-      const updated = await decideAffiliateApplication(data.id, data.decision);
+      const updated = await decideAffiliateApplication(data.id, data.decision, data.reason);
       if (!updated)
         return {
           ok: false as const,

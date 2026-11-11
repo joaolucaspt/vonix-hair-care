@@ -17,6 +17,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BuscaRouteImport } from './routes/busca'
 import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as ConsultarCandidaturaRouteImport } from './routes/consultar-candidatura'
 import { Route as ContaRouteImport } from './routes/conta'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
 import { Route as LojaRouteImport } from './routes/loja'
@@ -69,6 +70,11 @@ const CarrinhoRoute = CarrinhoRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConsultarCandidaturaRoute = ConsultarCandidaturaRouteImport.update({
+  id: '/consultar-candidatura',
+  path: '/consultar-candidatura',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContaRoute = ContaRouteImport.update({
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/busca': typeof BuscaRoute
   '/carrinho': typeof CarrinhoRoute
   '/checkout': typeof CheckoutRoute
+  '/consultar-candidatura': typeof ConsultarCandidaturaRoute
   '/conta': typeof ContaRoute
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/busca': typeof BuscaRoute
   '/carrinho': typeof CarrinhoRoute
   '/checkout': typeof CheckoutRoute
+  '/consultar-candidatura': typeof ConsultarCandidaturaRoute
   '/conta': typeof ContaRoute
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/busca': typeof BuscaRoute
   '/carrinho': typeof CarrinhoRoute
   '/checkout': typeof CheckoutRoute
+  '/consultar-candidatura': typeof ConsultarCandidaturaRoute
   '/conta': typeof ContaRoute
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/busca'
     | '/carrinho'
     | '/checkout'
+    | '/consultar-candidatura'
     | '/conta'
     | '/favoritos'
     | '/loja'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/busca'
     | '/carrinho'
     | '/checkout'
+    | '/consultar-candidatura'
     | '/conta'
     | '/favoritos'
     | '/loja'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/busca'
     | '/carrinho'
     | '/checkout'
+    | '/consultar-candidatura'
     | '/conta'
     | '/favoritos'
     | '/loja'
@@ -289,6 +301,7 @@ export interface RootRouteChildren {
   BuscaRoute: typeof BuscaRoute
   CarrinhoRoute: typeof CarrinhoRoute
   CheckoutRoute: typeof CheckoutRoute
+  ConsultarCandidaturaRoute: typeof ConsultarCandidaturaRoute
   ContaRoute: typeof ContaRoute
   FavoritosRoute: typeof FavoritosRoute
   LojaRoute: typeof LojaRoute
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/consultar-candidatura': {
+      id: '/consultar-candidatura'
+      path: '/consultar-candidatura'
+      fullPath: '/consultar-candidatura'
+      preLoaderRoute: typeof ConsultarCandidaturaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/conta': {
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   BuscaRoute: BuscaRoute,
   CarrinhoRoute: CarrinhoRoute,
   CheckoutRoute: CheckoutRoute,
+  ConsultarCandidaturaRoute: ConsultarCandidaturaRoute,
   ContaRoute: ContaRoute,
   FavoritosRoute: FavoritosRoute,
   LojaRoute: LojaRoute,

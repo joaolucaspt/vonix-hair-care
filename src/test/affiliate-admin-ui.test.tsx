@@ -331,7 +331,16 @@ describe("Vonix affiliate private panel", () => {
     render(<Page />);
     expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "RECUSAR" }));
+    expect(screen.getByLabelText("Motivo da recusa")).toHaveValue("seguidores_insuficientes");
+    fireEvent.change(screen.getByLabelText("Motivo da recusa"), {
+      target: { value: "engajamento_insuficiente" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar recusa" }));
+    await waitFor(() =>
+      expect(server.reviewAffiliateApplication).toHaveBeenCalledWith({
+        data: { id: candidate.id, decision: "recusada", reason: "engajamento_insuficiente" },
+      }),
+    );
     expect(
       await screen.findByText(/Notificação aceita pelo provedor; entrega não confirmada/),
     ).toBeInTheDocument();
@@ -352,7 +361,7 @@ describe("Vonix affiliate private panel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirmar recusa" }));
     await waitFor(() =>
       expect(server.reviewAffiliateApplication).toHaveBeenCalledWith({
-        data: { id: candidate.id, decision: "recusada" },
+        data: { id: candidate.id, decision: "recusada", reason: "seguidores_insuficientes" },
       }),
     );
     expect(server.reviewAffiliateApplication).toHaveBeenCalledTimes(1);

@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { env } from "./env.server";
 import { affiliateResendApiKey } from "./affiliate-resend-config.server";
@@ -228,7 +228,11 @@ export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput
   const data = affiliateSimpleSchema.parse(raw);
   if (data.website) return { ok: true as const };
   const socials = simpleAffiliateSocialUrls(data);
+  // One-time private tracking code, never stored in plaintext or sent to Meta.
+  const trackingCode = randomBytes(24).toString("base64url");
+  const statusTokenHash = createHash("sha256").update(trackingCode).digest("hex");
   const record = {
+    status_token_hash: statusTokenHash,
     full_name: data.fullName,
     city: data.city,
     state: data.state,
@@ -252,7 +256,36 @@ export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput
   }
   if (!response.ok)
     throw new Error("Não foi possível armazenar candidatura: HTTP " + response.status);
-  return { ok: true as const };
+  return { ok: true as const, trackingCode };
+}
+
+/** Private lookup: only a 192-bit randomly issued code grants access. */
+export async function getAffiliateStatusWithCode(raw: string) {
+  const code = z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{32}$/)
+    .parse(raw);
+  const hash = createHash("sha256").update(code).digest("hex");
+  const response = await requestSupabase(
+    "vonix_affiliate_applications?select=status,rejection_reason,created_at,reviewed_at" +
+      "&status_token_hash=eq." +
+      encodeURIComponent(hash) +
+      "&limit=1",
+    { method: "GET" },
+  );
+  if (!response.ok) throw new Error("Consulta temporariamente indisponível.");
+  const parsed = z
+    .array(
+      z.object({
+        status: z.enum(["pendente", "aprovada", "recusada"]),
+        rejection_reason: z.string().max(55).nullable(),
+        created_at: z.string().max(70),
+        reviewed_at: z.string().max(70).nullable(),
+      }),
+    )
+    .max(1)
+    .parse(await response.json());
+  return parsed[0] ?? null;
 }
 
 export async function affiliateOperationalReadiness() {
@@ -386,6 +419,7 @@ const affiliateAdminRowSchema = z.object({
   tiktok_url: z.string().max(240).nullable(),
   motivation: z.string().max(3000).nullable(),
   status: z.enum(["pendente", "aprovada", "recusada"]),
+  rejection_reason: z.string().max(55).nullable().default(null),
   created_at: z.string().datetime({ offset: true }).max(64),
   reviewed_at: z.string().datetime({ offset: true }).max(64).nullable(),
   questionnaire_encrypted: z
@@ -533,12 +567,17 @@ export async function readAffiliateApplicantEmailForAccessRecovery(applicationId
   return rows[0]!.email.toLowerCase();
 }
 
-export async function decideAffiliateApplication(id: string, decision: "aprovada" | "recusada") {
+export async function decideAffiliateApplication(
+  id: string,
+  decision: "aprovada" | "recusada",
+  rejectionReason: string | null = null,
+) {
   const response = await requestSupabase("rpc/vonix_affiliate_decide", {
     method: "POST",
     body: JSON.stringify({
       p_id: z.string().uuid().parse(id),
       p_decision: z.enum(["aprovada", "recusada"]).parse(decision),
+      p_reason: rejectionReason,
     }),
   });
   if (!response.ok) throw new Error("Não foi possível registrar a decisão.");

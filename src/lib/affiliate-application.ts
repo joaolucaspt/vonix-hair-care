@@ -129,6 +129,7 @@ export interface AffiliateApplicationRecord {
     couponSuggestion: string;
   } | null;
   status: AffiliateStatus;
+  rejection_reason?: string | null;
   created_at: string;
   reviewed_at: string | null;
   vonix_affiliate_mail_outbox?: { status: AffiliateMailStatus; sent_at: string | null }[] | null;
