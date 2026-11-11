@@ -15,6 +15,25 @@ const pkg = () => ({
   weight: Number(env("MELHORENVIO_UNIT_WEIGHT_KG", "0.6")),
 });
 
+export const packageSize = pkg;
+
+/** Chamada autenticada à API do Melhor Envio (carrinho, compra, geração e busca de etiquetas). */
+export async function melhorEnvio<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${base()}${path}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${requireEnv("MELHORENVIO_TOKEN")}`,
+      "User-Agent": `Vonix Hair (${env("MELHORENVIO_CONTACT_EMAIL", "contato@vonixhaircosmeticos.com.br")})`,
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Melhor Envio ${method} ${path} ${res.status}: ${text.slice(0, 300)}`);
+  return (text ? JSON.parse(text) : {}) as T;
+}
+
 export async function calculateShipping(toCep: string, products: ShippingProduct[]): Promise<ShippingQuote[]> {
   const token = requireEnv("MELHORENVIO_TOKEN");
   const from = requireEnv("STORE_ORIGIN_CEP").replace(/\D/g, "");
