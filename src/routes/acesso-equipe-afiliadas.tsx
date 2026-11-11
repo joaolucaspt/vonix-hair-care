@@ -50,10 +50,16 @@ export function AffiliateTeamAccess() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const pendingManualHash = useRef<string | null>(null);
+  const identityVersion = useRef(0);
 
   const inspectIdentity = useCallback(async () => {
+    const requestId = ++identityVersion.current;
+    // Clear the previous owner's onboarding state while revalidating Auth.
+    setStage("checking");
+    setEmail("");
     try {
       const identity = await vonixAffiliateAuth.auth.getUser();
+      if (requestId !== identityVersion.current) return;
       const user = identity.data.user;
       if (identity.error || !user?.email || !user.email_confirmed_at) {
         setStage(unauthenticatedTeamAccessStage());
@@ -66,6 +72,7 @@ export function AffiliateTeamAccess() {
         .select("role,password_set_at")
         .eq("email", normalized)
         .maybeSingle();
+      if (requestId !== identityVersion.current) return;
       if (row.error || !row.data) {
         setStage("denied");
         return;
@@ -73,11 +80,13 @@ export function AffiliateTeamAccess() {
       const invite = row.data as Invitation;
       setStage(invite.password_set_at ? "password" : "first-password");
     } catch {
-      setStage(unauthenticatedTeamAccessStage());
+      if (requestId === identityVersion.current) setStage(unauthenticatedTeamAccessStage());
     }
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const versionRef = identityVersion;
     const recoveryReason =
       affiliateAuthInitialLinkRecoveryReason ?? affiliateLinkRecoveryReason(window.location.href);
     if (recoveryReason) {
@@ -104,10 +113,14 @@ export function AffiliateTeamAccess() {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       queueMicrotask(() => {
-        if (!pendingManualHash.current) void inspectIdentity();
+        if (active && !pendingManualHash.current) void inspectIdentity();
       });
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      ++versionRef.current;
+      subscription.unsubscribe();
+    };
   }, [inspectIdentity]);
 
   async function confirmManualInvitation() {

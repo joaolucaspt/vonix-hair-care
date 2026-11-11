@@ -163,6 +163,7 @@ export function AffiliateSimpleForm({
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [trackingCopied, setTrackingCopied] = useState(false);
+  const [trackingNavigationError, setTrackingNavigationError] = useState("");
   const attemptCode = useRef("");
   const [unconfirmedCode, setUnconfirmedCode] = useState("");
   const [unconfirmedCopied, setUnconfirmedCopied] = useState(false);
@@ -223,9 +224,18 @@ export function AffiliateSimpleForm({
     if (!/^[A-Za-z0-9_-]{32}$/.test(trackingCode)) return;
     try {
       window.sessionStorage.setItem("vonix-affiliate-once-code", trackingCode);
+      if (window.sessionStorage.getItem("vonix-affiliate-once-code") !== trackingCode)
+        throw new Error("One-time handoff is unavailable.");
     } catch {
-      // The destination still provides a manual entry form if storage is off.
+      // A confirmed receipt exists only in this UI if the browser denies storage.
+      // Never navigate away while losing the only accessible private code.
+      setTrackingNavigationError(
+        "Este navegador bloqueou a transferência automática. Copie e guarde o código antes de abrir o acompanhamento pelo link abaixo.",
+      );
+      document.getElementById("affiliate-confirmed-code")?.focus();
+      return;
     }
+    setTrackingNavigationError("");
     window.location.assign("/consultar-candidatura");
   }
   const [message, setMessage] = useState("");
@@ -460,6 +470,11 @@ export function AffiliateSimpleForm({
                 Acompanhar inscrição agora
               </button>
             </div>
+            {trackingNavigationError && (
+              <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+                {trackingNavigationError}
+              </p>
+            )}
             <p className="mt-3 text-xs leading-relaxed text-[#775d65]">
               O código também pode ser digitado mais tarde em{" "}
               <a href="/consultar-candidatura" className="font-semibold underline">

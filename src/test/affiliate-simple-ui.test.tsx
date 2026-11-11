@@ -394,3 +394,24 @@ describe("Vonix short single-page application form", () => {
     expect(screen.getByLabelText(/Estado/)).toHaveValue("MG");
   });
 });
+
+it("keeps the confirmed receipt visible when sessionStorage blocks direct status handoff", async () => {
+  const original = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+    if (key === "vonix-affiliate-once-code")
+      throw new DOMException("storage blocked", "SecurityError");
+    return original.call(this, key, value);
+  });
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const receipt = await screen.findByLabelText("Código privado de acompanhamento");
+  const code = (receipt as HTMLInputElement).value;
+  fireEvent.click(screen.getByRole("button", { name: "Acompanhar inscrição agora" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Copie e guarde o código antes de abrir o acompanhamento",
+  );
+  expect(receipt).toHaveValue(code);
+  expect(screen.getByRole("button", { name: "Copiar código" })).toBeInTheDocument();
+  expect(window.location.pathname).not.toBe("/consultar-candidatura");
+});
