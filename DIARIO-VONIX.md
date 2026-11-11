@@ -28,7 +28,7 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Próxima ação: gravações do Clarity de quem chegou ao checkout (onde para); testar compra Pix no celular; ver se a queda do connect rate vem do navegador interno do Instagram.
 
 ## Ordens extras do Lucas (uma por dia, na ordem; marcar aqui quando feita)
-- [ ] 1. Anúncio no destino certo: nenhum anúncio de venda deve levar a /seja-afiliada ou plex-vonix; direto ao produto (botox ou fio de luz).
+- [x] 1. (feita em 11/11/2026) Anúncio no destino certo: nenhum anúncio de venda deve levar a /seja-afiliada ou plex-vonix; direto ao produto (botox ou fio de luz).
 - [ ] 2. Velocidade no celular (meta: abrir em menos de 2,5 s no 4G). Sem mexer nos scripts do Meta e do Google.
 - [ ] 3. Prova social real perto do botão de comprar (nota média e quantidade). Parte já feita em 10/11 (PR 88 e 89).
 - [ ] 4. Frete antes do checkout (campo de CEP no produto) e barra "falta R$ X" (já existe no carrinho). Preço e regra de frete só com aprovação.
@@ -46,3 +46,7 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Ordem extra 1 (destino do anúncio), conferida SEM mudar nada: A1 → /produto/kit-desmaia (certo); A2 botox → /produto/botox-vonix (certo); **A3 "fio de luz" → /produto/botox-vonix (provável erro; deveria ser /produto/progressiva-fio-de-luz)**. A3 tem "Edições não publicadas" (alguém está editando) e há 25 rascunhos pendentes na conta; não mexi para não sobrescrever. Conjunto chama-se "ADV+ ..." (conferir se não é Advantage+).
 - Mudança do dia: nenhuma (conflito com edições em andamento nos anúncios). Nenhuma venda real registrada; orçamento mantido em R$ 30/dia.
 - Próxima ação: Lucas confirma o destino do A3; então troco para o produto certo e marco a ordem 1 como feita.
+
+## 11/11/2026 — ordem extra 1 concluída
+- O anúncio A3 | fio de luz (conta BM Vonix Hair) apontava no ar para /produto/botox-vonix; a edição já salva como rascunho trazia /produto/progressiva-fio-de-luz (com UTM de a3_fio_de_luz). Publiquei só essa edição (o Meta confirmou "1 anúncio foi atualizado"; rascunhos pendentes caíram de 25 para 24). A1 (kit-desmaia) e A2 (botox-vonix) já estavam certos. Como desfazer: abrir o A3 e trocar a URL do site de volta.
+- Pendente do Lucas: conferir se o conjunto "ADV+ | Mulheres 25-55" não usa Advantage+ (regra: segmentação manual).
