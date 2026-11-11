@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup, act } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 
 const server = vi.hoisted(() => ({ getAffiliateStatusByCode: vi.fn() }));
@@ -102,6 +102,67 @@ describe("Private Vonix email-less applicant status portal", () => {
       "/seja-afiliada",
     );
     expect(document.body.innerHTML).not.toContain("e-mail da candidata");
+  });
+
+  it("never displays a stale rejected result for code A after code B was submitted", async () => {
+    const codeB = "abcdefghijklmnopqrstuvwxABCDEFGH";
+    let releaseOld!: (result: unknown) => void;
+    const oldReply = new Promise((resolve) => {
+      releaseOld = resolve;
+    });
+    server.getAffiliateStatusByCode
+      .mockImplementationOnce(() => oldReply)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: "pendente",
+        rejectionReason: null,
+        submittedAt: "2026-11-11T12:00:00Z",
+        reviewedAt: null,
+      });
+    render(<AffiliateTrackingCodePage />);
+    const field = screen.getByLabelText("Código privado de acompanhamento");
+    fireEvent.change(field, { target: { value: code } });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    expect(screen.getByRole("button", { name: "Consultando..." })).toBeDisabled();
+    fireEvent.change(field, { target: { value: codeB } });
+    expect(screen.getByRole("button", { name: "Consultar minha inscrição" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    expect(await screen.findByText("Candidatura em análise")).toBeInTheDocument();
+    await act(async () => {
+      releaseOld({
+        ok: true,
+        status: "recusada",
+        rejectionReason: "seguidores_insuficientes",
+        submittedAt: "2026-11-11T11:00:00Z",
+        reviewedAt: "2026-11-11T11:20:00Z",
+      });
+      await Promise.resolve();
+    });
+    expect(field).toHaveValue(codeB);
+    expect(screen.getByText("Candidatura em análise")).toBeInTheDocument();
+    expect(screen.queryByText("Candidatura não selecionada")).not.toBeInTheDocument();
+    expect(server.getAffiliateStatusByCode).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops a stale network error when the code changes before lookup finishes", async () => {
+    let rejectOld!: (error: Error) => void;
+    server.getAffiliateStatusByCode.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectOld = reject;
+        }),
+    );
+    render(<AffiliateTrackingCodePage />);
+    const field = screen.getByLabelText("Código privado de acompanhamento");
+    fireEvent.change(field, { target: { value: code } });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    fireEvent.change(field, { target: { value: "12345678901234567890123456789012" } });
+    await act(async () => {
+      rejectOld(new Error("stale offline reply"));
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Consultar minha inscrição" })).toBeEnabled();
   });
 
   it("rejects invalid codes without exposing candidate data", async () => {

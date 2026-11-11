@@ -744,6 +744,17 @@ export function AffiliateSimpleForm({
                 </button>
                 <a
                   href="/consultar-candidatura"
+                  onClick={() => {
+                    // One-time transfer within the same browser tab. Never
+                    // expose this bearer token in a URL, referrer or log.
+                    if (/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode)) {
+                      try {
+                        window.sessionStorage.setItem("vonix-affiliate-once-code", unconfirmedCode);
+                      } catch {
+                        // Private code remains visible for manual copy.
+                      }
+                    }
+                  }}
                   className="inline-flex min-h-11 items-center rounded-full border border-[#b9969e] px-4 font-bold underline"
                 >
                   Consultar código no portal
