@@ -51,6 +51,7 @@ export function AffiliateTeamAccess() {
   const [error, setError] = useState("");
   const pendingManualHash = useRef<string | null>(null);
   const identityVersion = useRef(0);
+  const leavingIdentity = useRef(false);
 
   const inspectIdentity = useCallback(async () => {
     const requestId = ++identityVersion.current;
@@ -113,7 +114,8 @@ export function AffiliateTeamAccess() {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       queueMicrotask(() => {
-        if (active && !pendingManualHash.current) void inspectIdentity();
+        if (active && !leavingIdentity.current && !pendingManualHash.current)
+          void inspectIdentity();
       });
     });
     return () => {
@@ -122,6 +124,34 @@ export function AffiliateTeamAccess() {
       subscription.unsubscribe();
     };
   }, [inspectIdentity]);
+
+  async function leaveCurrentIdentity() {
+    if (leavingIdentity.current || busy) return;
+    leavingIdentity.current = true;
+    // Invalidate old getUser/roster replies before attempting a provider logout.
+    identityVersion.current++;
+    setBusy(true);
+    setError("");
+    setPassword("");
+    setRepeatPassword("");
+    setOtp("");
+    try {
+      const result = await vonixAffiliateAuth.auth.signOut();
+      if (result.error) throw new Error("Provider did not confirm logout.");
+      // Do not advertise a new account until Supabase actually confirms exit.
+      identityVersion.current++;
+      setStage("email");
+      setEmail("");
+      setNotice("");
+    } catch {
+      setError(
+        "Não foi possível encerrar sua sessão. A conta anterior pode continuar conectada. Tente novamente.",
+      );
+    } finally {
+      leavingIdentity.current = false;
+      setBusy(false);
+    }
+  }
 
   async function confirmManualInvitation() {
     const tokenHash = pendingManualHash.current;
@@ -300,11 +330,8 @@ export function AffiliateTeamAccess() {
                 <button
                   type="button"
                   className="mt-6 text-sm font-semibold underline"
-                  onClick={async () => {
-                    await vonixAffiliateAuth.auth.signOut();
-                    setStage("email");
-                    setEmail("");
-                  }}
+                  onClick={() => void leaveCurrentIdentity()}
+                  disabled={busy}
                 >
                   Sair e tentar outra conta
                 </button>
@@ -545,11 +572,8 @@ export function AffiliateTeamAccess() {
                 <button
                   type="button"
                   className="mt-5 text-sm font-semibold text-[#79515d] underline"
-                  onClick={async () => {
-                    await vonixAffiliateAuth.auth.signOut();
-                    setStage("email");
-                    setPassword("");
-                  }}
+                  onClick={() => void leaveCurrentIdentity()}
+                  disabled={busy}
                 >
                   Trocar e-mail ou recuperar acesso
                 </button>

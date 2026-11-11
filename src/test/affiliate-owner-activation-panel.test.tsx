@@ -86,3 +86,53 @@ describe("owner activation control, private one-time links", () => {
     expect(screen.queryByRole("button", { name: "Gerar link individual" })).not.toBeInTheDocument();
   });
 });
+
+it("shows a non-sensitive retry when the pending-owner list fails to load initially", async () => {
+  mocks.list.mockRejectedValueOnce(new TypeError("network unavailable"));
+  render(<AffiliateOwnerActivationPanel />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Não foi possível consultar os convites",
+  );
+  expect(screen.queryByText(email)).not.toBeInTheDocument();
+  expect(mocks.generate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Tentar consultar convites novamente" }));
+  expect(await screen.findByText(email)).toBeInTheDocument();
+  expect(mocks.list).toHaveBeenCalledTimes(2);
+});
+
+it("does not issue repeated clipboard writes from a double-click on a private owner link", async () => {
+  let resolveCopy!: () => void;
+  mocks.clipboard.mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      resolveCopy = resolve;
+    }),
+  );
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+  const button = await screen.findByRole("button", {
+    name: /Copiar link para compartilhar em privado/,
+  });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledTimes(1));
+  expect(button).toBeDisabled();
+  resolveCopy();
+  expect(await screen.findByText(/Link copiado/)).toBeInTheDocument();
+});
+
+it("offers retry for a temporary protected-roster backend failure without leaking recipients", async () => {
+  mocks.list.mockResolvedValueOnce({
+    ok: false,
+    owners: [],
+    reason: "temporarily-unavailable",
+  });
+  render(<AffiliateOwnerActivationPanel />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Não foi possível consultar os convites",
+  );
+  expect(screen.queryByText(email)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Tentar consultar convites novamente" }));
+  expect(await screen.findByText(email)).toBeInTheDocument();
+});
