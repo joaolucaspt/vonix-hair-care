@@ -27,28 +27,40 @@ export const registerLead = createServerFn({ method: "POST" })
       cupom: SIGNUP_COUPON,
       em: new Date().toISOString(),
     };
-    const url = env("LEAD_WEBHOOK_URL");
-    if (!url) {
+    // Destinos: o app de expedição da Vonix (tela "Contatos do site") e, se existir, LEAD_WEBHOOK_URL (planilha, Brevo, Zapier...).
+    // Basta um aceitar o contato para confirmar o cadastro.
+    const appUrl = env("AFFILIATE_APP_URL");
+    const appSecret = env("AFFILIATE_SITE_SECRET");
+    const webhook = env("LEAD_WEBHOOK_URL");
+    const destinos: { url: string; headers: Record<string, string> }[] = [];
+    if (appUrl && appSecret) {
+      destinos.push({
+        url: `${appUrl.replace(/\/+$/, "")}/api/public/contatos`,
+        headers: { "content-type": "application/json", authorization: `Bearer ${appSecret}` },
+      });
+    }
+    if (webhook) destinos.push({ url: webhook, headers: { "content-type": "application/json" } });
+    if (destinos.length === 0) {
       return {
         ok: false as const,
         saved: false,
         message: "O cadastro está indisponível no momento. Tente novamente mais tarde.",
       };
     }
-    try {
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(lead),
-        signal: AbortSignal.timeout(6000),
-      });
-      if (!r.ok) throw new Error(`webhook respondeu ${r.status}`);
-      return { ok: true as const, saved: true };
-    } catch {
-      return {
-        ok: false as const,
-        saved: false,
-        message: "Não foi possível salvar seu cadastro. Tente novamente em instantes.",
-      };
-    }
+    const resultados = await Promise.all(
+      destinos.map(async (d) => {
+        try {
+          const r = await fetch(d.url, { method: "POST", headers: d.headers, body: JSON.stringify(lead), signal: AbortSignal.timeout(6000) });
+          return r.ok;
+        } catch {
+          return false;
+        }
+      }),
+    );
+    if (resultados.some(Boolean)) return { ok: true as const, saved: true };
+    return {
+      ok: false as const,
+      saved: false,
+      message: "Não foi possível salvar seu cadastro. Tente novamente em instantes.",
+    };
   });
