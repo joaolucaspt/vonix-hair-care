@@ -28,7 +28,7 @@ export function ProvasEmVideo({ slug, all = false, seed = "", max, className = "
   const list = all || !slug ? rotate(provas, seed || "geral").slice(0, max ?? provas.length).map((p) => ({ ...p, own: false })) : provasFor(slug, max ?? 6, seed || slug);
   if (list.length === 0) return null;
   return (
-    <section aria-label="Vídeos de afiliadas e embaixadoras Vonix" className={className}>
+    <section aria-label="Vídeos de quem usa Vonix" className={className}>
       <ul className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-2">
         {list.map((p) => (
           <li key={p.id} className="w-[8rem] shrink-0 snap-start sm:w-36">
@@ -46,7 +46,7 @@ export function ProvasEmVideo({ slug, all = false, seed = "", max, className = "
                 </button>
               )}
             </div>
-            <p className="mt-1 text-[0.75rem] text-muted-foreground">{p.own ? "Afiliada usando este produto" : "Afiliada da linha Vonix"}</p>
+            <p className="mt-1 text-[0.75rem] text-muted-foreground">{p.own ? "Usando este produto" : "Usando a linha Vonix"}</p>
           </li>
         ))}
       </ul>

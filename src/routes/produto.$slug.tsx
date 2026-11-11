@@ -333,7 +333,7 @@ function ProductPage() {
             {p.short && <p className="mt-3 text-muted-foreground">{p.short}</p>}
             <ReviewStrip slug={p.slug} />
             <div className="mt-4">
-              <p className="mb-2 text-small font-semibold">Veja em vídeo: afiliadas e embaixadoras Vonix</p>
+              <p className="mb-2 text-small font-semibold">Veja em vídeo quem usa</p>
               <ProvasEmVideo slug={p.slug} seed={p.slug} />
             </div>
             <ComentariosInstagram slug={p.slug} max={4} />

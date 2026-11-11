@@ -111,7 +111,7 @@ function Cart() {
           <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
             <div className="min-w-0">
               <section aria-label="Quem já usa Vonix" className="mb-6 rounded-2xl border border-border bg-card p-3">
-                <p className="mb-2 text-small font-semibold">Quem já usa Vonix: afiliadas e embaixadoras. Toque para assistir.</p>
+                <p className="mb-2 text-small font-semibold">Quem já usa Vonix. Toque para assistir.</p>
                 <ProvasEmVideo all seed="carrinho" max={8} />
               </section>
               <ul className="divide-y divide-border">
