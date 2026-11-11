@@ -145,9 +145,9 @@ export function AffiliateApplicationPage() {
               Sua inscrição, de um jeito simples.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#765c5d] sm:text-base">
-              Só precisamos do seu nome completo, telefone, endereço com CEP e número e dos seus
-              perfil no Instagram com seus seguidores. TikTok e seguidores no TikTok são opcionais.
-              A inscrição é gratuita e não garante aprovação. Se sua candidatura não for
+              Só precisamos do seu nome completo, telefone, endereço com CEP e número, do seu perfil
+              no Instagram e da quantidade de seguidores. TikTok e seguidores no TikTok são
+              opcionais. A inscrição é gratuita e não garante aprovação. Se sua candidatura não for
               selecionada, você poderá se inscrever novamente com o mesmo Instagram. Guarde o código
               de acompanhamento.
             </p>
