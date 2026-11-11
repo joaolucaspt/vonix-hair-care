@@ -1,3 +1,4 @@
+import { webp } from "@/lib/images";
 import { Check, Lock, Minus, Plus, Trash2, Truck } from "lucide-react";
 import { toItem, track } from "@/lib/analytics";
 import { useState } from "react";
@@ -50,7 +51,7 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
           <ul className="space-y-3">
             {cart.lines.map((l) => (
               <li key={l.slug + l.variant + (l.offer ?? "")} className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 text-body">
-                <img src={l.product.images[0]} alt={l.product.name} width={56} height={56} className="h-14 w-14 rounded-lg border border-border bg-white object-contain" />
+                <img src={webp(l.product.images[0]!)} alt={l.product.name} width={56} height={56} className="h-14 w-14 rounded-lg border border-border bg-white object-contain" />
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{l.product.name}</span>
                   <span className="text-small text-muted-foreground">{l.variant}</span>
@@ -84,7 +85,7 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
                   const v = p.variants[0]!;
                   return (
                     <li key={p.slug} className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border bg-white p-2">
-                      <img src={p.images[0]} alt={p.name} width={56} height={56} loading="lazy" className="h-14 w-14 rounded-lg object-contain" />
+                      <img src={webp(p.images[0]!)} alt={p.name} width={56} height={56} loading="lazy" className="h-14 w-14 rounded-lg object-contain" />
                       <span className="min-w-0">
                         <span className="block truncate text-body font-medium">{p.name}</span>
                         <b className="text-body">{brl(v.price)}</b>

@@ -1,3 +1,4 @@
+import { webp } from "@/lib/images";
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 type GalleryCard = { id: string; title: string; lines: string[] };
@@ -30,9 +31,9 @@ function CardFace({ card, photo, small }: { card: GalleryCard; photo: string; sm
 }
 
 export function ProductGallery({ images, name, cards = [] }: { images: string[]; name: string; cards?: GalleryCard[] }) {
-  const photo = images[0]!;
+  const photo = webp(images[0]!);
   const slides: ({ kind: "img"; src: string; detail?: boolean } | { kind: "card"; card: GalleryCard })[] = [
-    ...images.map((src) => ({ kind: "img" as const, src })),
+    ...images.map((src) => ({ kind: "img" as const, src: webp(src) })),
     ...(cards.length ? [{ kind: "img" as const, src: photo, detail: true }] : []),
     ...cards.map((card) => ({ kind: "card" as const, card })),
   ];
