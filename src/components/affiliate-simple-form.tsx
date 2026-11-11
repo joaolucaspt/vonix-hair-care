@@ -298,6 +298,7 @@ export function AffiliateSimpleForm({
   ) => (
     <Field
       id={key}
+      type={key === "phone" ? "tel" : "text"}
       label={label}
       value={values[key]}
       onChange={(value) => update(key, value)}
