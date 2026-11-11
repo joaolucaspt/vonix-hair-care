@@ -89,6 +89,53 @@ export function ReviewCard({ r }: { r: Review }) {
   );
 }
 
+/**
+ * Prova social logo abaixo do título: fotos e vídeos de clientes reais (só os que já estão nas avaliações aprovadas).
+ * Produto sem avaliação com foto ou vídeo não mostra nada aqui — nunca inventamos prova.
+ */
+export function ReviewStrip({ slug }: { slug: string }) {
+  const all = reviewsFor(slug);
+  const withMedia = all.filter((r) => r.media).slice(0, 4);
+  const [playing, setPlaying] = useState<number | null>(null);
+  if (withMedia.length === 0) return null;
+  const avg = all.reduce((s, r) => s + r.rating, 0) / all.length;
+  return (
+    <section aria-label="Clientes reais usando" className="mt-4 rounded-2xl border border-border bg-card p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+        <p className="text-small font-semibold">
+          <span className="text-star">★</span> {avg.toFixed(1).replace(".", ",")} · {all.length} {all.length === 1 ? "avaliação" : "avaliações"} de clientes reais
+        </p>
+        <a href="#avaliacoes" className="text-small underline">Ver todas</a>
+      </div>
+      <ul className="-mx-1 mt-2 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+        {withMedia.map((r, i) => (
+          <li key={`${r.author}|${r.date}`} className="w-[7.5rem] shrink-0 snap-start sm:w-32">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-black">
+              {r.media?.type === "video" ? (
+                playing === i ? (
+                  <video controls autoPlay playsInline className="h-full w-full object-cover" poster={r.media.poster}>
+                    <source src={r.media.src} type="video/mp4" />
+                  </video>
+                ) : (
+                  <button type="button" onClick={() => setPlaying(i)} className="group block h-full w-full" aria-label={`Assistir o vídeo de ${r.author}`}>
+                    <img src={r.media.poster} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                    <span aria-hidden="true" className="absolute inset-0 grid place-items-center">
+                      <span className="grid h-10 w-10 place-items-center rounded-full bg-black/60 text-white">▶</span>
+                    </span>
+                  </button>
+                )
+              ) : (
+                <img src={r.media?.src} alt={`Resultado enviado por ${r.author}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+              )}
+            </div>
+            <p className="mt-1 truncate text-[0.75rem] text-muted-foreground"><b className="text-foreground">{r.author}</b></p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Seção de avaliações da página do produto: as aprovadas, o compartilhar e o formulário para qualquer visitante avaliar. */
 export function ProductReviews({ slug }: { slug: string }) {
   const product = getProduct(slug);

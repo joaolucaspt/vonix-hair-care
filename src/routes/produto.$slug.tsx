@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { BuyDrawer } from "@/components/buy-drawer";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductDetails } from "@/components/product-details";
-import { ProductReviews, reviewsFor } from "@/components/reviews";
+import { ProductReviews, ReviewStrip, reviewsFor } from "@/components/reviews";
 import { ShareButton } from "@/components/share-button";
 import { Grid, PaymentMethods, PixMark, SecuritySeal, Shell, Stars } from "@/components/site";
 import { toItem, track } from "@/lib/analytics";
@@ -329,6 +329,7 @@ function ProductPage() {
               />
             </div>
             {p.short && <p className="mt-3 text-muted-foreground">{p.short}</p>}
+            <ReviewStrip slug={p.slug} />
             {
               <div className="mt-6">
                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
