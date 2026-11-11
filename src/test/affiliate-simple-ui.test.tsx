@@ -39,6 +39,14 @@ function fill() {
 }
 
 describe("Vonix short single-page application form", () => {
+  it("confirma declaração explícita de maioridade sem coletar data de nascimento", () => {
+    render(<AffiliateSimpleForm />);
+    const confirmation = screen.getByRole("checkbox", { name: /Autorizo o uso destes dados/ });
+    expect(confirmation).toBeRequired();
+    expect(confirmation.closest("label")).toHaveTextContent("Declaro ter 18 anos ou mais");
+    expect(document.querySelector('input[name="birthDate"]')).toBeNull();
+  });
+
   it("shows ONLY requested questions plus legal data protection consent", () => {
     render(<AffiliateSimpleForm />);
     expect(screen.getByText("Endereço completo")).toBeInTheDocument();

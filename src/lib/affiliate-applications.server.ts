@@ -13,6 +13,7 @@ import {
   type AffiliateStatus,
 } from "./affiliate-application";
 import { affiliateDecisionEmail } from "./affiliate-email";
+import { affiliateRejectionReasonSchema } from "./affiliate-rejection";
 import {
   affiliateSimpleSchema,
   simpleAffiliateSocialUrls,
@@ -688,6 +689,36 @@ async function finishAffiliateMail(
   return (await response.json()) === true;
 }
 
+/**
+ * For a historical applicant with a verified e-mail, read only the persisted,
+ * standardized moderation reason. Never trust the browser, free text or a
+ * provider-supplied reason for a private decision notification.
+ */
+async function readAffiliateRejectionReasonForMail(applicationId: string) {
+  const id = z.string().uuid().parse(applicationId);
+  const response = await requestSupabase(
+    "vonix_affiliate_applications?select=id,status,rejection_reason&id=eq." +
+      encodeURIComponent(id) +
+      "&status=eq.recusada&limit=1",
+    { method: "GET" },
+  );
+  if (!response.ok) throw new Error("Rejection reason unavailable.");
+  const rows = z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        status: z.literal("recusada"),
+        rejection_reason: affiliateRejectionReasonSchema,
+      }),
+    )
+    .max(1)
+    .parse(await response.json());
+  if (rows.length !== 1 || rows[0]!.id !== id) {
+    throw new Error("Rejection reason missing or changed.");
+  }
+  return rows[0]!.rejection_reason;
+}
+
 /** Each email is one DB outbox row; Resend de-duplicates retries for 24h. */
 export async function processAffiliateEmails(limit = 5, applicationId?: string) {
   const apiKey = affiliateResendApiKey();
@@ -698,12 +729,19 @@ export async function processAffiliateEmails(limit = 5, applicationId?: string) 
   for (let i = 0; i < Math.min(Math.max(limit, 0), 10); i++) {
     const mail = await claimAffiliateMail(applicationId);
     if (!mail) break;
-    const message = affiliateDecisionEmail(mail.decision);
     let successful = false;
     let providerId: string | null = null;
     let unknown = false;
     let permanent = false;
+    let providerRequestStarted = false;
     try {
+      const rejectionReason =
+        mail.decision === "recusada"
+          ? await readAffiliateRejectionReasonForMail(mail.application_id)
+          : null;
+      const message = affiliateDecisionEmail(mail.decision, rejectionReason);
+      // From this point a network failure can mean the provider accepted mail.
+      providerRequestStarted = true;
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -734,8 +772,9 @@ export async function processAffiliateEmails(limit = 5, applicationId?: string) 
         permanent = [400, 401, 403, 404, 409, 422].includes(response.status);
       }
     } catch {
-      // A timeout may happen AFTER the provider accepted the message.
-      unknown = true;
+      // A timeout after the outbound request is ambiguous; a failed local
+      // reason lookup is not a delivery attempt and can safely be retried.
+      unknown = providerRequestStarted;
     }
     const recorded = await finishAffiliateMail(mail, successful, providerId, unknown, permanent);
     if (!recorded) throw new Error("Email claim changed before status could be persisted.");

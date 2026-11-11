@@ -1,24 +1,33 @@
 import type { AffiliateStatus } from "./affiliate-application";
+import {
+  affiliateRejectionGuidance,
+  affiliateRejectionLabel,
+  type AffiliateRejectionReason,
+} from "./affiliate-rejection";
 
-export function affiliateDecisionEmail(decision: Exclude<AffiliateStatus, "pendente">): {
-  subject: string;
-  text: string;
-} {
+/** Decision notifications are for historical, verified-email applications.
+ * New phone-only candidates follow their result using the private status code.
+ * A triage approval is not a promise of a contract, commission or products.
+ */
+export function affiliateDecisionEmail(
+  decision: Exclude<AffiliateStatus, "pendente">,
+  reason: AffiliateRejectionReason | null = null,
+): { subject: string; text: string } {
   if (decision === "aprovada") {
     return {
-      subject: "Parabéns! Você foi aprovada na Vonix Hair!",
+      subject: "Candidatura aprovada na etapa de seleção | Vonix Hair",
       text: [
         "Olá!",
         "",
-        "Temos uma ótima notícia: sua inscrição foi aprovada e você foi selecionada para fazer parte do programa de afiliados Vonix Hair!",
+        "Sua candidatura foi aprovada nesta etapa de seleção de afiliadas da Vonix Hair.",
         "",
-        "Estamos muito felizes em ter você conosco.",
+        "Nossa equipe poderá entrar em contato para conversar sobre os próximos passos e apresentar as condições de uma eventual parceria.",
         "",
-        "Para dar continuidade ao processo, você deverá seguir as orientações e regras do nosso programa, apresentadas durante a etapa de triagem.",
+        "Esta aprovação de triagem não representa contratação e não garante envio de produtos, cupom, pagamento ou comissão. Qualquer condição comercial deverá ser apresentada e aceita separadamente.",
         "",
-        "Em breve, você receberá as próximas instruções para começar a divulgar nossos produtos e ganhar comissões pelas suas vendas.",
+        "Acompanhe as orientações pelos canais oficiais da Vonix Hair.",
         "",
-        "Seja muito bem-vinda à Vonix Hair!",
+        "Equipe Vonix Hair",
       ].join("\n"),
     };
   }
@@ -27,16 +36,22 @@ export function affiliateDecisionEmail(decision: Exclude<AffiliateStatus, "pende
     text: [
       "Olá!",
       "",
-      "Agradecemos muito pelo seu interesse em fazer parte do programa de afiliados Vonix Hair.",
+      "Agradecemos seu interesse no programa de afiliadas Vonix Hair.",
+      "Sua candidatura não foi selecionada nesta etapa.",
       "",
-      "Neste momento, infelizmente, não foi possível aprovar sua inscrição.",
+      ...(reason
+        ? [
+            "Motivo da avaliação: " + affiliateRejectionLabel(reason),
+            affiliateRejectionGuidance(reason),
+            "",
+          ]
+        : []),
+      "Você poderá se candidatar novamente futuramente, inclusive com o mesmo Instagram após uma recusa.",
       "",
-      "Mas não desanime! Continue acompanhando nossas redes sociais para ficar por dentro das próximas oportunidades de participação.",
+      "Se você se cadastrou usando e-mail, pode acompanhar sua candidatura pelo portal oficial:",
+      "https://vonixhair.com/acompanhar-inscricao",
       "",
-      "Agradecemos por considerar fazer parte da nossa marca!",
-      "",
-      "Atenciosamente,",
-      "Equipe Vonix Hair.",
+      "Equipe Vonix Hair",
     ].join("\n"),
   };
 }

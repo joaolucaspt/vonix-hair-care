@@ -755,10 +755,24 @@ describe("Notificações", () => {
   it("mantém assuntos e mensagens para aprovação e recusa", () => {
     const approved = affiliateDecisionEmail("aprovada");
     const rejected = affiliateDecisionEmail("recusada");
-    expect(approved.subject).toBe("Parabéns! Você foi aprovada na Vonix Hair!");
-    expect(approved.text).toContain("ganhar comissões pelas suas vendas");
+    expect(approved.subject).toBe("Candidatura aprovada na etapa de seleção | Vonix Hair");
+    expect(approved.text).toContain("aprovada nesta etapa de seleção");
+    expect(approved.text).toContain("não representa contratação");
+    expect(approved.text).toContain("não garante envio de produtos, cupom, pagamento ou comissão");
+    expect(approved.text).not.toContain("ganhar comissões pelas suas vendas");
     expect(rejected.subject).toBe("Resultado da sua inscrição | Vonix Hair");
-    expect(rejected.text).toContain("não foi possível aprovar sua inscrição");
+    expect(rejected.text).toContain("não foi selecionada nesta etapa");
+    expect(rejected.text).toContain("poderá se candidatar novamente");
+  });
+  it("informa o motivo padronizado de recusa e permite nova candidatura sem injetar texto arbitrário", () => {
+    const rejected = affiliateDecisionEmail("recusada", "seguidores_insuficientes");
+    expect(rejected.text).toContain("Motivo da avaliação: Poucos seguidores no Instagram");
+    expect(rejected.text).toContain("quando seu perfil crescer");
+    expect(rejected.text).toContain("https://vonixhair.com/acompanhar-inscricao");
+    expect(rejected.text).toContain("com o mesmo Instagram após uma recusa");
+    for (const text of [rejected.subject, rejected.text]) {
+      expect(text).not.toMatch(/comiss(ão|ões) garantid/i);
+    }
   });
   it("não reclama notificações nem faz envios sem provedor configurado", async () => {
     const fetchMock = vi.fn();
@@ -808,6 +822,93 @@ describe("Notificações", () => {
     expect(finish.p_attempt).toBe(1);
     expect(finish.p_provider_id).toBe("resend-id-1");
   });
+  it("inclui o motivo realmente registrado na recusa, sem buscar telefone ou questionário", async () => {
+    process.env["RESEND_API_KEY"] = "test-resend-key";
+    process.env["AFFILIATE_FROM_EMAIL"] = "Vonix Hair <afiliadas@example.invalid>";
+    const claim = {
+      mail_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      application_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      recipient: "maria@example.invalid",
+      decision: "recusada",
+      attempt: 1,
+    };
+    const visited: string[] = [];
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      visited.push(url);
+      if (url.includes("rpc/vonix_affiliate_claim_mail")) return Response.json([claim]);
+      if (url.includes("vonix_affiliate_applications?select=id,status,rejection_reason")) {
+        expect(url).toContain("&status=eq.recusada&limit=1");
+        expect(url).not.toContain("questionnaire");
+        expect(url).not.toContain("email");
+        expect(url).not.toContain("phone");
+        return Response.json([
+          {
+            id: claim.application_id,
+            status: "recusada",
+            rejection_reason: "seguidores_insuficientes",
+          },
+        ]);
+      }
+      if (url === "https://api.resend.com/emails") {
+        const data = JSON.parse(String(init?.body));
+        expect(data.to).toEqual(["maria@example.invalid"]);
+        expect(data.text).toContain("Motivo da avaliação: Poucos seguidores no Instagram");
+        expect(data.text).toContain("quando seu perfil crescer");
+        expect(data.text).toContain("https://vonixhair.com/acompanhar-inscricao");
+        expect(data.text).not.toContain("questionnaire");
+        return Response.json({ id: "resend-rejection-id" });
+      }
+      if (url.includes("rpc/vonix_affiliate_finish_mail")) {
+        expect(JSON.parse(String(init?.body))).toMatchObject({
+          p_success: true,
+          p_provider_id: "resend-rejection-id",
+          p_unknown: false,
+        });
+        return Response.json(true);
+      }
+      throw new Error("Unexpected test URL");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await processAffiliateEmails(1)).toMatchObject({ sent: 1, failed: 0 });
+    expect(visited).toHaveLength(4);
+  });
+
+  it("não dispara Resend se a motivação da recusa estiver inválida ou indisponível", async () => {
+    process.env["RESEND_API_KEY"] = "test-resend-key";
+    process.env["AFFILIATE_FROM_EMAIL"] = "afiliadas@example.invalid";
+    const claim = {
+      mail_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      application_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      recipient: "maria@example.invalid",
+      decision: "recusada",
+      attempt: 1,
+    };
+    for (const rejection_reason of [null, "outro_motivo_sem_whitelist"]) {
+      const calls: string[] = [];
+      const mock = vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push(url);
+        if (url.includes("claim_mail")) return Response.json([claim]);
+        if (url.includes("applications?select=id,status,rejection_reason"))
+          return Response.json([
+            { id: claim.application_id, status: "recusada", rejection_reason },
+          ]);
+        if (url.includes("finish_mail")) {
+          expect(JSON.parse(String(init?.body))).toMatchObject({
+            p_success: false,
+            p_unknown: false,
+            p_permanent: false,
+          });
+          return Response.json(true);
+        }
+        throw new Error("Resend must not receive an unverified reason");
+      });
+      vi.stubGlobal("fetch", mock);
+      expect(await processAffiliateEmails(1)).toMatchObject({ sent: 0, failed: 1 });
+      expect(calls).toHaveLength(3);
+      expect(calls.every((url) => !url.includes("api.resend.com"))).toBe(true);
+    }
+  });
+
   it("não marca envio como realizado se o provedor retornar erro", async () => {
     process.env["RESEND_API_KEY"] = "test-resend-key";
     process.env["AFFILIATE_FROM_EMAIL"] = "Vonix Hair <afiliados@example.com>";
@@ -824,11 +925,20 @@ describe("Notificações", () => {
           },
         ]),
       )
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            status: "recusada",
+            rejection_reason: "seguidores_insuficientes",
+          },
+        ]),
+      )
       .mockResolvedValueOnce(new Response("Rate limited", { status: 429 }))
       .mockResolvedValueOnce(Response.json(true));
     vi.stubGlobal("fetch", fetchMock);
     expect(await processAffiliateEmails(1)).toEqual({ sent: 0, failed: 1, configured: true });
-    expect(JSON.parse(String(fetchMock.mock.calls[2]![1].body)).p_success).toBe(false);
+    expect(JSON.parse(String(fetchMock.mock.calls[3]![1].body)).p_success).toBe(false);
   });
 });
 

@@ -570,7 +570,8 @@ export function AffiliateSimpleForm({
               className="mt-1 h-4 w-4 accent-[#633a43]"
             />
             Autorizo o uso destes dados para análise da candidatura e eventual contato sobre o
-            programa de afiliadas, conforme a política de privacidade da Vonix Hair.
+            programa de afiliadas, conforme a política de privacidade da Vonix Hair. Declaro ter 18
+            anos ou mais.
           </label>
           <p className="mt-2 text-xs text-[#806a6e]">
             Leia nossa{" "}
