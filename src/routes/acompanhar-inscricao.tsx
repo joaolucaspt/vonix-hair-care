@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -68,14 +68,19 @@ export function AffiliateApplicationTracker() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [application, setApplication] = useState<OwnApplication | null>(null);
+  // A response from an old account must never render under a newer session.
+  const refreshVersion = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++refreshVersion.current;
     setChecking(true);
     setError("");
     setApplication(null);
+    setSignedEmail("");
     try {
       // getUser checks the Auth server; do not trust an unvalidated local token.
       const userResult = await vonixAffiliateAuth.auth.getUser();
+      if (refreshVersion.current !== requestId) return;
       const verified = userResult.data.user;
       if (userResult.error || !verified?.email || !verified.email_confirmed_at) {
         setSignedEmail("");
@@ -89,6 +94,7 @@ export function AffiliateApplicationTracker() {
         .select("application_id,status,rejection_reason,submitted_at,reviewed_at")
         .order("submitted_at", { ascending: false })
         .limit(1);
+      if (refreshVersion.current !== requestId) return;
       if (response.error) {
         setError("Não foi possível consultar sua solicitação agora. Tente novamente.");
         return;
@@ -98,23 +104,30 @@ export function AffiliateApplicationTracker() {
         setApplication(item);
       }
     } catch {
-      setError("Não foi possível estabelecer uma conexão segura para consultar sua candidatura.");
+      if (refreshVersion.current === requestId)
+        setError("Não foi possível estabelecer uma conexão segura para consultar sua candidatura.");
     } finally {
-      setChecking(false);
+      if (refreshVersion.current === requestId) setChecking(false);
     }
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const versionRef = refreshVersion;
     void refresh();
     const {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       // Defer the Auth network request outside the SDK callback's lock.
       queueMicrotask(() => {
-        void refresh();
+        if (active) void refresh();
       });
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      ++versionRef.current;
+      subscription.unsubscribe();
+    };
   }, [refresh]);
 
   async function requestLogin(event: FormEvent<HTMLFormElement>) {
@@ -177,11 +190,22 @@ export function AffiliateApplicationTracker() {
   }
 
   async function signOut() {
+    ++refreshVersion.current;
+    setChecking(true);
     setApplication(null);
     setSignedEmail("");
     setCode("");
     setNotice("");
-    await vonixAffiliateAuth.auth.signOut();
+    let signOutFailed = false;
+    try {
+      const result = await vonixAffiliateAuth.auth.signOut();
+      signOutFailed = !!result.error;
+    } catch {
+      signOutFailed = true;
+    }
+    // Recheck the Auth server rather than claiming logout before it succeeds.
+    await refresh();
+    if (signOutFailed) setError("Não foi possível encerrar sua sessão. Tente novamente.");
   }
 
   const show = application ? statusUi[application.status] : null;
