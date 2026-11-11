@@ -3,6 +3,7 @@ import { ClipboardCopy, Link2, LockKeyhole, RefreshCw, ShieldCheck } from "lucid
 import {
   createPendingAffiliateOwnerActivationLink,
   getPendingAffiliateOwnerActivations,
+  resendPendingAffiliateOwnerEmail,
 } from "@/lib/affiliate-functions";
 
 type PendingOwner = { email: string };
@@ -82,6 +83,29 @@ export function AffiliateOwnerActivationPanel() {
     }
   }
 
+  async function sendInvitationEmail(email: string) {
+    if (busy || generated) return;
+    setBusy(true);
+    setMessage("");
+    setFailure("");
+    try {
+      const response = await resendPendingAffiliateOwnerEmail({ data: { email } });
+      if (!response.ok) {
+        setFailure(response.reason);
+        return;
+      }
+      setMessage(
+        "Convite solicitado ao provedor para " +
+          email +
+          ". A aceitação não garante entrega: a pessoa precisa abrir o e-mail, confirmar e criar a própria senha. Confira entrada, spam e promoções.",
+      );
+    } catch {
+      setFailure("Não foi possível solicitar o e-mail. Verifique sua conexão.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function copy() {
     if (!generated) return;
     try {
@@ -121,11 +145,10 @@ export function AffiliateOwnerActivationPanel() {
         </button>
       </div>
       <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#806a6c]">
-        O envio de e-mail pode estar indisponível. Você pode gerar um link de autenticação
-        individual do Supabase para cada conta já convidada e compartilhá-lo em uma conversa
-        privada, como WhatsApp individual. O link é de uso único e expira. A pessoa deve criar sua
-        própria senha. Não envie em grupos, não compartilhe senhas e confirme antes quem receberá o
-        link.
+        Para cada membro que ainda não ativou a conta, reenvie o convite por e-mail corporativo. A
+        pessoa abre o link privado, confirma a ativação e cria uma senha própria. Se não receber,
+        também é possível gerar um link Supabase e compartilhá-lo em conversa individual segura. Não
+        envie links em grupos. O aceite do provedor não comprova a entrega nem a leitura.
       </p>
       <div className="mt-5 rounded-xl border border-[#ebdadc] bg-[#fcf8f7] p-4">
         <label className="flex cursor-pointer items-start gap-3 text-sm font-medium">
@@ -154,15 +177,25 @@ export function AffiliateOwnerActivationPanel() {
                 <p className="break-all text-sm font-semibold">{person.email}</p>
                 <p className="mt-1 text-xs text-[#806a6c]">Convite ainda não ativado</p>
               </div>
-              <button
-                type="button"
-                onClick={() => void create(person.email)}
-                disabled={busy || !!generated || !confirmedPrivateRecipient}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#693440] px-5 text-sm font-bold text-white disabled:opacity-50"
-              >
-                <Link2 className="h-4 w-4" />
-                Gerar link individual
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void sendInvitationEmail(person.email)}
+                  disabled={busy || !!generated}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#693440] px-5 text-sm font-bold text-white disabled:opacity-50"
+                >
+                  Reenviar convite por e-mail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void create(person.email)}
+                  disabled={busy || !!generated || !confirmedPrivateRecipient}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#cfaeb4] px-5 text-sm font-bold text-[#693440] disabled:opacity-50"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Gerar link individual
+                </button>
+              </div>
             </li>
           ))}
         </ul>

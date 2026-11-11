@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ClipboardCheck, LockKeyhole, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { getAffiliateStatusByCode } from "@/lib/affiliate-functions";
@@ -28,14 +28,12 @@ export function AffiliateTrackingCodePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function check(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy || !/^[A-Za-z0-9_-]{32}$/.test(code)) return;
+  async function lookup(codeValue: string) {
     setBusy(true);
     setError("");
     setResult(null);
     try {
-      const response = await getAffiliateStatusByCode({ data: { code } });
+      const response = await getAffiliateStatusByCode({ data: { code: codeValue } });
       if (!response.ok) setError(response.reason);
       else
         setResult({
@@ -49,6 +47,26 @@ export function AffiliateTrackingCodePage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  useEffect(() => {
+    let oneTimeCode = "";
+    try {
+      oneTimeCode = window.sessionStorage.getItem("vonix-affiliate-once-code") ?? "";
+      window.sessionStorage.removeItem("vonix-affiliate-once-code");
+    } catch {
+      return;
+    }
+    if (/^[A-Za-z0-9_-]{32}$/.test(oneTimeCode)) {
+      setCode(oneTimeCode);
+      void lookup(oneTimeCode);
+    }
+  }, []);
+
+  async function check(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || !/^[A-Za-z0-9_-]{32}$/.test(code)) return;
+    await lookup(code);
   }
 
   return (

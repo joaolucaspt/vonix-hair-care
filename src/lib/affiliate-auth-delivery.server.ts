@@ -176,10 +176,12 @@ export async function sendAffiliateAuthEmailWithResend(
     .object({
       action_link: z.string().url().optional(),
       email_otp: z.string().optional(),
+      hashed_token: z.string().optional(),
       properties: z
         .object({
           action_link: z.string().url().optional(),
           email_otp: z.string().optional(),
+          hashed_token: z.string().optional(),
         })
         .optional(),
     })
@@ -205,6 +207,23 @@ export async function sendAffiliateAuthEmailWithResend(
     auditAffiliateAuthMailFailure("supabase-generate-link-unexpected-origin");
     return false;
   }
+  // A private owner activation URL can travel only inside the recipient's
+  // transactional e-mail. Its fragment is not sent in HTTP requests, and
+  // the user must confirm activation before verifying with Supabase Auth.
+  // Never log, cache or include the bearer hash in client responses.
+  const hashedToken = parsed.data.properties?.hashed_token ?? parsed.data.hashed_token;
+  const privateOwnerLink =
+    purpose === "owner" &&
+    hashedToken &&
+    /^[A-Za-z0-9_-]{32,256}$/.test(hashedToken) &&
+    parsedLink.searchParams.get("type") === "magiclink" &&
+    parsedLink.searchParams.get("redirect_to") === redirectUrl &&
+    (parsedLink.searchParams.get("token") ?? "").length >= 12 &&
+    !parsedLink.username &&
+    !parsedLink.password &&
+    !parsedLink.hash
+      ? redirectUrl + "#vonix_invite=" + encodeURIComponent(hashedToken)
+      : null;
   const safeOtp = otp && /^\d{6,8}$/.test(otp) ? otp : null;
   if (!safeOtp) {
     auditAffiliateAuthMailFailure("supabase-generate-link-no-numeric-otp");
@@ -217,6 +236,16 @@ export async function sendAffiliateAuthEmailWithResend(
   const text = [
     "Este acesso foi solicitado no site oficial Vonix Hair.",
     "",
+    ...(privateOwnerLink
+      ? [
+          "Para ativar sua conta na equipe Vonix, abra este link individual:",
+          privateOwnerLink,
+          "Na página oficial, clique em CONFIRMAR ATIVAÇÃO.",
+          "O link é privado, de uso único e não ativa a conta sem sua confirmação.",
+          "",
+          "Se preferir, utilize o código numérico abaixo:",
+        ]
+      : []),
     "Seu código de verificação: " + safeOtp,
     "",
     "Abra esta página oficial e DIGITE o código acima no formulário:",
@@ -224,7 +253,9 @@ export async function sendAffiliateAuthEmailWithResend(
     "",
     "Este endereço não confirma o acesso automaticamente. Não reutilize links de convites anteriores: eles podem ter expirado ou já ter sido utilizados.",
     ...(purpose === "owner"
-      ? ["Depois de confirmar o código, crie sua senha pessoal para entrar na gestão da equipe."]
+      ? [
+          "Após a confirmação, crie sua própria senha de no mínimo 12 caracteres se for seu primeiro acesso. Se já possui senha, entre normalmente.",
+        ]
       : ["Depois de confirmar o código, consulte o acompanhamento da candidatura."]),
     "",
     "Se você não solicitou este acesso, ignore esta mensagem.",

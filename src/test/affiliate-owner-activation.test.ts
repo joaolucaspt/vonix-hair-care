@@ -6,6 +6,8 @@ const gates = vi.hoisted(() => ({
   database: vi.fn(),
   rate: vi.fn(),
   fingerprint: vi.fn(),
+  emailReady: vi.fn(),
+  sendEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-admin-session.server", () => ({
@@ -22,11 +24,14 @@ vi.mock("@/lib/affiliate-throttle.server", () => ({
 }));
 vi.mock("@/lib/affiliate-auth-delivery.server", () => ({
   affiliateAccessEmailFingerprint: gates.fingerprint,
+  affiliateCustomAuthEmailReady: gates.emailReady,
+  sendAffiliateAuthEmailWithResend: gates.sendEmail,
 }));
 
 import {
   generatePendingAffiliateOwnerActivationLink,
   listPendingAffiliateOwnerActivations,
+  sendPendingAffiliateOwnerActivationEmail,
 } from "@/lib/affiliate-owner-activation.server";
 
 const root = "https://jewbzrbbvxyqmxqbrwrq.supabase.co";
@@ -58,6 +63,8 @@ beforeEach(() => {
   gates.database.mockReturnValue({ url: root, headers: { apikey: "synthetic-privileged-key" } });
   gates.rate.mockResolvedValue(true);
   gates.fingerprint.mockReturnValue("f".repeat(64));
+  gates.emailReady.mockReturnValue(true);
+  gates.sendEmail.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -101,6 +108,41 @@ describe("owner-mediated one-time activation without transactional email", () =>
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher.mock.calls[1]![0]).toContain("password_set_at=is.null");
     expect(fetcher.mock.calls[1]![0]).toContain("role=eq.owner");
+  });
+
+  it("allows only an activated owner to request a branded email for a pending owner", async () => {
+    const fetcher = mockFetch(Response.json(owner), Response.json(pending));
+    expect(await sendPendingAffiliateOwnerActivationEmail(email)).toEqual({ ok: true });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(gates.sendEmail).toHaveBeenCalledExactlyOnceWith(email, "owner");
+  });
+
+  it("refuses email delivery to an uninvited recipient", async () => {
+    const fetcher = mockFetch(Response.json(owner), Response.json(pending));
+    expect((await sendPendingAffiliateOwnerActivationEmail("stranger@example.invalid")).ok).toBe(
+      false,
+    );
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(gates.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not send emails without a verified owner or verified corporate provider", async () => {
+    gates.member.mockReturnValue(null);
+    vi.stubGlobal("fetch", vi.fn());
+    expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
+    expect(gates.sendEmail).not.toHaveBeenCalled();
+    gates.member.mockReturnValue({ email: actor, role: "owner" });
+    gates.emailReady.mockReturnValue(false);
+    expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("surfaces provider rejection without pretending a message was delivered", async () => {
+    gates.sendEmail.mockResolvedValue(false);
+    mockFetch(Response.json(owner), Response.json(pending));
+    const result = await sendPendingAffiliateOwnerActivationEmail(email);
+    expect(result.ok).toBe(false);
+    expect(JSON.stringify(result)).not.toContain("auth/v1/verify");
   });
 
   it("generates an Auth-only, single-use link after checking the recipient and durable quota", async () => {

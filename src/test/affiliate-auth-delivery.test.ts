@@ -84,6 +84,53 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     expect(message.text).toContain("Não reutilize links de convites anteriores");
   });
 
+  it("sends a privately confirmed activation link to an authorized owner in branded email", async () => {
+    const ownerDestination = "https://vonixhair.com/acesso-equipe-afiliadas";
+    const hash = "a".repeat(64);
+    const action_link =
+      base +
+      "/auth/v1/verify?token=fake-token-0123456789012&type=magiclink&redirect_to=" +
+      encodeURIComponent(ownerDestination);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(true))
+      .mockResolvedValueOnce(
+        Response.json({ action_link, email_otp: "123456", hashed_token: hash }),
+      )
+      .mockResolvedValueOnce(success());
+    vi.stubGlobal("fetch", fetcher);
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+    const delivered = JSON.parse(fetcher.mock.calls[2]![1].body);
+    expect(delivered.from).toContain("vonixhair.com");
+    expect(delivered.to).toEqual([inbox]);
+    expect(delivered.text).toContain(ownerDestination + "#vonix_invite=" + hash);
+    expect(delivered.text).toContain("CONFIRMAR ATIVAÇÃO");
+    expect(delivered.text).toContain("123456");
+    expect(delivered.text).not.toContain("fake-token-0123456789012");
+    expect(JSON.stringify(fetcher.mock.calls[2]![0])).not.toContain(hash);
+  });
+
+  it("rejects an untrusted activation redirect without leaking a private invitation link", async () => {
+    const dest = "https://evil.example";
+    const action_link =
+      base +
+      "/auth/v1/verify?token=long-0123456789012&type=magiclink&redirect_to=" +
+      encodeURIComponent(dest);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(true))
+      .mockResolvedValueOnce(
+        Response.json({ action_link, email_otp: "123456", hashed_token: "a".repeat(64) }),
+      )
+      .mockResolvedValueOnce(success());
+    vi.stubGlobal("fetch", fetcher);
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+    const delivered = JSON.parse(fetcher.mock.calls[2]![1].body);
+    expect(delivered.text).not.toContain("evil.example");
+    expect(delivered.text).not.toContain("#vonix_invite=");
+    expect(delivered.text).toContain("123456");
+  });
+
   it("prefers the scoped Vonix Resend key while preserving legacy fallback", async () => {
     const scoped = "re_" + "S".repeat(36);
     deps.values.set("AFFILIATE_RESEND_API_KEY", scoped);

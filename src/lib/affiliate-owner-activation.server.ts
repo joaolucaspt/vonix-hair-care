@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { affiliateAdminSameOrigin } from "./affiliate-admin-session.server";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
-import { affiliateAccessEmailFingerprint } from "./affiliate-auth-delivery.server";
+import {
+  affiliateAccessEmailFingerprint,
+  affiliateCustomAuthEmailReady,
+  sendAffiliateAuthEmailWithResend,
+} from "./affiliate-auth-delivery.server";
 import { affiliateMemberSession } from "./affiliate-member-session.server";
 import { affiliateRateLimitAllowed } from "./affiliate-throttle.server";
 
@@ -99,6 +103,33 @@ export async function listPendingAffiliateOwnerActivations() {
   }
   const owners = await fetchPendingOwners(db);
   return owners ? { ok: true as const, owners } : { ok: false as const, owners: [] };
+}
+
+/**
+ * Activated-owner-only resend to a pending, already invited owner. The
+ * corporate mail contains an optional one-use confirmation link and OTP.
+ * Never return the token or a magic link to the browser.
+ */
+export async function sendPendingAffiliateOwnerActivationEmail(email: string) {
+  const db = affiliateDatabaseConfig();
+  const parsed = address.safeParse(email);
+  const denied = { ok: false as const, reason: "Acesso não autorizado ou conta não elegível." };
+  if (!db || !parsed.success || !affiliateCustomAuthEmailReady()) return denied;
+  if (!(await authorizedActivatedOwner(db))) return denied;
+  const pending = await fetchPendingOwners(db);
+  if (!pending?.some((row) => row.email === parsed.data)) return denied;
+  try {
+    const accepted = await sendAffiliateAuthEmailWithResend(parsed.data, "owner");
+    if (!accepted)
+      return {
+        ok: false as const,
+        reason:
+          "O provedor não confirmou o envio. Aguarde o intervalo de segurança antes de tentar novamente.",
+      };
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, reason: "Não foi possível solicitar o convite por e-mail." };
+  }
 }
 
 /**

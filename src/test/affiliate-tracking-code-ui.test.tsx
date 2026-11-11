@@ -18,9 +18,30 @@ const code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  window.sessionStorage.removeItem("vonix-affiliate-once-code");
 });
 
 describe("Private Vonix email-less applicant status portal", () => {
+  it("consumes one-time code from signup and auto-consults without URL leakage", async () => {
+    const code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    window.sessionStorage.setItem("vonix-affiliate-once-code", code);
+    server.getAffiliateStatusByCode.mockResolvedValue({
+      ok: true,
+      status: "pendente",
+      rejectionReason: null,
+      submittedAt: "2026-11-11T12:00:00Z",
+      reviewedAt: null,
+    });
+    render(<AffiliateTrackingCodePage />);
+    await waitFor(() =>
+      expect(server.getAffiliateStatusByCode).toHaveBeenCalledWith({ data: { code } }),
+    );
+    expect(await screen.findByText("Candidatura em análise")).toBeInTheDocument();
+    expect(window.sessionStorage.getItem("vonix-affiliate-once-code")).toBeNull();
+    expect(window.location.search).not.toContain(code);
+    expect(window.location.hash).not.toContain(code);
+  });
+
   it("requires a strong private code, not a social handle", () => {
     render(<AffiliateTrackingCodePage />);
     expect(screen.getByRole("button", { name: "Consultar minha inscrição" })).toBeDisabled();
