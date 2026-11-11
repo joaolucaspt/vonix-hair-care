@@ -38,3 +38,11 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - [ ] 8. Botão de WhatsApp de dúvidas com mensagem pronta.
 - [ ] 9. Criativos novos: pausar anúncio com 3+ dias de gasto e sem carrinho; propor 2 por semana.
 - [ ] 10. Regra de parar e pensar: com menos de 100 visitas pagas após uma mudança, não trocar outra coisa grande.
+
+## 11/11/2026 (tarde) — dia 3 (rotina automática)
+- Meta (1–11/11, nível de anúncio): A2 Prova/botox gasto R$ 194,29 · 85 visualizações da página (connect rate 81,7%) · 24 carrinhos · 1 finalização. A3 fio de luz R$ 112,03 · 33 visualizações · 2 carrinhos · 1 finalização. A1 combo desmaia R$ 26,07 · 8 visualizações · 2 carrinhos · 3 finalizações. Conta toda: 160 visualizações, connect rate 66%, 29 carrinhos, 5 finalizações.
+- Clarity (3 dias, bots excluídos): 172 sessões (~49 de equipe/pré-visualização), LCP 2,4 s (bom), pontuação 80, rolagem 43,6%, cliques mortos 10,5% (18 sessões), 12 erros de JS (83% "java object is gone" = navegador interno do app, inofensivo). Funil produto→carrinho→checkout: 69 → 6 → 4. Navegador interno Instagram/Facebook ≈ 23% das sessões.
+- Site no ar: home, botox, fio de luz e checkout respondem 200 em menos de 1 s.
+- Ordem extra 1 (destino do anúncio), conferida SEM mudar nada: A1 → /produto/kit-desmaia (certo); A2 botox → /produto/botox-vonix (certo); **A3 "fio de luz" → /produto/botox-vonix (provável erro; deveria ser /produto/progressiva-fio-de-luz)**. A3 tem "Edições não publicadas" (alguém está editando) e há 25 rascunhos pendentes na conta; não mexi para não sobrescrever. Conjunto chama-se "ADV+ ..." (conferir se não é Advantage+).
+- Mudança do dia: nenhuma (conflito com edições em andamento nos anúncios). Nenhuma venda real registrada; orçamento mantido em R$ 30/dia.
+- Próxima ação: Lucas confirma o destino do A3; então troco para o produto certo e marco a ordem 1 como feita.
