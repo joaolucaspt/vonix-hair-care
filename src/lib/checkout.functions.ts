@@ -309,9 +309,9 @@ export const createPayment = createServerFn({ method: "POST" })
     }
     try {
       const document = data.customer.cpf.replace(/\D/g, "");
-      // Derive the same server-only HMAC for read-only recovery and
-      // later atomic reservation (independent of shipping and coupon).
-      const fingerprint = checkoutFingerprint({
+      // Physical delivery units are distinct destinations, even within the
+      // same building. Preserve the original HMAC for empty complements.
+      const identity = {
         document,
         address: {
           postcode: data.address.cep,
@@ -321,12 +321,24 @@ export const createPayment = createServerFn({ method: "POST" })
           state: data.address.uf,
         },
         items: lines.map((l) => ({
-          // The physical SKU/variant and UNIT count, not coupon, price or
-          // payment method, define whether this is the same shopping attempt.
           sku: `${l.product.slug}:${l.variant}`,
           quantity: l.units,
         })),
+      };
+      const legacyFingerprint = checkoutFingerprint(identity);
+      const fingerprint = checkoutFingerprint({
+        ...identity,
+        address: { ...identity.address, complement: data.address.complemento ?? "" },
       });
+      // A pending charge created before C40 used the address without apartment.
+      // Check it read-only BEFORE claiming a new HMAC; if present, fail closed
+      // or recover it rather than inadvertently creating a duplicate charge.
+      // This also deliberately blocks some different-apartment requests while
+      // a legacy order at the same building remains unresolved.
+      if (fingerprint !== legacyFingerprint) {
+        const legacyOrder = await recoverWithoutNewQuote(legacyFingerprint);
+        if (legacyOrder) return legacyOrder;
+      }
       // Quote failures must not hide a previously reserved payment.
       // Recovery only reads a server-only HMAC record and never reserves an intent.
       let options: Awaited<ReturnType<typeof shippingOptions>>;

@@ -8,7 +8,14 @@ import { env } from "./env.server";
  */
 export function checkoutFingerprint(input: {
   document: string;
-  address: { postcode: string; street: string; number: string; city: string; state: string };
+  address: {
+    postcode: string;
+    street: string;
+    number: string;
+    city: string;
+    state: string;
+    complement?: string;
+  };
   items: { sku: string; quantity: number }[];
 }): string {
   const secret = env("CHECKOUT_IDEMPOTENCY_SECRET");
@@ -28,6 +35,11 @@ export function checkoutFingerprint(input: {
       number: input.address.number.trim().toLowerCase(),
       city: input.address.city.trim().toLowerCase(),
       state: input.address.state.trim().toUpperCase(),
+      // Only non-empty apartment/unit information changes the fingerprint.
+      // Keep the exact pre-C40 HMAC for addresses without a complement.
+      ...(input.address.complement?.trim()
+        ? { complement: input.address.complement.trim().toLocaleLowerCase("pt-BR") }
+        : {}),
     },
     items: [...physicalItems.entries()]
       .map(([sku, quantity]) => ({ sku, quantity }))

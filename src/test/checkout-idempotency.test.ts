@@ -85,6 +85,23 @@ describe("HMAC checkout fingerprint", () => {
       checkoutFingerprint({ ...input, items: [{ sku: "itemB:Diferente", quantity: 1 }] }),
     ).not.toBe(id);
   });
+  it("distinguishes apartments within the same building while preserving legacy hashes without apartment", () => {
+    const legacy = checkoutFingerprint(input);
+    const apt101 = { ...input, address: { ...input.address, complement: " Apto 101 " } };
+    const apt202 = { ...input, address: { ...input.address, complement: "APTO 202" } };
+    expect(checkoutFingerprint(apt101)).not.toBe(checkoutFingerprint(apt202));
+    expect(checkoutFingerprint(apt101)).not.toBe(legacy);
+    expect(checkoutFingerprint({ ...input, address: { ...input.address, complement: "  " } })).toBe(
+      legacy,
+    );
+    expect(
+      checkoutFingerprint({
+        ...input,
+        address: { ...input.address, complement: "apto 101" },
+      }),
+    ).toBe(checkoutFingerprint(apt101));
+  });
+
   it("rejects empty or invalid item quantities instead of creating fingerprint collisions", () => {
     expect(() => checkoutFingerprint({ ...input, items: [] })).toThrow("Carrinho vazio");
     expect(() => checkoutFingerprint({ ...input, items: [{ sku: "A", quantity: -1 }] })).toThrow(

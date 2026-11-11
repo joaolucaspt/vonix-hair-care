@@ -377,6 +377,63 @@ describe("server authoritative checkout", () => {
     expect(mocks.createOrder.mock.calls[0]?.[0]).toMatchObject({ shipping_value: 0 });
   });
 
+  it("reconhece reserva de hash legado antes de criar novo pagamento com apartamento", async () => {
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "charging",
+      orderId: null,
+      updatedAt: new Date().toISOString(),
+    });
+    const r = await createPayment({
+      data: { ...data, address: { ...data.address, complemento: "Apartamento 202" } },
+    });
+    expect(r).toMatchObject({ ok: false, retrySafe: false });
+    expect(mocks.lookupIntent).toHaveBeenCalledOnce();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.createOrder).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+
+  it("usa identidade distinta por apartamento e permite cobrar só quando não existe tentativa legada", async () => {
+    const first = await createPayment({
+      data: { ...data, address: { ...data.address, complemento: "Apto 101" } },
+    });
+    const second = await createPayment({
+      data: { ...data, address: { ...data.address, complemento: "Apto 202" } },
+    });
+    expect(first).toMatchObject({ ok: true, method: "pix" });
+    expect(second).toMatchObject({ ok: true, method: "pix" });
+    expect(mocks.lookupIntent).toHaveBeenCalledTimes(2);
+    expect(mocks.claimIntent).toHaveBeenCalledTimes(2);
+    expect(mocks.claimIntent.mock.calls[0]?.[0]).not.toBe(mocks.claimIntent.mock.calls[1]?.[0]);
+    expect(mocks.createOrder).toHaveBeenCalledTimes(2);
+  });
+
+  it("falha de consulta ao hash legado impede cobrança potencialmente duplicada", async () => {
+    mocks.lookupIntent.mockRejectedValueOnce(new Error("intents temporarily unavailable"));
+    const response = await createPayment({
+      data: { ...data, address: { ...data.address, complemento: "Apto 303" } },
+    });
+    expect(response).toMatchObject({ ok: false, retrySafe: false });
+    expect(mocks.lookupIntent).toHaveBeenCalledOnce();
+    expect(mocks.claimIntent).not.toHaveBeenCalled();
+    expect(mocks.customer).not.toHaveBeenCalled();
+    expect(mocks.pix).not.toHaveBeenCalled();
+  });
+
+  it("ignora reserva legada cancelada e permite fluxo novo do apartamento", async () => {
+    mocks.lookupIntent.mockResolvedValueOnce({
+      phase: "cancelled",
+      orderId: 654,
+      updatedAt: new Date().toISOString(),
+    });
+    const response = await createPayment({
+      data: { ...data, address: { ...data.address, complemento: "Apto 404" } },
+    });
+    expect(response).toMatchObject({ ok: true, method: "pix" });
+    expect(mocks.claimIntent).toHaveBeenCalledOnce();
+  });
+
   it("keeps Pix/card unavailable until strong server-side idempotency is configured", async () => {
     mocks.idempotencySecret = "weak";
     const config = await getPaymentConfig({});

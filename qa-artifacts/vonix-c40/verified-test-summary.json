@@ -1,0 +1,54 @@
+{
+    "checkpoint":  "C40",
+    "date":  "2026-11-11",
+    "initialBase":  "C39 bf3b2da483887f4d6538bed614e8cfb0c63ae6d4",
+    "issue":  "N160: apt 101 and apt 202 collided in HMAC checkout fingerprint without address complement",
+    "red":  {
+                "failed":  2,
+                "tests":  "apartment distinction and read-only legacy pending payment guard",
+                "log":  "logs/apartment-red.log"
+            },
+    "focused":  {
+                    "passed":  63,
+                    "failed":  0,
+                    "files":  2,
+                    "log":  "logs/focused-green.log"
+                },
+    "full":  {
+                 "passed":  756,
+                 "failed":  0,
+                 "files":  88,
+                 "log":  "logs/full-vitest.log"
+             },
+    "quality":  {
+                    "typescript":  0,
+                    "eslintFunctional":  0,
+                    "eslintHistoricWarnings":  12,
+                    "build":  0,
+                    "prettier":  0,
+                    "diffCheck":  0
+                },
+    "site":  {
+                 "ssrPdp":  "42/42",
+                 "routes":  "15/15",
+                 "images":  "129/129",
+                 "metaCsv":  "42 lines, structurally valid but stock not verified",
+                 "chromeStore":  "3/3",
+                 "chromeCheckout":  "3/3",
+                 "noscriptSsr":  "3/3 markup only",
+                 "screenshots":  21
+             },
+    "safety":  {
+                   "noRealOrders":  true,
+                   "noRealPayments":  true,
+                   "noDatabaseRead":  true,
+                   "noProductionDeploy":  true,
+                   "noAffiliateAppEdits":  true
+               },
+    "notes":  [
+                  "Blank complement keeps legacy fingerprint",
+                  "Nonblank complement triggers read-only legacy check before any payment attempt",
+                  "Existing legacy intent can conservatively block distinct apartment while pending",
+                  "Logs under logs/ may be gitignored and are hashed separately in receipt"
+              ]
+}
