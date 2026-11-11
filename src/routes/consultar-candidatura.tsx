@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ClipboardCheck, LockKeyhole, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { getAffiliateStatusByCode } from "@/lib/affiliate-functions";
@@ -28,6 +28,7 @@ export function AffiliateTrackingCodePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const lookupVersion = useRef(0);
 
   async function copyPrivateCode() {
     if (!/^[A-Za-z0-9_-]{32}$/.test(code)) return;
@@ -44,11 +45,15 @@ export function AffiliateTrackingCodePage() {
   }
 
   async function lookup(codeValue: string) {
+    const requestId = ++lookupVersion.current;
     setBusy(true);
     setError("");
     setResult(null);
     try {
       const response = await getAffiliateStatusByCode({ data: { code: codeValue } });
+      // Each result is only valid for the code used by this exact request.
+      // Changing codes or launching a newer query invalidates older replies.
+      if (lookupVersion.current !== requestId) return;
       if (!response.ok) setError(response.reason);
       else
         setResult({
@@ -58,9 +63,11 @@ export function AffiliateTrackingCodePage() {
           reviewedAt: response.reviewedAt,
         });
     } catch {
-      setError("Falha ao consultar. Confira sua conexão e tente novamente.");
+      if (lookupVersion.current === requestId) {
+        setError("Falha ao consultar. Confira sua conexão e tente novamente.");
+      }
     } finally {
-      setBusy(false);
+      if (lookupVersion.current === requestId) setBusy(false);
     }
   }
 
@@ -112,6 +119,8 @@ export function AffiliateTrackingCodePage() {
                 required
                 value={code}
                 onChange={(event) => {
+                  lookupVersion.current++;
+                  setBusy(false);
                   setCode(event.target.value.trim());
                   setCopied(false);
                   setResult(null);

@@ -21,6 +21,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.sessionStorage.removeItem("vonix-affiliate-unconfirmed-code");
+  window.sessionStorage.removeItem("vonix-affiliate-once-code");
 });
 
 function fill() {
@@ -229,6 +230,14 @@ describe("Vonix short single-page application form", () => {
       "href",
       "/consultar-candidatura",
     );
+    // The status portal receives the private code via a one-time same-tab
+    // handoff, never as a URL query, referrer, or analytics event.
+    const link = screen.getByRole("link", { name: "Consultar código no portal" });
+    link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(link);
+    expect(window.sessionStorage.getItem("vonix-affiliate-once-code")).toBe(codeBefore);
+    expect(window.sessionStorage.getItem("vonix-affiliate-unconfirmed-code")).toBe(codeBefore);
+    expect(link.getAttribute("href")).not.toContain(codeBefore);
     expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
     expect(analytics.track).not.toHaveBeenCalled();
   });
