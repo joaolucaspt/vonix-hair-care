@@ -112,7 +112,7 @@ function Cart() {
             <div className="min-w-0">
               <section aria-label="Quem já usa Vonix" className="mb-6 rounded-2xl border border-border bg-card p-3">
                 <p className="mb-2 text-small font-semibold">Quem já usa Vonix: afiliadas e embaixadoras. Toque para assistir.</p>
-                <ProvasEmVideo all />
+                <ProvasEmVideo all seed="carrinho" max={8} />
               </section>
               <ul className="divide-y divide-border">
                 {c.lines.map((l) => (

@@ -621,9 +621,16 @@ function Checkout() {
               )}
             </div>
 
+            <ul aria-label="Vantagens da compra" className="grid grid-cols-2 gap-2 text-center text-small font-semibold sm:grid-cols-4">
+              <li className="rounded-xl bg-emerald-600 px-2 py-2 text-white">Pix com 5% OFF</li>
+              <li className="rounded-xl bg-foreground px-2 py-2 text-background">Até 6x sem juros</li>
+              <li className="rounded-xl bg-muted px-2 py-2">Frete grátis acima de {brl(FREE_SHIPPING_ABOVE)}</li>
+              <li className="rounded-xl bg-muted px-2 py-2">Compra 100% segura</li>
+            </ul>
+
             <section className={panel} aria-label="Quem já usa Vonix">
               <p className="mb-2 text-small font-semibold">Quem já usa Vonix: afiliadas e embaixadoras. Toque para assistir.</p>
-              <ProvasEmVideo all />
+              <ProvasEmVideo all seed="checkout" max={6} />
             </section>
 
             <fieldset className={panel}>
