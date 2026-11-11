@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
 import { env } from "./env.server";
+import { affiliateResendApiKey } from "./affiliate-resend-config.server";
 import { VONIX_AFFILIATE_PUBLIC_KEY } from "./vonix-affiliate-auth";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(180);
@@ -45,7 +46,7 @@ async function classifyAffiliateResendError(response: Response): Promise<string>
 }
 
 export function affiliateCustomAuthEmailReady(): boolean {
-  const key = env("RESEND_API_KEY");
+  const key = affiliateResendApiKey();
   const sender = env("AFFILIATE_FROM_EMAIL");
   return key.length >= 20 && sender.length >= 6 && sender.length <= 240;
 }
@@ -235,7 +236,7 @@ export async function sendAffiliateAuthEmailWithResend(
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + env("RESEND_API_KEY"),
+        Authorization: "Bearer " + affiliateResendApiKey(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
