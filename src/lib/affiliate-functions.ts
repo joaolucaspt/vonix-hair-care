@@ -13,6 +13,7 @@ import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
 import {
   generatePendingAffiliateOwnerActivationLink,
   listPendingAffiliateOwnerActivations,
+  sendPendingAffiliateOwnerActivationEmail,
 } from "./affiliate-owner-activation.server";
 import { invitePersistedAffiliateApplicant } from "./affiliate-invites.server";
 import {
@@ -296,6 +297,15 @@ export const getPendingAffiliateOwnerActivations = createServerFn({ method: "POS
     return listPendingAffiliateOwnerActivations();
   },
 );
+
+/** Resend from a current activated owner: no URL/token is returned to the browser. */
+export const resendPendingAffiliateOwnerEmail = createServerFn({ method: "POST" })
+  .validator(z.object({ email: z.string().trim().toLowerCase().email().max(180) }).strict())
+  .handler(async ({ data }) => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
+    return sendPendingAffiliateOwnerActivationEmail(data.email);
+  });
 
 export const createPendingAffiliateOwnerActivationLink = createServerFn({ method: "POST" })
   .validator(z.object({ email: z.string().trim().toLowerCase().email().max(180) }))

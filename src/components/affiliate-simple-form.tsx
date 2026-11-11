@@ -148,6 +148,28 @@ export function AffiliateSimpleForm({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
+  const [trackingCopied, setTrackingCopied] = useState(false);
+
+  async function copyTrackingCode() {
+    if (!trackingCode) return;
+    try {
+      await navigator.clipboard.writeText(trackingCode);
+      setTrackingCopied(true);
+    } catch {
+      setTrackingCopied(false);
+      document.getElementById("affiliate-confirmed-code")?.focus();
+    }
+  }
+
+  function openTrackingWithCode() {
+    if (!/^[A-Za-z0-9_-]{32}$/.test(trackingCode)) return;
+    try {
+      window.sessionStorage.setItem("vonix-affiliate-once-code", trackingCode);
+    } catch {
+      // The destination still provides a manual entry form if storage is off.
+    }
+    window.location.assign("/consultar-candidatura");
+  }
   const [message, setMessage] = useState("");
   const [zipLoading, setZipLoading] = useState(false);
   const zipRequest = useRef(0);
@@ -296,17 +318,36 @@ export function AffiliateSimpleForm({
             </p>
             <input
               readOnly
+              id="affiliate-confirmed-code"
               aria-label="Código privado de acompanhamento"
               value={trackingCode}
               onFocus={(event) => event.currentTarget.select()}
               className="mt-3 w-full rounded-lg border border-[#d5bac0] bg-white px-3 py-3 text-center font-semibold text-sm tracking-wider text-[#49323a]"
             />
-            <a
-              href="/consultar-candidatura"
-              className="mt-4 inline-block text-sm font-bold text-[#683643] underline"
-            >
-              Consultar candidatura e motivo da decisão
-            </a>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => void copyTrackingCode()}
+                className="min-h-12 rounded-full border border-[#b9969e] px-4 text-sm font-bold text-[#683643]"
+              >
+                {trackingCopied ? "Código copiado!" : "Copiar código"}
+              </button>
+              <button
+                type="button"
+                onClick={openTrackingWithCode}
+                className="min-h-12 rounded-full bg-[#633847] px-4 text-sm font-bold text-white"
+              >
+                Acompanhar inscrição agora
+              </button>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-[#775d65]">
+              O código também pode ser digitado mais tarde em{" "}
+              <a href="/consultar-candidatura" className="font-semibold underline">
+                vonixhair.com/consultar-candidatura
+              </a>
+              . O acompanhamento imediato usa este navegador e não coloca o código no endereço da
+              página.
+            </p>
           </div>
         )}
         <p className="mx-auto mt-3 max-w-lg text-sm text-[#7c6369]">

@@ -97,8 +97,10 @@ describe("Vonix short single-page application form", () => {
     expect(await screen.findByLabelText("Código privado de acompanhamento")).toHaveValue(
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
     );
+    expect(screen.getByRole("button", { name: "Copiar código" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Acompanhar inscrição agora" })).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Consultar candidatura e motivo da decisão" }),
+      screen.getByRole("link", { name: "vonixhair.com/consultar-candidatura" }),
     ).toHaveAttribute("href", "/consultar-candidatura");
   });
 

@@ -14,6 +14,7 @@ const server = vi.hoisted(() => ({
   getAffiliateRetentionPreview: vi.fn(),
   getPendingAffiliateOwnerActivations: vi.fn(),
   createPendingAffiliateOwnerActivationLink: vi.fn(),
+  resendPendingAffiliateOwnerEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-functions", () => server);
