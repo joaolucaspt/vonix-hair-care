@@ -630,7 +630,7 @@ function Checkout() {
             </ul>
 
             <section className={panel} aria-label="Quem já usa Vonix">
-              <p className="mb-2 text-small font-semibold">Quem já usa Vonix: afiliadas e embaixadoras. Toque para assistir.</p>
+              <p className="mb-2 text-small font-semibold">Quem já usa Vonix. Toque para assistir.</p>
               <ProvasEmVideo all seed="checkout" max={6} />
             </section>
 
