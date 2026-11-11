@@ -149,7 +149,7 @@ function Home() {
       <section className="container-site mt-20">
         <Title a="Vídeos de quem" b="Usa Vonix" to={{ q: "botox vonix" }} />
         <p className="-mt-4 mb-4 text-body text-muted-foreground">Afiliadas e embaixadoras da Vonix Hair usando os produtos. Toque para assistir.</p>
-        <ProvasEmVideo all />
+        <ProvasEmVideo all seed="home" />
       </section>
 
       <section className="container-site mt-20">

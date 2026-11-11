@@ -4,10 +4,18 @@ import raw from "@/data/provas-em-video.json";
 type Prova = { id: string; src: string; poster: string; slugs: string[] };
 const provas = raw as Prova[];
 
-/** Vídeos do produto primeiro; para completar, os vídeos gerais de afiliadas e embaixadoras da Vonix. */
-export const provasFor = (slug: string, max = 6) => {
+/** Número estável a partir de um texto (mesmo lugar = mesma ordem; lugares diferentes = ordens diferentes). */
+const hash = (s: string) => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+const rotate = <T,>(list: T[], seed: string) => {
+  if (list.length < 2) return list;
+  const k = hash(seed) % list.length;
+  return [...list.slice(k), ...list.slice(0, k)];
+};
+
+/** Vídeos do produto primeiro; para completar, os gerais de afiliadas e embaixadoras Vonix, em ordem que muda de página para página. */
+export const provasFor = (slug: string, max = 6, seed = slug) => {
   const own = provas.filter((p) => p.slugs.includes(slug));
-  const general = provas.filter((p) => !p.slugs.includes(slug));
+  const general = rotate(provas.filter((p) => !p.slugs.includes(slug)), seed);
   return [...own, ...general].slice(0, max).map((p) => ({ ...p, own: p.slugs.includes(slug) }));
 };
 
@@ -15,9 +23,9 @@ export const provasFor = (slug: string, max = 6) => {
  * Faixa de vídeos reais de afiliadas e embaixadoras Vonix usando os produtos. O vídeo só toca (e só baixa) quando a pessoa toca nele.
  * Sem `slug`, mostra todos (home). O rótulo é honesto: vídeo do próprio produto diz "usando este produto"; os demais, "linha Vonix".
  */
-export function ProvasEmVideo({ slug, all = false, className = "" }: { slug?: string; all?: boolean; className?: string }) {
+export function ProvasEmVideo({ slug, all = false, seed = "", max, className = "" }: { slug?: string; all?: boolean; seed?: string; max?: number; className?: string }) {
   const [playing, setPlaying] = useState<string | null>(null);
-  const list = all || !slug ? provas.map((p) => ({ ...p, own: false })) : provasFor(slug);
+  const list = all || !slug ? rotate(provas, seed || "geral").slice(0, max ?? provas.length).map((p) => ({ ...p, own: false })) : provasFor(slug, max ?? 6, seed || slug);
   if (list.length === 0) return null;
   return (
     <section aria-label="Vídeos de afiliadas e embaixadoras Vonix" className={className}>

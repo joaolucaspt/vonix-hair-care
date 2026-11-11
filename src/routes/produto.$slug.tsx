@@ -333,7 +333,7 @@ function ProductPage() {
             <ReviewStrip slug={p.slug} />
             <div className="mt-4">
               <p className="mb-2 text-small font-semibold">Veja em vídeo: afiliadas e embaixadoras Vonix</p>
-              <ProvasEmVideo slug={p.slug} />
+              <ProvasEmVideo slug={p.slug} seed={p.slug} />
             </div>
             {
               <div className="mt-6">
