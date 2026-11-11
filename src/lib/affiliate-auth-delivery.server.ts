@@ -264,7 +264,9 @@ export async function sendAffiliateAuthEmailWithResend(
       ? redirectUrl + "#vonix_invite=" + encodeURIComponent(hashedToken)
       : null;
   const safeOtp = otp && /^\d{6,8}$/.test(otp) ? otp : null;
-  if (!safeOtp) {
+  // A valid, manually confirmed owner activation link is sufficient even when
+  // Supabase omits a numeric OTP. Applicant tracking still requires a code.
+  if (!safeOtp && !privateOwnerLink) {
     auditAffiliateAuthMailFailure("supabase-generate-link-no-numeric-otp");
     return false;
   }
@@ -282,12 +284,14 @@ export async function sendAffiliateAuthEmailWithResend(
           "Na página oficial, clique em CONFIRMAR ATIVAÇÃO.",
           "O link é privado, de uso único e não ativa a conta sem sua confirmação.",
           "",
-          "Se preferir, utilize o código numérico abaixo:",
+          ...(safeOtp ? ["Se preferir, utilize o código numérico abaixo:"] : []),
         ]
       : []),
-    "Seu código de verificação: " + safeOtp,
+    ...(safeOtp ? ["Seu código de verificação: " + safeOtp] : []),
     "",
-    "Abra esta página oficial e DIGITE o código acima no formulário:",
+    ...(safeOtp
+      ? ["Abra esta página oficial e DIGITE o código acima no formulário:"]
+      : ["Abra o link individual acima e clique em CONFIRMAR ATIVAÇÃO. Página oficial da equipe:"]),
     redirectUrl,
     "",
     "Este endereço não confirma o acesso automaticamente. Não reutilize links de convites anteriores: eles podem ter expirado ou já ter sido utilizados.",
