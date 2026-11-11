@@ -1,0 +1,20 @@
+# Diário de melhorias do site (vonixhair.com)
+
+Regra: uma mudança por dia, registrada aqui. Antes de cada mudança, um backup (tag `backup-AAAA-MM-DD` no GitHub, volta com `git revert`). Nada de inventar avaliação, venda ou antes/depois. Preço, oferta, anúncio, pixel do Meta, Google Analytics e pagamento: perguntar ao Lucas antes.
+
+## Metas
+LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carrinho · conversão de pelo menos 1%. Estável por 7 dias seguidos = passar para verificação semanal.
+
+## Já feito antes do diário
+- 10/11 (noite): faixa de prova social no topo do produto (só avaliações reais com foto/vídeo) e vídeos dos depoimentos comprimidos (PR 88).
+- 10/11 (noite): vídeos reais de afiliadas em todos os produtos e na home (PR 89). Fora: 2 vídeos de live com horário e 1 com "18% de desconto" na imagem.
+- Medição de velocidade (celular simulado): home nota 53 / LCP 5,0 s; produto nota 58 / LCP 4,3 s. O peso está nos scripts do Google Analytics (~190 KB) e do pixel do Meta (~220 KB). O Lucas disse NÃO mexer neles.
+- Já existiam: barra de frete grátis (carrinho, gaveta de compra e checkout), páginas admin/afiliadas com noindex.
+
+## 11/11/2026 — dia 1 (Clarity, últimos 3 dias, bots já excluídos)
+- 151 sessões, mas ~42 são de equipe/pré-visualização (lovable.dev 28, lovableproject.com 13, 127.0.0.1 1). Visitas pagas reais ≈ 38 (instagram 25, facebook 12, adsmanager 2). Ainda é cedo para concluir (precisa de 100+).
+- Funil Produto → Carrinho → Checkout: 53 → 5 (9,4%, meta 8% batida) → 3; 1 compra registrada.
+- Rolagem média 41%; cliques mortos 10,6% (16 sessões); LCP real 3,6 s; pontuação de desempenho do Clarity 82.
+- Páginas mais vistas: botox-vonix 26, home 25, /seja-afiliada 25, /admin/afiliadas 17 (equipe), /produto/progressiva-fio-de-luz 12.
+- Mudança do dia: nenhuma no site (dados insuficientes para escolher com segurança). Feito: este diário, backup `backup-2026-11-11`, rotina diária às 7h37.
+- Próxima ação: medir de novo amanhã; achar os cliques mortos (mapa de cliques do Clarity); se a rolagem do Fio de Luz continuar baixa, subir as avaliações para antes do meio da página.
