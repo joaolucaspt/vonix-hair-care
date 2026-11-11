@@ -1,14 +1,110 @@
 [
-  { "id": "botox-1", "src": "/provas/botox-1.mp4", "poster": "/provas/botox-1.jpg", "slugs": ["botox-vonix", "botox-vonix-matizador", "botox-line", "botox-line-matizador"] },
-  { "id": "botox-2", "src": "/provas/botox-2.mp4", "poster": "/provas/botox-2.jpg", "slugs": ["botox-vonix", "botox-vonix-matizador", "botox-line", "botox-line-matizador"] },
-  { "id": "fio-1", "src": "/provas/fio-1.mp4", "poster": "/provas/fio-1.jpg", "slugs": ["progressiva-fio-de-luz", "shampoo-fio-de-luz-anti-residuo"] },
-  { "id": "fio-2", "src": "/provas/fio-2.mp4", "poster": "/provas/fio-2.jpg", "slugs": ["progressiva-fio-de-luz", "shampoo-fio-de-luz-anti-residuo"] },
-  { "id": "fio-3", "src": "/provas/fio-3.mp4", "poster": "/provas/fio-3.jpg", "slugs": ["progressiva-fio-de-luz", "shampoo-fio-de-luz-anti-residuo"] },
-  { "id": "fio-4", "src": "/provas/fio-4.mp4", "poster": "/provas/fio-4.jpg", "slugs": ["progressiva-fio-de-luz", "shampoo-fio-de-luz-anti-residuo"] },
-  { "id": "plex", "src": "/provas/plex.mp4", "poster": "/provas/plex.jpg", "slugs": ["plex-vonix"] },
-  { "id": "desmaia", "src": "/provas/desmaia.mp4", "poster": "/provas/desmaia.jpg", "slugs": ["mascara-efeito-teia-desmaia-cabelo", "kit-desmaia", "shampoo-hidratante-desmaia-cabelo"] },
-  { "id": "cabelo-1", "src": "/provas/cabelo-1.mp4", "poster": "/provas/cabelo-1.jpg", "slugs": [] },
-  { "id": "cabelo-2", "src": "/provas/cabelo-2.mp4", "poster": "/provas/cabelo-2.jpg", "slugs": [] },
-  { "id": "cabelo-3", "src": "/provas/cabelo-3.mp4", "poster": "/provas/cabelo-3.jpg", "slugs": [] },
-  { "id": "bia-moraes", "src": "/provas/bia-moraes.mp4", "poster": "/provas/bia-moraes.jpg", "slugs": [] }
+  {
+    "id": "banana-mel",
+    "src": "/provas/banana-mel.mp4",
+    "poster": "/provas/banana-mel.jpg",
+    "slugs": [
+      "kit-banana-e-mel"
+    ]
+  },
+  {
+    "id": "botox-1",
+    "src": "/provas/botox-1.mp4",
+    "poster": "/provas/botox-1.jpg",
+    "slugs": [
+      "botox-vonix",
+      "botox-vonix-matizador",
+      "botox-line",
+      "botox-line-matizador"
+    ]
+  },
+  {
+    "id": "botox-2",
+    "src": "/provas/botox-2.mp4",
+    "poster": "/provas/botox-2.jpg",
+    "slugs": [
+      "botox-vonix",
+      "botox-vonix-matizador",
+      "botox-line",
+      "botox-line-matizador"
+    ]
+  },
+  {
+    "id": "fio-1",
+    "src": "/provas/fio-1.mp4",
+    "poster": "/provas/fio-1.jpg",
+    "slugs": [
+      "progressiva-fio-de-luz",
+      "shampoo-fio-de-luz-anti-residuo"
+    ]
+  },
+  {
+    "id": "fio-2",
+    "src": "/provas/fio-2.mp4",
+    "poster": "/provas/fio-2.jpg",
+    "slugs": [
+      "progressiva-fio-de-luz",
+      "shampoo-fio-de-luz-anti-residuo"
+    ]
+  },
+  {
+    "id": "fio-3",
+    "src": "/provas/fio-3.mp4",
+    "poster": "/provas/fio-3.jpg",
+    "slugs": [
+      "progressiva-fio-de-luz",
+      "shampoo-fio-de-luz-anti-residuo"
+    ]
+  },
+  {
+    "id": "fio-4",
+    "src": "/provas/fio-4.mp4",
+    "poster": "/provas/fio-4.jpg",
+    "slugs": [
+      "progressiva-fio-de-luz",
+      "shampoo-fio-de-luz-anti-residuo"
+    ]
+  },
+  {
+    "id": "plex",
+    "src": "/provas/plex.mp4",
+    "poster": "/provas/plex.jpg",
+    "slugs": [
+      "plex-vonix"
+    ]
+  },
+  {
+    "id": "desmaia",
+    "src": "/provas/desmaia.mp4",
+    "poster": "/provas/desmaia.jpg",
+    "slugs": [
+      "mascara-efeito-teia-desmaia-cabelo",
+      "kit-desmaia",
+      "shampoo-hidratante-desmaia-cabelo"
+    ]
+  },
+  {
+    "id": "cabelo-1",
+    "src": "/provas/cabelo-1.mp4",
+    "poster": "/provas/cabelo-1.jpg",
+    "slugs": []
+  },
+  {
+    "id": "cabelo-2",
+    "src": "/provas/cabelo-2.mp4",
+    "poster": "/provas/cabelo-2.jpg",
+    "slugs": []
+  },
+  {
+    "id": "cabelo-3",
+    "src": "/provas/cabelo-3.mp4",
+    "poster": "/provas/cabelo-3.jpg",
+    "slugs": []
+  },
+  {
+    "id": "bia-moraes",
+    "src": "/provas/bia-moraes.mp4",
+    "poster": "/provas/bia-moraes.jpg",
+    "slugs": []
+  }
 ]
