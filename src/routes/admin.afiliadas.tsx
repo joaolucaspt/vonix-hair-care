@@ -74,6 +74,25 @@ const mailLabels: Record<AffiliateMailStatus, string> = {
   incerto: "Envio incerto — conciliar antes de reenviar",
 };
 
+const SIMPLE_PRIVATE_ANSWER_FIELDS: ReadonlyArray<{
+  key: keyof AffiliatePrivateDetail["answers"];
+  label: string;
+}> = [
+  { key: "firstName", label: "Nome completo" },
+  { key: "phone", label: "Telefone de contato" },
+  { key: "postalCode", label: "CEP" },
+  { key: "street", label: "Rua / Avenida" },
+  { key: "number", label: "Número" },
+  { key: "district", label: "Bairro" },
+  { key: "city", label: "Cidade" },
+  { key: "state", label: "Estado" },
+  { key: "complement", label: "Complemento" },
+  { key: "instagramUsername", label: "Instagram" },
+  { key: "instagramFollowers", label: "Seguidores no Instagram" },
+  { key: "tiktokUsername", label: "TikTok" },
+  { key: "tiktokFollowers", label: "Seguidores no TikTok" },
+];
+
 const PRIVATE_ANSWER_FIELDS: ReadonlyArray<{
   key: keyof AffiliatePrivateDetail["answers"];
   label: string;
@@ -531,7 +550,12 @@ export function AffiliateAdminPage() {
   }
 
   async function eraseCandidate(app: AffiliateApplicationRecord) {
-    if (!authorized || workingId || erasureEmail.trim().toLowerCase() !== app.email) return;
+    if (
+      !authorized ||
+      workingId ||
+      erasureEmail.trim().toLowerCase() !== (app.email ?? app.full_name).toLowerCase()
+    )
+      return;
     const sessionId = sessionVersion.current;
     setWorkingId(app.id);
     setError("");
@@ -1190,24 +1214,30 @@ export function AffiliateAdminPage() {
                     </div>
                     <div className="grid gap-6 px-6 py-6 md:grid-cols-[1fr_1.1fr]">
                       <dl className="grid grid-cols-2 gap-x-3 gap-y-5 text-sm">
-                        <div>
-                          <dt className="text-xs text-[#927b7d]">Idade</dt>
-                          <dd className="mt-1 font-semibold">{app.age} anos</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-[#927b7d]">Tipo de cabelo</dt>
-                          <dd className="mt-1 font-semibold">{app.hair_type}</dd>
-                        </div>
+                        {app.age !== null && (
+                          <div>
+                            <dt className="text-xs text-[#927b7d]">Idade</dt>
+                            <dd className="mt-1 font-semibold">{app.age} anos</dd>
+                          </div>
+                        )}
+                        {app.hair_type && (
+                          <div>
+                            <dt className="text-xs text-[#927b7d]">Tipo de cabelo</dt>
+                            <dd className="mt-1 font-semibold">{app.hair_type}</dd>
+                          </div>
+                        )}
                         <div className="col-span-2">
                           <dt className="text-xs text-[#927b7d]">Localização</dt>
                           <dd className="mt-1 font-semibold">
                             {app.city} / {app.state}
                           </dd>
                         </div>
-                        <div className="col-span-2">
-                          <dt className="text-xs text-[#927b7d]">E-mail</dt>
-                          <dd className="mt-1 break-all font-semibold">{app.email}</dd>
-                        </div>
+                        {app.email && (
+                          <div className="col-span-2">
+                            <dt className="text-xs text-[#927b7d]">E-mail</dt>
+                            <dd className="mt-1 break-all font-semibold">{app.email}</dd>
+                          </div>
+                        )}
                         <div className="col-span-2 flex flex-wrap gap-2">
                           {instagram && (
                             <a
@@ -1231,14 +1261,16 @@ export function AffiliateAdminPage() {
                           )}
                         </div>
                       </dl>
-                      <div className="rounded-2xl bg-[#fcf7f4] p-5">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-[#9a686b]">
-                          Por que deseja participar?
-                        </h4>
-                        <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#5a4246]">
-                          {app.motivation || "Não informado no questionário de cinco etapas."}
-                        </p>
-                      </div>
+                      {app.motivation && (
+                        <div className="rounded-2xl bg-[#fcf7f4] p-5">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#9a686b]">
+                            Motivação
+                          </h4>
+                          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-[#5a4246]">
+                            {app.motivation}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     {app.questionnaireSummary && (
                       <section
@@ -1253,31 +1285,38 @@ export function AffiliateAdminPage() {
                           criptografados e não são exibidos aqui.
                         </p>
                         <dl className="mt-5 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                          {(
-                            [
-                              [
-                                "Nicho de conteúdo",
-                                app.questionnaireSummary.otherNiche ||
-                                  app.questionnaireSummary.niche,
-                              ],
-                              [
-                                "Seguidores no Instagram",
-                                app.questionnaireSummary.instagramFollowers || "Não informado",
-                              ],
-                              ["Seguidores no TikTok", app.questionnaireSummary.tiktokFollowers],
-                              [
-                                "Inscrição municipal",
-                                app.questionnaireSummary.municipalRegistration === "sim"
-                                  ? "Sim"
-                                  : "Não",
-                              ],
-                              ["Dependentes", app.questionnaireSummary.dependents],
-                              ["Linha preferida", app.questionnaireSummary.preferredLine],
-                              [
-                                "Nome sugerido para cupom",
-                                app.questionnaireSummary.couponSuggestion,
-                              ],
-                            ] as const
+                          {(app.questionnaireSummary.kind === "simple"
+                            ? ([
+                                [
+                                  "Seguidores no Instagram",
+                                  app.questionnaireSummary.instagramFollowers || "0",
+                                ],
+                                ["Seguidores no TikTok", app.questionnaireSummary.tiktokFollowers],
+                              ] as const)
+                            : ([
+                                [
+                                  "Nicho de conteúdo",
+                                  app.questionnaireSummary.otherNiche ||
+                                    app.questionnaireSummary.niche,
+                                ],
+                                [
+                                  "Seguidores no Instagram",
+                                  app.questionnaireSummary.instagramFollowers || "Não informado",
+                                ],
+                                ["Seguidores no TikTok", app.questionnaireSummary.tiktokFollowers],
+                                [
+                                  "Inscrição municipal",
+                                  app.questionnaireSummary.municipalRegistration === "sim"
+                                    ? "Sim"
+                                    : "Não",
+                                ],
+                                ["Dependentes", app.questionnaireSummary.dependents],
+                                ["Linha preferida", app.questionnaireSummary.preferredLine],
+                                [
+                                  "Nome sugerido para cupom",
+                                  app.questionnaireSummary.couponSuggestion,
+                                ],
+                              ] as const)
                           ).map(([label, answer]) => (
                             <div key={label}>
                               <dt className="text-xs font-semibold text-[#96777c]">{label}</dt>
@@ -1332,7 +1371,10 @@ export function AffiliateAdminPage() {
                             {new Date(privateDetail.acceptedAt).toLocaleString("pt-BR")}
                           </p>
                           <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                            {PRIVATE_ANSWER_FIELDS.map(({ key, label }) => (
+                            {(privateDetail.kind === "simple"
+                              ? SIMPLE_PRIVATE_ANSWER_FIELDS
+                              : PRIVATE_ANSWER_FIELDS
+                            ).map(({ key, label }) => (
                               <div key={key} className="min-w-0 border-b border-[#f2e6e5] pb-3">
                                 <dt className="text-xs font-semibold text-[#98757b]">{label}</dt>
                                 <dd className="mt-1 whitespace-pre-wrap break-words font-medium text-[#392930]">
@@ -1344,70 +1386,74 @@ export function AffiliateAdminPage() {
                         </div>
                       )}
                     </section>
-                    <section
-                      aria-label={"Acesso de acompanhamento de " + app.full_name}
-                      className="border-t border-[#f3e7e3] bg-white px-6 py-5"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <h4 className="text-sm font-bold text-[#623b45]">Acesso à candidatura</h4>
-                          <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#806a6c]">
-                            O acompanhamento continua disponível mesmo após aprovação ou recusa. Se
-                            um convite falhou, solicite um novo envio após verificar o e-mail.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          aria-expanded={pendingAccessInviteId === app.id}
-                          disabled={workingId !== null || loading || sessionRechecking}
-                          onClick={() =>
-                            setPendingAccessInviteId(
-                              pendingAccessInviteId === app.id ? null : app.id,
-                            )
-                          }
-                          className="min-h-11 rounded-full border border-[#cfaeb4] px-5 text-sm font-semibold text-[#693440] hover:bg-[#fff5f3] disabled:opacity-50"
-                        >
-                          {workingId === app.id
-                            ? "Processando..."
-                            : pendingAccessInviteId === app.id
-                              ? "Cancelar reenvio"
-                              : "Reenviar acesso"}
-                        </button>
-                      </div>
-                      {pendingAccessInviteId === app.id && (
-                        <div
-                          role="group"
-                          aria-label="Confirmar tentativa de convite da candidata"
-                          className="mt-4 rounded-xl border border-[#e1c8cc] bg-[#fffaf8] p-5"
-                        >
-                          <p className="text-sm font-semibold text-[#5b343b]">
-                            Solicitar novo convite para {app.email}?
-                          </p>
-                          <p className="mt-2 text-xs leading-relaxed text-[#806a6c]">
-                            O envio usa exclusivamente o e-mail já armazenado nesta inscrição. A
-                            resposta do provedor não comprova a entrega. Se a candidata já possuir
-                            conta, ela pode pedir um código diretamente no portal.
-                          </p>
-                          <div className="mt-4 flex flex-wrap gap-3">
-                            <button
-                              type="button"
-                              disabled={workingId !== null || loading}
-                              onClick={() => void retryApplicantAccess(app)}
-                              className="min-h-11 rounded-full bg-[#693440] px-5 text-sm font-bold text-white disabled:opacity-50"
-                            >
-                              Confirmar tentativa de convite
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPendingAccessInviteId(null)}
-                              className="min-h-11 rounded-full border border-[#dcc8c6] px-5 text-sm font-semibold text-[#68464e]"
-                            >
-                              Cancelar
-                            </button>
+                    {app.email && (
+                      <section
+                        aria-label={"Acesso de acompanhamento de " + app.full_name}
+                        className="border-t border-[#f3e7e3] bg-white px-6 py-5"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h4 className="text-sm font-bold text-[#623b45]">
+                              Acesso à candidatura
+                            </h4>
+                            <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#806a6c]">
+                              O acompanhamento continua disponível mesmo após aprovação ou recusa.
+                              Se um convite falhou, solicite um novo envio após verificar o e-mail.
+                            </p>
                           </div>
+                          <button
+                            type="button"
+                            aria-expanded={pendingAccessInviteId === app.id}
+                            disabled={workingId !== null || loading || sessionRechecking}
+                            onClick={() =>
+                              setPendingAccessInviteId(
+                                pendingAccessInviteId === app.id ? null : app.id,
+                              )
+                            }
+                            className="min-h-11 rounded-full border border-[#cfaeb4] px-5 text-sm font-semibold text-[#693440] hover:bg-[#fff5f3] disabled:opacity-50"
+                          >
+                            {workingId === app.id
+                              ? "Processando..."
+                              : pendingAccessInviteId === app.id
+                                ? "Cancelar reenvio"
+                                : "Reenviar acesso"}
+                          </button>
                         </div>
-                      )}
-                    </section>
+                        {pendingAccessInviteId === app.id && (
+                          <div
+                            role="group"
+                            aria-label="Confirmar tentativa de convite da candidata"
+                            className="mt-4 rounded-xl border border-[#e1c8cc] bg-[#fffaf8] p-5"
+                          >
+                            <p className="text-sm font-semibold text-[#5b343b]">
+                              Solicitar novo convite para {app.email}?
+                            </p>
+                            <p className="mt-2 text-xs leading-relaxed text-[#806a6c]">
+                              O envio usa exclusivamente o e-mail já armazenado nesta inscrição. A
+                              resposta do provedor não comprova a entrega. Se a candidata já possuir
+                              conta, ela pode pedir um código diretamente no portal.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                disabled={workingId !== null || loading}
+                                onClick={() => void retryApplicantAccess(app)}
+                                className="min-h-11 rounded-full bg-[#693440] px-5 text-sm font-bold text-white disabled:opacity-50"
+                              >
+                                Confirmar tentativa de convite
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPendingAccessInviteId(null)}
+                                className="min-h-11 rounded-full border border-[#dcc8c6] px-5 text-sm font-semibold text-[#68464e]"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </section>
+                    )}
                     {app.status === "pendente" ? (
                       <div className="flex flex-wrap gap-3 border-t border-[#f3e7e3] bg-[#fffaf7] px-6 py-5">
                         <button
@@ -1544,11 +1590,13 @@ export function AffiliateAdminPage() {
                             htmlFor={"erase-email-" + app.id}
                             className="mt-4 block text-xs font-semibold"
                           >
-                            Confirme digitando o e-mail da candidata: {app.email}
+                            Confirme digitando{" "}
+                            {app.email ? "o e-mail da candidata" : "o nome completo da candidata"}:{" "}
+                            {app.email ?? app.full_name}
                           </label>
                           <input
                             id={"erase-email-" + app.id}
-                            type="email"
+                            type={app.email ? "email" : "text"}
                             autoComplete="off"
                             value={erasureEmail}
                             onChange={(event) => setErasureEmail(event.target.value)}
@@ -1557,7 +1605,9 @@ export function AffiliateAdminPage() {
                           <button
                             type="submit"
                             disabled={
-                              workingId !== null || erasureEmail.trim().toLowerCase() !== app.email
+                              workingId !== null ||
+                              erasureEmail.trim().toLowerCase() !==
+                                (app.email ?? app.full_name).toLowerCase()
                             }
                             className="mt-4 min-h-11 rounded-full bg-red-800 px-6 text-sm font-bold text-white disabled:opacity-40"
                           >

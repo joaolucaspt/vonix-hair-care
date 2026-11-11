@@ -13,8 +13,8 @@ vi.mock("@/components/affiliate-shell", () => ({
   AffiliateShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
 vi.mock("@/lib/store", () => ({ SITE_URL: "https://vonixhair.com" }));
-vi.mock("@/components/affiliate-wizard", () => ({
-  AffiliateWizard: ({
+vi.mock("@/components/affiliate-simple-form", () => ({
+  AffiliateSimpleForm: ({
     preview,
     onDraftChange,
   }: {

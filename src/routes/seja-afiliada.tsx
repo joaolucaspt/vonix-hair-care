@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { getAffiliateRecruitmentStatus } from "@/lib/affiliate-functions";
-import { AffiliateWizard } from "@/components/affiliate-wizard";
+import { AffiliateSimpleForm } from "@/components/affiliate-simple-form";
 import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
 import { SITE_URL } from "@/lib/store";
 
@@ -14,12 +14,12 @@ export const Route = createFileRoute("/seja-afiliada")({
       {
         name: "description",
         content:
-          "Conheça a inscrição para afiliadas Vonix Hair, o formulário de cinco etapas e como funciona a seleção de candidaturas.",
+          "Inscreva-se para seleção de afiliadas Vonix Hair com um formulário rápido de contato, endereço e redes sociais.",
       },
       { property: "og:title", content: "Programa de afiliados Vonix Hair" },
       {
         property: "og:description",
-        content: "Conheça o cadastro de cinco etapas para a seleção de afiliadas Vonix Hair.",
+        content: "Inscrição simplificada: nome, telefone, endereço, Instagram e TikTok.",
       },
       { name: "robots", content: "index,follow" },
     ],
@@ -78,8 +78,7 @@ export function AffiliateApplicationPage() {
       }
     }
     void refreshStatus();
-    // Re-check availability after leaving a tab idle, without restarting
-    // the five-stage form or reinterpreting a preview as a live application.
+    // Re-check availability without restarting a filled draft.
     const onFocus = () => {
       if (document.visibilityState === "visible") void refreshStatus();
     };
@@ -133,12 +132,12 @@ export function AffiliateApplicationPage() {
               {recruitment === "open" ? "Inscrições abertas" : "Programa de afiliados"}
             </p>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl">
-              Sua história começa em cinco etapas.
+              Sua inscrição, de um jeito simples.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#765c5d] sm:text-base">
-              Queremos conhecer sua trajetória, seu conteúdo e sua conexão com os produtos Vonix
-              Hair. O cadastro não tem custo e não garante aprovação. Participação destinada a
-              maiores de 18 anos.
+              Só precisamos do seu nome completo, telefone, endereço com CEP e número e dos seus
+              perfis no Instagram e TikTok com a quantidade de seguidores. Sem perguntas extras. A
+              inscrição é gratuita e não garante aprovação.
             </p>
           </div>
 
@@ -156,7 +155,7 @@ export function AffiliateApplicationPage() {
               <p className="mt-4 leading-relaxed text-[#755b5e]">
                 {recruitment === "loading"
                   ? "Estamos verificando a disponibilidade do cadastro."
-                  : "O formulário de cinco etapas já está disponível para visualização, mas não recebe candidaturas enquanto a operação não estiver habilitada."}
+                  : "O formulário simplificado está disponível para visualização, mas não recebe candidaturas enquanto as inscrições estiverem fechadas."}
               </p>
               {recruitment !== "loading" && (
                 <button
@@ -190,7 +189,7 @@ export function AffiliateApplicationPage() {
               )}
               {/* A preview must never turn into a live POST because status changed.
                   Switching explicitly to live starts a fresh form, not an old draft. */}
-              <AffiliateWizard
+              <AffiliateSimpleForm
                 key={preview ? "preview" : "live"}
                 preview={simulationOnly}
                 onDraftChange={setPreviewHasDraft}

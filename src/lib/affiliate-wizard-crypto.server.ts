@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { z } from "zod";
 import { env } from "./env.server";
 import type { ValidatedAffiliateWizard } from "./affiliate-wizard";
+import { affiliateSimpleSchema, type AffiliateSimpleInput } from "./affiliate-simple";
 
 function encryptionKey(): Buffer | null {
   const supplied = env("AFFILIATE_QUESTIONNAIRE_KEY");
@@ -31,6 +32,32 @@ function encryptionKey(): Buffer | null {
 }
 
 export const affiliateQuestionnaireEncryptionReady = () => encryptionKey() !== null;
+
+// New lightweight application data (phone and full postal address) remains
+// encrypted at rest. Old v2 questionnaires are still readable for moderation.
+const simpleAnswersSchema = affiliateSimpleSchema.omit({
+  privacyAccepted: true,
+  website: true,
+});
+
+export function encryptSimpleAffiliateApplication(data: AffiliateSimpleInput): string {
+  const key = encryptionKey();
+  if (!key) throw new Error("Criptografia de inscrição não configurada.");
+  const { privacyAccepted: _accepted, website: _trap, ...answers } = data;
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const plaintext = Buffer.from(
+    JSON.stringify({ version: 3, acceptedAt: new Date().toISOString(), answers }),
+    "utf8",
+  );
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return [
+    "v3",
+    iv.toString("base64url"),
+    cipher.getAuthTag().toString("base64url"),
+    encrypted.toString("base64url"),
+  ].join(".");
+}
 
 // A five-stage submission is bounded by field schemas. This is a defensive
 // cap for malformed historical database payloads, not a limit on applicants.
@@ -68,6 +95,7 @@ export function encryptAffiliateWizard(wizard: ValidatedAffiliateWizard): string
 }
 
 export type AffiliateWizardSummary = {
+  kind?: "legacy" | "simple";
   niche: string;
   otherNiche: string | null;
   instagramFollowers: string | null;
@@ -105,7 +133,7 @@ export function affiliateWizardSummary(
   if (!key) return null;
   try {
     const [version, iv64, tag64, encrypted64] = ciphertext.split(".");
-    if (version !== "v2" || !iv64 || !tag64 || !encrypted64) return null;
+    if ((version !== "v2" && version !== "v3") || !iv64 || !tag64 || !encrypted64) return null;
     const iv = Buffer.from(iv64, "base64url");
     const tag = Buffer.from(tag64, "base64url");
     if (iv.length !== 12 || tag.length !== 16) return null;
@@ -116,11 +144,27 @@ export function affiliateWizardSummary(
       decipher.final(),
     ]).toString("utf8");
     const payload = JSON.parse(json) as { version?: number; answers?: unknown };
-    if (payload.version !== 2) return null;
+    if (version === "v3" && payload.version === 3) {
+      const simple = simpleAnswersSchema.safeParse(payload.answers);
+      if (!simple.success) return null;
+      return {
+        kind: "simple",
+        niche: "",
+        otherNiche: null,
+        instagramFollowers: simple.data.instagramFollowers.toLocaleString("pt-BR"),
+        tiktokFollowers: simple.data.tiktokFollowers.toLocaleString("pt-BR"),
+        municipalRegistration: "",
+        dependents: "",
+        preferredLine: "",
+        couponSuggestion: "",
+      };
+    }
+    if (version !== "v2" || payload.version !== 2) return null;
     const data = summaryFieldsSchema.safeParse(payload.answers);
     if (!data.success) return null;
     const w = data.data;
     return {
+      kind: "legacy",
       niche: w.niche,
       otherNiche: w.niche === "Outro" ? w.otherNiche || null : null,
       instagramFollowers: w.instagramFollowers || null,
@@ -175,6 +219,7 @@ const privateAnswersSchema = z.object({
 });
 export type AffiliatePrivateAnswers = z.infer<typeof privateAnswersSchema>;
 export type AffiliatePrivateDetail = {
+  kind?: "legacy" | "simple";
   acceptedAt: string;
   answers: AffiliatePrivateAnswers;
 };
@@ -191,7 +236,7 @@ export function decryptAffiliateWizardForAdmin(
     const parts = ciphertext.split(".");
     if (parts.length !== 4) return null;
     const [version, iv64, tag64, encrypted64] = parts;
-    if (version !== "v2" || !iv64 || !tag64 || !encrypted64) return null;
+    if ((version !== "v2" && version !== "v3") || !iv64 || !tag64 || !encrypted64) return null;
     const iv = Buffer.from(iv64, "base64url");
     const tag = Buffer.from(tag64, "base64url");
     if (iv.length !== 12 || tag.length !== 16) return null;
@@ -203,6 +248,39 @@ export function decryptAffiliateWizardForAdmin(
         decipher.final(),
       ]).toString("utf8"),
     ) as unknown;
+    if (version === "v3") {
+      const simple = z
+        .object({
+          version: z.literal(3),
+          acceptedAt: z.string().datetime({ offset: true }),
+          answers: simpleAnswersSchema,
+        })
+        .safeParse(payload);
+      if (!simple.success) return null;
+      const data = simple.data.answers;
+      // The old private-detail viewer expects a fixed field map. Empty values
+      // are view-only for fields that were not collected; they are NOT stored.
+      const blank = Object.fromEntries(
+        Object.keys(privateAnswersSchema.shape).map((key) => [key, ""]),
+      );
+      const answers = privateAnswersSchema.parse({
+        ...blank,
+        firstName: data.fullName,
+        phone: data.phone,
+        postalCode: data.postalCode,
+        street: data.street,
+        number: data.number,
+        district: data.district,
+        city: data.city,
+        state: data.state,
+        complement: data.complement,
+        instagramUsername: data.instagram,
+        instagramFollowers: data.instagramFollowers.toLocaleString("pt-BR"),
+        tiktokUsername: data.tiktok,
+        tiktokFollowers: data.tiktokFollowers.toLocaleString("pt-BR"),
+      });
+      return { kind: "simple", acceptedAt: simple.data.acceptedAt, answers };
+    }
     const parsed = z
       .object({
         version: z.literal(2),
@@ -211,7 +289,7 @@ export function decryptAffiliateWizardForAdmin(
       })
       .safeParse(payload);
     return parsed.success
-      ? { acceptedAt: parsed.data.acceptedAt, answers: parsed.data.answers }
+      ? { kind: "legacy", acceptedAt: parsed.data.acceptedAt, answers: parsed.data.answers }
       : null;
   } catch {
     // No ciphertext, plaintext or decryption failure details in logs or API.

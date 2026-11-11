@@ -6,6 +6,7 @@ import { affiliateDatabaseConfig } from "./affiliate-database.server";
 import { VONIX_AFFILIATE_AUTH_URL, VONIX_AFFILIATE_PUBLIC_KEY } from "./vonix-affiliate-auth";
 import { affiliateQuestionnaireEncryptionReady } from "./affiliate-wizard-crypto.server";
 import { affiliateApplicationSchema, affiliateAdminSchema } from "./affiliate-application";
+import { affiliateSimpleSchema } from "./affiliate-simple";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
 import {
@@ -33,6 +34,7 @@ import {
   eraseAffiliateApplication,
   previewAffiliateRetention,
   createAffiliateApplication,
+  createSimpleAffiliateApplication,
   readAffiliateApplicantEmailForAccessRecovery,
   decideAffiliateApplication,
   listAffiliateApplications,
@@ -166,6 +168,39 @@ export const requestAffiliateAccessEmail = createServerFn({ method: "POST" })
       // Fixed operator-only category: never log the address, code, link or error body.
       console.warn("[vonix-affiliate-auth-mail] request-exception http=none");
       return { status: "requested" as const };
+    }
+  });
+
+export const submitSimpleAffiliateApplication = createServerFn({ method: "POST" })
+  .validator(affiliateSimpleSchema)
+  .handler(async ({ data }) => {
+    if (!(await affiliateOperatorIntakeEnabled())) {
+      return {
+        ok: false as const,
+        reason:
+          "As inscrições ainda não estão disponíveis. Consulte os canais oficiais da Vonix Hair.",
+      };
+    }
+    if (!affiliateMutationSameOrigin()) {
+      return {
+        ok: false as const,
+        reason: "Envie a inscrição pelo formulário oficial da Vonix Hair.",
+      };
+    }
+    if (!(await consumeAffiliateRateLimit("submit"))) {
+      return {
+        ok: false as const,
+        reason: "Muitas tentativas ou serviço temporariamente indisponível. Tente mais tarde.",
+      };
+    }
+    try {
+      return await createSimpleAffiliateApplication(data);
+    } catch {
+      // Never return SQL or encrypted PII in a public error.
+      return {
+        ok: false as const,
+        reason: "Não foi possível receber a inscrição agora. Tente novamente mais tarde.",
+      };
     }
   });
 
@@ -370,7 +405,7 @@ export const eraseAffiliateApplicationAdmin = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id: z.string().uuid(),
-      emailConfirmation: z.string().trim().toLowerCase().email().max(180),
+      emailConfirmation: z.string().trim().min(3).max(180),
       reason: z.enum(["solicitacao_titular", "retencao", "correcao"]),
     }),
   )

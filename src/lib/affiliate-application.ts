@@ -109,15 +109,16 @@ export type AffiliateMailStatus = "pendente" | "processando" | "enviado" | "falh
 export interface AffiliateApplicationRecord {
   id: string;
   full_name: string;
-  age: number;
+  age: number | null;
   city: string;
   state: string;
-  hair_type: string;
-  email: string;
+  hair_type: string | null;
+  email: string | null;
   instagram_url: string;
   tiktok_url: string | null;
   motivation: string | null;
   questionnaireSummary?: {
+    kind?: "legacy" | "simple";
     niche: string;
     otherNiche: string | null;
     instagramFollowers: string | null;
