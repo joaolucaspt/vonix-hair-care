@@ -84,6 +84,28 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     expect(message.text).toContain("Não reutilize links de convites anteriores");
   });
 
+  it("prefers the scoped Vonix Resend key while preserving legacy fallback", async () => {
+    const scoped = "re_" + "S".repeat(36);
+    deps.values.set("AFFILIATE_RESEND_API_KEY", scoped);
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(true))
+      .mockResolvedValueOnce(generate())
+      .mockResolvedValueOnce(success());
+    vi.stubGlobal("fetch", fetcher);
+    expect(affiliateCustomAuthEmailReady()).toBe(true);
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+    expect(fetcher.mock.calls[2]![1].headers.Authorization).toBe("Bearer " + scoped);
+    deps.values.delete("AFFILIATE_RESEND_API_KEY");
+    expect(affiliateCustomAuthEmailReady()).toBe(true);
+  });
+
+  it("allows the scoped key without a legacy key", () => {
+    deps.values.delete("RESEND_API_KEY");
+    deps.values.set("AFFILIATE_RESEND_API_KEY", "re_" + "S".repeat(36));
+    expect(affiliateCustomAuthEmailReady()).toBe(true);
+  });
+
   it("does not forward a generated token to an untrusted host", async () => {
     const fetcher = vi
       .fn()

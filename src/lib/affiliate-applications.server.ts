@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { env } from "./env.server";
+import { affiliateResendApiKey } from "./affiliate-resend-config.server";
 import {
   affiliateDatabaseConfig,
   requireAffiliateDatabaseConfig,
@@ -306,7 +307,7 @@ export async function affiliateOperationalReadiness() {
       id: "resend",
       label: "Notificações por e-mail (opcional para inscrições)",
       ok: Boolean(
-        env("RESEND_API_KEY") &&
+        affiliateResendApiKey() &&
         env("AFFILIATE_FROM_EMAIL") &&
         env("AFFILIATE_WORKER_SECRET").length >= 24,
       ),
@@ -650,7 +651,7 @@ async function finishAffiliateMail(
 
 /** Each email is one DB outbox row; Resend de-duplicates retries for 24h. */
 export async function processAffiliateEmails(limit = 5, applicationId?: string) {
-  const apiKey = env("RESEND_API_KEY");
+  const apiKey = affiliateResendApiKey();
   const from = env("AFFILIATE_FROM_EMAIL");
   if (!apiKey || !from) return { sent: 0, failed: 0, configured: false };
   let sent = 0;
