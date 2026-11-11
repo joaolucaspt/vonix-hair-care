@@ -229,6 +229,7 @@ function AudienceChoice() {
 
 export function Shell({ children }: { children: ReactNode }) {
   const { count } = useCart();
+  const { audience } = useAudience();
   const [open, setOpen] = useState(false);
   const path = useLocation().pathname;
   const router = useRouter();
@@ -245,7 +246,8 @@ export function Shell({ children }: { children: ReactNode }) {
           ))}
         </div>
       </div>
-      <header className="sticky top-0 z-40 border-b border-border bg-background">
+      {/* O topo (logo, busca e categorias) rola junto com a página; só a escolha "Para mim / Cabeleireiras" fica fixa. */}
+      <header className="relative z-30 border-b border-border bg-background">
         <div className="container-site grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2 lg:flex lg:items-start lg:gap-4 lg:py-2">
           {isCheckout ? (
             // No checkout o topo é mínimo: o espaço do menu fica reservado para o logo continuar centralizado.
@@ -262,7 +264,6 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
               <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
               <SearchBox />
-              <AudienceChoice />
             </div>
           )}
           <div className="ml-auto flex items-center justify-self-end gap-2 text-body sm:gap-4">
@@ -309,7 +310,6 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="container-site space-y-2 pb-3 lg:hidden">
               <p className="whitespace-nowrap text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
               <SearchBox />
-              <AudienceChoice />
             </div>
           )
         )}
@@ -329,6 +329,13 @@ export function Shell({ children }: { children: ReactNode }) {
           </nav>
         )}
       </header>
+      {!isCheckout && (
+        <div className={`${audience ? "sticky top-0 z-40 border-b border-border bg-background py-1" : "container-site py-2"} ${isProduct ? "hidden lg:block" : ""}`}>
+          <div className={audience ? "container-site" : undefined}>
+            <AudienceChoice />
+          </div>
+        </div>
+      )}
       {open && (
         <div className="fixed inset-0 z-50 bg-foreground/50" onClick={() => setOpen(false)}>
           <aside
