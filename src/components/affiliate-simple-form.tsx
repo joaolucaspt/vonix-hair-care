@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CheckCircle2, MapPin, Send, ShieldCheck, Instagram } from "lucide-react";
 import { affiliateSimpleSchema } from "@/lib/affiliate-simple";
+import { track } from "@/lib/analytics";
 import { submitSimpleAffiliateApplication } from "@/lib/affiliate-functions";
 import { WIZARD_BRAZIL_STATES, onlyDigits } from "@/lib/affiliate-wizard";
 
@@ -251,6 +252,8 @@ export function AffiliateSimpleForm({
     try {
       const result = await submitSimpleAffiliateApplication({ data: parsed.data });
       if (result.ok) {
+        // Count only a persisted application; no candidate personal information is sent.
+        track("sign_up", { method: "affiliate_application" });
         setSent(true);
         setValues({ ...fields });
         setAccepted(false);

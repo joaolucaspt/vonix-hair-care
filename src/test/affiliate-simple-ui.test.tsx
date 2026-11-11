@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const server = vi.hoisted(() => ({ submit: vi.fn() }));
+const analytics = vi.hoisted(() => ({ track: vi.fn() }));
+vi.mock("@/lib/analytics", () => ({ track: analytics.track }));
 vi.mock("@/lib/affiliate-functions", () => ({
   submitSimpleAffiliateApplication: server.submit,
 }));
@@ -77,6 +79,9 @@ describe("Vonix short single-page application form", () => {
       }),
     });
     expect(await screen.findByRole("status")).toHaveTextContent("Inscrição recebida!");
+    expect(analytics.track).toHaveBeenCalledExactlyOnceWith("sign_up", {
+      method: "affiliate_application",
+    });
   });
 
   it("keeps an interactive preview from calling the server", async () => {
@@ -85,6 +90,16 @@ describe("Vonix short single-page application form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Simular envio" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("apenas uma prévia"));
     expect(server.submit).not.toHaveBeenCalled();
+    expect(analytics.track).not.toHaveBeenCalled();
+  });
+
+  it("never reports a lead when the server rejects a candidature", async () => {
+    server.submit.mockResolvedValue({ ok: false, reason: "Inscrições indisponíveis." });
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Inscrições indisponíveis.");
+    expect(analytics.track).not.toHaveBeenCalled();
   });
 
   it("rejects a missing address number before any request", () => {
@@ -93,5 +108,6 @@ describe("Vonix short single-page application form", () => {
     fireEvent.change(screen.getByLabelText(/Número/), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
     expect(server.submit).not.toHaveBeenCalled();
+    expect(analytics.track).not.toHaveBeenCalled();
   });
 });
