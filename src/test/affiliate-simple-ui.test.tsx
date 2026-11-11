@@ -16,6 +16,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function fill() {
@@ -193,5 +194,110 @@ describe("Vonix short single-page application form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
     expect(server.submit).not.toHaveBeenCalled();
     expect(analytics.track).not.toHaveBeenCalled();
+  });
+
+  it("accepts shared official Instagram and TikTok profile links with tracking query parameters", async () => {
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.change(screen.getByLabelText(/^Instagram/), {
+      target: { value: "https://www.instagram.com/maria.exemplo/?igsh=YWIxMTEx" },
+    });
+    fireEvent.change(screen.getByLabelText(/^TikTok/), {
+      target: { value: "https://www.tiktok.com/@maria.exemplo?_t=8xYz&_r=1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    await waitFor(() =>
+      expect(server.submit).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          instagram: "maria.exemplo",
+          tiktok: "maria.exemplo",
+        }),
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Inscrição recebida!");
+  });
+
+  it("rejects spoofed social domains and non-profile paths despite tracking query strings", async () => {
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.change(screen.getByLabelText(/^Instagram/), {
+      target: { value: "https://instagram.com.evil.io/maria?igsh=x" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(server.submit).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Informe um usuário válido");
+  });
+
+  it("clears only CEP-autofilled address fields on postal code change, preserving manual edits", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          logradouro: "Rua Primeira",
+          bairro: "Centro Antigo",
+          localidade: "Belo Horizonte",
+          uf: "MG",
+        }),
+      ),
+    );
+    render(<AffiliateSimpleForm />);
+    fireEvent.change(screen.getByLabelText(/CEP/), { target: { value: "30110012" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }));
+    expect(await screen.findByDisplayValue("Rua Primeira")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Bairro/)).toHaveValue("Centro Antigo");
+    fireEvent.change(screen.getByLabelText(/Rua \/ Avenida/), {
+      target: { value: "Rua digitada por mim" },
+    });
+    fireEvent.change(screen.getByLabelText(/CEP/), { target: { value: "30120020" } });
+    expect(screen.getByLabelText(/Rua \/ Avenida/)).toHaveValue("Rua digitada por mim");
+    expect(screen.getByLabelText(/Bairro/)).toHaveValue("");
+    expect(screen.getByLabelText(/Cidade/)).toHaveValue("");
+    expect(screen.getByLabelText(/Estado/)).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }));
+    await waitFor(() => expect(screen.getByLabelText(/Bairro/)).toHaveValue("Centro Antigo"));
+    expect(screen.getByLabelText(/Rua \/ Avenida/)).toHaveValue("Rua digitada por mim");
+  });
+
+  it("unlocks lookup after CEP changes mid-flight; stale reply must not overwrite current address", async () => {
+    let releaseOld!: (reply: Response) => void;
+    const first = new Promise<Response>((resolve) => {
+      releaseOld = resolve;
+    });
+    const provider = vi.fn((url: string) => {
+      if (url.includes("/30110012/")) return first;
+      return Promise.resolve(
+        Response.json({
+          logradouro: "Rua do Segundo CEP",
+          bairro: "Bairro Atual",
+          localidade: "Contagem",
+          uf: "MG",
+        }),
+      );
+    });
+    vi.stubGlobal("fetch", provider);
+    render(<AffiliateSimpleForm />);
+    fireEvent.change(screen.getByLabelText(/CEP/), { target: { value: "30110012" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }));
+    await waitFor(() => expect(provider).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Buscando CEP..." })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/CEP/), { target: { value: "32010000" } });
+    expect(screen.getByRole("button", { name: "Buscar CEP" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }));
+    await waitFor(() => expect(provider).toHaveBeenCalledTimes(2));
+    expect(await screen.findByDisplayValue("Rua do Segundo CEP")).toBeInTheDocument();
+
+    releaseOld(
+      Response.json({
+        logradouro: "Rua Antiga",
+        bairro: "Antigo",
+        localidade: "Cidade Antiga",
+        uf: "RJ",
+      }),
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Buscar CEP" })).toBeEnabled());
+    expect(screen.getByLabelText(/Rua \/ Avenida/)).toHaveValue("Rua do Segundo CEP");
+    expect(screen.getByLabelText(/Cidade/)).toHaveValue("Contagem");
+    expect(screen.getByLabelText(/Estado/)).toHaveValue("MG");
   });
 });

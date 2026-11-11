@@ -50,8 +50,8 @@ function normalizeSocial(value: string, platform: "instagram" | "tiktok") {
     const domain = url.hostname.toLowerCase().replace(/^www\./, "");
     if (
       url.protocol !== "https:" ||
-      url.search ||
-      url.hash ||
+      /* Official share-link query parameters are intentionally discarded. */
+      /* A validated direct profile path is authoritative even with a fragment. */
       url.username ||
       url.password ||
       url.port ||
@@ -173,6 +173,10 @@ export function AffiliateSimpleForm({
   const [message, setMessage] = useState("");
   const [zipLoading, setZipLoading] = useState(false);
   const zipRequest = useRef(0);
+  // Track only CEP-provided values. Never clear an applicant's manual edits.
+  const zipAutoFilled = useRef<Partial<Record<"street" | "district" | "city" | "state", string>>>(
+    {},
+  );
   const submitting = useRef(false);
   const dirty = Object.values(values).some(Boolean) || accepted || !!trap;
 
@@ -191,7 +195,6 @@ export function AffiliateSimpleForm({
   }, [dirty, sent]);
 
   function update(key: Key, raw: string) {
-    if (key === "postalCode") zipRequest.current++;
     const value =
       key === "postalCode"
         ? onlyDigits(raw)
@@ -200,7 +203,28 @@ export function AffiliateSimpleForm({
         : key === "instagram" || key === "tiktok"
           ? raw.slice(0, 240)
           : raw;
-    setValues((prev) => ({ ...prev, [key]: value }));
+    if (key === "postalCode") {
+      if (onlyDigits(value) !== onlyDigits(values.postalCode)) {
+        // Old results can no longer overwrite a changed CEP; allow a new lookup.
+        zipRequest.current++;
+        setZipLoading(false);
+        const auto = zipAutoFilled.current;
+        zipAutoFilled.current = {};
+        setValues((prev) => ({
+          ...prev,
+          postalCode: value,
+          street: auto.street && prev.street === auto.street ? "" : prev.street,
+          district: auto.district && prev.district === auto.district ? "" : prev.district,
+          city: auto.city && prev.city === auto.city ? "" : prev.city,
+          state: auto.state && prev.state === auto.state ? "" : prev.state,
+        }));
+      }
+    } else {
+      if (key === "street" || key === "district" || key === "city" || key === "state") {
+        delete zipAutoFilled.current[key];
+      }
+      setValues((prev) => ({ ...prev, [key]: value }));
+    }
     setErrors((prev) => ({ ...prev, [key]: "" }));
     setMessage("");
   }
@@ -226,13 +250,20 @@ export function AffiliateSimpleForm({
       if (!WIZARD_BRAZIL_STATES.some((state) => state === uf)) return;
       setValues((prev) => {
         if (zipRequest.current !== request || onlyDigits(prev.postalCode) !== digits) return prev;
-        return {
-          ...prev,
-          street: prev.street || text("logradouro", 120),
-          district: prev.district || text("bairro", 90),
-          city: prev.city || text("localidade", 90),
-          state: prev.state || uf,
+        const suggested = {
+          street: text("logradouro", 120),
+          district: text("bairro", 90),
+          city: text("localidade", 90),
+          state: uf,
         };
+        const next = { ...prev };
+        for (const key of ["street", "district", "city", "state"] as const) {
+          if (!prev[key] && suggested[key]) {
+            next[key] = suggested[key];
+            zipAutoFilled.current[key] = suggested[key];
+          }
+        }
+        return next;
       });
     } catch {
       // CEP lookup only assists; the full address can always be entered manually.

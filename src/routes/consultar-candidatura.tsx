@@ -27,6 +27,21 @@ export function AffiliateTrackingCodePage() {
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  async function copyPrivateCode() {
+    if (!/^[A-Za-z0-9_-]{32}$/.test(code)) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+    } catch {
+      // Copy can be blocked by browser permissions; select for manual copy.
+      setCopied(false);
+      const field = document.getElementById("affiliate-private-code") as HTMLInputElement | null;
+      field?.focus();
+      field?.select();
+    }
+  }
 
   async function lookup(codeValue: string) {
     setBusy(true);
@@ -98,6 +113,7 @@ export function AffiliateTrackingCodePage() {
                 value={code}
                 onChange={(event) => {
                   setCode(event.target.value.trim());
+                  setCopied(false);
                   setResult(null);
                   setError("");
                 }}
@@ -112,6 +128,15 @@ export function AffiliateTrackingCodePage() {
                 <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
                 {busy ? "Consultando..." : "Consultar minha inscrição"}
               </button>
+              {/^[A-Za-z0-9_-]{32}$/.test(code) && (
+                <button
+                  type="button"
+                  onClick={() => void copyPrivateCode()}
+                  className="mt-3 min-h-11 w-full rounded-full border border-[#b9969e] px-5 text-sm font-bold text-[#633847]"
+                >
+                  {copied ? "Código copiado!" : "Copiar código para guardar"}
+                </button>
+              )}
             </form>
             {error && (
               <p role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-800">

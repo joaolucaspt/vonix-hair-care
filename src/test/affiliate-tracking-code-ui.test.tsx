@@ -40,6 +40,31 @@ describe("Private Vonix email-less applicant status portal", () => {
     expect(window.sessionStorage.getItem("vonix-affiliate-once-code")).toBeNull();
     expect(window.location.search).not.toContain(code);
     expect(window.location.hash).not.toContain(code);
+    expect(screen.getByRole("button", { name: "Copiar código para guardar" })).toBeInTheDocument();
+  });
+
+  it("allows copying the private code on the status portal without persisting or logging it in the URL", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const original = Object.getOwnPropertyDescriptor(window.navigator, "clipboard");
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    try {
+      render(<AffiliateTrackingCodePage />);
+      fireEvent.change(screen.getByLabelText("Código privado de acompanhamento"), {
+        target: { value: code },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Copiar código para guardar" }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith(code));
+      expect(screen.getByRole("button", { name: "Código copiado!" })).toBeInTheDocument();
+      expect(window.location.search).not.toContain(code);
+      expect(window.location.hash).not.toContain(code);
+      expect(server.getAffiliateStatusByCode).not.toHaveBeenCalled();
+    } finally {
+      if (original) Object.defineProperty(window.navigator, "clipboard", original);
+      else Reflect.deleteProperty(window.navigator, "clipboard");
+    }
   });
 
   it("requires a strong private code, not a social handle", () => {
