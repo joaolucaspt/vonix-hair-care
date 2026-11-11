@@ -50,3 +50,9 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 ## 11/11/2026 — ordem extra 1 concluída
 - O anúncio A3 | fio de luz (conta BM Vonix Hair) apontava no ar para /produto/botox-vonix; a edição já salva como rascunho trazia /produto/progressiva-fio-de-luz (com UTM de a3_fio_de_luz). Publiquei só essa edição (o Meta confirmou "1 anúncio foi atualizado"; rascunhos pendentes caíram de 25 para 24). A1 (kit-desmaia) e A2 (botox-vonix) já estavam certos. Como desfazer: abrir o A3 e trocar a URL do site de volta.
 - Pendente do Lucas: conferir se o conjunto "ADV+ | Mulheres 25-55" não usa Advantage+ (regra: segmentação manual).
+
+## 11/11/2026 — publicado (aprovado pelo Lucas)
+- Fotos de produto em WebP na tela (JPG segue no catálogo/feed/og). Vídeo Banana e Mel (cortado, sem áudio, sem o texto de 10% que acabou). Cadastro do cupom agora envia o contato para o app (tela Contatos do site; tabela site_leads criada no banco do app). Visita de anúncio (fbclid ou utm_medium=paid) não vê roleta, pop-up de afiliada nem Seja afiliada no topo.
+- Medição (celular simulado), antes -> depois: home peso 2,68 -> 1,77 MB, LCP 7,8 -> 4,1 s, nota 46 -> 57; loja peso 3,04 -> 1,67 MB, nota 52 -> 53; botox peso 1,66 -> 1,53 MB, nota 56 -> 54 (variação normal do teste). O tempo travado (TBT 1,7 a 2,3 s) não melhorou: vem dos scripts do Meta e do Google (Lucas disse NÃO mexer).
+- Não testado ponta a ponta: um cadastro real no site chegando na tela Contatos do site (evitei criar contato falso).
+- Como desfazer: git revert das PRs 106, 107 e 108 (site) e 14 (app).
