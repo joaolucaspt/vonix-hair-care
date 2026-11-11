@@ -12,12 +12,18 @@ import {
   type AffiliateStatus,
 } from "./affiliate-application";
 import { affiliateDecisionEmail } from "./affiliate-email";
+import {
+  affiliateSimpleSchema,
+  simpleAffiliateSocialUrls,
+  type AffiliateSimpleInput,
+} from "./affiliate-simple";
 import { affiliateTrustedIpHeaderValid } from "./affiliate-throttle.server";
 import { ageFromBirthDate, instagramProfileUrl, tiktokProfileUrl } from "./affiliate-wizard";
 import {
   affiliateQuestionnaireEncryptionReady,
   affiliateWizardSummary,
   encryptAffiliateWizard,
+  encryptSimpleAffiliateApplication,
   decryptAffiliateWizardForAdmin,
   MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH,
 } from "./affiliate-wizard-crypto.server";
@@ -212,6 +218,42 @@ export async function createAffiliateApplication(raw: AffiliateApplicationInput)
   return { ok: true as const };
 }
 
+/**
+ * One-page enrollment: no fictitious email, DOB or hair type is generated.
+ * Phone and full address live only inside authenticated encrypted ciphertext.
+ * The existing historical records and privileged moderation flows are kept.
+ */
+export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput) {
+  const data = affiliateSimpleSchema.parse(raw);
+  if (data.website) return { ok: true as const };
+  const socials = simpleAffiliateSocialUrls(data);
+  const record = {
+    full_name: data.fullName,
+    city: data.city,
+    state: data.state,
+    instagram_url: normalizedProfile(socials.instagram_url),
+    tiktok_url: normalizedProfile(socials.tiktok_url),
+    questionnaire_encrypted: encryptSimpleAffiliateApplication(data),
+    consent_at: new Date().toISOString(),
+  };
+  const response = await requestSupabase("vonix_affiliate_applications", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(record),
+  });
+  // Never tell a caller whether a specific person's profile was enrolled.
+  if (response.status === 409) {
+    return {
+      ok: false as const,
+      reason:
+        "Já pode existir uma candidatura com um desses perfis. Entre em contato com a equipe Vonix.",
+    };
+  }
+  if (!response.ok)
+    throw new Error("Não foi possível armazenar candidatura: HTTP " + response.status);
+  return { ok: true as const };
+}
+
 export async function affiliateOperationalReadiness() {
   const dbConfigured = Boolean(affiliateDatabaseConfig());
   const recruitmentOpen = affiliateRecruitmentOpen();
@@ -334,11 +376,11 @@ const validMailStatus = z.enum(["pendente", "processando", "enviado", "falhou", 
 const affiliateAdminRowSchema = z.object({
   id: z.string().uuid(),
   full_name: z.string().min(1).max(120),
-  age: z.number().int().min(18).max(100),
+  age: z.number().int().min(18).max(100).nullable(),
   city: z.string().max(90),
   state: z.string().length(2),
-  hair_type: z.string().max(50),
-  email: z.string().email().max(180),
+  hair_type: z.string().max(50).nullable(),
+  email: z.string().email().max(180).nullable(),
   instagram_url: z.string().max(240),
   tiktok_url: z.string().max(240).nullable(),
   motivation: z.string().max(3000).nullable(),
@@ -481,12 +523,12 @@ export async function readAffiliateApplicantEmailForAccessRecovery(applicationId
     .array(
       z.object({
         id: z.string().uuid(),
-        email: z.string().email().max(180),
+        email: z.string().email().max(180).nullable(),
       }),
     )
     .max(1)
     .parse(await response.json());
-  if (rows.length !== 1 || rows[0]!.id !== id) return null;
+  if (rows.length !== 1 || rows[0]!.id !== id || !rows[0]!.email) return null;
   return rows[0]!.email.toLowerCase();
 }
 
@@ -516,7 +558,18 @@ export async function eraseAffiliateApplication(
   reason: AffiliateErasureReason,
 ): Promise<boolean> {
   const parsedId = z.string().uuid().parse(id);
-  const email = z.string().trim().toLowerCase().email().max(180).parse(confirmedEmail);
+  const email = z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3)
+    .max(180)
+    .refine(
+      (value) =>
+        z.string().email().safeParse(value).success || /^[\p{L}.' -]+\s+[\p{L}.' -]+$/u.test(value),
+      "Confirmação deve ser e-mail ou nome completo.",
+    )
+    .parse(confirmedEmail);
   const parsedReason = z.enum(affiliateErasureReasons).parse(reason);
   const response = await requestSupabase("rpc/vonix_affiliate_erase", {
     method: "POST",

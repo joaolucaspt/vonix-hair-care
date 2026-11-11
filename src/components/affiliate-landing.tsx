@@ -94,7 +94,7 @@ const questions = [
   {
     question: "Quem pode apresentar uma candidatura?",
     answer:
-      "Pessoas com 18 anos ou mais que se identificam com criação de conteúdo e cuidados capilares. Você pode preencher o formulário mesmo com uma audiência pequena; a seleção é feita pela equipe e não há aprovação automática.",
+      "Pessoas interessadas em criar conteúdo e apresentar seus perfis sociais à Vonix Hair. A seleção é feita pela equipe e não existe aprovação automática.",
   },
   {
     question: "Preciso ter portfólio ou muitos seguidores?",
@@ -114,7 +114,7 @@ const questions = [
   {
     question: "Como funciona a avaliação?",
     answer:
-      "Você informa seus dados e apresenta seu perfil em cinco etapas. A equipe poderá analisar as candidaturas quando o programa estiver operacional e comunicar uma decisão pelos canais informados. Não há prazo de resposta garantido nesta página.",
+      "Você informa seu nome, telefone, endereço completo e perfis do Instagram e TikTok com número de seguidores em um único formulário. A equipe poderá entrar em contato pelo telefone informado. Não há prazo de resposta garantido.",
   },
   {
     question: "Já posso enviar meu cadastro?",
@@ -390,7 +390,7 @@ export function AffiliateLandingIntro({
               {
                 number: "01",
                 title: "Apresente seu perfil",
-                text: "Preencha o cadastro de cinco etapas com seus dados, redes sociais, interesses e afinidade com a Vonix Hair.",
+                text: "Preencha um único formulário com nome, telefone, endereço completo, Instagram e TikTok com seguidores.",
                 Icon: ClipboardList,
               },
               {
@@ -421,8 +421,8 @@ export function AffiliateLandingIntro({
           </div>
           <div className="mt-10 flex flex-wrap items-center justify-between gap-5 rounded-[1.5rem] border border-[#c9918e]/40 bg-[#6d3e4c]/50 px-6 py-6 sm:px-9">
             <p className="max-w-2xl text-sm leading-[1.75] text-[#fff0e8]">
-              <strong>Inscrições em preparação?</strong> Você pode visualizar as cinco etapas em uma
-              prévia segura, sem enviar ou armazenar seus dados.
+              <strong>Inscrições em preparação?</strong> Você pode visualizar o formulário simples
+              em uma prévia segura, sem enviar ou armazenar seus dados.
             </p>
             <a
               href="#inscricao"
@@ -668,7 +668,7 @@ export function AffiliateLandingFAQ() {
           Sua criatividade merece ser conhecida.
         </h2>
         <p className="mx-auto mt-5 max-w-xl text-sm leading-[1.85] text-[#ead6d6]">
-          Conheça as etapas do cadastro e acompanhe a disponibilidade oficial da seleção.
+          Preencha o formulário simples e acompanhe a disponibilidade oficial da seleção.
         </p>
         <a
           href="#inscricao"
