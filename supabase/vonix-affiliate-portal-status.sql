@@ -27,6 +27,8 @@ CREATE POLICY affiliate_portal_select_verified_email
 CREATE OR REPLACE FUNCTION public.vonix_affiliate_sync_portal_status()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
+  -- Phone-only applications do not have an email-verified portal identity.
+  IF NEW.email IS NULL THEN RETURN NEW; END IF;
   INSERT INTO public.vonix_affiliate_portal_status
     (application_id,email,status,submitted_at,reviewed_at,updated_at)
   VALUES (NEW.id, lower(NEW.email), NEW.status, NEW.created_at, NEW.reviewed_at, now())
@@ -46,6 +48,7 @@ INSERT INTO public.vonix_affiliate_portal_status
   (application_id,email,status,submitted_at,reviewed_at)
 SELECT id,lower(email),status,created_at,reviewed_at
 FROM public.vonix_affiliate_applications
+WHERE email IS NOT NULL
 ON CONFLICT (application_id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.vonix_affiliate_admin_invites (

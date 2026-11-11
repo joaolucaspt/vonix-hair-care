@@ -126,6 +126,9 @@ jobs:
           docker cp supabase/vonix-affiliate-portal-status.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-portal-status.sql
           docker cp supabase/vonix-affiliate-verified-email-rls.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-verified-email-rls.sql
           docker cp supabase/vonix-affiliate-verified-email-rls-qa.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-verified-email-rls-qa.sql
+          docker cp supabase/vonix-affiliate-simple-form-20261110.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-simple-form-20261110.sql
+          docker cp supabase/vonix-affiliate-phone-only-portal-fix-20261111.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-phone-only-portal-fix-20261111.sql
+          docker cp supabase/vonix-affiliate-phone-only-portal-qa-20261111.sql vonix-affiliates-sql-qa:/tmp/vonix-affiliate-phone-only-portal-qa-20261111.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-applications.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
@@ -142,5 +145,11 @@ jobs:
             -f /tmp/vonix-affiliate-verified-email-rls.sql
           docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
             -f /tmp/vonix-affiliate-verified-email-rls-qa.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-simple-form-20261110.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-phone-only-portal-fix-20261111.sql
+          docker exec vonix-affiliates-sql-qa psql -X -v ON_ERROR_STOP=1 -U postgres -d vonix_affiliates_qa \
+            -f /tmp/vonix-affiliate-phone-only-portal-qa-20261111.sql
 
           node scripts/qa-affiliate-concurrency.mjs
