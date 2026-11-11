@@ -19,7 +19,7 @@ export const Route = createFileRoute("/seja-afiliada")({
       { property: "og:title", content: "Programa de afiliados Vonix Hair" },
       {
         property: "og:description",
-        content: "Inscrição simplificada: nome, telefone, endereço, Instagram e TikTok.",
+        content: "Inscrição simplificada: nome, telefone, endereço, Instagram e TikTok opcional.",
       },
       { name: "robots", content: "index,follow" },
     ],
@@ -136,8 +136,8 @@ export function AffiliateApplicationPage() {
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#765c5d] sm:text-base">
               Só precisamos do seu nome completo, telefone, endereço com CEP e número e dos seus
-              perfis no Instagram e TikTok com a quantidade de seguidores. Sem perguntas extras. A
-              inscrição é gratuita e não garante aprovação.
+              perfil no Instagram com seus seguidores. TikTok e seguidores no TikTok são opcionais.
+              A inscrição é gratuita e não garante aprovação.
             </p>
           </div>
 

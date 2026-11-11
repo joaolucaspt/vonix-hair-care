@@ -228,7 +228,12 @@ export function AffiliateSimpleForm({
       instagramFollowers: /^\d+$/.test(values.instagramFollowers)
         ? Number(values.instagramFollowers)
         : NaN,
-      tiktokFollowers: /^\d+$/.test(values.tiktokFollowers) ? Number(values.tiktokFollowers) : NaN,
+      tiktokFollowers:
+        values.tiktokFollowers.trim() === ""
+          ? null
+          : /^\d+$/.test(values.tiktokFollowers)
+            ? Number(values.tiktokFollowers)
+            : NaN,
       privacyAccepted: accepted,
       website: trap,
     });
@@ -277,8 +282,8 @@ export function AffiliateSimpleForm({
         <CheckCircle2 aria-hidden="true" className="mx-auto h-14 w-14 text-[#38705a]" />
         <h3 className="mt-5 font-display text-4xl text-[#482b37]">Inscrição recebida!</h3>
         <p className="mx-auto mt-4 max-w-lg text-[#70575e]">
-          Obrigada pelo interesse na Vonix Hair. Nossa equipe analisará seu Instagram e TikTok e,
-          caso necessário, entrará em contato pelo telefone informado.
+          Obrigada pelo interesse na Vonix Hair. Nossa equipe analisará seu Instagram e, se
+          informado, seu TikTok e, caso necessário, entrará em contato pelo telefone informado.
         </p>
         <p className="mx-auto mt-3 max-w-lg text-sm text-[#7c6369]">
           A candidatura não garante aprovação ou parceria. Não será enviado código por e-mail, pois
@@ -439,7 +444,8 @@ export function AffiliateSimpleForm({
                 Redes sociais
               </h4>
               <p className={help}>
-                Informe o @ ou link do perfil e a quantidade atual de seguidores.
+                Instagram e seus seguidores são obrigatórios. TikTok e seus seguidores são
+                opcionais.
               </p>
             </div>
           </div>
@@ -456,13 +462,15 @@ export function AffiliateSimpleForm({
             })}
           </div>
           <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr]">
-            {field("tiktok", "TikTok", {
-              placeholder: "@seuperfil",
+            {field("tiktok", "TikTok (opcional)", {
+              placeholder: "@seuperfil (se tiver)",
               maxLength: 240,
               autoComplete: "off",
+              required: false,
             })}
-            {field("tiktokFollowers", "Seguidores no TikTok", {
-              placeholder: "Ex.: 900",
+            {field("tiktokFollowers", "Seguidores no TikTok (opcional)", {
+              placeholder: "Ex.: 900 (se tiver)",
+              required: false,
               inputMode: "numeric",
               maxLength: 10,
             })}

@@ -51,11 +51,16 @@ export const affiliateSimpleSchema = z
       "Informe um usuário válido do Instagram.",
     ),
     instagramFollowers: followerCount,
-    tiktok: socialHandle.refine(
-      (value) => /^@?[A-Za-z0-9._]{2,30}$/.test(value),
-      "Informe um usuário válido do TikTok.",
-    ),
-    tiktokFollowers: followerCount,
+    tiktok: z
+      .string()
+      .trim()
+      .max(50)
+      .refine(
+        (value) => value === "" || /^@?[A-Za-z0-9._]{2,30}$/.test(value),
+        "Informe um usuário válido do TikTok, se informado.",
+      )
+      .default(""),
+    tiktokFollowers: followerCount.nullable().default(null),
     privacyAccepted: z.literal(true),
     website: z.string().max(120).default(""), // anti-bot honeypot
   })

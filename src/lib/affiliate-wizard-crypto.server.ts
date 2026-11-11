@@ -152,7 +152,7 @@ export function affiliateWizardSummary(
         niche: "",
         otherNiche: null,
         instagramFollowers: simple.data.instagramFollowers.toLocaleString("pt-BR"),
-        tiktokFollowers: simple.data.tiktokFollowers.toLocaleString("pt-BR"),
+        tiktokFollowers: simple.data.tiktokFollowers?.toLocaleString("pt-BR") ?? "",
         municipalRegistration: "",
         dependents: "",
         preferredLine: "",
@@ -277,7 +277,7 @@ export function decryptAffiliateWizardForAdmin(
         instagramUsername: data.instagram,
         instagramFollowers: data.instagramFollowers.toLocaleString("pt-BR"),
         tiktokUsername: data.tiktok,
-        tiktokFollowers: data.tiktokFollowers.toLocaleString("pt-BR"),
+        tiktokFollowers: data.tiktokFollowers?.toLocaleString("pt-BR") ?? "",
       });
       return { kind: "simple", acceptedAt: simple.data.acceptedAt, answers };
     }
