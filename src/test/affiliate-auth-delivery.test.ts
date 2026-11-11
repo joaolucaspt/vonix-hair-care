@@ -347,3 +347,52 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
   });
 });
+
+it("delivers a valid manually confirmed owner activation link when Auth omits a numeric OTP", async () => {
+  const dest = "https://vonixhair.com/acesso-equipe-afiliadas";
+  const hash = "A".repeat(64);
+  const link =
+    base +
+    "/auth/v1/verify?token=mock-private-token-0123456789&type=magiclink&redirect_to=" +
+    encodeURIComponent(dest);
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ properties: { action_link: link, hashed_token: hash } }))
+    .mockResolvedValueOnce(success());
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  const email = JSON.parse(fetcher.mock.calls[2]![1].body);
+  expect(email.text).toContain(dest + "#vonix_invite=" + hash);
+  expect(email.text).toContain("CONFIRMAR ATIVAÇÃO");
+  expect(email.text).not.toContain("mock-private-token");
+  expect(email.text).not.toContain("null");
+  expect(email.text).not.toContain("undefined");
+});
+
+it("does not send an owner message when both numeric OTP and safe one-time owner link are absent", async () => {
+  const dest = "https://vonixhair.com/acesso-equipe-afiliadas";
+  const link =
+    base +
+    "/auth/v1/verify?token=mock-private-token-0123456789&type=magiclink&redirect_to=" +
+    encodeURIComponent(dest);
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ action_link: link }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("does not send an applicant message without a numeric OTP, even if Auth returns a link", async () => {
+  const link = base + "/auth/v1/verify?token=mock-private-token-0123456789&type=magiclink";
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ action_link: link, hashed_token: "A".repeat(64) }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "applicant")).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});

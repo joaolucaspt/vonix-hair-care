@@ -29,6 +29,7 @@ type Stage =
   | "existing-password"
   | "password"
   | "first-password"
+  | "reset-password"
   | "denied";
 type Invitation = { role: "reviewer" | "owner"; password_set_at: string | null };
 
@@ -52,6 +53,9 @@ export function AffiliateTeamAccess() {
   const pendingManualHash = useRef<string | null>(null);
   const identityVersion = useRef(0);
   const leavingIdentity = useRef(false);
+  // A password reset can only follow freshly verified one-time Auth proof
+  // for the exact owner address. A pre-existing browser session is not proof.
+  const freshVerifiedAddress = useRef<string | null>(null);
 
   const inspectIdentity = useCallback(async () => {
     const requestId = ++identityVersion.current;
@@ -63,6 +67,7 @@ export function AffiliateTeamAccess() {
       if (requestId !== identityVersion.current) return;
       const user = identity.data.user;
       if (identity.error || !user?.email || !user.email_confirmed_at) {
+        freshVerifiedAddress.current = null;
         setStage(unauthenticatedTeamAccessStage());
         return;
       }
@@ -75,11 +80,18 @@ export function AffiliateTeamAccess() {
         .maybeSingle();
       if (requestId !== identityVersion.current) return;
       if (row.error || !row.data) {
+        freshVerifiedAddress.current = null;
         setStage("denied");
         return;
       }
       const invite = row.data as Invitation;
-      setStage(invite.password_set_at ? "password" : "first-password");
+      setStage(
+        !invite.password_set_at
+          ? "first-password"
+          : freshVerifiedAddress.current === normalized
+            ? "reset-password"
+            : "password",
+      );
     } catch {
       if (requestId === identityVersion.current) setStage(unauthenticatedTeamAccessStage());
     }
@@ -128,6 +140,7 @@ export function AffiliateTeamAccess() {
   async function leaveCurrentIdentity() {
     if (leavingIdentity.current || busy) return;
     leavingIdentity.current = true;
+    freshVerifiedAddress.current = null;
     // Invalidate old getUser/roster replies before attempting a provider logout.
     identityVersion.current++;
     setBusy(true);
@@ -171,8 +184,15 @@ export function AffiliateTeamAccess() {
         );
         return;
       }
-      // Auth still validates the user and the existing invitation, then
-      // requires a new personal password and the activation RPC.
+      // Confirm which person redeemed the one-use link before offering
+      // recovery of an existing password or onboarding of a new owner.
+      const identity = await vonixAffiliateAuth.auth.getUser();
+      if (identity.error || !identity.data.user?.email || !identity.data.user.email_confirmed_at) {
+        setStage("email");
+        setError("Não foi possível confirmar o titular do convite. Solicite um novo acesso.");
+        return;
+      }
+      freshVerifiedAddress.current = identity.data.user.email.toLowerCase();
       await inspectIdentity();
     } catch {
       pendingManualHash.current = null;
@@ -231,7 +251,10 @@ export function AffiliateTeamAccess() {
         type: "email",
       });
       if (response.error) setError("Código inválido ou expirado.");
-      else await inspectIdentity();
+      else {
+        freshVerifiedAddress.current = email.trim().toLowerCase();
+        await inspectIdentity();
+      }
     } catch {
       setError("Não foi possível validar o código.");
     } finally {
@@ -271,6 +294,68 @@ export function AffiliateTeamAccess() {
       window.location.assign("/admin/afiliadas");
     } catch {
       setError("Não foi possível concluir a ativação. Confira sua sessão ou solicite novo acesso.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const verified = freshVerifiedAddress.current;
+    if (!verified || verified !== email.trim().toLowerCase()) {
+      setError("Confirme novamente seu e-mail pelo código ou link individual.");
+      return;
+    }
+    if (password.length < 12 || password.length > 128 || password !== repeatPassword) {
+      setError("Use uma senha de 12 a 128 caracteres e confirme-a corretamente.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    let passwordUpdated = false;
+    try {
+      // A fresh OTP is not enough if Auth changed identities or the owner
+      // was removed from the allowlist after the one-time verification.
+      const identity = await vonixAffiliateAuth.auth.getUser();
+      if (
+        identity.error ||
+        !identity.data.user?.email_confirmed_at ||
+        identity.data.user.email?.toLowerCase() !== verified
+      )
+        throw new Error("Auth identity mismatch.");
+      const row = await vonixAffiliateAuth
+        .from("vonix_affiliate_admin_invites")
+        .select("role,password_set_at")
+        .eq("email", verified)
+        .maybeSingle();
+      if (row.error || !row.data?.password_set_at) {
+        throw new Error("Owner is not activated.");
+      }
+      const updated = await vonixAffiliateAuth.auth.updateUser({ password });
+      if (updated.error) throw new Error("Password update failed.");
+      passwordUpdated = true;
+      freshVerifiedAddress.current = null;
+      setStage("password");
+      setRepeatPassword("");
+      setNotice("Sua senha pessoal foi atualizada.");
+      // The server issues admin access only after a fresh password grant,
+      // not from the OTP Auth session alone.
+      const login = await loginAffiliateAdminMember({ data: { email: verified, password } });
+      setPassword("");
+      if (!login.ok) {
+        setError(
+          "Sua senha foi atualizada, mas o acesso ao painel ainda não foi confirmado. Entre novamente com a nova senha.",
+        );
+        return;
+      }
+      window.location.assign("/admin/afiliadas");
+    } catch {
+      setError(
+        passwordUpdated
+          ? "Sua senha foi atualizada, mas o acesso ao painel não foi confirmado. Entre novamente com a nova senha."
+          : "Não foi possível redefinir a senha. Confirme novamente seu e-mail ou solicite outro código.",
+      );
     } finally {
       setBusy(false);
     }
@@ -495,15 +580,23 @@ export function AffiliateTeamAccess() {
                 </button>
               </>
             )}
-            {stage === "first-password" && (
+            {(stage === "first-password" || stage === "reset-password") && (
               <>
                 <KeyRound className="h-8 w-8 text-[#865766]" />
-                <h2 className="mt-4 font-display text-2xl">Crie sua senha pessoal</h2>
+                <h2 className="mt-4 font-display text-2xl">
+                  {stage === "reset-password"
+                    ? "Redefinir sua senha pessoal"
+                    : "Crie sua senha pessoal"}
+                </h2>
                 <p className="mt-2 text-sm text-[#806970]">
-                  Seu e-mail foi verificado. Para ativar o convite, defina uma senha forte de pelo
-                  menos 12 caracteres. Não compartilhe esta senha.
+                  {stage === "reset-password"
+                    ? "Seu e-mail acaba de ser verificado pelo Supabase. Defina uma nova senha pessoal de pelo menos 12 caracteres. O painel exigirá login com a nova senha."
+                    : "Seu e-mail foi verificado. Para ativar o convite, defina uma senha forte de pelo menos 12 caracteres. Não compartilhe esta senha."}
                 </p>
-                <form onSubmit={activatePassword} className="mt-6 space-y-4">
+                <form
+                  onSubmit={stage === "reset-password" ? resetPassword : activatePassword}
+                  className="mt-6 space-y-4"
+                >
                   <label className="block text-sm font-semibold" htmlFor="team-first-password">
                     Nova senha
                   </label>
@@ -536,7 +629,9 @@ export function AffiliateTeamAccess() {
                     disabled={busy}
                     className="min-h-12 w-full rounded-full bg-[#633847] font-semibold text-white disabled:opacity-60"
                   >
-                    Ativar acesso seguro
+                    {stage === "reset-password"
+                      ? "Redefinir senha e acessar"
+                      : "Ativar acesso seguro"}
                   </button>
                 </form>
               </>
