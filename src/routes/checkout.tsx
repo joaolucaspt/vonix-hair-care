@@ -16,6 +16,7 @@ import {
   quoteShipping,
 } from "@/lib/checkout.functions";
 import {
+  FREE_SHIPPING_ABOVE,
   OFFER_LABEL,
   WHATSAPP,
   brl,
