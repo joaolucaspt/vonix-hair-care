@@ -106,9 +106,9 @@ function Home() {
           <button aria-label="Próximo" onClick={() => setI((i + 1) % 7)} className="absolute right-3 top-[16%] grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background md:right-4 md:top-1/2">
             <ChevronRight className="h-4 w-4" />
           </button>
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3">
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-4">
             {BANNERS.map((_, k) => (
-              <button key={k} aria-label={`Banner ${k + 1}`} onClick={() => setI(k)} className={`relative h-3 w-3 rounded-full border border-foreground before:absolute before:-inset-1.5 before:content-[''] ${k === i ? "bg-foreground" : "bg-background/70"}`} />
+              <button key={k} aria-label={`Banner ${k + 1}`} onClick={() => setI(k)} className={`relative h-4 w-4 rounded-full border border-foreground before:absolute before:-inset-2 before:content-[''] ${k === i ? "bg-foreground" : "bg-background/70"}`} />
             ))}
           </div>
         </div>
