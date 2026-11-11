@@ -164,20 +164,11 @@ export function AffiliateTeamAccess() {
         setError("Utilize a página oficial da equipe e solicite o acesso novamente.");
         return;
       }
-      const result = await vonixAffiliateAuth.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: {
-          shouldCreateUser: true,
-          emailRedirectTo: window.location.origin + "/acesso-equipe-afiliadas",
-        },
-      });
-      if (result.error) {
-        setError("Não foi possível enviar o acesso. Confira o endereço ou tente novamente.");
-      } else {
-        setNotice(
-          "Se este endereço foi autorizado pela Vonix Hair, confira seu e-mail para verificar o acesso.",
-        );
-      }
+      // Only the server may dispatch access to a preauthorized owner.
+      // In particular, the public browser must not create arbitrary Auth users.
+      setError(
+        "Envio temporariamente indisponível. Peça ao proprietário que reenvie o convite individual pelo painel.",
+      );
     } catch {
       setError("Falha de conexão ao solicitar acesso.");
     } finally {

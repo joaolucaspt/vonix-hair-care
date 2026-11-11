@@ -14,7 +14,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type RecruitmentStatus = "loading" | "open" | "closed";
+type RecruitmentStatus = "loading" | "open" | "limited" | "closed";
 
 const experiences = [
   {

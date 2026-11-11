@@ -66,6 +66,51 @@ describe("Página pública de inscrições da Vonix", () => {
     expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue("");
   });
 
+  it("distinguishes a temporary network quota from genuinely closed recruitment", async () => {
+    server.status.mockResolvedValue({
+      open: false,
+      intakeEnabled: true,
+      rateLimitReady: false,
+      storageReachable: true,
+      storageDiagnostic: "reachable",
+    });
+    render(<Page />);
+    expect(
+      await screen.findByRole("heading", { name: "Limite temporário nesta conexão" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/programa de afiliadas continua aberto/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Programa aberto · acesso temporariamente limitado/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Visualizar formulário/ }));
+    expect(screen.getByText("Simulação protegida")).toBeInTheDocument();
+    expect(screen.queryByText("Formulário de envio")).not.toBeInTheDocument();
+  });
+
+  it("recovers from quota limitation without promoting an existing preview draft to a real submission", async () => {
+    server.status
+      .mockResolvedValueOnce({ open: false, intakeEnabled: true, rateLimitReady: false })
+      .mockResolvedValueOnce({ open: true, intakeEnabled: true, rateLimitReady: true });
+    render(<Page />);
+    expect(await screen.findByText("Limite temporário nesta conexão")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Visualizar formulário/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Rascunho sintético" }), {
+      target: { value: "Rascunho local" },
+    });
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await waitFor(() => expect(server.status).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Simulação protegida")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue(
+      "Rascunho local",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Iniciar inscrição real/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Descartar dados e iniciar inscrição real" }),
+    );
+    expect(screen.getByText("Formulário de envio")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Rascunho sintético" })).toHaveValue("");
+  });
+
   it("fecha imediatamente uma prévia vazia sem exigir confirmação desnecessária", async () => {
     server.status.mockResolvedValue({ open: false });
     render(<Page />);

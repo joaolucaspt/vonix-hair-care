@@ -14,6 +14,8 @@ const gates = vi.hoisted(() => ({
   email: vi.fn(),
   authorized: vi.fn(),
   sendAuth: vi.fn(),
+  sendManaged: vi.fn(),
+  emailReady: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -28,9 +30,10 @@ vi.mock("@tanstack/react-start", () => ({
 }));
 vi.mock("@tanstack/react-start/server", () => ({ setResponseHeader: vi.fn() }));
 vi.mock("@/lib/affiliate-auth-delivery.server", () => ({
-  affiliateCustomAuthEmailReady: () => true,
+  affiliateCustomAuthEmailReady: gates.emailReady,
   affiliateEmailAuthorizedForPortal: gates.authorized,
   sendAffiliateAuthEmailWithResend: gates.sendAuth,
+  sendAffiliateManagedAuthOtp: gates.sendManaged,
 }));
 vi.mock("@/lib/affiliate-admin-auth.server", () => ({
   attemptAffiliateAdminLogin: vi.fn(),
@@ -88,6 +91,8 @@ beforeEach(() => {
   gates.email.mockResolvedValue({ sent: 0, failed: 0, configured: false });
   gates.authorized.mockResolvedValue(true);
   gates.sendAuth.mockResolvedValue(true);
+  gates.sendManaged.mockResolvedValue(true);
+  gates.emailReady.mockReturnValue(true);
 });
 
 describe("Public simplified affiliate submission origin policy", () => {
@@ -161,6 +166,42 @@ describe("Private Auth delivery recovery", () => {
     ).toMatchObject({ status: "requested" });
     expect(gates.authorized).toHaveBeenCalledWith("owner@example.invalid", "owner");
     expect(gates.sendAuth).toHaveBeenCalledWith("owner@example.invalid", "owner");
+  });
+
+  it("routes a missing corporate provider through the server-only, roster-verified Supabase fallback", async () => {
+    gates.emailReady.mockReturnValue(false);
+    expect(
+      await requestAccess({ data: { email: "owner@example.invalid", purpose: "owner" } }),
+    ).toMatchObject({ status: "requested" });
+    expect(gates.authorized).toHaveBeenCalledWith("owner@example.invalid", "owner");
+    expect(gates.sendManaged).toHaveBeenCalledExactlyOnceWith("owner@example.invalid", "owner");
+    expect(gates.sendAuth).not.toHaveBeenCalled();
+    expect(gates.quota).toHaveBeenCalledWith("admin");
+  });
+
+  it("does not send Supabase fallback mail to non-invited addresses, with indistinguishable response", async () => {
+    gates.emailReady.mockReturnValue(false);
+    gates.authorized.mockResolvedValueOnce(false);
+    expect(
+      await requestAccess({ data: { email: "stranger@example.invalid", purpose: "owner" } }),
+    ).toMatchObject({ status: "requested" });
+    expect(gates.sendManaged).not.toHaveBeenCalled();
+    expect(gates.sendAuth).not.toHaveBeenCalled();
+  });
+
+  it("fails closed before managed fallback when same-origin or quota denies access", async () => {
+    gates.emailReady.mockReturnValue(false);
+    gates.sameOrigin.mockReturnValue(false);
+    expect(
+      await requestAccess({ data: { email: "owner@example.invalid", purpose: "owner" } }),
+    ).toMatchObject({ status: "denied" });
+    gates.sameOrigin.mockReturnValue(true);
+    gates.quota.mockResolvedValue(false);
+    expect(
+      await requestAccess({ data: { email: "owner@example.invalid", purpose: "owner" } }),
+    ).toMatchObject({ status: "rate-limited" });
+    expect(gates.authorized).not.toHaveBeenCalled();
+    expect(gates.sendManaged).not.toHaveBeenCalled();
   });
 
   it("never contacts the provider for an unknown email", async () => {

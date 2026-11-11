@@ -122,6 +122,45 @@ async function requestAffiliateSupabaseManagedOtp(
   }
 }
 
+/** Fallback for an authorized, server-checked portal identity ONLY.
+ * The calling server function must enforce same-origin, IP quotas and the
+ * persisted application/owner roster before invoking this helper.
+ * create_user=false prevents arbitrary visitors from provisioning Auth users.
+ */
+export async function sendAffiliateManagedAuthOtp(
+  email: string,
+  purpose: AffiliateAuthEmailPurpose,
+): Promise<boolean> {
+  const parsed = emailSchema.safeParse(email);
+  const config = affiliateDatabaseConfig();
+  if (!parsed.success || !config) return false;
+  const fingerprint = affiliateAccessEmailFingerprint(parsed.data);
+  if (!fingerprint) return false;
+  try {
+    // Preserve the same durable per-recipient cooldown as corporate delivery.
+    const quota = await fetch(
+      config.url + "/rest/v1/rpc/vonix_affiliate_consume_auth_mail_cooldown",
+      {
+        method: "POST",
+        headers: config.headers,
+        body: JSON.stringify({ p_fingerprint: fingerprint }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(4500),
+      },
+    );
+    if (!quota.ok || (await quota.json()) !== true) return false;
+  } catch {
+    return false;
+  }
+  return requestAffiliateSupabaseManagedOtp(
+    parsed.data,
+    purpose === "owner"
+      ? "https://vonixhair.com/acesso-equipe-afiliadas"
+      : "https://vonixhair.com/acompanhar-inscricao",
+    config.url,
+  );
+}
+
 /** Send a Supabase-generated OTP + magic link via the already-configured
  * Resend transactional provider, bypassing Supabase's development SMTP cap.
  *
