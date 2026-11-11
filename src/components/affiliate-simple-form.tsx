@@ -280,9 +280,22 @@ export function AffiliateSimpleForm({
     try {
       const result = await submitSimpleAffiliateApplication({ data: parsed.data });
       if (result.ok) {
-        // Count only a persisted application; no candidate personal information is sent.
+        // A honeypot can acknowledge without saving a real application.
+        // Never confirm success or fire a Meta Lead without a private receipt.
+        const receipt =
+          "trackingCode" in result &&
+          typeof result.trackingCode === "string" &&
+          /^[A-Za-z0-9_-]{32}$/.test(result.trackingCode)
+            ? result.trackingCode
+            : "";
+        if (!receipt) {
+          setMessage(
+            "Não foi possível confirmar o recebimento da inscrição. Revise os campos e tente novamente.",
+          );
+          return;
+        }
         track("sign_up", { method: "affiliate_application" });
-        setTrackingCode(result.trackingCode ?? "");
+        setTrackingCode(receipt);
         setSent(true);
         setValues({ ...fields });
         setAccepted(false);
@@ -454,7 +467,7 @@ export function AffiliateSimpleForm({
               maxLength: 120,
               autoComplete: "address-line1",
             })}
-            {field("number", "Número", { placeholder: "123", maxLength: 15 })}
+            {field("number", "Número", { placeholder: "123 ou s/n", maxLength: 15 })}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {field("district", "Bairro", { maxLength: 90, autoComplete: "address-level3" })}

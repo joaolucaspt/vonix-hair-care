@@ -59,6 +59,10 @@ describe("Persisted affiliate request rate limiting", () => {
     expect(first).not.toContain("203.0.113.14");
     expect(first).toBe(affiliateIpDigest("203.0.113.14", "submit", pepper));
     expect(first).not.toBe(affiliateIpDigest("203.0.113.14", "admin", pepper));
+    expect(first).not.toBe(affiliateIpDigest("203.0.113.14", "status", pepper));
+    expect(affiliateIpDigest("203.0.113.14", "status", pepper)).not.toBe(
+      affiliateIpDigest("203.0.113.14", "admin", pepper),
+    );
     expect(first).not.toBe(affiliateIpDigest("203.0.113.15", "submit", pepper));
     expect(affiliateIpDigest("203.0.113.14, 127.0.0.1", "submit", pepper)).toBeNull();
     expect(affiliateIpDigest("203.0.113.14", "submit", "short")).toBeNull();
@@ -77,6 +81,19 @@ describe("Persisted affiliate request rate limiting", () => {
     expect(body.p_scope).toBe("submit");
     expect(body.p_fingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(init.body).not.toContain("203.0.113.14");
+  });
+
+  it("uses independent quota scope for read-only status checks", async () => {
+    const mock = vi.fn().mockImplementation(() => Promise.resolve(Response.json(true)));
+    vi.stubGlobal("fetch", mock);
+    expect(await consumeAffiliateRateLimit("status")).toBe(true);
+    expect(await consumeAffiliateRateLimit("submit")).toBe(true);
+    const first = JSON.parse(String(mock.mock.calls[0]![1].body));
+    const second = JSON.parse(String(mock.mock.calls[1]![1].body));
+    expect(first.p_scope).toBe("status");
+    expect(second.p_scope).toBe("submit");
+    expect(first.p_fingerprint).not.toEqual(second.p_fingerprint);
+    expect(mock).toHaveBeenCalledTimes(2);
   });
 
   it("checks admin lockouts without incrementing successful sessions", async () => {

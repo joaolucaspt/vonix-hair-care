@@ -11,7 +11,7 @@ import { AffiliateSimpleForm } from "@/components/affiliate-simple-form";
 
 beforeEach(() => {
   vi.resetAllMocks();
-  server.submit.mockResolvedValue({ ok: true });
+  server.submit.mockResolvedValue({ ok: true, trackingCode: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" });
 });
 afterEach(() => {
   cleanup();
@@ -123,6 +123,41 @@ describe("Vonix short single-page application form", () => {
     expect(analytics.track).toHaveBeenCalledExactlyOnceWith("sign_up", {
       method: "affiliate_application",
     });
+  });
+
+  it("never confirms a honeypot/non-persisted acknowledgement as a Meta Lead", async () => {
+    server.submit.mockResolvedValue({ ok: true });
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível confirmar o recebimento",
+    );
+    expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
+    expect(analytics.track).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid-length receipt without sending conversion events", async () => {
+    server.submit.mockResolvedValue({ ok: true, trackingCode: "incomplete" });
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível confirmar");
+    expect(analytics.track).not.toHaveBeenCalled();
+    expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
+  });
+
+  it("submits a valid s/n street number instead of falsely rejecting Brazilian addresses", async () => {
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.change(screen.getByLabelText(/Número/), { target: { value: "s/n" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    await waitFor(() =>
+      expect(server.submit).toHaveBeenCalledWith({
+        data: expect.objectContaining({ number: "s/n" }),
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Inscrição recebida");
   });
 
   it("keeps an interactive preview from calling the server", async () => {

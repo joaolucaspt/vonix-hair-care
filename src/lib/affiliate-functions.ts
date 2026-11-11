@@ -213,7 +213,8 @@ export const getAffiliateStatusByCode = createServerFn({ method: "POST" })
     setResponseHeader("Cache-Control", "private, no-store, max-age=0");
     setResponseHeader("Referrer-Policy", "no-referrer");
     if (!affiliateMutationSameOrigin()) return { ok: false as const, reason: "Acesso inválido." };
-    if (!(await consumeAffiliateRateLimit("submit")))
+    // Status reads must never consume the limited write/submission budget.
+    if (!(await consumeAffiliateRateLimit("status")))
       return { ok: false as const, reason: "Muitas consultas. Tente mais tarde." };
     try {
       const result = await getAffiliateStatusWithCode(data.code);

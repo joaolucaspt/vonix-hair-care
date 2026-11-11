@@ -91,6 +91,16 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
     }
   });
 
+  it("accepts genuine Brazilian addresses without a numbered building, but not random text", () => {
+    for (const number of ["s/n", "SN", "sem número", "sem numero", "123", "123A"]) {
+      const result = affiliateSimpleSchema.safeParse({ ...valid, number });
+      expect(result.success, number).toBe(true);
+    }
+    for (const number of ["", "nada", "???", "<script>", "123?"]) {
+      expect(affiliateSimpleSchema.safeParse({ ...valid, number }).success, number).toBe(false);
+    }
+  });
+
   it("accepts no TikTok account or count, while preserving encrypted moderation details", () => {
     const absent = affiliateSimpleSchema.parse({ ...valid, tiktok: "", tiktokFollowers: null });
     expect(absent.tiktok).toBe("");
