@@ -4,7 +4,9 @@ import { getRequestHeader } from "@tanstack/react-start/server";
 import { env } from "./env.server";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
 
-export type AffiliateRateScope = "submit" | "admin";
+/** Private status reads use a separate quota: refreshing a receipt must not
+ * exhaust a genuine applicant's signup allowance on a shared network. */
+export type AffiliateRateScope = "submit" | "admin" | "status";
 
 export function affiliateIpDigest(
   ip: string | null | undefined,

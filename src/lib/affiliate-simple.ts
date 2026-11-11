@@ -41,7 +41,7 @@ export const affiliateSimpleSchema = z
       .trim()
       .min(1)
       .max(15)
-      .regex(/^\d+[A-Za-z]?$/, "Informe o número do imóvel."),
+      .regex(/^(?:\d+[A-Za-z]?|s\/n|sn|sem n[uú]mero)$/i, "Informe o número do imóvel ou s/n."),
     district: z.string().trim().min(2).max(90),
     city: z.string().trim().min(2).max(90),
     state: z.enum(WIZARD_BRAZIL_STATES),
