@@ -255,6 +255,161 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
     expect(JSON.stringify(result)).not.toContain("maria.exemplo");
   });
 
+  it("accepts a browser-issued 192-bit receipt while keeping it out of encrypted candidate data", async () => {
+    const privateCode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    const record: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        record.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(null, { status: 201 });
+      }),
+    );
+    const candidate = affiliateSimpleSchema.parse({ ...valid, trackingCode: privateCode });
+    expect(await createSimpleAffiliateApplication(candidate)).toEqual({
+      ok: true,
+      trackingCode: privateCode,
+    });
+    expect(record).toHaveLength(1);
+    expect(record[0]?.["status_token_hash"]).toBe(
+      createHash("sha256").update(privateCode).digest("hex"),
+    );
+    expect(JSON.stringify(record)).not.toContain(privateCode);
+    const restored = decryptAffiliateWizardForAdmin(String(record[0]?.["questionnaire_encrypted"]));
+    expect(restored?.kind).toBe("simple");
+    expect(restored?.answers.phone).toBe(valid.phone);
+    expect(JSON.stringify(restored)).not.toContain(privateCode);
+  });
+
+  it("retries an already-committed enrollment with the same code after a lost HTTP response", async () => {
+    const privateCode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    const candidate = affiliateSimpleSchema.parse({ ...valid, trackingCode: privateCode });
+    let stored: Record<string, unknown> | null = null;
+    let postCount = 0;
+    let getCount = 0;
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        postCount++;
+        if (postCount === 1) {
+          stored = JSON.parse(String(init.body)) as Record<string, unknown>;
+          throw new TypeError("response disappeared after database committed");
+        }
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          status_token_hash: stored?.["status_token_hash"],
+        });
+        return Response.json({ code: "23505" }, { status: 409 });
+      }
+      getCount++;
+      expect(String(url)).toContain("status_token_hash=eq.");
+      expect(String(url)).not.toContain(privateCode);
+      return Response.json([
+        {
+          instagram_url: stored?.["instagram_url"],
+          status_token_hash: stored?.["status_token_hash"],
+          questionnaire_encrypted: stored?.["questionnaire_encrypted"],
+        },
+      ]);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(createSimpleAffiliateApplication(candidate)).rejects.toThrow(
+      "response disappeared",
+    );
+    expect(await createSimpleAffiliateApplication(candidate)).toEqual({
+      ok: true,
+      trackingCode: privateCode,
+    });
+    expect(postCount).toBe(2);
+    expect(getCount).toBe(1);
+  });
+
+  it("does not confirm a modified phone or address as a saved idempotent replay", async () => {
+    const privateCode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    const oldForm = affiliateSimpleSchema.parse({ ...valid, trackingCode: privateCode });
+    const previous: Record<string, unknown> = {
+      instagram_url: "https://instagram.com/maria.exemplo",
+      status_token_hash: createHash("sha256").update(privateCode).digest("hex"),
+      questionnaire_encrypted: encryptSimpleAffiliateApplication(oldForm),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          return Response.json({ code: "23505" }, { status: 409 });
+        }
+        return Response.json([
+          {
+            instagram_url: previous?.["instagram_url"],
+            status_token_hash: previous?.["status_token_hash"],
+            questionnaire_encrypted: previous?.["questionnaire_encrypted"],
+          },
+        ]);
+      }),
+    );
+    const current = affiliateSimpleSchema.parse({ ...oldForm, phone: "(31) 98888-9999" });
+    expect(await createSimpleAffiliateApplication(current)).toMatchObject({ ok: false });
+    expect(await createSimpleAffiliateApplication(oldForm)).toEqual({
+      ok: true,
+      trackingCode: privateCode,
+    });
+  });
+
+  it("never treats someone else's Instagram collision as ownership of the private code", async () => {
+    const privateCode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+        requests.push(String(url));
+        if (init?.method === "POST") return Response.json({ code: "23505" }, { status: 409 });
+        return Response.json([]);
+      }),
+    );
+    expect(
+      await createSimpleAffiliateApplication(
+        affiliateSimpleSchema.parse({ ...valid, trackingCode: privateCode }),
+      ),
+    ).toMatchObject({ ok: false });
+    expect(requests).toHaveLength(2);
+    expect(JSON.stringify(requests)).not.toContain(privateCode);
+    expect(
+      affiliateSimpleSchema.safeParse({ ...valid, trackingCode: "A".repeat(31) }).success,
+    ).toBe(false);
+  });
+
+  it("same-code parallel requests return one private receipt without extra records", async () => {
+    const privateCode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    const candidate = affiliateSimpleSchema.parse({ ...valid, trackingCode: privateCode });
+    let accepted: Record<string, unknown> | null = null;
+    let postCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          postCount++;
+          if (postCount === 1) {
+            accepted = JSON.parse(String(init.body)) as Record<string, unknown>;
+            return new Response(null, { status: 201 });
+          }
+          return Response.json({ code: "23505" }, { status: 409 });
+        }
+        return Response.json([
+          {
+            instagram_url: accepted?.["instagram_url"],
+            status_token_hash: accepted?.["status_token_hash"],
+            questionnaire_encrypted: accepted?.["questionnaire_encrypted"],
+          },
+        ]);
+      }),
+    );
+    const [first, second] = await Promise.all([
+      createSimpleAffiliateApplication(candidate),
+      createSimpleAffiliateApplication(candidate),
+    ]);
+    expect(first).toEqual({ ok: true, trackingCode: privateCode });
+    expect(second).toEqual({ ok: true, trackingCode: privateCode });
+    expect(postCount).toBe(2);
+  });
+
   it("honeypot does not persist spam", async () => {
     const fetched = vi.fn();
     vi.stubGlobal("fetch", fetched);

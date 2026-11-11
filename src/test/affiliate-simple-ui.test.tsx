@@ -11,12 +11,16 @@ import { AffiliateSimpleForm } from "@/components/affiliate-simple-form";
 
 beforeEach(() => {
   vi.resetAllMocks();
-  server.submit.mockResolvedValue({ ok: true, trackingCode: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" });
+  server.submit.mockImplementation(async (args: { data: { trackingCode?: string } }) => ({
+    ok: true,
+    trackingCode: args.data.trackingCode,
+  }));
 });
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  window.sessionStorage.removeItem("vonix-affiliate-unconfirmed-code");
 });
 
 function fill() {
@@ -98,13 +102,18 @@ describe("Vonix short single-page application form", () => {
   });
 
   it("displays a private tracking code only after successful server receipt", async () => {
-    server.submit.mockResolvedValue({ ok: true, trackingCode: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" });
+    server.submit.mockImplementation(async (args: { data: { trackingCode?: string } }) => ({
+      ok: true,
+      trackingCode: args.data.trackingCode,
+    }));
     render(<AffiliateSimpleForm />);
     expect(screen.queryByLabelText("Código privado de acompanhamento")).not.toBeInTheDocument();
     fill();
     fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
-    expect(await screen.findByLabelText("Código privado de acompanhamento")).toHaveValue(
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
+    const receipt = await screen.findByLabelText("Código privado de acompanhamento");
+    expect((receipt as HTMLInputElement).value).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(server.submit.mock.calls[0]![0].data.trackingCode).toBe(
+      (receipt as HTMLInputElement).value,
     );
     expect(screen.getByRole("button", { name: "Copiar código" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Acompanhar inscrição agora" })).toBeInTheDocument();
@@ -167,6 +176,81 @@ describe("Vonix short single-page application form", () => {
       }),
     );
     expect(await screen.findByRole("status")).toHaveTextContent("Inscrição recebida");
+  });
+
+  it("keeps an unconfirmed private code when the network loses a committed response, then retries exactly once", async () => {
+    let calls = 0;
+    server.submit.mockImplementation(async (args: { data: { trackingCode?: string } }) => {
+      calls++;
+      if (calls === 1) throw new TypeError("response lost after database commit");
+      return { ok: true, trackingCode: args.data.trackingCode };
+    });
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    const privateInput = await screen.findByLabelText("Código privado da tentativa não confirmada");
+    const pendingCode = (privateInput as HTMLInputElement).value;
+    expect(pendingCode).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(window.sessionStorage.getItem("vonix-affiliate-unconfirmed-code")).toBe(pendingCode);
+    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível confirmar o envio");
+    expect(analytics.track).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    const confirmed = await screen.findByLabelText("Código privado de acompanhamento");
+    expect(confirmed).toHaveValue(pendingCode);
+    expect(server.submit).toHaveBeenCalledTimes(2);
+    expect(server.submit.mock.calls[0]![0].data.trackingCode).toBe(pendingCode);
+    expect(server.submit.mock.calls[1]![0].data.trackingCode).toBe(pendingCode);
+    expect(window.sessionStorage.getItem("vonix-affiliate-unconfirmed-code")).toBeNull();
+    expect(analytics.track).toHaveBeenCalledExactlyOnceWith("sign_up", {
+      method: "affiliate_application",
+    });
+  });
+
+  it("recovers a pending code after browser reload without claiming any enrollment was accepted", async () => {
+    server.submit.mockRejectedValue(new TypeError("network lost"));
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    const codeBefore = (
+      (await screen.findByLabelText(
+        "Código privado da tentativa não confirmada",
+      )) as HTMLInputElement
+    ).value;
+    cleanup();
+    render(<AffiliateSimpleForm />);
+    const codeAfter = (
+      (await screen.findByLabelText(
+        "Código privado da tentativa não confirmada",
+      )) as HTMLInputElement
+    ).value;
+    expect(codeAfter).toBe(codeBefore);
+    expect(screen.getByText(/Este código não comprova que ela foi salva/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Consultar código no portal" })).toHaveAttribute(
+      "href",
+      "/consultar-candidatura",
+    );
+    expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
+    expect(analytics.track).not.toHaveBeenCalled();
+  });
+
+  it("does not report a Meta Lead if the server returns another private code", async () => {
+    server.submit.mockResolvedValue({ ok: true, trackingCode: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" });
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(
+      await screen.findByLabelText("Código privado da tentativa não confirmada"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível confirmar o recebimento");
+    expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
+    expect(analytics.track).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Descartar código e iniciar nova tentativa" }),
+    );
+    expect(
+      screen.queryByLabelText("Código privado da tentativa não confirmada"),
+    ).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem("vonix-affiliate-unconfirmed-code")).toBeNull();
   });
 
   it("keeps an interactive preview from calling the server", async () => {

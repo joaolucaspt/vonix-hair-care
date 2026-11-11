@@ -38,12 +38,13 @@ export const affiliateQuestionnaireEncryptionReady = () => encryptionKey() !== n
 const simpleAnswersSchema = affiliateSimpleSchema.omit({
   privacyAccepted: true,
   website: true,
+  trackingCode: true,
 });
 
 export function encryptSimpleAffiliateApplication(data: AffiliateSimpleInput): string {
   const key = encryptionKey();
   if (!key) throw new Error("Criptografia de inscrição não configurada.");
-  const { privacyAccepted: _accepted, website: _trap, ...answers } = data;
+  const { privacyAccepted: _accepted, website: _trap, trackingCode: _receipt, ...answers } = data;
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const plaintext = Buffer.from(
@@ -223,6 +224,35 @@ export type AffiliatePrivateDetail = {
   acceptedAt: string;
   answers: AffiliatePrivateAnswers;
 };
+
+/** Compare a repeated intake against the previously encrypted form.
+ * A private token alone may identify a record, but MUST NOT silently confirm
+ * changed contact/address details that were never actually saved.
+ * No decrypted PII leaves this server-side function.
+ */
+export function matchesEncryptedSimpleAffiliateApplication(
+  ciphertext: string,
+  input: AffiliateSimpleInput,
+): boolean {
+  const detail = decryptAffiliateWizardForAdmin(ciphertext);
+  if (!detail || detail.kind !== "simple") return false;
+  const a = detail.answers;
+  return (
+    a.firstName === input.fullName &&
+    a.phone === input.phone &&
+    a.postalCode === input.postalCode &&
+    a.street === input.street &&
+    a.number === input.number &&
+    a.district === input.district &&
+    a.city === input.city &&
+    a.state === input.state &&
+    a.complement === input.complement &&
+    a.instagramUsername === input.instagram &&
+    a.instagramFollowers === input.instagramFollowers.toLocaleString("pt-BR") &&
+    a.tiktokUsername === input.tiktok &&
+    a.tiktokFollowers === (input.tiktokFollowers?.toLocaleString("pt-BR") ?? "")
+  );
+}
 
 export function decryptAffiliateWizardForAdmin(
   ciphertext: string | null | undefined,
