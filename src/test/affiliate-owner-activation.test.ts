@@ -215,3 +215,16 @@ describe("owner-mediated one-time activation without transactional email", () =>
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+it("distinguishes an unavailable roster query after verified owner authorization", async () => {
+  const fetcher = mockFetch(Response.json(owner), new Response("", { status: 503 }));
+  expect(await listPendingAffiliateOwnerActivations()).toEqual({
+    ok: false,
+    owners: [],
+    reason: "temporarily-unavailable",
+  });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(
+    JSON.stringify(await Promise.resolve({ reason: "temporarily-unavailable" })),
+  ).not.toContain(email);
+});

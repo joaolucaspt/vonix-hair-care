@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Link2, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import {
   createPendingAffiliateOwnerActivationLink,
@@ -17,6 +17,9 @@ type GeneratedLink = { email: string; link: string };
 export function AffiliateOwnerActivationPanel() {
   const [owners, setOwners] = useState<PendingOwner[] | null>(null);
   const [available, setAvailable] = useState(false);
+  const [initialError, setInitialError] = useState(false);
+  const [initialRetry, setInitialRetry] = useState(0);
+  const copyingLink = useRef(false);
   const [busy, setBusy] = useState(false);
   const [confirmedPrivateRecipient, setConfirmedPrivateRecipient] = useState(false);
   const [generated, setGenerated] = useState<GeneratedLink | null>(null);
@@ -29,19 +32,49 @@ export function AffiliateOwnerActivationPanel() {
       .then((result) => {
         if (!active) return;
         if (result.ok) {
+          setInitialError(false);
           setAvailable(true);
           setOwners(result.owners);
+        } else {
+          // Never show invitees on failure; only the authorized server's
+          // transient-failure category can expose a retry affordance.
+          setAvailable(false);
+          setInitialError(result.reason === "temporarily-unavailable");
         }
       })
       .catch(() => {
-        if (active) setAvailable(false);
+        if (active) {
+          setAvailable(false);
+          // A network failure must not silently remove the owner's recovery UI.
+          setInitialError(true);
+        }
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialRetry]);
 
-  if (!available || owners === null) return null;
+  if (!available || owners === null)
+    return initialError ? (
+      <section
+        aria-label="Recuperação da consulta de convites"
+        className="mb-6 rounded-2xl border border-[#e7d4d3] bg-white p-5"
+      >
+        <p role="alert" className="text-sm text-[#7b4652]">
+          Não foi possível consultar os convites. Nenhuma identidade foi exibida.
+        </p>
+        <button
+          type="button"
+          className="mt-4 min-h-11 rounded-full border border-[#cda9ad] px-5 text-sm font-semibold"
+          onClick={() => {
+            setInitialError(false);
+            setInitialRetry((value) => value + 1);
+          }}
+        >
+          Tentar consultar convites novamente
+        </button>
+      </section>
+    ) : null;
 
   async function reload() {
     if (busy) return;
@@ -107,7 +140,9 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function copy() {
-    if (!generated) return;
+    if (!generated || busy || copyingLink.current) return;
+    copyingLink.current = true;
+    setBusy(true);
     try {
       await navigator.clipboard.writeText(generated.link);
       setGenerated(null);
@@ -118,6 +153,9 @@ export function AffiliateOwnerActivationPanel() {
       setFailure(
         "O navegador bloqueou a cópia. Permita o acesso à área de transferência e clique novamente.",
       );
+    } finally {
+      copyingLink.current = false;
+      setBusy(false);
     }
   }
 
@@ -210,6 +248,7 @@ export function AffiliateOwnerActivationPanel() {
           <button
             type="button"
             onClick={() => void copy()}
+            disabled={busy}
             className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#693440] px-5 text-sm font-bold text-white"
           >
             <ClipboardCopy className="h-4 w-4" />

@@ -102,7 +102,11 @@ export async function listPendingAffiliateOwnerActivations() {
     return { ok: false as const, owners: [] as PendingAffiliateOwner[] };
   }
   const owners = await fetchPendingOwners(db);
-  return owners ? { ok: true as const, owners } : { ok: false as const, owners: [] };
+  // Only an authenticated, active owner can learn that the protected query failed.
+  // A forbidden caller still receives the indistinguishable, empty denied response.
+  return owners
+    ? { ok: true as const, owners }
+    : { ok: false as const, owners: [], reason: "temporarily-unavailable" as const };
 }
 
 /**
