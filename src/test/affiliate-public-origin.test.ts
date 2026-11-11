@@ -7,6 +7,7 @@ const gates = vi.hoisted(() => ({
   sameOrigin: vi.fn(),
   quota: vi.fn(),
   create: vi.fn(),
+  createSimple: vi.fn(),
   session: vi.fn(),
   allowed: vi.fn(),
   decide: vi.fn(),
@@ -51,6 +52,7 @@ vi.mock("@/lib/affiliate-applications.server", () => ({
   eraseAffiliateApplication: vi.fn(),
   previewAffiliateRetention: vi.fn(),
   createAffiliateApplication: gates.create,
+  createSimpleAffiliateApplication: gates.createSimple,
   decideAffiliateApplication: gates.decide,
   listAffiliateApplications: vi.fn(),
   processAffiliateEmails: gates.email,
@@ -60,12 +62,17 @@ import {
   requestAffiliateAccessEmail,
   reviewAffiliateApplication,
   submitAffiliateApplication,
+  submitSimpleAffiliateApplication,
 } from "@/lib/affiliate-functions";
 
 // Validation takes place in the framework before the handler. These synthetic
 // values only exercise whether the side-effect is reached, never external I/O.
-const submit = submitAffiliateApplication as unknown as (args: {
-  data: { wizard?: Record<string, string> };
+const submit = submitSimpleAffiliateApplication as unknown as (args: {
+  data: Record<string, unknown>;
+}) => Promise<{ ok: boolean; reason?: string }>;
+
+const legacySubmit = submitAffiliateApplication as unknown as (args: {
+  data: Record<string, unknown>;
 }) => Promise<{ ok: boolean; reason?: string }>;
 
 beforeEach(() => {
@@ -74,6 +81,7 @@ beforeEach(() => {
   gates.sameOrigin.mockReturnValue(true);
   gates.quota.mockResolvedValue(true);
   gates.create.mockResolvedValue({ ok: true });
+  gates.createSimple.mockResolvedValue({ ok: true });
   gates.session.mockReturnValue(true);
   gates.allowed.mockResolvedValue(true);
   gates.decide.mockResolvedValue(true);
@@ -82,48 +90,50 @@ beforeEach(() => {
   gates.sendAuth.mockResolvedValue(true);
 });
 
-describe("Public affiliate submission origin policy", () => {
+describe("Public simplified affiliate submission origin policy", () => {
   it("refuses cross-site submissions before quota and database writes", async () => {
     gates.sameOrigin.mockReturnValue(false);
-    const result = await submit({ data: { wizard: { firstName: "Example" } } });
+    const result = await submit({ data: { fullName: "Exemplo" } });
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/formulário oficial/);
     expect(gates.quota).not.toHaveBeenCalled();
-    expect(gates.create).not.toHaveBeenCalled();
+    expect(gates.createSimple).not.toHaveBeenCalled();
   });
 
   it("preserves the closed-by-default launch gate", async () => {
     gates.open.mockReturnValue(false);
-    const result = await submit({ data: { wizard: { firstName: "Example" } } });
+    const result = await submit({ data: { fullName: "Exemplo" } });
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/Inscrições ainda não disponíveis/);
+    expect(result.reason).toMatch(/inscrições ainda não estão disponíveis/i);
     expect(gates.sameOrigin).not.toHaveBeenCalled();
-    expect(gates.create).not.toHaveBeenCalled();
+    expect(gates.createSimple).not.toHaveBeenCalled();
   });
 
-  it("refuses legacy single-step payloads even with a trusted origin", async () => {
-    const result = await submit({ data: {} });
-    expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/cinco etapas/);
-    expect(gates.quota).not.toHaveBeenCalled();
-    expect(gates.create).not.toHaveBeenCalled();
-  });
-
-  it("checks rate limiting and forwards only trusted wizard submissions", async () => {
-    const data = { wizard: { firstName: "Example" } };
+  it("checks rate limiting and forwards only the simplified submission", async () => {
+    const data = { fullName: "Pessoa Exemplo", instagramFollowers: 100 };
     const result = await submit({ data });
     expect(result.ok).toBe(true);
     expect(gates.quota).toHaveBeenCalledWith("submit");
-    expect(gates.create).toHaveBeenCalledWith(data);
-    expect(gates.create).toHaveBeenCalledOnce();
+    expect(gates.createSimple).toHaveBeenCalledWith(data);
+    expect(gates.create).not.toHaveBeenCalled();
   });
 
   it("fails closed when distributed quota rejects the request", async () => {
     gates.quota.mockResolvedValue(false);
-    const result = await submit({ data: { wizard: { firstName: "Example" } } });
+    const result = await submit({ data: { fullName: "Exemplo" } });
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Muitas tentativas/);
+    expect(gates.createSimple).not.toHaveBeenCalled();
+  });
+
+  it("retires the old five-stage endpoint without contacting storage", async () => {
+    const result = await legacySubmit({ data: { wizard: { firstName: "Exemplo" } } });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/cadastro antigo foi encerrado/);
+    expect(gates.quota).not.toHaveBeenCalled();
     expect(gates.create).not.toHaveBeenCalled();
+    expect(gates.createSimple).not.toHaveBeenCalled();
+    expect(gates.sendAuth).not.toHaveBeenCalled();
   });
 });
 

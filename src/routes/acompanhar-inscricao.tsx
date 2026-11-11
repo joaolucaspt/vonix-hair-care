@@ -294,6 +294,12 @@ export function AffiliateApplicationTracker() {
                     </p>
                   </div>
                 </div>
+                <p className="mt-5 rounded-xl border border-[#ead9d2] bg-[#fffaf6] p-4 text-sm leading-relaxed text-[#75575f]">
+                  <strong>Fez a inscrição pelo novo formulário?</strong> Ele não solicita e-mail. A
+                  equipe poderá entrar em contato pelo telefone informado. O acesso por e-mail
+                  abaixo é exclusivo para candidaturas anteriores que registraram um endereço de
+                  e-mail.
+                </p>
                 <form onSubmit={requestLogin} className="mt-7">
                   <label htmlFor="affiliate-tracker-email" className="text-sm font-semibold">
                     E-mail utilizado na inscrição
