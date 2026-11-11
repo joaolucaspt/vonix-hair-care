@@ -62,6 +62,13 @@ export const affiliateSimpleSchema = z
       .default(""),
     tiktokFollowers: followerCount.nullable().default(null),
     privacyAccepted: z.literal(true),
+    // An optional browser-issued 192-bit private receipt makes ambiguous
+    // network failures retryable without querying an applicant by Instagram.
+    // Older clients omit it; the server then issues a fresh secure receipt.
+    trackingCode: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{32}$/)
+      .optional(),
     website: z.string().max(120).default(""), // anti-bot honeypot
   })
   .strict();

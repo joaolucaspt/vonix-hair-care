@@ -20,6 +20,20 @@ type Key =
   | "tiktok"
   | "tiktokFollowers";
 
+const pendingReceiptSessionKey = "vonix-affiliate-unconfirmed-code";
+
+/** Web Crypto creates 192 unpredictable bits before the request begins.
+ * The code is a private bearer token: never include it in a URL or analytics.
+ */
+function createBrowserPrivateReceipt(): string {
+  const bytes = new Uint8Array(24);
+  window.crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
 const fields: Record<Key, string> = {
   fullName: "",
   phone: "",
@@ -149,6 +163,50 @@ export function AffiliateSimpleForm({
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [trackingCopied, setTrackingCopied] = useState(false);
+  const attemptCode = useRef("");
+  const [unconfirmedCode, setUnconfirmedCode] = useState("");
+  const [unconfirmedCopied, setUnconfirmedCopied] = useState(false);
+
+  useEffect(() => {
+    try {
+      const pending = window.sessionStorage.getItem(pendingReceiptSessionKey) ?? "";
+      if (/^[A-Za-z0-9_-]{32}$/.test(pending)) {
+        attemptCode.current = pending;
+        setUnconfirmedCode(pending);
+      } else {
+        window.sessionStorage.removeItem(pendingReceiptSessionKey);
+      }
+    } catch {
+      // The form still works when browser storage is denied; the user must
+      // keep this page open to copy the pending code after a network failure.
+    }
+  }, []);
+
+  async function copyUnconfirmedCode() {
+    if (!/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode)) return;
+    try {
+      await navigator.clipboard.writeText(unconfirmedCode);
+      setUnconfirmedCopied(true);
+    } catch {
+      setUnconfirmedCopied(false);
+      const field = document.getElementById(
+        "affiliate-unconfirmed-code",
+      ) as HTMLInputElement | null;
+      field?.focus();
+      field?.select();
+    }
+  }
+
+  function discardUnconfirmedCode() {
+    attemptCode.current = "";
+    setUnconfirmedCode("");
+    setUnconfirmedCopied(false);
+    try {
+      window.sessionStorage.removeItem(pendingReceiptSessionKey);
+    } catch {
+      /* restricted storage */
+    }
+  }
 
   async function copyTrackingCode() {
     if (!trackingCode) return;
@@ -309,7 +367,19 @@ export function AffiliateSimpleForm({
     setSending(true);
     setMessage("");
     try {
-      const result = await submitSimpleAffiliateApplication({ data: parsed.data });
+      // Reuse this 192-bit code on a retry. Without it a lost response might
+      // create an unreachable application and a second submission conflict.
+      if (!attemptCode.current) {
+        attemptCode.current = createBrowserPrivateReceipt();
+        try {
+          window.sessionStorage.setItem(pendingReceiptSessionKey, attemptCode.current);
+        } catch {
+          // Secure in-memory fallback; show the code after any uncertain reply.
+        }
+      }
+      const result = await submitSimpleAffiliateApplication({
+        data: { ...parsed.data, trackingCode: attemptCode.current },
+      });
       if (result.ok) {
         // A honeypot can acknowledge without saving a real application.
         // Never confirm success or fire a Meta Lead without a private receipt.
@@ -319,22 +389,28 @@ export function AffiliateSimpleForm({
           /^[A-Za-z0-9_-]{32}$/.test(result.trackingCode)
             ? result.trackingCode
             : "";
-        if (!receipt) {
+        if (!receipt || receipt !== attemptCode.current) {
+          setUnconfirmedCode(attemptCode.current);
           setMessage(
-            "Não foi possível confirmar o recebimento da inscrição. Revise os campos e tente novamente.",
+            "Não foi possível confirmar o recebimento. Guarde o código de tentativa e consulte o portal antes de tentar novamente.",
           );
           return;
         }
+        discardUnconfirmedCode();
         track("sign_up", { method: "affiliate_application" });
         setTrackingCode(receipt);
         setSent(true);
         setValues({ ...fields });
         setAccepted(false);
       } else {
+        setUnconfirmedCode(attemptCode.current);
         setMessage(result.reason);
       }
     } catch {
-      setMessage("Não foi possível enviar sua inscrição. Tente novamente.");
+      if (attemptCode.current) setUnconfirmedCode(attemptCode.current);
+      setMessage(
+        "Não foi possível confirmar o envio. A inscrição pode ter sido salva; guarde o código de tentativa e consulte o portal antes de reenviar.",
+      );
     } finally {
       submitting.current = false;
       setSending(false);
@@ -636,6 +712,56 @@ export function AffiliateSimpleForm({
             <p role="alert" className="mt-4 rounded-xl bg-[#fff5f1] p-4 text-sm text-[#844954]">
               {message}
             </p>
+          ) : null}
+          {!preview && unconfirmedCode ? (
+            <section
+              aria-label="Tentativa de inscrição não confirmada"
+              className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-[#604448]"
+            >
+              <p className="font-bold">Guarde o código desta tentativa</p>
+              <p className="mt-2">
+                Ainda não temos confirmação de inscrição. Este código não comprova que ela foi
+                salva, mas permite consultar o resultado caso a conexão tenha caído depois do
+                registro. Não compartilhe com outras pessoas.
+              </p>
+              <input
+                id="affiliate-unconfirmed-code"
+                aria-label="Código privado da tentativa não confirmada"
+                readOnly
+                value={unconfirmedCode}
+                onFocus={(event) => event.currentTarget.select()}
+                className="mt-3 w-full rounded-lg border border-amber-200 bg-white p-3 text-center font-semibold tracking-wide"
+              />
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void copyUnconfirmedCode()}
+                  className="min-h-11 rounded-full border border-[#b9969e] px-4 font-bold"
+                >
+                  {unconfirmedCopied
+                    ? "Código de tentativa copiado!"
+                    : "Copiar código de tentativa"}
+                </button>
+                <a
+                  href="/consultar-candidatura"
+                  className="inline-flex min-h-11 items-center rounded-full border border-[#b9969e] px-4 font-bold underline"
+                >
+                  Consultar código no portal
+                </a>
+                <button
+                  type="button"
+                  onClick={discardUnconfirmedCode}
+                  className="min-h-11 px-4 text-xs underline"
+                >
+                  Descartar código e iniciar nova tentativa
+                </button>
+              </div>
+              <p className="mt-2 text-xs">
+                Ao repetir o envio sem descartar, o sistema usa o mesmo código. Se você alterar os
+                dados depois da primeira tentativa, consulte o código antes de iniciar uma inscrição
+                diferente.
+              </p>
+            </section>
           ) : null}
           {preview ? (
             <p role="status" className="mt-4 text-sm font-semibold text-[#865667]">

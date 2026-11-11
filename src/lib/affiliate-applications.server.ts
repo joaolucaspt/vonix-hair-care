@@ -27,6 +27,7 @@ import {
   encryptAffiliateWizard,
   encryptSimpleAffiliateApplication,
   decryptAffiliateWizardForAdmin,
+  matchesEncryptedSimpleAffiliateApplication,
   MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH,
 } from "./affiliate-wizard-crypto.server";
 
@@ -230,7 +231,7 @@ export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput
   if (data.website) return { ok: true as const };
   const socials = simpleAffiliateSocialUrls(data);
   // One-time private tracking code, never stored in plaintext or sent to Meta.
-  const trackingCode = randomBytes(24).toString("base64url");
+  const trackingCode = data.trackingCode ?? randomBytes(24).toString("base64url");
   const statusTokenHash = createHash("sha256").update(trackingCode).digest("hex");
   const record = {
     status_token_hash: statusTokenHash,
@@ -247,8 +248,42 @@ export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify(record),
   });
-  // Never tell a caller whether a specific person's profile was enrolled.
+  // A retry with the SAME strong private receipt is idempotent even if the
+  // preceding request committed but its HTTP response was lost. A social
+  // profile alone is NEVER sufficient proof and must not reveal a receipt.
   if (response.status === 409) {
+    if (data.trackingCode) {
+      const prior = await requestSupabase(
+        "vonix_affiliate_applications?select=instagram_url,status_token_hash,questionnaire_encrypted" +
+          "&status_token_hash=eq." +
+          encodeURIComponent(statusTokenHash) +
+          "&limit=1",
+        { method: "GET" },
+      );
+      if (!prior.ok) throw new Error("Private receipt verification unavailable.");
+      const matching = z
+        .array(
+          z.object({
+            instagram_url: z.string().max(400),
+            status_token_hash: z.string().regex(/^[a-f0-9]{64}$/),
+            questionnaire_encrypted: z
+              .string()
+              .min(1)
+              .max(MAX_AFFILIATE_QUESTIONNAIRE_CIPHERTEXT_LENGTH),
+          }),
+        )
+        .max(1)
+        .parse(await prior.json());
+      if (
+        matching.length === 1 &&
+        matching[0]!.status_token_hash === statusTokenHash &&
+        normalizedProfile(matching[0]!.instagram_url) ===
+          normalizedProfile(socials.instagram_url) &&
+        matchesEncryptedSimpleAffiliateApplication(matching[0]!.questionnaire_encrypted, data)
+      ) {
+        return { ok: true as const, trackingCode };
+      }
+    }
     return {
       ok: false as const,
       reason:
