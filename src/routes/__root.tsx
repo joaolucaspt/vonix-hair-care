@@ -16,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { META_PIXEL_ID } from "@/lib/analytics";
 import { captureRef } from "@/lib/affiliate-ref";
+import { markPaidVisit } from "@/lib/paid-visit";
 import { FACEBOOK, INSTAGRAM, SITE_URL } from "@/lib/store";
 
 // IDs lidos do site publicado; confirmar o ID do Clarity em Configurações > Visão geral do projeto.
@@ -182,7 +183,7 @@ function RootComponent() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const previousPathname = useRef(pathname);
   // Link de afiliada (?ref=codigo): guarda o código por 30 dias para a venda ser contada para ela.
-  useEffect(() => { captureRef(window.location.search); }, []);
+  useEffect(() => { captureRef(window.location.search); markPaidVisit(window.location.search); }, []);
 
   // O script do pixel já registra a primeira página antes da hidratação.
   useEffect(() => {
