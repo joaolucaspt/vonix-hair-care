@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Lock } from "lucide-react";
 import { SecuritySeal, Shell } from "@/components/site";
 import { ShippingBar } from "@/components/cart-summary";
+import { ProvasEmVideo } from "@/components/provas-em-video";
 import { useCepAddress } from "@/hooks/use-cep-address";
 import { toItem, track } from "@/lib/analytics";
 import { isValidCpf } from "@/lib/cpf";
@@ -619,6 +620,11 @@ function Checkout() {
                 </p>
               )}
             </div>
+
+            <section className={panel} aria-label="Quem já usa Vonix">
+              <p className="mb-2 text-small font-semibold">Quem já usa Vonix: afiliadas e embaixadoras. Toque para assistir.</p>
+              <ProvasEmVideo all />
+            </section>
 
             <fieldset className={panel}>
               <StepTitle n={1}>Contato</StepTitle>

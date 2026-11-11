@@ -5,6 +5,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { Shell } from "@/components/site";
 import { OFFER_LABEL, brl, complementsFor, pixPrice, useCart, useHydrated } from "@/lib/store";
 import { ShippingBar, Summary } from "@/components/cart-summary";
+import { ProvasEmVideo } from "@/components/provas-em-video";
 
 export const Route = createFileRoute("/carrinho")({
   head: () => ({
@@ -109,6 +110,10 @@ function Cart() {
         ) : (
           <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
             <div className="min-w-0">
+              <section aria-label="Quem já usa Vonix" className="mb-6 rounded-2xl border border-border bg-card p-3">
+                <p className="mb-2 text-small font-semibold">Quem já usa Vonix: afiliadas e embaixadoras. Toque para assistir.</p>
+                <ProvasEmVideo all />
+              </section>
               <ul className="divide-y divide-border">
                 {c.lines.map((l) => (
                   <li key={l.slug + l.variant + (l.offer ?? "")} className="flex gap-4 py-4">
