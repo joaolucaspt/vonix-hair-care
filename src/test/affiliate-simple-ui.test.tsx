@@ -46,6 +46,10 @@ describe("Vonix short single-page application form", () => {
     expect(screen.getByLabelText(/Telefone com DDD/)).toBeRequired();
     expect(screen.getByLabelText(/CEP/)).toBeRequired();
     expect(screen.getByLabelText(/Número/)).toBeRequired();
+    expect(screen.getByLabelText(/^Instagram/)).toBeRequired();
+    expect(screen.getByLabelText(/Seguidores no Instagram/)).toBeRequired();
+    expect(screen.getByLabelText(/^TikTok/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Seguidores no TikTok/)).not.toBeRequired();
     for (const removed of [
       "CPF",
       "CNPJ",
@@ -76,6 +80,27 @@ describe("Vonix short single-page application form", () => {
         tiktok: "maria.exemplo",
         tiktokFollowers: 4300,
         privacyAccepted: true,
+      }),
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent("Inscrição recebida!");
+    expect(analytics.track).toHaveBeenCalledExactlyOnceWith("sign_up", {
+      method: "affiliate_application",
+    });
+  });
+
+  it("submits successfully with both TikTok fields left empty", async () => {
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.change(screen.getByLabelText(/^TikTok/), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText(/Seguidores no TikTok/), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    await waitFor(() => expect(server.submit).toHaveBeenCalledOnce());
+    expect(server.submit).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        instagram: "maria.exemplo",
+        instagramFollowers: 12345,
+        tiktok: "",
+        tiktokFollowers: null,
       }),
     });
     expect(await screen.findByRole("status")).toHaveTextContent("Inscrição recebida!");

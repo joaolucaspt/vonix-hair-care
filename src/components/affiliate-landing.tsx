@@ -114,7 +114,7 @@ const questions = [
   {
     question: "Como funciona a avaliação?",
     answer:
-      "Você informa seu nome, telefone, endereço completo e perfis do Instagram e TikTok com número de seguidores em um único formulário. A equipe poderá entrar em contato pelo telefone informado. Não há prazo de resposta garantido.",
+      "Você informa nome, telefone, endereço completo e Instagram com número de seguidores em um único formulário. TikTok e seus seguidores são opcionais. A equipe poderá entrar em contato pelo telefone informado. Não há prazo de resposta garantido.",
   },
   {
     question: "Já posso enviar meu cadastro?",
@@ -390,7 +390,7 @@ export function AffiliateLandingIntro({
               {
                 number: "01",
                 title: "Apresente seu perfil",
-                text: "Preencha um único formulário com nome, telefone, endereço completo, Instagram e TikTok com seguidores.",
+                text: "Preencha seus dados e Instagram com seguidores. TikTok é opcional.",
                 Icon: ClipboardList,
               },
               {

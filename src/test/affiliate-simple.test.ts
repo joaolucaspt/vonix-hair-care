@@ -63,7 +63,7 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
     }
   });
 
-  it("requires number, full CEP, telephone, both profiles and follower counts", () => {
+  it("requires address, phone and Instagram, while validating provided TikTok data", () => {
     const failures = [
       { postalCode: "30110" },
       { number: "" },
@@ -73,7 +73,7 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
       { state: "" },
       { phone: "invalid" },
       { instagram: "https://evil.invalid/maria" },
-      { tiktok: "" },
+      { tiktok: "a" },
       { instagramFollowers: -1 },
       { tiktokFollowers: 1.5 },
       { fullName: "Maria" },
@@ -85,6 +85,48 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
         JSON.stringify(change),
       ).toBe(false);
     }
+  });
+
+  it("accepts no TikTok account or count, while preserving encrypted moderation details", () => {
+    const absent = affiliateSimpleSchema.parse({ ...valid, tiktok: "", tiktokFollowers: null });
+    expect(absent.tiktok).toBe("");
+    expect(absent.tiktokFollowers).toBeNull();
+    const omitted = { ...valid } as Record<string, unknown>;
+    delete omitted["tiktok"];
+    delete omitted["tiktokFollowers"];
+    expect(affiliateSimpleSchema.parse(omitted)).toMatchObject({
+      tiktok: "",
+      tiktokFollowers: null,
+    });
+    expect(affiliateSimpleSchema.parse({ ...valid, tiktokFollowers: null }).tiktok).toBe(
+      "maria.exemplo",
+    );
+    const encrypted = encryptSimpleAffiliateApplication(absent);
+    expect(affiliateWizardSummary(encrypted)).toMatchObject({
+      kind: "simple",
+      instagramFollowers: "12.345",
+      tiktokFollowers: "",
+    });
+    expect(decryptAffiliateWizardForAdmin(encrypted)?.answers).toMatchObject({
+      tiktokUsername: "",
+      tiktokFollowers: "",
+    });
+  });
+
+  it("stores absent TikTok as SQL null, never as a malformed URL", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        posted.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(null, { status: 201 });
+      }),
+    );
+    const candidate = affiliateSimpleSchema.parse({ ...valid, tiktok: "", tiktokFollowers: null });
+    expect(await createSimpleAffiliateApplication(candidate)).toEqual({ ok: true });
+    expect(posted).toHaveLength(1);
+    expect(posted[0]?.["tiktok_url"]).toBeNull();
+    expect(String(posted[0]?.["questionnaire_encrypted"])).toMatch(/^v3\./);
   });
 
   it("keeps phone/address private and exposes only follower counts in triage", () => {

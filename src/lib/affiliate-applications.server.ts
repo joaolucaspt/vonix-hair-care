@@ -233,7 +233,7 @@ export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput
     city: data.city,
     state: data.state,
     instagram_url: normalizedProfile(socials.instagram_url),
-    tiktok_url: normalizedProfile(socials.tiktok_url),
+    tiktok_url: socials.tiktok_url ? normalizedProfile(socials.tiktok_url) : null,
     questionnaire_encrypted: encryptSimpleAffiliateApplication(data),
     consent_at: new Date().toISOString(),
   };
