@@ -246,9 +246,12 @@ export function Shell({ children }: { children: ReactNode }) {
           ))}
         </div>
       </div>
-      {/* O topo (logo, busca e categorias) rola junto com a página; só a escolha "Para mim / Cabeleireiras" fica fixa. */}
-      <header className="relative z-30 border-b border-border bg-background">
-        <div className="container-site grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2 lg:flex lg:items-start lg:gap-4 lg:py-2">
+      {/* Acompanham a rolagem: logo (com menu, entrar e carrinho), a busca e a escolha "Para mim / Cabeleireiras". O resto rola com a página. */}
+      {!isCheckout && !isProduct && (
+        <p className="whitespace-nowrap bg-background pt-2 text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
+      )}
+      <div className="sticky top-0 z-40 border-b border-border bg-background">
+        <div className="container-site grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-2 lg:flex lg:gap-4">
           {isCheckout ? (
             // No checkout o topo é mínimo: o espaço do menu fica reservado para o logo continuar centralizado.
             <span aria-hidden="true" className="h-6 w-6 justify-self-start lg:hidden" />
@@ -261,8 +264,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <img src={LOGO} alt="Vonix Hair" width={420} height={163} className="h-8 w-auto sm:h-11" />
           </Link>
           {!isCheckout && (
-            <div className="mx-auto hidden min-w-0 w-full max-w-xl flex-col items-center gap-1.5 lg:flex">
-              <p className="text-body italic">“Até aqui nos ajudou o Senhor”</p>
+            <div className="mx-auto hidden w-full max-w-xl min-w-0 lg:block">
               <SearchBox />
             </div>
           )}
@@ -301,18 +303,24 @@ export function Shell({ children }: { children: ReactNode }) {
         {isProduct ? (
           // Página de produto no celular: só a busca, e só depois de tocar na lupa.
           searchOpen && (
-            <div className="container-site pb-3 lg:hidden">
+            <div className="container-site pb-2 lg:hidden">
               <SearchBox autoFocus onDone={() => setSearchOpen(false)} />
             </div>
           )
         ) : (
           !isCheckout && (
-            <div className="container-site space-y-2 pb-3 lg:hidden">
-              <p className="whitespace-nowrap text-center text-body italic">“Até aqui nos ajudou o Senhor”</p>
+            <div className="container-site pb-2 lg:hidden">
               <SearchBox />
             </div>
           )
         )}
+        {!isCheckout && audience && (
+          <div className={`container-site pb-1.5 ${isProduct ? "hidden lg:block" : ""}`}>
+            <AudienceChoice />
+          </div>
+        )}
+      </div>
+      <header className="border-b border-border bg-background">
         {!isCheckout && (
           <nav aria-label="Categorias" className="hidden border-t border-border lg:block">
             <div className="container-site flex flex-wrap items-center justify-center gap-x-6 gap-y-2 py-3 text-small font-medium uppercase tracking-[0.15em] xl:gap-x-9">
@@ -329,11 +337,9 @@ export function Shell({ children }: { children: ReactNode }) {
           </nav>
         )}
       </header>
-      {!isCheckout && (
-        <div className={`${audience ? "sticky top-0 z-40 border-b border-border bg-background py-1" : "container-site py-2"} ${isProduct ? "hidden lg:block" : ""}`}>
-          <div className={audience ? "container-site" : undefined}>
-            <AudienceChoice />
-          </div>
+      {!isCheckout && !audience && (
+        <div className={`container-site py-2 ${isProduct ? "hidden lg:block" : ""}`}>
+          <AudienceChoice />
         </div>
       )}
       {open && (
