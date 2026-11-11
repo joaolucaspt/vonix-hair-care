@@ -12,6 +12,11 @@ import {
   XCircle,
 } from "lucide-react";
 import { LOGO } from "@/components/site";
+import {
+  affiliateRejectionReasons,
+  affiliateRejectionLabel,
+  type AffiliateRejectionReason,
+} from "@/lib/affiliate-rejection";
 import { AffiliateOwnerActivationPanel } from "@/components/affiliate-owner-activation-panel";
 import {
   getAffiliateAdminSession,
@@ -192,6 +197,9 @@ export function AffiliateAdminPage() {
     id: string;
     message: string;
   } | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<AffiliateRejectionReason>(
+    "seguidores_insuficientes",
+  );
   const [pendingDecision, setPendingDecision] = useState<{
     id: string;
     decision: "aprovada" | "recusada";
@@ -486,14 +494,17 @@ export function AffiliateAdminPage() {
     setError("");
     setNotice("");
     try {
-      const result = await reviewAffiliateApplication({ data: { id: app.id, decision } });
+      const result = await reviewAffiliateApplication({
+        data: { id: app.id, decision, reason: decision === "recusada" ? rejectionReason : null },
+      });
       if (sessionVersion.current !== sessionId) return;
       if (!result.ok) {
         if (sessionExpired(result.reason)) return;
         setError(result.reason);
       } else {
-        const mailNotice =
-          result.notification === "accepted"
+        const mailNotice = !app.email
+          ? " O motivo está disponível no acompanhamento por código; contato telefônico é manual."
+          : result.notification === "accepted"
             ? " Notificação aceita pelo provedor; entrega não confirmada."
             : result.notification === "unconfigured"
               ? " Provedor de e-mails não configurado. A notificação aguarda configuração."
@@ -1468,7 +1479,10 @@ export function AffiliateAdminPage() {
                         <button
                           type="button"
                           disabled={workingId !== null || loading}
-                          onClick={() => setPendingDecision({ id: app.id, decision: "recusada" })}
+                          onClick={() => {
+                            setRejectionReason("seguidores_insuficientes");
+                            setPendingDecision({ id: app.id, decision: "recusada" });
+                          }}
                           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#ba8589] px-6 text-sm font-bold text-[#773c45] hover:bg-[#fff1f1] disabled:opacity-50"
                         >
                           <XCircle className="h-4 w-4" /> RECUSAR
@@ -1489,6 +1503,37 @@ export function AffiliateAdminPage() {
                               Esta decisão é definitiva no painel e poderá gerar uma notificação por
                               e-mail. Confira a candidatura antes de confirmar.
                             </p>
+                            {pendingDecision.decision === "recusada" && (
+                              <div className="mt-4">
+                                <label
+                                  htmlFor={"rejection-reason-" + app.id}
+                                  className="block text-sm font-bold text-[#653a49]"
+                                >
+                                  Motivo da recusa *
+                                </label>
+                                <select
+                                  id={"rejection-reason-" + app.id}
+                                  aria-label="Motivo da recusa"
+                                  value={rejectionReason}
+                                  onChange={(event) =>
+                                    setRejectionReason(
+                                      event.target.value as AffiliateRejectionReason,
+                                    )
+                                  }
+                                  className="mt-2 min-h-12 w-full rounded-xl border border-[#d6b6be] bg-white px-4 text-sm"
+                                >
+                                  {affiliateRejectionReasons.map(({ value, label }) => (
+                                    <option key={value} value={value}>
+                                      {label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <p className="mt-2 text-xs text-[#806a6c]">
+                                  A candidata poderá ver este motivo com o código privado e se
+                                  inscrever novamente.
+                                </p>
+                              </div>
+                            )}
                             <div className="mt-4 flex flex-wrap gap-3">
                               <button
                                 type="button"
@@ -1512,22 +1557,33 @@ export function AffiliateAdminPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#f3e7e3] bg-[#fffaf7] px-6 py-4 text-sm">
-                        <span className="font-semibold text-[#6a5559]">
-                          {app.reviewed_at
-                            ? "Analisada em " + new Date(app.reviewed_at).toLocaleString("pt-BR")
-                            : "Inscrição analisada"}
-                        </span>
-                        <span
-                          className={
-                            "rounded-lg px-3 py-2 text-xs font-semibold " +
-                            (mail?.status === "enviado"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-amber-100 text-amber-900")
-                          }
-                        >
-                          {mail ? mailLabels[mail.status] : "Sem registro de e-mail"}
-                        </span>
+                      <div className="border-t border-[#f3e7e3] bg-[#fffaf7] px-6 py-4 text-sm">
+                        {app.status === "recusada" && (
+                          <p className="mb-3 font-semibold text-[#633a43]">
+                            Motivo: {affiliateRejectionLabel(app.rejection_reason)}
+                            <span className="mt-1 block text-xs font-normal text-[#806a6c]">
+                              Nova candidatura permitida após a recusa. Não compartilhe dados da
+                              candidata publicamente.
+                            </span>
+                          </p>
+                        )}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-semibold text-[#6a5559]">
+                            {app.reviewed_at
+                              ? "Analisada em " + new Date(app.reviewed_at).toLocaleString("pt-BR")
+                              : "Inscrição analisada"}
+                          </span>
+                          <span
+                            className={
+                              "rounded-lg px-3 py-2 text-xs font-semibold " +
+                              (mail?.status === "enviado"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-900")
+                            }
+                          >
+                            {mail ? mailLabels[mail.status] : "Sem registro de e-mail"}
+                          </span>
+                        </div>
                       </div>
                     )}
                     <div className="border-t border-[#f3e7e3] px-6 py-4">

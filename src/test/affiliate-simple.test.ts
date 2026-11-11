@@ -5,7 +5,11 @@ import {
   affiliateWizardSummary,
   decryptAffiliateWizardForAdmin,
 } from "@/lib/affiliate-wizard-crypto.server";
-import { createSimpleAffiliateApplication } from "@/lib/affiliate-applications.server";
+import {
+  createSimpleAffiliateApplication,
+  getAffiliateStatusWithCode,
+} from "@/lib/affiliate-applications.server";
+import { createHash } from "node:crypto";
 
 const valid = {
   fullName: "Maria da Silva",
@@ -123,10 +127,41 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
       }),
     );
     const candidate = affiliateSimpleSchema.parse({ ...valid, tiktok: "", tiktokFollowers: null });
-    expect(await createSimpleAffiliateApplication(candidate)).toEqual({ ok: true });
+    expect(await createSimpleAffiliateApplication(candidate)).toMatchObject({
+      ok: true,
+      trackingCode: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/),
+    });
     expect(posted).toHaveLength(1);
     expect(posted[0]?.["tiktok_url"]).toBeNull();
     expect(String(posted[0]?.["questionnaire_encrypted"])).toMatch(/^v3\./);
+  });
+
+  it("retrieves only status and reason via hashed private code, never Instagram", async () => {
+    const code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    const expected = createHash("sha256").update(code).digest("hex");
+    const mocked = vi.fn(async (url: RequestInfo | URL) => {
+      expect(String(url)).toContain("status_token_hash=eq." + expected);
+      expect(String(url)).not.toContain(code);
+      expect(String(url)).not.toContain("instagram");
+      return new Response(
+        JSON.stringify([
+          {
+            status: "recusada",
+            rejection_reason: "seguidores_insuficientes",
+            created_at: "2026-11-11T11:00:00Z",
+            reviewed_at: "2026-11-11T12:00:00Z",
+          },
+        ]),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", mocked);
+    expect(await getAffiliateStatusWithCode(code)).toMatchObject({
+      status: "recusada",
+      rejection_reason: "seguidores_insuficientes",
+    });
+    expect(mocked).toHaveBeenCalledOnce();
+    await expect(getAffiliateStatusWithCode("instagram_public")).rejects.toThrow();
   });
 
   it("keeps phone/address private and exposes only follower counts in triage", () => {
@@ -169,9 +204,13 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
       return new Response(null, { status: 201 });
     });
     vi.stubGlobal("fetch", mockedFetch);
-    expect(await createSimpleAffiliateApplication(affiliateSimpleSchema.parse(valid))).toEqual({
+    const submitted = await createSimpleAffiliateApplication(affiliateSimpleSchema.parse(valid));
+    expect(submitted).toMatchObject({
       ok: true,
+      trackingCode: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/),
     });
+    expect(posted[0]?.["status_token_hash"]).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(posted)).not.toContain(submitted.trackingCode);
     expect(posted).toHaveLength(1);
     for (const field of [
       "age",

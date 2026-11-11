@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
+import { affiliateRejectionLabel, affiliateRejectionGuidance } from "@/lib/affiliate-rejection";
 import { requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
 import { affiliateStatusRedirectUrl, vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
 
@@ -32,6 +33,7 @@ type ApplicationStatus = "pendente" | "aprovada" | "recusada";
 type OwnApplication = {
   application_id: string;
   status: ApplicationStatus;
+  rejection_reason: string | null;
   submitted_at: string;
   reviewed_at: string | null;
 };
@@ -51,7 +53,7 @@ const statusUi = {
   },
   recusada: {
     title: "Candidatura não selecionada",
-    copy: "Sua candidatura foi avaliada e não foi selecionada nesta etapa. Você pode continuar acompanhando a Vonix Hair como cliente e integrante da nossa comunidade.",
+    copy: "Sua candidatura não foi selecionada nesta etapa. Você pode tentar novamente após desenvolver seu perfil.",
     Icon: XCircle,
     tone: "bg-stone-50 text-stone-700 border-stone-200",
   },
@@ -84,7 +86,7 @@ export function AffiliateApplicationTracker() {
       // documents, phone numbers or other candidates' details are returned.
       const response = await vonixAffiliateAuth
         .from("vonix_affiliate_portal_status")
-        .select("application_id,status,submitted_at,reviewed_at")
+        .select("application_id,status,rejection_reason,submitted_at,reviewed_at")
         .order("submitted_at", { ascending: false })
         .limit(1);
       if (response.error) {
@@ -249,6 +251,22 @@ export function AffiliateApplicationTracker() {
                       <div>
                         <h2 className="font-display text-2xl">{show.title}</h2>
                         <p className="mt-2 text-sm leading-relaxed">{show.copy}</p>
+                        {application?.status === "recusada" && (
+                          <>
+                            <p className="mt-3 text-sm font-bold">
+                              Motivo: {affiliateRejectionLabel(application.rejection_reason)}
+                            </p>
+                            <p className="mt-2 text-sm">
+                              {affiliateRejectionGuidance(application.rejection_reason)}
+                            </p>
+                            <a
+                              href="/seja-afiliada"
+                              className="mt-4 inline-block font-bold underline"
+                            >
+                              Fazer nova inscrição
+                            </a>
+                          </>
+                        )}
                       </div>
                     </div>
                     <dl className="mt-6 grid gap-4 border-t border-[#f0e5e4] pt-6 text-sm sm:grid-cols-2">
@@ -296,9 +314,12 @@ export function AffiliateApplicationTracker() {
                 </div>
                 <p className="mt-5 rounded-xl border border-[#ead9d2] bg-[#fffaf6] p-4 text-sm leading-relaxed text-[#75575f]">
                   <strong>Fez a inscrição pelo novo formulário?</strong> Ele não solicita e-mail. A
-                  equipe poderá entrar em contato pelo telefone informado. O acesso por e-mail
-                  abaixo é exclusivo para candidaturas anteriores que registraram um endereço de
-                  e-mail.
+                  equipe poderá entrar em contato pelo telefone informado. Guarde e use o código
+                  privado recebido ao concluir sua inscrição no{" "}
+                  <a href="/consultar-candidatura" className="font-semibold underline">
+                    acompanhamento por código
+                  </a>
+                  . O acesso por e-mail abaixo é exclusivo para candidaturas anteriores.
                 </p>
                 <form onSubmit={requestLogin} className="mt-7">
                   <label htmlFor="affiliate-tracker-email" className="text-sm font-semibold">

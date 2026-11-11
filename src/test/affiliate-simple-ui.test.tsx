@@ -88,6 +88,20 @@ describe("Vonix short single-page application form", () => {
     });
   });
 
+  it("displays a private tracking code only after successful server receipt", async () => {
+    server.submit.mockResolvedValue({ ok: true, trackingCode: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef" });
+    render(<AffiliateSimpleForm />);
+    expect(screen.queryByLabelText("Código privado de acompanhamento")).not.toBeInTheDocument();
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(await screen.findByLabelText("Código privado de acompanhamento")).toHaveValue(
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef",
+    );
+    expect(
+      screen.getByRole("link", { name: "Consultar candidatura e motivo da decisão" }),
+    ).toHaveAttribute("href", "/consultar-candidatura");
+  });
+
   it("submits successfully with both TikTok fields left empty", async () => {
     render(<AffiliateSimpleForm />);
     fill();

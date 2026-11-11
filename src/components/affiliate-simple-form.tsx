@@ -147,6 +147,7 @@ export function AffiliateSimpleForm({
   const [trap, setTrap] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [trackingCode, setTrackingCode] = useState("");
   const [message, setMessage] = useState("");
   const [zipLoading, setZipLoading] = useState(false);
   const zipRequest = useRef(0);
@@ -259,6 +260,7 @@ export function AffiliateSimpleForm({
       if (result.ok) {
         // Count only a persisted application; no candidate personal information is sent.
         track("sign_up", { method: "affiliate_application" });
+        setTrackingCode(result.trackingCode ?? "");
         setSent(true);
         setValues({ ...fields });
         setAccepted(false);
@@ -285,9 +287,32 @@ export function AffiliateSimpleForm({
           Obrigada pelo interesse na Vonix Hair. Nossa equipe analisará seu Instagram e, se
           informado, seu TikTok e, caso necessário, entrará em contato pelo telefone informado.
         </p>
+        {trackingCode && (
+          <div className="mx-auto mt-6 max-w-lg rounded-2xl border border-[#d4b8bd] bg-[#fff8f5] p-5">
+            <p className="text-sm font-bold text-[#633a43]">Guarde seu código de acompanhamento</p>
+            <p className="mt-1 text-xs leading-relaxed text-[#775d65]">
+              Este código é privado: com ele você consulta o resultado e o motivo de uma eventual
+              recusa. Salve agora, pois não enviamos por e-mail nem conseguimos recuperá-lo.
+            </p>
+            <input
+              readOnly
+              aria-label="Código privado de acompanhamento"
+              value={trackingCode}
+              onFocus={(event) => event.currentTarget.select()}
+              className="mt-3 w-full rounded-lg border border-[#d5bac0] bg-white px-3 py-3 text-center font-semibold text-sm tracking-wider text-[#49323a]"
+            />
+            <a
+              href="/consultar-candidatura"
+              className="mt-4 inline-block text-sm font-bold text-[#683643] underline"
+            >
+              Consultar candidatura e motivo da decisão
+            </a>
+          </div>
+        )}
         <p className="mx-auto mt-3 max-w-lg text-sm text-[#7c6369]">
           A candidatura não garante aprovação ou parceria. Não será enviado código por e-mail, pois
-          este formulário não solicita e-mail.
+          este formulário não solicita e-mail. Se não for selecionada, você poderá se candidatar
+          novamente.
         </p>
       </section>
     );
