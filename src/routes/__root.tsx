@@ -133,9 +133,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           ],
         }),
       },
-      { src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, async: true },
       {
         children: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`,
+      },
+      {
+        // Google e Meta só baixam depois da página abrir (primeiro toque ou 3,5 s). Os eventos ficam na fila e saem quando carregam; nada se perde.
+        children: `(function(){window.__vonixLoadTrackers=function(){if(window.__vonixTrk)return;window.__vonixTrk=1;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_ID}';document.head.appendChild(s);if(window.__vonixLoadMeta)window.__vonixLoadMeta();};var ev=['pointerdown','keydown','scroll','touchstart'];function go(){ev.forEach(function(e){window.removeEventListener(e,go)});window.__vonixLoadTrackers();}ev.forEach(function(e){window.addEventListener(e,go,{passive:true,once:true})});window.addEventListener('load',function(){setTimeout(go,3500)});})();`,
       },
       {
         // Clarity só carrega depois da página abrir, para não competir com o conteúdo.
@@ -144,16 +147,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         // A prévia da Lovable não deve gerar eventos de produção.
         children: `if (window.location.origin === ${JSON.stringify(SITE_URL)} && !window.fbq) {
-          !function(f,b,e,v,n,t,s){n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+          !function(f,b,e,v,n,t,s){n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];window.__vonixLoadMeta=function(){t=b.createElement(e);t.async=!0;t.src=v;t.onload=function(){setTimeout(window.__vonixMetaServer,1500)};s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
           fbq('init','${META_PIXEL_ID}');
           var pvId='PageView-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
           fbq('track','PageView',{},{eventID:pvId});
-          setTimeout(function(){try{
+          window.__vonixMetaServer=function(){try{
             var ck=function(n){var m=document.cookie.split('; ').filter(function(c){return c.indexOf(n+'=')===0})[0];return m?m.slice(n.length+1):undefined};
             var fc=new URLSearchParams(location.search).get('fbclid');
             fetch('/api/public/meta-event',{method:'POST',headers:{'content-type':'application/json'},keepalive:true,
               body:JSON.stringify({event:'PageView',eventId:pvId,url:location.href,fbp:ck('_fbp'),fbc:ck('_fbc')||(fc?'fb.1.'+Date.now()+'.'+fc:undefined)})}).catch(function(){});
-          }catch(e){}},1500);
+          }catch(e){}};
         }`,
       },
     ],
