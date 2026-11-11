@@ -12,7 +12,7 @@ import {
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { affiliateRejectionLabel, affiliateRejectionGuidance } from "@/lib/affiliate-rejection";
 import { requestAffiliateAccessEmail } from "@/lib/affiliate-functions";
-import { affiliateStatusRedirectUrl, vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
+import { vonixAffiliateAuth } from "@/lib/vonix-affiliate-auth";
 
 export const Route = createFileRoute("/acompanhar-inscricao")({
   head: () => ({
@@ -142,23 +142,10 @@ export function AffiliateApplicationTracker() {
         setError("Abra o portal oficial da Vonix Hair e solicite o acesso novamente.");
         return;
       }
-      // If a custom provider is unavailable, retain the standard Auth flow.
-      const response = await vonixAffiliateAuth.auth.signInWithOtp({
-        email: normalized,
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: affiliateStatusRedirectUrl(),
-        },
-      });
-      if (response.error) {
-        setError(
-          "Não foi possível enviar o acesso. Confira o e-mail usado no cadastro ou tente mais tarde.",
-        );
-      } else {
-        setNotice(
-          "Se este e-mail possui uma conta de candidatura, confira a mensagem de acesso enviada a ele.",
-        );
-      }
+      // Never let a client-side fallback bypass the persisted applicant roster.
+      setError(
+        "O envio de acesso está temporariamente indisponível. Tente novamente mais tarde ou contate a equipe Vonix.",
+      );
     } catch {
       setError("Falha de conexão ao solicitar acesso.");
     } finally {

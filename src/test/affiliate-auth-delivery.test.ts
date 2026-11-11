@@ -15,6 +15,7 @@ import {
   affiliateCustomAuthEmailReady,
   affiliateEmailAuthorizedForPortal,
   sendAffiliateAuthEmailWithResend,
+  sendAffiliateManagedAuthOtp,
 } from "@/lib/affiliate-auth-delivery.server";
 
 const base = "https://synthetic-reference-123.supabase.co";
@@ -82,6 +83,28 @@ describe("Verified Supabase Auth OTP via transactional email", () => {
     expect(message.text).toContain("https://vonixhair.com/acompanhar-inscricao");
     expect(message.text).toContain("DIGITE o código");
     expect(message.text).toContain("Não reutilize links de convites anteriores");
+  });
+
+  it("limits preauthorized managed OTP fallback by durable recipient cooldown and never creates users", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json(true))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await sendAffiliateManagedAuthOtp(inbox, "owner")).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(String(fetcher.mock.calls[0]![0])).toContain("consume_auth_mail_cooldown");
+    const [url, init] = fetcher.mock.calls[1]!;
+    expect(String(url)).toContain("/auth/v1/otp?redirect_to=");
+    expect(String(url)).toContain("acesso-equipe-afiliadas");
+    expect(JSON.parse(init.body)).toEqual({ email: inbox, create_user: false });
+  });
+
+  it("never sends managed fallback mail if the recipient cooldown denies it", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(false));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await sendAffiliateManagedAuthOtp(inbox, "applicant")).toBe(false);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
   it("sends a privately confirmed activation link to an authorized owner in branded email", async () => {

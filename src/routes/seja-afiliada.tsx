@@ -29,7 +29,9 @@ export const Route = createFileRoute("/seja-afiliada")({
 });
 
 export function AffiliateApplicationPage() {
-  const [recruitment, setRecruitment] = useState<"loading" | "open" | "closed">("loading");
+  const [recruitment, setRecruitment] = useState<"loading" | "open" | "limited" | "closed">(
+    "loading",
+  );
   const [preview, setPreview] = useState(false);
   const [backendDiagnostics, setBackendDiagnostics] = useState({
     storage: false,
@@ -54,6 +56,8 @@ export function AffiliateApplicationPage() {
       try {
         const {
           open,
+          intakeEnabled,
+          rateLimitReady,
           storageReachable,
           storageDiagnostic,
           publicNetworkDiagnostic,
@@ -70,7 +74,9 @@ export function AffiliateApplicationPage() {
           encryption: encryptionReady,
           emailConfigured: transactionalEmailConfigured,
         });
-        setRecruitment(open ? "open" : "closed");
+        setRecruitment(
+          open ? "open" : intakeEnabled === true && rateLimitReady === false ? "limited" : "closed",
+        );
         if (open) setLiveFormStarted(true);
       } catch {
         // Never assume availability while a status probe is unavailable.
@@ -129,7 +135,11 @@ export function AffiliateApplicationPage() {
         >
           <div className="mb-10 text-center">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-[#9e565e]">
-              {recruitment === "open" ? "Inscrições abertas" : "Programa de afiliados"}
+              {recruitment === "open"
+                ? "Inscrições abertas"
+                : recruitment === "limited"
+                  ? "Programa aberto · acesso temporariamente limitado"
+                  : "Programa de afiliados"}
             </p>
             <h2 className="mt-3 font-display text-4xl sm:text-5xl">
               Sua inscrição, de um jeito simples.
@@ -152,12 +162,16 @@ export function AffiliateApplicationPage() {
               <h3 className="mt-5 font-display text-3xl sm:text-4xl">
                 {recruitment === "loading"
                   ? "Verificando inscrições..."
-                  : "Inscrições em preparação"}
+                  : recruitment === "limited"
+                    ? "Limite temporário nesta conexão"
+                    : "Inscrições em preparação"}
               </h3>
               <p className="mt-4 leading-relaxed text-[#755b5e]">
                 {recruitment === "loading"
                   ? "Estamos verificando a disponibilidade do cadastro."
-                  : "O formulário simplificado está disponível para visualização, mas não recebe candidaturas enquanto as inscrições estiverem fechadas."}
+                  : recruitment === "limited"
+                    ? "O programa de afiliadas continua aberto, mas esta conexão não pode enviar novas candidaturas agora. Aguarde alguns minutos e tente novamente; a prévia não registra inscrições."
+                    : "O formulário simplificado está disponível para visualização, mas não recebe candidaturas enquanto as inscrições estiverem fechadas."}
               </p>
               {recruitment !== "loading" && (
                 <button
@@ -186,7 +200,9 @@ export function AffiliateApplicationPage() {
                 >
                   {preview
                     ? "Esta prévia nunca envia ou armazena candidaturas, mesmo se as inscrições forem abertas."
-                    : "A disponibilidade mudou: este cadastro não recebe candidaturas agora. O rascunho permanece nesta aba, mas nenhum envio será realizado."}
+                    : recruitment === "limited"
+                      ? "O programa continua aberto, mas esta conexão está temporariamente limitada. Seu rascunho permanece na aba; o envio não será realizado até o acesso ser restabelecido."
+                      : "A disponibilidade mudou: este cadastro não recebe candidaturas agora. O rascunho permanece nesta aba, mas nenhum envio será realizado."}
                 </p>
               )}
               {/* A preview must never turn into a live POST because status changed.

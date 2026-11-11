@@ -20,6 +20,7 @@ import {
   affiliateCustomAuthEmailReady,
   affiliateEmailAuthorizedForPortal,
   sendAffiliateAuthEmailWithResend,
+  sendAffiliateManagedAuthOtp,
 } from "./affiliate-auth-delivery.server";
 import {
   affiliateAdminSameOrigin,
@@ -127,6 +128,7 @@ export const getAffiliateRecruitmentStatus = createServerFn({ method: "GET" }).h
   const rateLimitReady = operatorIntakeReady && (await affiliateRateLimitAllowed("submit"));
   return {
     open: rateLimitReady,
+    intakeEnabled: operatorIntakeReady,
     rateLimitReady,
     storageReachable,
     storageDiagnostic,
@@ -153,7 +155,6 @@ export const requestAffiliateAccessEmail = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     setResponseHeader("Cache-Control", "private, no-store, max-age=0");
     if (!affiliateMutationSameOrigin()) return { status: "denied" as const };
-    if (!affiliateCustomAuthEmailReady()) return { status: "not-configured" as const };
     if (!(await consumeAffiliateRateLimit("admin"))) {
       return { status: "rate-limited" as const };
     }
@@ -163,7 +164,13 @@ export const requestAffiliateAccessEmail = createServerFn({ method: "POST" })
         // Equal response for an address without a persisted candidate/member.
         return { status: "requested" as const };
       }
-      await sendAffiliateAuthEmailWithResend(data.email, data.purpose);
+      if (affiliateCustomAuthEmailReady()) {
+        await sendAffiliateAuthEmailWithResend(data.email, data.purpose);
+      } else {
+        // Only preauthorized recipients can use the managed Supabase fallback.
+        // No public browser is permitted to create Auth users or choose targets.
+        await sendAffiliateManagedAuthOtp(data.email, data.purpose);
+      }
       // Do not expose account existence or provider-specific failures.
       return { status: "requested" as const };
     } catch {
