@@ -33,7 +33,6 @@ import {
   affiliateOperationalReadiness,
   eraseAffiliateApplication,
   previewAffiliateRetention,
-  createAffiliateApplication,
   createSimpleAffiliateApplication,
   readAffiliateApplicantEmailForAccessRecovery,
   decideAffiliateApplication,
@@ -204,47 +203,19 @@ export const submitSimpleAffiliateApplication = createServerFn({ method: "POST" 
     }
   });
 
+/** Retired five-stage endpoint: cached old clients cannot collect extra PII.
+ * Keep a harmless compatibility response, while historical records and
+ * their verified e-mail tracking remain available via the existing portal.
+ */
 export const submitAffiliateApplication = createServerFn({ method: "POST" })
   .validator(affiliateApplicationSchema)
-  .handler(async ({ data }) => {
-    if (!(await affiliateOperatorIntakeEnabled())) {
-      return {
-        ok: false as const,
-        reason: "Inscrições ainda não disponíveis. Consulte os canais oficiais da Vonix Hair.",
-      };
-    }
-    if (!affiliateMutationSameOrigin()) {
-      return {
-        ok: false as const,
-        reason: "Envie a candidatura diretamente pelo formulário oficial da Vonix Hair.",
-      };
-    }
-    // The public registration form now uses the full five-stage questionnaire.
-    // Legacy simplified payloads are never accepted through this public endpoint.
-    if (!data.wizard) {
-      return { ok: false as const, reason: "Preencha as cinco etapas do cadastro." };
-    }
-    if (!(await consumeAffiliateRateLimit("submit"))) {
-      return {
-        ok: false as const,
-        reason: "Muitas tentativas ou serviço temporariamente indisponível. Tente mais tarde.",
-      };
-    }
-    try {
-      const result = await createAffiliateApplication(data);
-      if (result.ok && !data.website && data.wizard) {
-        // A successful durable insert or a verified email duplicate precedes
-        // any Auth invitation. Never provision a login for honeypots.
-        const inviteSent = await invitePersistedAffiliateApplicant(data.wizard.email);
-        return { ...result, inviteSent };
-      }
-      return result;
-    } catch {
-      return {
-        ok: false as const,
-        reason: "Não foi possível receber sua inscrição agora. Tente novamente mais tarde.",
-      };
-    }
+  .handler(async () => {
+    setResponseHeader("Cache-Control", "no-store");
+    return {
+      ok: false as const,
+      reason:
+        "O cadastro antigo foi encerrado. Inscreva-se pelo formulário simplificado em /seja-afiliada.",
+    };
   });
 
 /** Manual recovery: retry an applicant's Auth invite, by stored record ID only.
