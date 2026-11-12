@@ -8,6 +8,8 @@ const leadSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(160),
   /** Campo-isca escondido: gente de verdade não preenche, robô preenche. */
   empresa: z.string().max(200).optional(),
+  /** WhatsApp (a lista VIP da Black Friday pede). O app guarda só dígitos e ignora número que não parece de telefone. */
+  telefone: z.string().trim().max(25).optional(),
   /** De onde veio o cadastro. A lista VIP da Black Friday não ganha cupom: ganha o aviso em primeira mão. */
   origem: z.enum(["cadastro-site", "esquenta-black-friday"]).optional(),
 });
@@ -26,6 +28,7 @@ export const registerLead = createServerFn({ method: "POST" })
       origem: data.origem ?? "cadastro-site",
       nome: data.nome ?? "",
       email: data.email,
+      telefone: data.telefone ?? "",
       cupom: data.origem === "esquenta-black-friday" ? "" : SIGNUP_COUPON,
       em: new Date().toISOString(),
     };
