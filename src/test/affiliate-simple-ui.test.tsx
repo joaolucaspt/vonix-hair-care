@@ -504,3 +504,44 @@ it("keeps the tracking code visible if the browser blocks its backup download", 
   expect(screen.getByText(/Este navegador não permitiu baixar o arquivo/)).toBeInTheDocument();
   expect(input).toHaveValue(code);
 });
+
+it("blocks reusing an older private code with edited candidate details after an uncertain response", async () => {
+  server.submit.mockRejectedValueOnce(new TypeError("response lost"));
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const first = await screen.findByLabelText("Código privado da tentativa não confirmada");
+  const code = (first as HTMLInputElement).value;
+  fireEvent.change(screen.getByLabelText(/Nome completo/), {
+    target: { value: "Pessoa Diferente" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  expect(server.submit).toHaveBeenCalledOnce();
+  expect(first).toHaveValue(code);
+  expect(screen.getByRole("alert")).toHaveTextContent("dados foram alterados");
+  expect(analytics.track).not.toHaveBeenCalled();
+});
+
+it("requires an explicit decision before a recovered code can be reused after a reload", async () => {
+  const old = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+  window.sessionStorage.setItem("vonix-affiliate-unconfirmed-code", old);
+  render(<AffiliateSimpleForm />);
+  expect(await screen.findByLabelText("Código privado da tentativa não confirmada")).toHaveValue(
+    old,
+  );
+  fill();
+  const send = screen.getByRole("button", { name: /Resolva a tentativa anterior/ });
+  expect(send).toBeDisabled();
+  expect(server.submit).not.toHaveBeenCalled();
+  expect(screen.getByText(/recuperada de outra visita/)).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Descartar código e iniciar nova tentativa" }),
+  );
+  expect(screen.getByRole("button", { name: "Enviar minha inscrição" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  await waitFor(() => expect(server.submit).toHaveBeenCalledOnce());
+  const newCode = server.submit.mock.calls[0]![0].data.trackingCode;
+  expect(newCode).toMatch(/^[A-Za-z0-9_-]{32}$/);
+  expect(newCode).not.toBe(old);
+  expect(analytics.track).toHaveBeenCalledOnce();
+});
