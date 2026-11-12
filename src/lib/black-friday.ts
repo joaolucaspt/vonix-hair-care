@@ -29,13 +29,14 @@ export const BF_FOCO: { titulo: string; texto: string; slug: string }[] = [
 
 /**
  * Desconto da Black Friday por produto (só vale com a oferta ativa, nunca no esquenta nem depois do prazo):
- * kits 20% (menos o Monovonix, margem menor), Botox e Progressiva Fio de Luz 15%.
+ * kits 20% (menos o Monovonix, margem menor), Botox 30% (sobra mais de R$ 60 por unidade no cartão), Progressiva Fio de Luz 15%.
  * Não soma com o "leve 2 / leve 3": vale o maior dos dois, para proteger a margem.
  */
 export const bfPct = (slug: string | undefined, now: Date = new Date()): number => {
   if (!slug || bfPhase(now) !== "ativa") return 0;
   if (slug === "kit-monovonix") return 0;
   if (slug.startsWith("kit-")) return 20;
-  if (slug.startsWith("botox-") || slug === "progressiva-fio-de-luz") return 15;
+  if (slug.startsWith("botox-")) return 30;
+  if (slug === "progressiva-fio-de-luz") return 15;
   return 0;
 };
