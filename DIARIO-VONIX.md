@@ -64,3 +64,11 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Mudança do dia: nenhuma (só conferência; menos de 100 visitas pagas desde a mudança de 11/11, "ainda é cedo": faltam ~56). Nenhuma mudança em anúncio; orçamento mantido em R$ 30/dia (sem venda real).
 - Pendente do Lucas: conferir se o conjunto não usa Advantage+; aprovar abertura do remarketing quando o público chegar a 100+.
 - Atenção: cliques mortos subiram de 10,5% para 12,1%. Próximo passo seguro (site): achar no mapa de cliques do Clarity quais elementos recebem clique morto.
+
+## 12/11/2026 (dia) — Esquenta da Black Friday e grupo VIP (aprovado pelo Lucas, publicado)
+- Roleta saiu. Nova página /esquenta-black-friday (lista VIP: nome, e-mail e WhatsApp) e aviso no lugar da roleta. Desconto programado, travado por data (27/11 00h a 30/11 23h59, a confirmar o fim): Botox 30%, Fio de Luz 15%, kits 20% (Monovonix fora); não soma com leve 2/leve 3. Antes e depois o preço não muda (Botox segue R$ 180,90).
+- Cadastros NÃO eram salvos: a senha AFFILIATE_SITE_SECRET era diferente no site e no app (erro 401). Trocada nos dois (Lovable). Teste ao vivo OK: contato com WhatsApp apareceu em Contatos do site; contato de teste apagado. Coluna phone criada no app (PR 15 do app); site PRs 133 a 136.
+- Grupo de WhatsApp Business "Vonix VIP - Black Friday" (link no site, BF_GRUPO_VIP): só admin escreve, entrada com aprovação (Larrossa caps. 1 e 7), descrição e boas-vindas com emojis, banner feito no ChatGPT (pasta Criativos Vonix - Claude). Encerrar o grupo depois da Black Friday (~01/12).
+- Falha minha: criei grupo/mensagem antes de abrir o manual dos livros; regra reforçada (conferir ANTES de qualquer decisão).
+- Pendente: conferir cupom de boas-vindas e afiliadas após a troca da senha; combo "Sistema Fio de Luz" (precisa Bling/foto/estoque); rascunhos de anúncio do esquenta (2 conferências).
+- Como desfazer: git revert das PRs 133, 134, 135, 136 (site) e 15 (app).
