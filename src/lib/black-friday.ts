@@ -42,4 +42,4 @@ export const bfPct = (slug: string | undefined, now: Date = new Date()): number 
 };
 
 /** Link de convite do grupo VIP no WhatsApp. Vazio = o botao nao aparece (preencher quando o grupo existir). */
-export const BF_GRUPO_VIP = "";
+export const BF_GRUPO_VIP = "https://chat.whatsapp.com/LANn3jhVc857miUWtjv8hV";
