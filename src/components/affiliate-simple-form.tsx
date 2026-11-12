@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { CheckCircle2, MapPin, Send, ShieldCheck, Instagram } from "lucide-react";
 import { affiliateSimpleSchema } from "@/lib/affiliate-simple";
+import { downloadAffiliatePrivateReceipt } from "@/lib/affiliate-private-receipt";
 import { track } from "@/lib/analytics";
 import { submitSimpleAffiliateApplication } from "@/lib/affiliate-functions";
 import { WIZARD_BRAZIL_STATES, onlyDigits } from "@/lib/affiliate-wizard";
@@ -168,6 +169,7 @@ export function AffiliateSimpleForm({
   const [unconfirmedCode, setUnconfirmedCode] = useState("");
   const [unconfirmedCopied, setUnconfirmedCopied] = useState(false);
   const [unconfirmedHandoffError, setUnconfirmedHandoffError] = useState("");
+  const [downloadFeedback, setDownloadFeedback] = useState("");
 
   useEffect(() => {
     try {
@@ -183,6 +185,19 @@ export function AffiliateSimpleForm({
       // keep this page open to copy the pending code after a network failure.
     }
   }, []);
+
+  function downloadCode(code: string, confirmed: boolean) {
+    const initiated = downloadAffiliatePrivateReceipt(code, confirmed);
+    setDownloadFeedback(
+      initiated
+        ? "Download solicitado. Confira seus arquivos e guarde o código em local privado."
+        : "Este navegador não permitiu baixar o arquivo. Selecione e copie o código manualmente.",
+    );
+    if (!initiated)
+      document
+        .getElementById(confirmed ? "affiliate-confirmed-code" : "affiliate-unconfirmed-code")
+        ?.focus();
+  }
 
   async function copyUnconfirmedCode() {
     if (!/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode)) return;
@@ -201,6 +216,7 @@ export function AffiliateSimpleForm({
 
   function discardUnconfirmedCode() {
     setUnconfirmedHandoffError("");
+    setDownloadFeedback("");
     attemptCode.current = "";
     setUnconfirmedCode("");
     setUnconfirmedCopied(false);
@@ -487,12 +503,22 @@ export function AffiliateSimpleForm({
               </button>
               <button
                 type="button"
+                onClick={() => downloadCode(trackingCode, true)}
+                className="min-h-12 rounded-full border border-[#b9969e] px-4 text-sm font-bold text-[#683643]"
+              >
+                Baixar código de acompanhamento
+              </button>
+              <button
+                type="button"
                 onClick={openTrackingWithCode}
                 className="min-h-12 rounded-full bg-[#633847] px-4 text-sm font-bold text-white"
               >
                 Acompanhar inscrição agora
               </button>
             </div>
+            {downloadFeedback && (
+              <p className="mt-3 text-xs leading-relaxed text-[#775d65]">{downloadFeedback}</p>
+            )}
             {trackingNavigationError && (
               <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
                 {trackingNavigationError}
@@ -780,6 +806,13 @@ export function AffiliateSimpleForm({
                     ? "Código de tentativa copiado!"
                     : "Copiar código de tentativa"}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => downloadCode(unconfirmedCode, false)}
+                  className="min-h-11 rounded-full border border-[#b9969e] px-4 font-bold"
+                >
+                  Baixar código de tentativa
+                </button>
                 <a
                   href="/consultar-candidatura"
                   onClick={handoffUnconfirmedCode}
@@ -795,6 +828,9 @@ export function AffiliateSimpleForm({
                   Descartar código e iniciar nova tentativa
                 </button>
               </div>
+              {downloadFeedback && (
+                <p className="mt-2 text-xs leading-relaxed">{downloadFeedback}</p>
+              )}
               {unconfirmedHandoffError && (
                 <p role="alert" className="mt-2 text-sm font-semibold text-red-700">
                   {unconfirmedHandoffError}
