@@ -72,3 +72,9 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Falha minha: criei grupo/mensagem antes de abrir o manual dos livros; regra reforçada (conferir ANTES de qualquer decisão).
 - Pendente: conferir cupom de boas-vindas e afiliadas após a troca da senha; combo "Sistema Fio de Luz" (precisa Bling/foto/estoque); rascunhos de anúncio do esquenta (2 conferências).
 - Como desfazer: git revert das PRs 133, 134, 135, 136 (site) e 15 (app).
+
+## 12/11/2026 (tarde) — regra do frete grátis (decisão do Claude, poderes liberados pelo Lucas)
+- Antes: frete grátis (pedido acima de R$ 150) = opção mais barata que entregue em até 3 dias úteis. Custava ao Lucas ≈ R$ 15 no Sudeste, R$ 53 em Salvador/Curitiba e R$ 79 em Manaus (SEDEX), cotações reais de 12/11.
+- Agora: frete grátis = opção MAIS BARATA; só usa a rápida (até 3 dias) se custar no máximo R$ 8 a mais. Custo cai para ≈ R$ 14 a R$ 17 (Sudeste, Nordeste, Sul) e R$ 31 (Manaus, prazo longo). O cliente não paga a mais; o prazo mostrado continua o real.
+- Motivo: com o SEDEX no frete grátis, 16 produtos caíam abaixo de 30% de margem no Norte (Plex Vonix ≈ 4%). Com a regra nova a pior sobra fica acima de 30% antes de comissão e anúncio.
+- Como desfazer: git revert da PR "Regra de frete grátis econômico" (src/lib/shipping-pick.ts e src/test/shipping-pick.test.ts).
