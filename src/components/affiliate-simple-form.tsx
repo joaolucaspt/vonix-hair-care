@@ -166,6 +166,10 @@ export function AffiliateSimpleForm({
   const [trackingCopied, setTrackingCopied] = useState(false);
   const [trackingNavigationError, setTrackingNavigationError] = useState("");
   const attemptCode = useRef("");
+  // A retry can reuse the private receipt only with exactly the same data.
+  // Do not persist the applicant's sensitive form contents across sessions.
+  const submittedPayload = useRef<string | null>(null);
+  const [recoveredAttempt, setRecoveredAttempt] = useState(false);
   const [unconfirmedCode, setUnconfirmedCode] = useState("");
   const [unconfirmedCopied, setUnconfirmedCopied] = useState(false);
   const [unconfirmedHandoffError, setUnconfirmedHandoffError] = useState("");
@@ -177,6 +181,7 @@ export function AffiliateSimpleForm({
       if (/^[A-Za-z0-9_-]{32}$/.test(pending)) {
         attemptCode.current = pending;
         setUnconfirmedCode(pending);
+        setRecoveredAttempt(true);
       } else {
         window.sessionStorage.removeItem(pendingReceiptSessionKey);
       }
@@ -218,6 +223,8 @@ export function AffiliateSimpleForm({
     setUnconfirmedHandoffError("");
     setDownloadFeedback("");
     attemptCode.current = "";
+    submittedPayload.current = null;
+    setRecoveredAttempt(false);
     setUnconfirmedCode("");
     setUnconfirmedCopied(false);
     try {
@@ -382,6 +389,13 @@ export function AffiliateSimpleForm({
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (sending || submitting.current || sent) return;
+    if (recoveredAttempt) {
+      setMessage(
+        "Esta tentativa foi recuperada de outra visita. Consulte o código anterior e descarte-o antes de iniciar uma nova inscrição.",
+      );
+      document.getElementById("affiliate-unconfirmed-code")?.focus();
+      return;
+    }
     const parsed = affiliateSimpleSchema.safeParse({
       ...values,
       instagram: normalizeSocial(values.instagram, "instagram"),
@@ -412,6 +426,14 @@ export function AffiliateSimpleForm({
       setMessage("Esta é apenas uma prévia. Nenhuma candidatura foi enviada.");
       return;
     }
+    const payload = JSON.stringify(parsed.data);
+    if (attemptCode.current && submittedPayload.current !== payload) {
+      setMessage(
+        "Os dados foram alterados desde a tentativa anterior. Consulte o código existente e descarte-o antes de iniciar outra inscrição.",
+      );
+      document.getElementById("affiliate-unconfirmed-code")?.focus();
+      return;
+    }
     submitting.current = true;
     setSending(true);
     setMessage("");
@@ -420,6 +442,7 @@ export function AffiliateSimpleForm({
       // create an unreachable application and a second submission conflict.
       if (!attemptCode.current) {
         attemptCode.current = createBrowserPrivateReceipt();
+        submittedPayload.current = payload;
         try {
           window.sessionStorage.setItem(pendingReceiptSessionKey, attemptCode.current);
         } catch {
@@ -837,9 +860,9 @@ export function AffiliateSimpleForm({
                 </p>
               )}
               <p className="mt-2 text-xs">
-                Ao repetir o envio sem descartar, o sistema usa o mesmo código. Se você alterar os
-                dados depois da primeira tentativa, consulte o código antes de iniciar uma inscrição
-                diferente.
+                {recoveredAttempt
+                  ? "Esta tentativa foi recuperada de outra visita. Consulte o código antigo e descarte-o apenas quando tiver certeza de que quer iniciar outra inscrição. O formulário fica bloqueado para não associar dados de outra pessoa ao código anterior."
+                  : "Ao repetir uma tentativa nesta página, o sistema mantém o mesmo código e exige os mesmos dados. Se precisar alterar a inscrição, consulte o código anterior antes de descartá-lo."}
               </p>
             </section>
           ) : null}
@@ -850,15 +873,17 @@ export function AffiliateSimpleForm({
           ) : null}
           <button
             type="submit"
-            disabled={sending}
+            disabled={sending || recoveredAttempt}
             className="mt-6 flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-[#633846] px-6 py-4 text-base font-bold text-white shadow-lg transition hover:bg-[#7e4e5c] disabled:opacity-50"
           >
             <Send aria-hidden="true" className="h-5 w-5" />
             {sending
               ? "Enviando candidatura..."
-              : preview
-                ? "Simular envio"
-                : "Enviar minha inscrição"}
+              : recoveredAttempt
+                ? "Resolva a tentativa anterior para continuar"
+                : preview
+                  ? "Simular envio"
+                  : "Enviar minha inscrição"}
           </button>
           <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-[#937a7d]">
             <ShieldCheck aria-hidden="true" className="h-4 w-4" />
