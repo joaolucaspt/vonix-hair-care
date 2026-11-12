@@ -371,7 +371,7 @@ it("delivers a valid manually confirmed owner activation link when Auth omits a 
   expect(email.text).not.toContain("undefined");
 });
 
-it("does not send an owner message when both numeric OTP and safe one-time owner link are absent", async () => {
+it("uses managed OTP instead of sending an unusable owner invite to Resend", async () => {
   const dest = "https://vonixhair.com/acesso-equipe-afiliadas";
   const link =
     base +
@@ -380,21 +380,38 @@ it("does not send an owner message when both numeric OTP and safe one-time owner
   const fetcher = vi
     .fn()
     .mockResolvedValueOnce(Response.json(true))
-    .mockResolvedValueOnce(Response.json({ action_link: link }));
+    .mockResolvedValueOnce(Response.json({ action_link: link }))
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
   vi.stubGlobal("fetch", fetcher);
-  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
-  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(
+    fetcher.mock.calls.filter((call) => String(call[0]).includes("consume_auth_mail_cooldown")),
+  ).toHaveLength(1);
+  expect(fetcher.mock.calls[2]![0]).toBe(
+    base + "/auth/v1/otp?redirect_to=" + encodeURIComponent(dest),
+  );
+  expect(JSON.parse(fetcher.mock.calls[2]![1].body)).toEqual({ email: inbox, create_user: false });
+  expect(fetcher.mock.calls.some((call) => String(call[0]).includes("api.resend.com"))).toBe(false);
 });
 
-it("does not send an applicant message without a numeric OTP, even if Auth returns a link", async () => {
+it("uses managed OTP instead of sending an unusable applicant code", async () => {
   const link = base + "/auth/v1/verify?token=mock-private-token-0123456789&type=magiclink";
   const fetcher = vi
     .fn()
     .mockResolvedValueOnce(Response.json(true))
-    .mockResolvedValueOnce(Response.json({ action_link: link, hashed_token: "A".repeat(64) }));
+    .mockResolvedValueOnce(Response.json({ action_link: link, hashed_token: "A".repeat(64) }))
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
   vi.stubGlobal("fetch", fetcher);
-  expect(await sendAffiliateAuthEmailWithResend(inbox, "applicant")).toBe(false);
-  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "applicant")).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(fetcher.mock.calls[2]![0]).toBe(
+    base +
+      "/auth/v1/otp?redirect_to=" +
+      encodeURIComponent("https://vonixhair.com/acompanhar-inscricao"),
+  );
+  expect(JSON.parse(fetcher.mock.calls[2]![1].body)).toEqual({ email: inbox, create_user: false });
+  expect(fetcher.mock.calls.some((call) => String(call[0]).includes("api.resend.com"))).toBe(false);
 });
 
 it("recovers a preauthorized owner's invite when Supabase admin generate_link is unavailable, without a second cooldown debit", async () => {
@@ -477,4 +494,110 @@ it("rejects malformed configured Resend sender before consuming an owner's invit
     expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
   }
   expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("recovers an authorized owner's access if Auth returns a safe link without a usable OTP or hash", async () => {
+  const dest = "https://vonixhair.com/acesso-equipe-afiliadas";
+  const authLink =
+    base +
+    "/auth/v1/verify?token=synthetic-token-long-enough&type=magiclink&redirect_to=" +
+    encodeURIComponent(dest);
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ action_link: authLink }))
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(
+    fetcher.mock.calls.filter((call) => String(call[0]).includes("consume_auth_mail_cooldown")),
+  ).toHaveLength(1);
+  const [url, options] = fetcher.mock.calls[2]!;
+  expect(url).toBe(base + "/auth/v1/otp?redirect_to=" + encodeURIComponent(dest));
+  expect(JSON.parse(options.body)).toEqual({ email: inbox, create_user: false });
+  expect(fetcher.mock.calls.some((call) => String(call[0]).includes("api.resend.com"))).toBe(false);
+});
+
+it("recovers an authorized owner after invalid Auth JSON, without printing upstream content", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(
+      new Response('{"sensitive-provider-payload":', {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    )
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(String(fetcher.mock.calls[2]![0])).toContain("/auth/v1/otp?");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("sensitive-provider-payload");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(inbox);
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+it("does not claim an owner invitation when Auth supplies no usable OTP and managed fallback is rate-limited", async () => {
+  const dest = "https://vonixhair.com/acesso-equipe-afiliadas";
+  const authLink =
+    base +
+    "/auth/v1/verify?token=synthetic-token-long-enough&type=magiclink&redirect_to=" +
+    encodeURIComponent(dest);
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ action_link: authLink }))
+    .mockResolvedValueOnce(new Response(null, { status: 429 }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(fetcher.mock.calls.some((call) => String(call[0]).includes("api.resend.com"))).toBe(false);
+});
+
+it("still refuses fallback after an untrusted Auth verification origin", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(
+      Response.json({
+        action_link:
+          "https://untrusted.example/auth/v1/verify?token=synthetic-long-token&type=magiclink",
+      }),
+    )
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("fails closed on an unexpected owner redirect with no numeric OTP, without requesting fallback", async () => {
+  const action_link =
+    base +
+    "/auth/v1/verify?token=synthetic-long-token&type=magiclink&redirect_to=" +
+    encodeURIComponent("https://untrusted.example");
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ action_link }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("uses managed OTP when the admin link-generation success payload has no link", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(Response.json({ email_otp: "123456" }))
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(String(fetcher.mock.calls[2]![0])).toContain("/auth/v1/otp?");
 });

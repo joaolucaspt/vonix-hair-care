@@ -224,7 +224,13 @@ export async function sendAffiliateAuthEmailWithResend(
     auditAffiliateAuthMailFailure("supabase-generate-link-http", generation.status);
     return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
   }
-  const raw: unknown = await generation.json();
+  let raw: unknown;
+  try {
+    raw = await generation.json();
+  } catch {
+    auditAffiliateAuthMailFailure("supabase-generate-link-unreadable-payload");
+    return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
+  }
   const parsed = z
     .object({
       action_link: z.string().url().optional(),
@@ -241,13 +247,13 @@ export async function sendAffiliateAuthEmailWithResend(
     .safeParse(raw);
   if (!parsed.success) {
     auditAffiliateAuthMailFailure("supabase-generate-link-invalid-payload");
-    return false;
+    return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
   }
   const link = parsed.data.action_link ?? parsed.data.properties?.action_link;
   const otp = parsed.data.email_otp ?? parsed.data.properties?.email_otp;
   if (!link) {
     auditAffiliateAuthMailFailure("supabase-generate-link-missing-link");
-    return false;
+    return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
   }
   const parsedLink = new URL(link);
   // Never send a generated token if any upstream response points away from
@@ -281,8 +287,21 @@ export async function sendAffiliateAuthEmailWithResend(
   // A valid, manually confirmed owner activation link is sufficient even when
   // Supabase omits a numeric OTP. Applicant tracking still requires a code.
   if (!safeOtp && !privateOwnerLink) {
-    auditAffiliateAuthMailFailure("supabase-generate-link-no-numeric-otp");
-    return false;
+    // An unexpected redirect is suspicious even if the host is our
+    // dedicated Auth host. Do not replace it with a claimed success.
+    if (
+      purpose === "owner" &&
+      parsedLink.searchParams.has("redirect_to") &&
+      parsedLink.searchParams.get("redirect_to") !== redirectUrl
+    ) {
+      auditAffiliateAuthMailFailure("supabase-generate-link-unexpected-redirect");
+      return false;
+    }
+    // The recipient and durable cooldown were checked before generating.
+    // Managed Auth issues an OTP only for an existing account; no unsafe
+    // link or numeric code from the malformed payload is ever forwarded.
+    auditAffiliateAuthMailFailure("supabase-generate-link-no-usable-credential");
+    return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
   }
   const subject =
     purpose === "owner"
