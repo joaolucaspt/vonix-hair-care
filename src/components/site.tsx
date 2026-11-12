@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import logoUrl from "@/assets/vonix-logo.webp";
 import { usePaidVisit } from "@/lib/paid-visit";
-import { PrizeWheel } from "@/components/prize-wheel";
+import { BfPopup } from "@/components/bf-popup";
 import { AffiliatePopup } from "@/components/affiliate-popup";
 import { reviewsFor } from "@/components/reviews";
 import { soldFor } from "@/lib/sales";
@@ -407,7 +407,7 @@ export function Shell({ children }: { children: ReactNode }) {
       )}
       <main>{children}</main>
       <Footer />
-      {!paidVisit && <PrizeWheel />}
+      {!paidVisit && <BfPopup />}
       {!paidVisit && <AffiliatePopup />}
       {!hideWhatsApp && (
         <a

@@ -8,6 +8,8 @@ const leadSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(160),
   /** Campo-isca escondido: gente de verdade não preenche, robô preenche. */
   empresa: z.string().max(200).optional(),
+  /** De onde veio o cadastro. A lista VIP da Black Friday não ganha cupom: ganha o aviso em primeira mão. */
+  origem: z.enum(["cadastro-site", "esquenta-black-friday"]).optional(),
 });
 
 /**
@@ -21,10 +23,10 @@ export const registerLead = createServerFn({ method: "POST" })
     if (data.empresa)
       return { ok: false as const, saved: false, message: "Não foi possível concluir o cadastro." };
     const lead = {
-      origem: "cadastro-site",
+      origem: data.origem ?? "cadastro-site",
       nome: data.nome ?? "",
       email: data.email,
-      cupom: SIGNUP_COUPON,
+      cupom: data.origem === "esquenta-black-friday" ? "" : SIGNUP_COUPON,
       em: new Date().toISOString(),
     };
     // Destinos: o app de expedição da Vonix (tela "Contatos do site") e, se existir, LEAD_WEBHOOK_URL (planilha, Brevo, Zapier...).

@@ -26,7 +26,7 @@ function buildLines(items: z.infer<typeof itemSchema>[]) {
     const p = getProduct(i.slug);
     const v = p?.variants.find((x) => x.label === i.variant);
     if (!p || !v) throw new Error(`Produto indisponível: ${i.slug}`);
-    const t = lineTotals(v.price, i.qty, i.offer as Offer | undefined);
+    const t = lineTotals(v.price, i.qty, i.offer as Offer | undefined, p.slug);
     return { product: p, variant: v.label, offer: i.offer as Offer | undefined, ...t };
   });
 }
