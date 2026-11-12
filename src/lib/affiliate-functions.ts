@@ -396,6 +396,9 @@ export const getAffiliateApplications = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
+    // Private admin data/diagnostics: never cache or reveal through referrers.
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
     if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid()) {
       return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
     }
@@ -419,6 +422,9 @@ export const getAffiliateApplications = createServerFn({ method: "POST" })
 /** Restricted configuration and read-only RPC probes. No secrets or applicant data. */
 export const getAffiliateOperationalReadiness = createServerFn({ method: "POST" }).handler(
   async () => {
+    // Private admin data/diagnostics: never cache or reveal through referrers.
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
     if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
       return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
     if (!(await affiliateRateLimitAllowed("admin")))
@@ -472,6 +478,9 @@ export const getAffiliateRetentionPreview = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
+    // Private admin data/diagnostics: never cache or reveal through referrers.
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
     if (!affiliateAdminSameOrigin() || !affiliateAdminSessionValid())
       return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
     if (!(await affiliateRateLimitAllowed("admin")))
