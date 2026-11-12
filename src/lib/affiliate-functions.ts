@@ -184,6 +184,10 @@ export const requestAffiliateAccessEmail = createServerFn({ method: "POST" })
 export const submitSimpleAffiliateApplication = createServerFn({ method: "POST" })
   .validator(affiliateSimpleSchema)
   .handler(async ({ data }) => {
+    // A successful response includes a private 192-bit tracking bearer.
+    // Never permit browser/proxy caching or referrer propagation of this response.
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
     if (!(await affiliateOperatorIntakeEnabled())) {
       return {
         ok: false as const,

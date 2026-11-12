@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { setResponseHeader } from "@tanstack/react-start/server";
 
 // Exercise the real server-function handler without creating any HTTP server,
 // external request, database write, or applicant record.
@@ -273,5 +274,34 @@ describe("Admin decision notification semantics", () => {
     gates.sameOrigin.mockReturnValue(false);
     expect(await review({ data })).toMatchObject({ ok: false });
     expect(gates.decide).not.toHaveBeenCalled();
+  });
+});
+
+describe("Privacy headers for the private submission receipt", () => {
+  it("blocks browser and intermediary caching before returning a valid private tracking code", async () => {
+    const receipt = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+    gates.createSimple.mockResolvedValueOnce({ ok: true, trackingCode: receipt });
+    const result = (await submit({ data: { fullName: "Candidata Exemplo" } })) as {
+      ok: boolean;
+      trackingCode?: string;
+    };
+    expect(result).toEqual({ ok: true, trackingCode: receipt });
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+    expect(setResponseHeader).toHaveBeenCalledWith("Referrer-Policy", "no-referrer");
+  });
+
+  it("also sends privacy headers if a cross-origin submit is rejected", async () => {
+    gates.sameOrigin.mockReturnValue(false);
+    expect((await submit({ data: { fullName: "Exemplo" } })).ok).toBe(false);
+    expect(gates.createSimple).not.toHaveBeenCalled();
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+    expect(setResponseHeader).toHaveBeenCalledWith("Referrer-Policy", "no-referrer");
+  });
+
+  it("keeps the same no-store policy for quota failures without issuing a receipt", async () => {
+    gates.quota.mockResolvedValue(false);
+    expect((await submit({ data: { fullName: "Exemplo" } })).ok).toBe(false);
+    expect(gates.createSimple).not.toHaveBeenCalled();
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
   });
 });
