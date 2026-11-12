@@ -5,10 +5,12 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   generate: vi.fn(),
   clipboard: vi.fn(),
+  inspect: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-functions", () => ({
   getPendingAffiliateOwnerActivations: mocks.list,
+  inspectAffiliateOwnerSenderStatus: mocks.inspect,
   createPendingAffiliateOwnerActivationLink: mocks.generate,
 }));
 
@@ -21,6 +23,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.list.mockResolvedValue({ ok: true, owners: [{ email }] });
   mocks.generate.mockResolvedValue({ ok: true, recipient: email, link: token });
+  mocks.inspect.mockResolvedValue({
+    ok: true,
+    diagnosis: { status: "verified", domain: "vonixhair.com" },
+  });
   mocks.clipboard.mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", {
     configurable: true,
@@ -165,4 +171,40 @@ it("shows retry without displaying stale owner addresses when refresh rejects ov
     "Não foi possível consultar os convites",
   );
   expect(screen.queryByText(email)).not.toBeInTheDocument();
+});
+
+it("diagnoses verified Resend domain without sending an invitation or exposing private tokens", async () => {
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  fireEvent.click(screen.getByRole("button", { name: "Verificar domínio do e-mail sem enviar" }));
+  const result = await screen.findByRole("status", {
+    name: "Diagnóstico do remetente de convites",
+  });
+  expect(result).toHaveTextContent("verificado no Resend");
+  expect(result).toHaveTextContent("NÃO comprova a entrega");
+  expect(mocks.inspect).toHaveBeenCalledOnce();
+  expect(mocks.generate).not.toHaveBeenCalled();
+  expect(mocks.clipboard).not.toHaveBeenCalled();
+  expect(document.body.textContent).not.toContain("vonix_invite");
+});
+
+it("does not mistake a sending-only Resend key for unverified DNS", async () => {
+  mocks.inspect.mockResolvedValueOnce({ ok: true, diagnosis: { status: "read-restricted" } });
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  fireEvent.click(screen.getByRole("button", { name: "Verificar domínio do e-mail sem enviar" }));
+  expect(
+    await screen.findByRole("status", { name: "Diagnóstico do remetente de convites" }),
+  ).toHaveTextContent("permissão somente de envio");
+});
+
+it("conceals owner roster when a protected sender diagnosis denies authorization", async () => {
+  mocks.inspect.mockResolvedValueOnce({ ok: false });
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  fireEvent.click(screen.getByRole("button", { name: "Verificar domínio do e-mail sem enviar" }));
+  await waitFor(() => expect(screen.queryByText(email)).not.toBeInTheDocument());
+  expect(
+    screen.queryByRole("button", { name: "Verificar domínio do e-mail sem enviar" }),
+  ).not.toBeInTheDocument();
 });

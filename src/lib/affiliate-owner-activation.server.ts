@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { inspectAffiliateResendSenderDomain } from "./affiliate-resend-domain.server";
 import { affiliateAdminSameOrigin } from "./affiliate-admin-session.server";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
 import {
@@ -94,6 +95,14 @@ async function fetchPendingOwners(db: Database): Promise<PendingAffiliateOwner[]
   } catch {
     return null;
   }
+}
+
+/** Owner-only, read-only provider check. No OTPs or emails are generated. */
+export async function diagnoseAffiliateOwnerSender() {
+  const db = affiliateDatabaseConfig();
+  if (!db || !(await authorizedActivatedOwner(db))) return { ok: false as const };
+  const diagnosis = await inspectAffiliateResendSenderDomain();
+  return { ok: true as const, diagnosis };
 }
 
 /** Sensitive responses from these functions must always have Cache-Control: no-store. */

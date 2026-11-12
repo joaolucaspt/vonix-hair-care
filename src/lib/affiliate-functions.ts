@@ -12,6 +12,7 @@ import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
 import {
   generatePendingAffiliateOwnerActivationLink,
+  diagnoseAffiliateOwnerSender,
   listPendingAffiliateOwnerActivations,
   sendPendingAffiliateOwnerActivationEmail,
 } from "./affiliate-owner-activation.server";
@@ -298,6 +299,15 @@ export const resendAffiliateApplicantInvite = createServerFn({ method: "POST" })
  * cached or persisted. The owner must deliver them privately to the intended
  * recipient, who still verifies the token and creates an individual password.
  */
+/** Protected owner-only, no-send Resend verification. Does not reveal keys. */
+export const inspectAffiliateOwnerSenderStatus = createServerFn({ method: "POST" }).handler(
+  async () => {
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
+    return diagnoseAffiliateOwnerSender();
+  },
+);
+
 export const getPendingAffiliateOwnerActivations = createServerFn({ method: "POST" }).handler(
   async () => {
     setResponseHeader("Cache-Control", "private, no-store, max-age=0");
