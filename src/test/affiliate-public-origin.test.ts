@@ -9,6 +9,9 @@ const gates = vi.hoisted(() => ({
   quota: vi.fn(),
   create: vi.fn(),
   createSimple: vi.fn(),
+  list: vi.fn(),
+  readiness: vi.fn(),
+  retention: vi.fn(),
   session: vi.fn(),
   allowed: vi.fn(),
   decide: vi.fn(),
@@ -52,19 +55,23 @@ vi.mock("@/lib/affiliate-throttle.server", () => ({
 vi.mock("@/lib/affiliate-applications.server", () => ({
   affiliateRecruitmentOpen: gates.open,
   affiliateOperatorIntakeEnabled: gates.open,
-  affiliateOperationalReadiness: vi.fn(),
+  affiliateOperationalReadiness: gates.readiness,
   eraseAffiliateApplication: vi.fn(),
-  previewAffiliateRetention: vi.fn(),
+  // retention mock is provided below via gates.retention
   createAffiliateApplication: gates.create,
   createSimpleAffiliateApplication: gates.createSimple,
   decideAffiliateApplication: gates.decide,
-  listAffiliateApplications: vi.fn(),
+  listAffiliateApplications: gates.list,
+  previewAffiliateRetention: gates.retention,
   processAffiliateEmails: gates.email,
 }));
 
 import {
   requestAffiliateAccessEmail,
   reviewAffiliateApplication,
+  getAffiliateApplications,
+  getAffiliateOperationalReadiness,
+  getAffiliateRetentionPreview,
   submitAffiliateApplication,
   submitSimpleAffiliateApplication,
 } from "@/lib/affiliate-functions";
@@ -86,6 +93,9 @@ beforeEach(() => {
   gates.quota.mockResolvedValue(true);
   gates.create.mockResolvedValue({ ok: true });
   gates.createSimple.mockResolvedValue({ ok: true });
+  gates.list.mockResolvedValue({ rows: [{ full_name: "Pessoa Exemplo" }], total: 1 });
+  gates.readiness.mockResolvedValue({ checks: [] });
+  gates.retention.mockResolvedValue({ pending_eligible: 0, rejected_eligible: 0 });
   gates.session.mockReturnValue(true);
   gates.allowed.mockResolvedValue(true);
   gates.decide.mockResolvedValue(true);
@@ -302,6 +312,46 @@ describe("Privacy headers for the private submission receipt", () => {
     gates.quota.mockResolvedValue(false);
     expect((await submit({ data: { fullName: "Exemplo" } })).ok).toBe(false);
     expect(gates.createSimple).not.toHaveBeenCalled();
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+  });
+});
+
+describe("Protected admin read responses never use public or browser caching", () => {
+  const list = getAffiliateApplications as unknown as (args: {
+    data: { status: "pendente" | "todas"; page: number };
+  }) => Promise<{ ok: boolean; rows?: Array<{ full_name: string }> }>;
+
+  const readiness = getAffiliateOperationalReadiness as unknown as () => Promise<{ ok: boolean }>;
+  const retention = getAffiliateRetentionPreview as unknown as (args: {
+    data: { pendingDays: number; rejectedDays: number };
+  }) => Promise<{ ok: boolean }>;
+
+  it("prevents caching and referer propagation of the protected applicant roster", async () => {
+    const result = await list({ data: { status: "pendente", page: 0 } });
+    expect(result).toMatchObject({ ok: true, rows: [{ full_name: "Pessoa Exemplo" }] });
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+    expect(setResponseHeader).toHaveBeenCalledWith("Referrer-Policy", "no-referrer");
+  });
+
+  it("does not cache authorization failures or expose any list data", async () => {
+    gates.session.mockReturnValue(false);
+    expect(await list({ data: { status: "todas", page: 0 } })).toMatchObject({ ok: false });
+    expect(gates.list).not.toHaveBeenCalled();
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+  });
+
+  it("does not cache privileged operational configuration", async () => {
+    expect(await readiness()).toMatchObject({ ok: true });
+    expect(gates.readiness).toHaveBeenCalledOnce();
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+    expect(setResponseHeader).toHaveBeenCalledWith("Referrer-Policy", "no-referrer");
+  });
+
+  it("does not cache privileged data-retention estimates", async () => {
+    expect(await retention({ data: { pendingDays: 90, rejectedDays: 180 } })).toMatchObject({
+      ok: true,
+    });
+    expect(gates.retention).toHaveBeenCalledOnce();
     expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
   });
 });
