@@ -52,20 +52,22 @@ export const registerLead = createServerFn({ method: "POST" })
         message: "O cadastro está indisponível no momento. Tente novamente mais tarde.",
       };
     }
+    // Motivo da falha (só um código, sem dado pessoal): "http-401", "http-503", "rede"...
     const resultados = await Promise.all(
       destinos.map(async (d) => {
         try {
           const r = await fetch(d.url, { method: "POST", headers: d.headers, body: JSON.stringify(lead), signal: AbortSignal.timeout(6000) });
-          return r.ok;
-        } catch {
-          return false;
+          return r.ok ? "ok" : `http-${r.status}`;
+        } catch (e) {
+          return e instanceof Error && e.name === "TimeoutError" ? "demorou" : "rede";
         }
       }),
     );
-    if (resultados.some(Boolean)) return { ok: true as const, saved: true };
+    if (resultados.includes("ok")) return { ok: true as const, saved: true };
     return {
       ok: false as const,
       saved: false,
+      why: resultados.join(","),
       message: "Não foi possível salvar seu cadastro. Tente novamente em instantes.",
     };
   });
