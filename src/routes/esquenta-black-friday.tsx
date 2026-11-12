@@ -45,7 +45,7 @@ function EsquentaPage() {
             <div className="mt-6 rounded-xl bg-[oklch(0.975_0.012_88)] p-4 text-foreground md:p-5">
               <h2 className="font-display text-h2 leading-tight">Entre na lista VIP</h2>
               <p className="mb-4 mt-1 text-body text-muted-foreground">
-                Só o seu e-mail. Sem spam: avisamos da Black Friday e pronto.
+                Só e-mail e WhatsApp. Sem spam: avisamos da Black Friday e pronto.
               </p>
               <BfVipForm />
             </div>
