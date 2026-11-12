@@ -40,3 +40,15 @@ describe("Black Friday 2026", () => {
     expect(linePct(1, "plex-vonix", durante)).toBe(0);
   });
 });
+
+import { validWhatsapp } from "@/components/bf-vip-form";
+describe("WhatsApp da lista VIP", () => {
+  it("aceita celular e fixo do Brasil em formatos comuns e recusa lixo", () => {
+    expect(validWhatsapp("(31) 99999-8888")).toBe(true);
+    expect(validWhatsapp("+55 31 99999-8888")).toBe(true);
+    expect(validWhatsapp("3133334444")).toBe(true);
+    expect(validWhatsapp("")).toBe(false);
+    expect(validWhatsapp("12345")).toBe(false);
+    expect(validWhatsapp("11111111111")).toBe(false);
+  });
+});

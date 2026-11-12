@@ -40,3 +40,6 @@ export const bfPct = (slug: string | undefined, now: Date = new Date()): number 
   if (slug === "progressiva-fio-de-luz") return 15;
   return 0;
 };
+
+/** Link de convite do grupo VIP no WhatsApp. Vazio = o botao nao aparece (preencher quando o grupo existir). */
+export const BF_GRUPO_VIP = "";
