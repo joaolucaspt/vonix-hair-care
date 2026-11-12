@@ -78,3 +78,8 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Agora: frete grátis = opção MAIS BARATA; só usa a rápida (até 3 dias) se custar no máximo R$ 8 a mais. Custo cai para ≈ R$ 14 a R$ 17 (Sudeste, Nordeste, Sul) e R$ 31 (Manaus, prazo longo). O cliente não paga a mais; o prazo mostrado continua o real.
 - Motivo: com o SEDEX no frete grátis, 16 produtos caíam abaixo de 30% de margem no Norte (Plex Vonix ≈ 4%). Com a regra nova a pior sobra fica acima de 30% antes de comissão e anúncio.
 - Como desfazer: git revert da PR "Regra de frete grátis econômico" (src/lib/shipping-pick.ts e src/test/shipping-pick.test.ts).
+
+## 12/11/2026 (tarde) — preço real, sem "de/por" (decisão do Claude a pedido do Lucas)
+- O Lucas confirmou: o preço real é o de venda (ex.: Botox R$ 180,90). O preço riscado "de R$ 217,90" nunca foi praticado (o preço antes do reajuste era R$ 164,90). Tirei o preço riscado dos 39 produtos (campo compareBase = null em src/data/products.json): nada mais mostra "de ... por ..." nem selo de % OFF por causa dele. Preços de venda NÃO mudaram.
+- A faixa do topo "ATÉ 26% OFF EM PRODUTOS SELECIONADOS" virou "LEVE 2 UNIDADES: 12% OFF · LEVE 3: 15% OFF" (desconto que existe de verdade) e o banner da home "ATÉ x% OFF" virou "LEVE MAIS E ECONOMIZE" com o texto "Leve 2 ganhe 12% OFF, leve 3 ganhe 15% OFF".
+- Valores antigos para desfazer: compareBase = Fio de Luz 232,90; Botox Vonix 217,90; Shampoo Fio de Luz 73,90; Nutri Repair 102,90; Kit Café Verde 164,90; Kit Banana e Mel 202,90; Kit Cronograma 249,90; Kit Whey 144,90 (e os demais 31 no commit anterior). Como desfazer: git revert da PR "Preço real".

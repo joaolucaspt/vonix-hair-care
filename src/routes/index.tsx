@@ -6,7 +6,7 @@ import { AffiliateHomeInvite } from "@/components/affiliate-home-invite";
 import { ProvasEmVideo } from "@/components/provas-em-video";
 import { ComentariosInstagram } from "@/components/comentarios-instagram";
 import { Benefits, Grid, Shell } from "@/components/site";
-import { BEST_SELLERS, MAX_DISCOUNT, SITE_URL, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
+import { BEST_SELLERS, SITE_URL, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
 
 /**
  * Banner da home: a arte (título, produtos e fundo) é a imagem enviada pela loja;
@@ -166,9 +166,9 @@ function Home() {
         <div className="relative overflow-hidden rounded-2xl">
           <div aria-hidden className="h-72 w-full" style={{ background: "radial-gradient(90% 120% at 15% 10%, oklch(0.66 0.13 82) 0%, oklch(0.4 0.08 70) 45%, oklch(0.2 0.02 60) 100%)" }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/40 text-center text-background">
-            <span className="text-body tracking-[0.3em]">ATÉ {MAX_DISCOUNT}% OFF</span>
+            <span className="text-body tracking-[0.3em]">LEVE MAIS E ECONOMIZE</span>
             <h3 className="font-display text-h1">Ofertas Vonix Hair</h3>
-            <p className="mt-2 text-body">Aproveite os preços especiais nos seus favoritos da Vonix Hair.</p>
+            <p className="mt-2 text-body">Leve 2 unidades e ganhe 12% OFF. Leve 3 e ganhe 15% OFF, em qualquer produto.</p>
             <Link to="/loja" className="mt-5 rounded-full bg-background px-6 py-2.5 text-body text-foreground">Ver ofertas</Link>
           </div>
         </div>
