@@ -19,6 +19,7 @@ import { Route as CarrinhoRouteImport } from './routes/carrinho'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ConsultarCandidaturaRouteImport } from './routes/consultar-candidatura'
 import { Route as ContaRouteImport } from './routes/conta'
+import { Route as EsquentaBlackFridayRouteImport } from './routes/esquenta-black-friday'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
 import { Route as LojaRouteImport } from './routes/loja'
 import { Route as PainelRouteImport } from './routes/painel'
@@ -80,6 +81,11 @@ const ConsultarCandidaturaRoute = ConsultarCandidaturaRouteImport.update({
 const ContaRoute = ContaRouteImport.update({
   id: '/conta',
   path: '/conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsquentaBlackFridayRoute = EsquentaBlackFridayRouteImport.update({
+  id: '/esquenta-black-friday',
+  path: '/esquenta-black-friday',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FavoritosRoute = FavoritosRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/consultar-candidatura': typeof ConsultarCandidaturaRoute
   '/conta': typeof ContaRoute
+  '/esquenta-black-friday': typeof EsquentaBlackFridayRoute
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
   '/painel': typeof PainelRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/consultar-candidatura': typeof ConsultarCandidaturaRoute
   '/conta': typeof ContaRoute
+  '/esquenta-black-friday': typeof EsquentaBlackFridayRoute
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
   '/painel': typeof PainelRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/consultar-candidatura': typeof ConsultarCandidaturaRoute
   '/conta': typeof ContaRoute
+  '/esquenta-black-friday': typeof EsquentaBlackFridayRoute
   '/favoritos': typeof FavoritosRoute
   '/loja': typeof LojaRoute
   '/painel': typeof PainelRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultar-candidatura'
     | '/conta'
+    | '/esquenta-black-friday'
     | '/favoritos'
     | '/loja'
     | '/painel'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultar-candidatura'
     | '/conta'
+    | '/esquenta-black-friday'
     | '/favoritos'
     | '/loja'
     | '/painel'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/consultar-candidatura'
     | '/conta'
+    | '/esquenta-black-friday'
     | '/favoritos'
     | '/loja'
     | '/painel'
@@ -303,6 +315,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   ConsultarCandidaturaRoute: typeof ConsultarCandidaturaRoute
   ContaRoute: typeof ContaRoute
+  EsquentaBlackFridayRoute: typeof EsquentaBlackFridayRoute
   FavoritosRoute: typeof FavoritosRoute
   LojaRoute: typeof LojaRoute
   PainelRoute: typeof PainelRoute
@@ -387,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: '/conta'
       fullPath: '/conta'
       preLoaderRoute: typeof ContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esquenta-black-friday': {
+      id: '/esquenta-black-friday'
+      path: '/esquenta-black-friday'
+      fullPath: '/esquenta-black-friday'
+      preLoaderRoute: typeof EsquentaBlackFridayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/favoritos': {
@@ -487,6 +507,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   ConsultarCandidaturaRoute: ConsultarCandidaturaRoute,
   ContaRoute: ContaRoute,
+  EsquentaBlackFridayRoute: EsquentaBlackFridayRoute,
   FavoritosRoute: FavoritosRoute,
   LojaRoute: LojaRoute,
   PainelRoute: PainelRoute,

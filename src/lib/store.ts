@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import raw from "@/data/products.json";
+import { bfPct } from "@/lib/black-friday";
 
 export type Variant = { label: string; price: number };
 export type Product = {
@@ -108,8 +109,11 @@ export const OFFER_LABEL: Record<Offer, string> = {
  */
 export const volumePct = (qty: number) => (qty >= 3 ? 15 : qty === 2 ? 12 : 0);
 
+/** Desconto que vale na linha: o maior entre o "leve mais" e a Black Friday do produto (nunca somam). */
+export const linePct = (qty: number, slug?: string, now?: Date) => Math.max(volumePct(qty), bfPct(slug, now));
+
 /** Line totals in cents-safe math. Without an offer the volume discount follows qty; kit2/kit3 (old carts) count kits, comp5 is the 5% cart complement. */
-export function lineTotals(price: number, qty: number, offer?: Offer) {
+export function lineTotals(price: number, qty: number, offer?: Offer, slug?: string, now?: Date) {
   const u = cents(price);
   if (offer === "kit2") {
     const kit = Math.round((u * 2 * 88) / 100);
@@ -124,7 +128,7 @@ export function lineTotals(price: number, qty: number, offer?: Offer) {
     return { gross: (u * qty) / 100, net: (unit * qty) / 100, units: qty };
   }
   const gross = u * qty;
-  return { gross: gross / 100, net: Math.round((gross * (100 - volumePct(qty))) / 100) / 100, units: qty };
+  return { gross: gross / 100, net: Math.round((gross * (100 - linePct(qty, slug, now))) / 100) / 100, units: qty };
 }
 
 /** A line is "on offer" when it carries a line offer OR the volume discount made it cheaper: then Pix 5% and coupons do not stack. */
@@ -197,7 +201,7 @@ export function useCart() {
       const p = getProduct(i.slug);
       const v = p?.variants.find((x) => x.label === i.variant) ?? p?.variants[0];
       if (!p || !v) return null;
-      const t = lineTotals(v.price, i.qty, i.offer);
+      const t = lineTotals(v.price, i.qty, i.offer, p.slug);
       const pct = t.gross > 0 ? Math.round((1 - t.net / t.gross) * 100) : 0;
       return { ...i, product: p, price: v.price, gross: t.gross, net: t.net, units: t.units, total: t.net, pct };
     })

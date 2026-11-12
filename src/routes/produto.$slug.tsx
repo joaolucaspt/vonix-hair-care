@@ -32,7 +32,7 @@ import {
   useAudience,
   useCart,
   useFavorites,
-  volumePct,
+  linePct,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/produto/$slug")({
@@ -278,7 +278,7 @@ function ProductPage() {
     products.filter((x) => x.category === p.category && x.slug !== p.slug),
     audience,
   ).slice(0, 4);
-  const sel = lineTotals(v.price, qty);
+  const sel = lineTotals(v.price, qty, undefined, p.slug);
   const discounted = sel.net < sel.gross;
   const unitPrice = sel.net / sel.units;
   useEffect(() => {
@@ -355,8 +355,8 @@ function ProductPage() {
                   className="grid gap-2.5 sm:grid-cols-3 sm:gap-3"
                 >
                   {QTY_OPTIONS.map((o, k) => {
-                    const t = lineTotals(v.price, o.n);
-                    const pct = volumePct(o.n);
+                    const t = lineTotals(v.price, o.n, undefined, p.slug);
+                    const pct = linePct(o.n, p.slug);
                     const on = k === 0 ? qty === 1 : k === 1 ? qty === 2 : qty >= 3;
                     const best = k === QTY_OPTIONS.length - 1;
                     return (
@@ -414,7 +414,7 @@ function ProductPage() {
                   <div>
                     <div className="text-small text-muted-foreground">
                       Seu pedido · {sel.units} {sel.units === 1 ? "unidade" : "unidades"}
-                      {discounted ? ` · ${volumePct(qty)}% OFF` : ""}
+                      {discounted ? ` · ${linePct(qty, p.slug)}% OFF` : ""}
                     </div>
                     <div className="flex flex-wrap items-baseline gap-x-2">
                       {discounted ? (
