@@ -45,7 +45,7 @@ export type AffiliateSenderDiagnosis =
         | "not-verifiable";
     };
 
-function senderDomain(raw: string): string | null {
+export function affiliateResendSenderDomain(raw: string): string | null {
   const sender = raw.trim();
   const angle = /^.{1,120}\s<([^<>]+)>$/.exec(sender);
   const address = angle ? angle[1] : sender;
@@ -56,7 +56,7 @@ function senderDomain(raw: string): string | null {
 
 /** No email is sent; this only queries the authenticated Resend domain catalog. */
 export async function inspectAffiliateResendSenderDomain(): Promise<AffiliateSenderDiagnosis> {
-  const domain = senderDomain(env("AFFILIATE_FROM_EMAIL"));
+  const domain = affiliateResendSenderDomain(env("AFFILIATE_FROM_EMAIL"));
   if (!domain) return { status: "sender-invalid" };
   const key = affiliateResendApiKey();
   if (!key || key.length < 20) return { status: "not-configured" };

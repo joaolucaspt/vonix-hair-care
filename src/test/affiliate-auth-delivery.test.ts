@@ -396,3 +396,85 @@ it("does not send an applicant message without a numeric OTP, even if Auth retur
   expect(await sendAffiliateAuthEmailWithResend(inbox, "applicant")).toBe(false);
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
+
+it("recovers a preauthorized owner's invite when Supabase admin generate_link is unavailable, without a second cooldown debit", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(new Response("sensitive admin error", { status: 503 }))
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    const urls = fetcher.mock.calls.map((x) => String(x[0]));
+    expect(urls.filter((x) => x.includes("consume_auth_mail_cooldown"))).toHaveLength(1);
+    expect(urls[1]).toContain("/auth/v1/admin/generate_link");
+    expect(urls[2]).toBe(
+      base +
+        "/auth/v1/otp?redirect_to=" +
+        encodeURIComponent("https://vonixhair.com/acesso-equipe-afiliadas"),
+    );
+    expect(JSON.parse(fetcher.mock.calls[2]![1].body)).toEqual({
+      email: inbox,
+      create_user: false,
+    });
+    expect(urls.some((x) => x.includes("api.resend.com"))).toBe(false);
+    expect(warn).toHaveBeenCalledWith(
+      "[vonix-affiliate-auth-mail] supabase-generate-link-http http=503",
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("sensitive admin error");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(inbox);
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+it("uses managed OTP after an Auth link-generation network outage, without exposing secret values", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockRejectedValueOnce(new Error("upstream sensitive key or recipient"))
+    .mockResolvedValueOnce(new Response(null, { status: 200 }));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(warn).toHaveBeenCalledWith(
+      "[vonix-affiliate-auth-mail] supabase-generate-link-network http=none",
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("sensitive key");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(inbox);
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+it("never claims a successful invite when link generation and managed fallback both fail", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(true))
+    .mockResolvedValueOnce(new Response(null, { status: 500 }))
+    .mockResolvedValueOnce(new Response(null, { status: 429 }));
+  vi.stubGlobal("fetch", fetcher);
+  expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+it("rejects malformed configured Resend sender before consuming an owner's invite cooldown", async () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  for (const value of [
+    "NoReply<not-an-address>",
+    "Vonix Hair <bad@>",
+    "bad address but long enough",
+    "Vonix Hair <a@example.com>\nBCC:x@y.com",
+  ]) {
+    deps.values.set("AFFILIATE_FROM_EMAIL", value);
+    expect(affiliateCustomAuthEmailReady()).toBe(false);
+    expect(await sendAffiliateAuthEmailWithResend(inbox, "owner")).toBe(false);
+  }
+  expect(fetcher).not.toHaveBeenCalled();
+});
