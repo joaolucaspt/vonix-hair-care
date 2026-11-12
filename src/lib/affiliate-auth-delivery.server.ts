@@ -3,6 +3,7 @@ import { z } from "zod";
 import { affiliateDatabaseConfig } from "./affiliate-database.server";
 import { env } from "./env.server";
 import { affiliateResendApiKey } from "./affiliate-resend-config.server";
+import { affiliateResendSenderDomain } from "./affiliate-resend-domain.server";
 import { VONIX_AFFILIATE_PUBLIC_KEY } from "./vonix-affiliate-auth";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(180);
@@ -48,7 +49,12 @@ async function classifyAffiliateResendError(response: Response): Promise<string>
 export function affiliateCustomAuthEmailReady(): boolean {
   const key = affiliateResendApiKey();
   const sender = env("AFFILIATE_FROM_EMAIL");
-  return key.length >= 20 && sender.length >= 6 && sender.length <= 240;
+  return (
+    key.length >= 20 &&
+    sender.length >= 6 &&
+    sender.length <= 240 &&
+    affiliateResendSenderDomain(sender) !== null
+  );
 }
 
 /** Verifies that an identity was pre-authorized, without returning its existence. */
@@ -195,20 +201,28 @@ export async function sendAffiliateAuthEmailWithResend(
     purpose === "owner"
       ? "https://vonixhair.com/acesso-equipe-afiliadas"
       : "https://vonixhair.com/acompanhar-inscricao";
-  const generation = await fetch(db.url + "/auth/v1/admin/generate_link", {
-    method: "POST",
-    headers: db.headers,
-    body: JSON.stringify({
-      type: "magiclink",
-      email: address.data,
-      redirect_to: redirectUrl,
-    }),
-    redirect: "manual",
-    signal: AbortSignal.timeout(8000),
-  });
+  let generation: Response;
+  try {
+    generation = await fetch(db.url + "/auth/v1/admin/generate_link", {
+      method: "POST",
+      headers: db.headers,
+      body: JSON.stringify({
+        type: "magiclink",
+        email: address.data,
+        redirect_to: redirectUrl,
+      }),
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    // Recipient authorization and durable cooldown were already enforced.
+    // Managed Auth only requests an OTP for an existing account (create_user=false).
+    auditAffiliateAuthMailFailure("supabase-generate-link-network");
+    return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
+  }
   if (!generation.ok) {
     auditAffiliateAuthMailFailure("supabase-generate-link-http", generation.status);
-    return false;
+    return requestAffiliateSupabaseManagedOtp(address.data, redirectUrl, db.url);
   }
   const raw: unknown = await generation.json();
   const parsed = z
