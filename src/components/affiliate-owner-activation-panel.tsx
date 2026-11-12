@@ -86,11 +86,17 @@ export function AffiliateOwnerActivationPanel() {
       const result = await getPendingAffiliateOwnerActivations();
       if (!result.ok) {
         setAvailable(false);
+        setOwners(null);
+        // The server may distinguish temporary failures only after owner authorization.
+        setInitialError(result.reason === "temporarily-unavailable");
         return;
       }
+      setInitialError(false);
       setOwners(result.owners);
     } catch {
-      setFailure("Não foi possível atualizar as contas. Verifique sua conexão e sessão.");
+      setAvailable(false);
+      setOwners(null);
+      setInitialError(true);
     } finally {
       setBusy(false);
     }

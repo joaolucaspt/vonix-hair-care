@@ -8,6 +8,7 @@ const gates = vi.hoisted(() => ({
   fingerprint: vi.fn(),
   emailReady: vi.fn(),
   sendEmail: vi.fn(),
+  managedEmail: vi.fn(),
 }));
 
 vi.mock("@/lib/affiliate-admin-session.server", () => ({
@@ -26,6 +27,7 @@ vi.mock("@/lib/affiliate-auth-delivery.server", () => ({
   affiliateAccessEmailFingerprint: gates.fingerprint,
   affiliateCustomAuthEmailReady: gates.emailReady,
   sendAffiliateAuthEmailWithResend: gates.sendEmail,
+  sendAffiliateManagedAuthOtp: gates.managedEmail,
 }));
 
 import {
@@ -65,6 +67,7 @@ beforeEach(() => {
   gates.fingerprint.mockReturnValue("f".repeat(64));
   gates.emailReady.mockReturnValue(true);
   gates.sendEmail.mockResolvedValue(true);
+  gates.managedEmail.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -126,7 +129,7 @@ describe("owner-mediated one-time activation without transactional email", () =>
     expect(gates.sendEmail).not.toHaveBeenCalled();
   });
 
-  it("does not send emails without a verified owner or verified corporate provider", async () => {
+  it("does not send emails without a verified owner or an accessible protected roster", async () => {
     gates.member.mockReturnValue(null);
     vi.stubGlobal("fetch", vi.fn());
     expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
@@ -134,7 +137,9 @@ describe("owner-mediated one-time activation without transactional email", () =>
     gates.member.mockReturnValue({ email: actor, role: "owner" });
     gates.emailReady.mockReturnValue(false);
     expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
-    expect(globalThis.fetch).not.toHaveBeenCalled();
+    // The active owner is revalidated from the protected roster even when
+    // the branded provider is unavailable. A failed authorization still denies.
+    expect(globalThis.fetch).toHaveBeenCalledOnce();
   });
 
   it("surfaces provider rejection without pretending a message was delivered", async () => {
@@ -227,4 +232,37 @@ it("distinguishes an unavailable roster query after verified owner authorization
   expect(
     JSON.stringify(await Promise.resolve({ reason: "temporarily-unavailable" })),
   ).not.toContain(email);
+});
+
+it("falls back to the managed Supabase email only for an already-invited pending owner", async () => {
+  gates.emailReady.mockReturnValue(false);
+  const fetcher = mockFetch(Response.json(owner), Response.json(pending));
+  expect(await sendPendingAffiliateOwnerActivationEmail(email)).toEqual({ ok: true });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(gates.managedEmail).toHaveBeenCalledExactlyOnceWith(email, "owner");
+  expect(gates.sendEmail).not.toHaveBeenCalled();
+});
+
+it("never attempts managed fallback for nonowners or uninvited addresses", async () => {
+  gates.emailReady.mockReturnValue(false);
+  gates.member.mockReturnValue(null);
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
+  expect(fetcher).not.toHaveBeenCalled();
+  gates.member.mockReturnValue({ email: actor, role: "owner" });
+  const eligible = mockFetch(Response.json(owner), Response.json(pending));
+  expect((await sendPendingAffiliateOwnerActivationEmail("stranger@example.invalid")).ok).toBe(
+    false,
+  );
+  expect(eligible).toHaveBeenCalledTimes(2);
+  expect(gates.managedEmail).not.toHaveBeenCalled();
+});
+
+it("does not claim accepted email when the managed provider rejects it", async () => {
+  gates.emailReady.mockReturnValue(false);
+  gates.managedEmail.mockResolvedValue(false);
+  mockFetch(Response.json(owner), Response.json(pending));
+  expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
+  expect(gates.managedEmail).toHaveBeenCalledOnce();
 });

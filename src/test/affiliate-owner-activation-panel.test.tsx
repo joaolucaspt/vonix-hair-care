@@ -136,3 +136,33 @@ it("offers retry for a temporary protected-roster backend failure without leakin
   fireEvent.click(screen.getByRole("button", { name: "Tentar consultar convites novamente" }));
   expect(await screen.findByText(email)).toBeInTheDocument();
 });
+
+it("retains a safe retry path if an authorized owner refreshes the roster and the server fails", async () => {
+  mocks.list
+    .mockResolvedValueOnce({ ok: true, owners: [{ email }] })
+    .mockResolvedValueOnce({ ok: false, owners: [], reason: "temporarily-unavailable" })
+    .mockResolvedValueOnce({ ok: true, owners: [{ email }] });
+  render(<AffiliateOwnerActivationPanel />);
+  expect(await screen.findByText(email)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Atualizar" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Não foi possível consultar os convites",
+  );
+  expect(screen.queryByText(email)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Tentar consultar convites novamente" }));
+  expect(await screen.findByText(email)).toBeInTheDocument();
+  expect(mocks.list).toHaveBeenCalledTimes(3);
+});
+
+it("shows retry without displaying stale owner addresses when refresh rejects over network", async () => {
+  mocks.list
+    .mockResolvedValueOnce({ ok: true, owners: [{ email }] })
+    .mockRejectedValueOnce(new TypeError("provider offline"));
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  fireEvent.click(screen.getByRole("button", { name: "Atualizar" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Não foi possível consultar os convites",
+  );
+  expect(screen.queryByText(email)).not.toBeInTheDocument();
+});

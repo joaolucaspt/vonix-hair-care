@@ -5,6 +5,7 @@ import {
   affiliateAccessEmailFingerprint,
   affiliateCustomAuthEmailReady,
   sendAffiliateAuthEmailWithResend,
+  sendAffiliateManagedAuthOtp,
 } from "./affiliate-auth-delivery.server";
 import { affiliateMemberSession } from "./affiliate-member-session.server";
 import { affiliateRateLimitAllowed } from "./affiliate-throttle.server";
@@ -118,12 +119,16 @@ export async function sendPendingAffiliateOwnerActivationEmail(email: string) {
   const db = affiliateDatabaseConfig();
   const parsed = address.safeParse(email);
   const denied = { ok: false as const, reason: "Acesso não autorizado ou conta não elegível." };
-  if (!db || !parsed.success || !affiliateCustomAuthEmailReady()) return denied;
+  if (!db || !parsed.success) return denied;
   if (!(await authorizedActivatedOwner(db))) return denied;
   const pending = await fetchPendingOwners(db);
   if (!pending?.some((row) => row.email === parsed.data)) return denied;
   try {
-    const accepted = await sendAffiliateAuthEmailWithResend(parsed.data, "owner");
+    // A preauthorized pending owner can request managed Supabase OTP when
+    // the branded Resend sender is unconfigured, without public account creation.
+    const accepted = affiliateCustomAuthEmailReady()
+      ? await sendAffiliateAuthEmailWithResend(parsed.data, "owner")
+      : await sendAffiliateManagedAuthOtp(parsed.data, "owner");
     if (!accepted)
       return {
         ok: false as const,
