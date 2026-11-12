@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ClipboardCopy, Link2, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
+import { ClipboardCopy, Link2, LockKeyhole, RefreshCw, Share2, ShieldCheck } from "lucide-react";
 import {
   createPendingAffiliateOwnerActivationLink,
   getPendingAffiliateOwnerActivations,
@@ -164,7 +164,9 @@ export function AffiliateOwnerActivationPanel() {
         return;
       }
       setGenerated({ email: result.recipient, link: result.link });
-      setMessage("Link individual gerado. Copie e envie somente para o destinatário autorizado.");
+      setMessage(
+        "Link individual gerado. Copie ou compartilhe somente com o destinatário autorizado.",
+      );
     } catch {
       setFailure("Não foi possível gerar o link. Tente novamente após conferir a sessão.");
     } finally {
@@ -191,6 +193,42 @@ export function AffiliateOwnerActivationPanel() {
     } catch {
       setFailure("Não foi possível solicitar o e-mail. Verifique sua conexão.");
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function shareNative() {
+    // Native share is available in secure mobile contexts and is an explicit
+    // owner gesture. The private token is never embedded in HTML or analytics.
+    if (
+      !generated ||
+      !confirmedPrivateRecipient ||
+      busy ||
+      copyingLink.current ||
+      typeof navigator.share !== "function"
+    )
+      return;
+    copyingLink.current = true;
+    setBusy(true);
+    setFailure("");
+    try {
+      await navigator.share({ title: "Convite individual Vonix Hair", url: generated.link });
+      setGenerated(null);
+      setMessage(
+        "Compartilhamento aberto no dispositivo. Isso não comprova que o destinatário recebeu; confirme o envio no aplicativo escolhido.",
+      );
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        setMessage(
+          "Compartilhamento cancelado. O link ainda está disponível para copiar ou compartilhar em privado.",
+        );
+      } else {
+        setFailure(
+          "Não foi possível abrir o compartilhamento. Tente copiar o link para envio privado.",
+        );
+      }
+    } finally {
+      copyingLink.current = false;
       setBusy(false);
     }
   }
@@ -320,9 +358,21 @@ export function AffiliateOwnerActivationPanel() {
         <div className="mt-4 rounded-xl border border-[#d5c1c3] bg-[#faf4f2] p-4">
           <p className="break-all text-sm font-semibold">{generated.email}</p>
           <p className="mt-2 text-sm text-[#806a6c]">
-            Link gerado para esta conta. Copie agora. O endereço não será exibido na página e será
-            apagado da tela assim que a cópia for concluída.
+            Link gerado para esta conta. Copie ou compartilhe em conversa privada com o destinatário
+            confirmado. O endereço não é exibido na página e será retirado da tela após a
+            transferência.
           </p>
+          {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
+            <button
+              type="button"
+              onClick={() => void shareNative()}
+              disabled={busy || !confirmedPrivateRecipient}
+              className="mt-4 mr-2 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#b18f9a] bg-[#fff9f5] px-5 text-sm font-bold text-[#693440] disabled:opacity-50"
+            >
+              <Share2 className="h-4 w-4" />
+              Compartilhar link individual no celular
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void copy()}
