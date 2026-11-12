@@ -73,6 +73,13 @@ async function authorizedActivatedOwner(db: Database): Promise<boolean> {
   }
 }
 
+/** Stronger authorization for irreversible actions. A signed member cookie
+ * alone is insufficient after a team owner's role or activation is revoked. */
+export async function affiliateActivatedOwnerStillAuthorized(): Promise<boolean> {
+  const db = affiliateDatabaseConfig();
+  return db ? authorizedActivatedOwner(db) : false;
+}
+
 async function fetchPendingOwners(db: Database): Promise<PendingAffiliateOwner[] | null> {
   try {
     const response = await fetch(

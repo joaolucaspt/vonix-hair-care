@@ -185,19 +185,19 @@ export function createAffiliateAdminSession(): boolean {
   return true;
 }
 
+/** Distinguish legacy password+TOTP cookies from member identity cookies.
+ * A member owner requires an additional current-roster check for erasure. */
+export function affiliateLegacyAdminSessionValid(): boolean {
+  return verifyAffiliateSessionToken(getCookie(cookieName()), sessionSigningKey());
+}
+
 export function affiliateAdminSessionValid(): boolean {
-  return (
-    verifyAffiliateSessionToken(getCookie(cookieName()), sessionSigningKey()) ||
-    affiliateMemberSession() !== null
-  );
+  return affiliateLegacyAdminSessionValid() || affiliateMemberSession() !== null;
 }
 
 /** Member reviewers may triage. Only the legacy owner or a member owner may erase data. */
 export function affiliateAdminMayErase(): boolean {
-  return (
-    verifyAffiliateSessionToken(getCookie(cookieName()), sessionSigningKey()) ||
-    affiliateMemberSession()?.role === "owner"
-  );
+  return affiliateLegacyAdminSessionValid() || affiliateMemberSession()?.role === "owner";
 }
 
 export function affiliateAdminActor(): string {

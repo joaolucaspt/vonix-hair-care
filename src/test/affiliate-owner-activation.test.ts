@@ -39,6 +39,7 @@ import {
   listPendingAffiliateOwnerActivations,
   sendPendingAffiliateOwnerActivationEmail,
   diagnoseAffiliateOwnerSender,
+  affiliateActivatedOwnerStillAuthorized,
 } from "@/lib/affiliate-owner-activation.server";
 
 const root = "https://jewbzrbbvxyqmxqbrwrq.supabase.co";
@@ -302,4 +303,45 @@ it("never diagnoses a deactivated owner even if an old signed cookie exists", as
   expect(await diagnoseAffiliateOwnerSender()).toEqual({ ok: false });
   expect(fetcher).toHaveBeenCalledOnce();
   expect(gates.inspectDomain).not.toHaveBeenCalled();
+});
+
+describe("current-owner authorization for irreversible applicant erasure", () => {
+  it("allows an activated member owner only after a fresh allowlist query", async () => {
+    const fetcher = mockFetch(Response.json(owner));
+    expect(await affiliateActivatedOwnerStillAuthorized()).toBe(true);
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(String(fetcher.mock.calls[0]![0])).toContain("email=eq.");
+  });
+
+  it("denies signed owner cookies after the owner password activation is revoked", async () => {
+    const fetcher = mockFetch(
+      Response.json([{ email: actor, role: "owner", password_set_at: null }]),
+    );
+    expect(await affiliateActivatedOwnerStillAuthorized()).toBe(false);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("refuses a downgraded team role or failed protected roster query", async () => {
+    const fetcher = mockFetch(
+      Response.json([
+        { email: actor, role: "reviewer", password_set_at: "2026-11-10T19:00:00+00:00" },
+      ]),
+    );
+    expect(await affiliateActivatedOwnerStillAuthorized()).toBe(false);
+    expect(fetcher).toHaveBeenCalledOnce();
+    const failed = mockFetch(new Response(null, { status: 503 }));
+    expect(await affiliateActivatedOwnerStillAuthorized()).toBe(false);
+    expect(failed).toHaveBeenCalledOnce();
+  });
+
+  it("denies missing owner cookie and inaccessible per-IP quota before any roster request", async () => {
+    gates.member.mockReturnValue(null);
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    expect(await affiliateActivatedOwnerStillAuthorized()).toBe(false);
+    gates.member.mockReturnValue({ email: actor, role: "owner" });
+    gates.rate.mockResolvedValue(false);
+    expect(await affiliateActivatedOwnerStillAuthorized()).toBe(false);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
 });

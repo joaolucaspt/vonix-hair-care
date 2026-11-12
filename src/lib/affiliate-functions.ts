@@ -15,6 +15,7 @@ import {
   diagnoseAffiliateOwnerSender,
   listPendingAffiliateOwnerActivations,
   sendPendingAffiliateOwnerActivationEmail,
+  affiliateActivatedOwnerStillAuthorized,
 } from "./affiliate-owner-activation.server";
 import { invitePersistedAffiliateApplicant } from "./affiliate-invites.server";
 import {
@@ -28,6 +29,7 @@ import {
   affiliateMutationSameOrigin,
   affiliateAdminSessionValid,
   affiliateAdminMayErase,
+  affiliateLegacyAdminSessionValid,
   destroyAffiliateAdminSession,
 } from "./affiliate-admin-session.server";
 import { affiliateRateLimitAllowed, consumeAffiliateRateLimit } from "./affiliate-throttle.server";
@@ -448,8 +450,20 @@ export const eraseAffiliateApplicationAdmin = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
-    if (!affiliateAdminSameOrigin() || !affiliateAdminMayErase())
-      return { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+    setResponseHeader("Referrer-Policy", "no-referrer");
+    const denied = { ok: false as const, reason: "Acesso negado. Faça login novamente." };
+    if (!affiliateAdminSameOrigin() || !affiliateAdminMayErase()) return denied;
+    // Re-check activation and owner role against the current protected roster
+    // before irreversible LGPD erasure. A valid one-hour member cookie may
+    // outlive a role removal. Legacy TOTP owners retain their own distinct
+    // signed-session authorization pathway.
+    try {
+      if (!affiliateLegacyAdminSessionValid() && !(await affiliateActivatedOwnerStillAuthorized()))
+        return denied;
+    } catch {
+      return denied;
+    }
     if (!(await affiliateRateLimitAllowed("admin")))
       return { ok: false as const, reason: "Acesso temporariamente indisponível." };
     try {

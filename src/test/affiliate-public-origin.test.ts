@@ -20,6 +20,10 @@ const gates = vi.hoisted(() => ({
   sendAuth: vi.fn(),
   sendManaged: vi.fn(),
   emailReady: vi.fn(),
+  mayErase: vi.fn(),
+  legacyOwner: vi.fn(),
+  activeOwner: vi.fn(),
+  erase: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-start", () => ({
@@ -47,6 +51,15 @@ vi.mock("@/lib/affiliate-admin-session.server", () => ({
   affiliateMutationSameOrigin: gates.sameOrigin,
   affiliateAdminSessionValid: gates.session,
   destroyAffiliateAdminSession: vi.fn(),
+  affiliateAdminMayErase: gates.mayErase,
+  affiliateLegacyAdminSessionValid: gates.legacyOwner,
+}));
+vi.mock("@/lib/affiliate-owner-activation.server", () => ({
+  affiliateActivatedOwnerStillAuthorized: gates.activeOwner,
+  generatePendingAffiliateOwnerActivationLink: vi.fn(),
+  diagnoseAffiliateOwnerSender: vi.fn(),
+  listPendingAffiliateOwnerActivations: vi.fn(),
+  sendPendingAffiliateOwnerActivationEmail: vi.fn(),
 }));
 vi.mock("@/lib/affiliate-throttle.server", () => ({
   affiliateRateLimitAllowed: gates.allowed,
@@ -56,7 +69,7 @@ vi.mock("@/lib/affiliate-applications.server", () => ({
   affiliateRecruitmentOpen: gates.open,
   affiliateOperatorIntakeEnabled: gates.open,
   affiliateOperationalReadiness: gates.readiness,
-  eraseAffiliateApplication: vi.fn(),
+  eraseAffiliateApplication: gates.erase,
   // retention mock is provided below via gates.retention
   createAffiliateApplication: gates.create,
   createSimpleAffiliateApplication: gates.createSimple,
@@ -72,6 +85,7 @@ import {
   getAffiliateApplications,
   getAffiliateOperationalReadiness,
   getAffiliateRetentionPreview,
+  eraseAffiliateApplicationAdmin,
   submitAffiliateApplication,
   submitSimpleAffiliateApplication,
 } from "@/lib/affiliate-functions";
@@ -104,6 +118,10 @@ beforeEach(() => {
   gates.sendAuth.mockResolvedValue(true);
   gates.sendManaged.mockResolvedValue(true);
   gates.emailReady.mockReturnValue(true);
+  gates.mayErase.mockReturnValue(true);
+  gates.legacyOwner.mockReturnValue(false);
+  gates.activeOwner.mockResolvedValue(true);
+  gates.erase.mockResolvedValue(true);
 });
 
 describe("Public simplified affiliate submission origin policy", () => {
@@ -353,5 +371,53 @@ describe("Protected admin read responses never use public or browser caching", (
     });
     expect(gates.retention).toHaveBeenCalledOnce();
     expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store, max-age=0");
+  });
+});
+
+describe("LGPD erasure revocation gate", () => {
+  const erase = eraseAffiliateApplicationAdmin as unknown as (args: {
+    data: { id: string; emailConfirmation: string; reason: "solicitacao_titular" };
+  }) => Promise<{ ok: boolean }>;
+  const data = {
+    id: "00000000-0000-4000-8000-000000000999",
+    emailConfirmation: "example.invalid",
+    reason: "solicitacao_titular" as const,
+  };
+
+  it("refuses irreversible deletion when a member owner's signed cookie survives roster revocation", async () => {
+    gates.activeOwner.mockResolvedValue(false);
+    expect((await erase({ data })).ok).toBe(false);
+    expect(gates.erase).not.toHaveBeenCalled();
+    expect(gates.activeOwner).toHaveBeenCalledOnce();
+  });
+
+  it("allows an activated owner after a fresh live allowlist check", async () => {
+    expect(await erase({ data })).toEqual({ ok: true });
+    expect(gates.activeOwner).toHaveBeenCalledOnce();
+    expect(gates.erase).toHaveBeenCalledOnce();
+  });
+
+  it("keeps legacy TOTP owner support independent of an unrelated member cookie", async () => {
+    gates.legacyOwner.mockReturnValue(true);
+    gates.activeOwner.mockResolvedValue(false);
+    expect(await erase({ data })).toEqual({ ok: true });
+    expect(gates.activeOwner).not.toHaveBeenCalled();
+    expect(gates.erase).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed on a live roster outage instead of erasing data", async () => {
+    gates.activeOwner.mockRejectedValue(new TypeError("upstream unavailable"));
+    expect((await erase({ data })).ok).toBe(false);
+    expect(gates.erase).not.toHaveBeenCalled();
+  });
+
+  it("never consults owner roster or erases on cross-origin and invalid sessions", async () => {
+    gates.sameOrigin.mockReturnValue(false);
+    expect((await erase({ data })).ok).toBe(false);
+    gates.sameOrigin.mockReturnValue(true);
+    gates.mayErase.mockReturnValue(false);
+    expect((await erase({ data })).ok).toBe(false);
+    expect(gates.activeOwner).not.toHaveBeenCalled();
+    expect(gates.erase).not.toHaveBeenCalled();
   });
 });
