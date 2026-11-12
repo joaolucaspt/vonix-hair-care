@@ -3,6 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 
 const server = vi.hoisted(() => ({ submit: vi.fn() }));
 const analytics = vi.hoisted(() => ({ track: vi.fn() }));
+const receipts = vi.hoisted(() => ({ download: vi.fn() }));
+vi.mock("@/lib/affiliate-private-receipt", () => ({
+  downloadAffiliatePrivateReceipt: receipts.download,
+}));
 vi.mock("@/lib/analytics", () => ({ track: analytics.track }));
 vi.mock("@/lib/affiliate-functions", () => ({
   submitSimpleAffiliateApplication: server.submit,
@@ -455,4 +459,48 @@ it("stops navigation when storage silently drops an unconfirmed receipt", async 
   expect(await screen.findByText(/Copie e guarde o código da tentativa/)).toBeInTheDocument();
   expect(code).toHaveValue((code as HTMLInputElement).value);
   expect(analytics.track).not.toHaveBeenCalled();
+});
+
+it("offers a download of a confirmed code without sending another application or Meta Lead", async () => {
+  receipts.download.mockReturnValueOnce(true);
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const code = (
+    (await screen.findByLabelText("Código privado de acompanhamento")) as HTMLInputElement
+  ).value;
+  fireEvent.click(screen.getByRole("button", { name: "Baixar código de acompanhamento" }));
+  expect(receipts.download).toHaveBeenCalledExactlyOnceWith(code, true);
+  expect(screen.getByText(/Download solicitado/)).toBeInTheDocument();
+  expect(server.submit).toHaveBeenCalledOnce();
+  expect(analytics.track).toHaveBeenCalledOnce();
+});
+
+it("allows local backup for an unconfirmed attempt without falsely claiming enrollment", async () => {
+  server.submit.mockRejectedValueOnce(new TypeError("response lost"));
+  receipts.download.mockReturnValueOnce(true);
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const code = (
+    (await screen.findByLabelText("Código privado da tentativa não confirmada")) as HTMLInputElement
+  ).value;
+  fireEvent.click(screen.getByRole("button", { name: "Baixar código de tentativa" }));
+  expect(receipts.download).toHaveBeenCalledExactlyOnceWith(code, false);
+  expect(screen.getByText(/Download solicitado/)).toBeInTheDocument();
+  expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
+  expect(analytics.track).not.toHaveBeenCalled();
+  expect(server.submit).toHaveBeenCalledOnce();
+});
+
+it("keeps the tracking code visible if the browser blocks its backup download", async () => {
+  receipts.download.mockReturnValueOnce(false);
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const input = await screen.findByLabelText("Código privado de acompanhamento");
+  const code = (input as HTMLInputElement).value;
+  fireEvent.click(screen.getByRole("button", { name: "Baixar código de acompanhamento" }));
+  expect(screen.getByText(/Este navegador não permitiu baixar o arquivo/)).toBeInTheDocument();
+  expect(input).toHaveValue(code);
 });
