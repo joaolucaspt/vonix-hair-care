@@ -56,3 +56,11 @@ LCP até 2,5 s · 60% rolando além de 25% da página · 8% adicionando ao carri
 - Medição (celular simulado), antes -> depois: home peso 2,68 -> 1,77 MB, LCP 7,8 -> 4,1 s, nota 46 -> 57; loja peso 3,04 -> 1,67 MB, nota 52 -> 53; botox peso 1,66 -> 1,53 MB, nota 56 -> 54 (variação normal do teste). O tempo travado (TBT 1,7 a 2,3 s) não melhorou: vem dos scripts do Meta e do Google (Lucas disse NÃO mexer).
 - Não testado ponta a ponta: um cadastro real no site chegando na tela Contatos do site (evitei criar contato falso).
 - Como desfazer: git revert das PRs 106, 107 e 108 (site) e 14 (app).
+
+## 12/11/2026 (manhã, quinta) — dia 4 (rotina automática, só conferência)
+- Meta (últimos 30 dias até 11/11): conta toda R$ 1.067,89 gasto, 55 carrinhos, 14 finalizações, 2 compras (as mesmas da Black Friday, sem venda nova). Campanha ativa "FRIO Combo Banana e Mel": R$ 352,93 (≈ R$ 67 desde 09/11, ritmo ~R$ 30/dia), 7.982 impressões, 28 carrinhos, 5 finalizações, 0 compras, connect rate 71%. Embaixadoras: R$ 12,24. Remarketing MORNO segue em rascunho (público ainda não verificado).
+- Clarity (3 dias): 199 sessões (maioria equipe/pré-visualização: lovable.dev 42 + lovableproject 17 + 127.0.0.1 6). Visitas pagas reais ≈ 44 (instagram 25, facebook 15, adsmanager 4). Rolagem 43,5%, cliques mortos 12,1% (24 sessões), retornos rápidos 12,6%, LCP 2,4 s (bom), INP 370 ms (precisa melhorar), pontuação 79. Eventos: 91 viram produto, 6 foram ao carrinho, 3 begin_checkout, 1 purchase (provável interna).
+- Site no ar (home 1,6 s, produtos 0,4–1,1 s, checkout 0,4 s, todos 200); preço R$ 180,90 presente no botox.
+- Mudança do dia: nenhuma (só conferência; menos de 100 visitas pagas desde a mudança de 11/11, "ainda é cedo": faltam ~56). Nenhuma mudança em anúncio; orçamento mantido em R$ 30/dia (sem venda real).
+- Pendente do Lucas: conferir se o conjunto não usa Advantage+; aprovar abertura do remarketing quando o público chegar a 100+.
+- Atenção: cliques mortos subiram de 10,5% para 12,1%. Próximo passo seguro (site): achar no mapa de cliques do Clarity quais elementos recebem clique morto.
