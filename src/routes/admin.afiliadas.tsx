@@ -18,6 +18,7 @@ import {
   type AffiliateRejectionReason,
 } from "@/lib/affiliate-rejection";
 import { AffiliateOwnerActivationPanel } from "@/components/affiliate-owner-activation-panel";
+import { affiliateWhatsAppContactUrl } from "@/lib/affiliate-whatsapp-contact";
 import {
   getAffiliateAdminSession,
   eraseAffiliateApplicationAdmin,
@@ -1202,6 +1203,12 @@ export function AffiliateAdminPage() {
                 const instagram = safeProfileLink(app.instagram_url, "instagram");
                 const tiktok = safeProfileLink(app.tiktok_url, "tiktok");
                 const mail = app.vonix_affiliate_mail_outbox?.[0];
+                // No phone is fetched or exposed until explicit confidential
+                // detail access by the currently authenticated admin.
+                const manualWhatsApp =
+                  authorized && !sessionRechecking && privateDetail?.id === app.id
+                    ? affiliateWhatsAppContactUrl(privateDetail.answers.phone)
+                    : null;
                 return (
                   <article
                     key={app.id}
@@ -1394,6 +1401,24 @@ export function AffiliateAdminPage() {
                               </div>
                             ))}
                           </dl>
+                          {manualWhatsApp && (
+                            <div className="mt-5 border-t border-[#f0e2df] pt-4">
+                              <a
+                                href={manualWhatsApp}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                referrerPolicy="no-referrer"
+                                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#83b69c] bg-[#eef9f2] px-5 text-sm font-bold text-[#286344] hover:bg-[#e4f4e9]"
+                              >
+                                Contatar pelo WhatsApp{" "}
+                                <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                              </a>
+                              <p className="mt-2 text-xs leading-relaxed text-[#806a6c]">
+                                Abre uma conversa externa com mensagem pronta, sem enviá-la. Revise
+                                o destinatário e só envie após confirmar que se trata da candidata.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </section>

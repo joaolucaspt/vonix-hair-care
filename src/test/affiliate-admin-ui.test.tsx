@@ -793,3 +793,45 @@ describe("Vonix affiliate private panel", () => {
     expect(screen.queryByText("Prévia de retenção LGPD")).not.toBeInTheDocument();
   });
 });
+
+it("opens manual WhatsApp contact only after the administrator explicitly decrypts a valid applicant phone", async () => {
+  server.getAffiliateApplicationPrivateDetail.mockResolvedValueOnce({
+    ok: true,
+    detail: {
+      kind: "simple",
+      acceptedAt: "2026-11-09T12:00:00Z",
+      answers: { phone: "(31) 99999-9999", firstName: "Segredo da candidata" },
+    },
+  });
+  render(<Page />);
+  await screen.findByText("Segredo da candidata");
+  expect(screen.queryByRole("link", { name: /Contatar pelo WhatsApp/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Ver todas as respostas" }));
+  const link = await screen.findByRole("link", { name: /Contatar pelo WhatsApp/ });
+  expect(link).toHaveAttribute(
+    "href",
+    expect.stringMatching(/^https:\/\/wa\.me\/5531999999999\?text=/),
+  );
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+  expect(link).toHaveAttribute("referrerpolicy", "no-referrer");
+  expect(server.reviewAffiliateApplication).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Ocultar respostas" }));
+  expect(screen.queryByRole("link", { name: /Contatar pelo WhatsApp/ })).not.toBeInTheDocument();
+});
+
+it("does not offer an outbound WhatsApp link for invalid decrypted phone values", async () => {
+  server.getAffiliateApplicationPrivateDetail.mockResolvedValueOnce({
+    ok: true,
+    detail: {
+      kind: "simple",
+      acceptedAt: "2026-11-09T12:00:00Z",
+      answers: { phone: "https://attacker.invalid" },
+    },
+  });
+  render(<Page />);
+  await screen.findByText("Segredo da candidata");
+  fireEvent.click(screen.getByRole("button", { name: "Ver todas as respostas" }));
+  expect(await screen.findByText("https://attacker.invalid")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Contatar pelo WhatsApp/ })).not.toBeInTheDocument();
+});
