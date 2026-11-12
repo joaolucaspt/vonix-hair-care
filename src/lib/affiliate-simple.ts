@@ -27,7 +27,7 @@ export const affiliateSimpleSchema = z
       .min(10)
       .max(20)
       .refine((v) => {
-        if (!/^[+()\d.\s-]+$/.test(v)) return false;
+        if (!/^[+()\d. -]+$/.test(v)) return false;
         const digits = onlyDigits(v).replace(/^55(?=\d{10,11}$)/, "");
         return /^(?:[1-9]\d[2-5]\d{7}|[1-9]\d9\d{8})$/.test(digits);
       }, "Informe um telefone brasileiro com DDD."),

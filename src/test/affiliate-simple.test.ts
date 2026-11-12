@@ -421,3 +421,18 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
     expect(fetched).not.toHaveBeenCalled();
   });
 });
+
+it("rejects newline/tab control characters in phones that the protected WhatsApp link cannot safely use", () => {
+  for (const phone of ["(31)\n99999-9999", "(31)\t99999-9999", "(31) 99999\r-9999"]) {
+    expect(
+      affiliateSimpleSchema.safeParse({ ...valid, phone }).success,
+      phone.replace(/\s/g, "_"),
+    ).toBe(false);
+  }
+  expect(affiliateSimpleSchema.safeParse({ ...valid, phone: "(31) 99999-9999" }).success).toBe(
+    true,
+  );
+  expect(affiliateSimpleSchema.safeParse({ ...valid, phone: "+55 (31) 99999 9999" }).success).toBe(
+    true,
+  );
+});

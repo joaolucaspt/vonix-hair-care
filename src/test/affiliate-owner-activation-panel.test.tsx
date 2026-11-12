@@ -208,3 +208,89 @@ it("conceals owner roster when a protected sender diagnosis denies authorization
     screen.queryByRole("button", { name: "Verificar domínio do e-mail sem enviar" }),
   ).not.toBeInTheDocument();
 });
+
+it("offers native private sharing on supported phones without writing a bearer link into DOM or clipboard", async () => {
+  const nativeShare = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "share", { configurable: true, value: nativeShare });
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    const share = await screen.findByRole("button", {
+      name: /Compartilhar link individual no celular/,
+    });
+    expect(document.body.textContent).not.toContain("vonix_invite");
+    expect(document.querySelector('a[href*="vonix_invite"]')).toBeNull();
+    fireEvent.click(share);
+    await waitFor(() =>
+      expect(nativeShare).toHaveBeenCalledExactlyOnceWith({
+        title: "Convite individual Vonix Hair",
+        url: token,
+      }),
+    );
+    expect(mocks.clipboard).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: /Compartilhar link individual no celular/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("não comprova que o destinatário recebeu");
+  } finally {
+    Reflect.deleteProperty(navigator, "share");
+  }
+});
+
+it("keeps the single-use link recoverable if mobile sharing is canceled", async () => {
+  const abort = new Error("cancel");
+  abort.name = "AbortError";
+  const nativeShare = vi.fn().mockRejectedValue(abort);
+  Object.defineProperty(navigator, "share", { configurable: true, value: nativeShare });
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Compartilhar link individual no celular/ }),
+    );
+    expect(await screen.findByText(/Compartilhamento cancelado/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    ).toBeEnabled();
+    expect(document.body.textContent).not.toContain("vonix_invite");
+    expect(nativeShare).toHaveBeenCalledTimes(1);
+  } finally {
+    Reflect.deleteProperty(navigator, "share");
+  }
+});
+
+it("refuses overlapping mobile shares and falls back to copy after unsupported share", async () => {
+  let rejectShare!: (reason: Error) => void;
+  const nativeShare = vi.fn().mockReturnValue(
+    new Promise<void>((_, reject) => {
+      rejectShare = reject;
+    }),
+  );
+  Object.defineProperty(navigator, "share", { configurable: true, value: nativeShare });
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    const button = await screen.findByRole("button", {
+      name: /Compartilhar link individual no celular/,
+    });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(nativeShare).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+    rejectShare(new Error("not supported"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Tente copiar o link");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    );
+    await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledExactlyOnceWith(token));
+    expect(document.body.textContent).not.toContain("vonix_invite");
+  } finally {
+    Reflect.deleteProperty(navigator, "share");
+  }
+});
