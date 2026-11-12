@@ -415,3 +415,44 @@ it("keeps the confirmed receipt visible when sessionStorage blocks direct status
   expect(screen.getByRole("button", { name: "Copiar código" })).toBeInTheDocument();
   expect(window.location.pathname).not.toBe("/consultar-candidatura");
 });
+
+it("does not abandon an unconfirmed private receipt if browser storage refuses the status handoff", async () => {
+  server.submit.mockRejectedValueOnce(new TypeError("connection interrupted"));
+  const original = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+    if (key === "vonix-affiliate-once-code") throw new DOMException("blocked", "SecurityError");
+    return original.call(this, key, value);
+  });
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const field = await screen.findByLabelText("Código privado da tentativa não confirmada");
+  const code = (field as HTMLInputElement).value;
+  const link = screen.getByRole("link", { name: "Consultar código no portal" });
+  const click = fireEvent.click(link);
+  expect(click).toBe(false);
+  expect(await screen.findByText(/Copie e guarde o código da tentativa/)).toBeInTheDocument();
+  expect(field).toHaveValue(code);
+  expect(window.sessionStorage.getItem("vonix-affiliate-unconfirmed-code")).toBe(code);
+  expect(screen.queryByText("Inscrição recebida!")).not.toBeInTheDocument();
+  expect(analytics.track).not.toHaveBeenCalled();
+});
+
+it("stops navigation when storage silently drops an unconfirmed receipt", async () => {
+  server.submit.mockRejectedValueOnce(new TypeError("upstream unavailable"));
+  const original = Storage.prototype.setItem;
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+    if (key === "vonix-affiliate-once-code") return;
+    return original.call(this, key, value);
+  });
+  render(<AffiliateSimpleForm />);
+  fill();
+  fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+  const code = await screen.findByLabelText("Código privado da tentativa não confirmada");
+  expect(fireEvent.click(screen.getByRole("link", { name: "Consultar código no portal" }))).toBe(
+    false,
+  );
+  expect(await screen.findByText(/Copie e guarde o código da tentativa/)).toBeInTheDocument();
+  expect(code).toHaveValue((code as HTMLInputElement).value);
+  expect(analytics.track).not.toHaveBeenCalled();
+});

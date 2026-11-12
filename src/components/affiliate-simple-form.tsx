@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { CheckCircle2, MapPin, Send, ShieldCheck, Instagram } from "lucide-react";
 import { affiliateSimpleSchema } from "@/lib/affiliate-simple";
 import { track } from "@/lib/analytics";
@@ -167,6 +167,7 @@ export function AffiliateSimpleForm({
   const attemptCode = useRef("");
   const [unconfirmedCode, setUnconfirmedCode] = useState("");
   const [unconfirmedCopied, setUnconfirmedCopied] = useState(false);
+  const [unconfirmedHandoffError, setUnconfirmedHandoffError] = useState("");
 
   useEffect(() => {
     try {
@@ -199,6 +200,7 @@ export function AffiliateSimpleForm({
   }
 
   function discardUnconfirmedCode() {
+    setUnconfirmedHandoffError("");
     attemptCode.current = "";
     setUnconfirmedCode("");
     setUnconfirmedCopied(false);
@@ -206,6 +208,27 @@ export function AffiliateSimpleForm({
       window.sessionStorage.removeItem(pendingReceiptSessionKey);
     } catch {
       /* restricted storage */
+    }
+  }
+
+  function handoffUnconfirmedCode(event: MouseEvent<HTMLAnchorElement>) {
+    if (!/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode)) {
+      event.preventDefault();
+      return;
+    }
+    try {
+      // The browser may throw OR silently ignore storage writes. Do not
+      // navigate away with the only copy of this unconfirmed private token.
+      window.sessionStorage.setItem("vonix-affiliate-once-code", unconfirmedCode);
+      if (window.sessionStorage.getItem("vonix-affiliate-once-code") !== unconfirmedCode)
+        throw new Error("Private handoff unavailable.");
+      setUnconfirmedHandoffError("");
+    } catch {
+      event.preventDefault();
+      setUnconfirmedHandoffError(
+        "Copie e guarde o código da tentativa antes de abrir o acompanhamento. Este navegador não permitiu transferi-lo automaticamente.",
+      );
+      document.getElementById("affiliate-unconfirmed-code")?.focus();
     }
   }
 
@@ -759,17 +782,7 @@ export function AffiliateSimpleForm({
                 </button>
                 <a
                   href="/consultar-candidatura"
-                  onClick={() => {
-                    // One-time transfer within the same browser tab. Never
-                    // expose this bearer token in a URL, referrer or log.
-                    if (/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode)) {
-                      try {
-                        window.sessionStorage.setItem("vonix-affiliate-once-code", unconfirmedCode);
-                      } catch {
-                        // Private code remains visible for manual copy.
-                      }
-                    }
-                  }}
+                  onClick={handoffUnconfirmedCode}
                   className="inline-flex min-h-11 items-center rounded-full border border-[#b9969e] px-4 font-bold underline"
                 >
                   Consultar código no portal
@@ -782,6 +795,11 @@ export function AffiliateSimpleForm({
                   Descartar código e iniciar nova tentativa
                 </button>
               </div>
+              {unconfirmedHandoffError && (
+                <p role="alert" className="mt-2 text-sm font-semibold text-red-700">
+                  {unconfirmedHandoffError}
+                </p>
+              )}
               <p className="mt-2 text-xs">
                 Ao repetir o envio sem descartar, o sistema usa o mesmo código. Se você alterar os
                 dados depois da primeira tentativa, consulte o código antes de iniciar uma inscrição
