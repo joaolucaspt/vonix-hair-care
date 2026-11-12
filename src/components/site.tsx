@@ -15,7 +15,6 @@ import { PaymentLogos } from "@/components/payment-logos";
 import { toItem, track } from "@/lib/analytics";
 import {
   FREE_SHIPPING_ABOVE,
-  MAX_DISCOUNT,
   brl,
   discountPct,
   hasFreeShipping,
@@ -59,7 +58,7 @@ function GoldLogo({ className = "h-12" }: { className?: string }) {
 }
 
 const MARQUEE = [
-  `ATÉ ${MAX_DISCOUNT}% OFF EM PRODUTOS SELECIONADOS`,
+  "LEVE 2 UNIDADES: 12% OFF · LEVE 3: 15% OFF",
   "FRETE GRÁTIS ACIMA DE R$ 150 EM PRODUTOS, ANTES DOS DESCONTOS",
   "PARCELAMENTO EM ATÉ 6X SEM JUROS",
   "5% NO PIX EM ITENS SEM OUTRA OFERTA",
