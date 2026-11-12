@@ -3,11 +3,40 @@ import { ClipboardCopy, Link2, LockKeyhole, RefreshCw, ShieldCheck } from "lucid
 import {
   createPendingAffiliateOwnerActivationLink,
   getPendingAffiliateOwnerActivations,
+  inspectAffiliateOwnerSenderStatus,
   resendPendingAffiliateOwnerEmail,
 } from "@/lib/affiliate-functions";
 
 type PendingOwner = { email: string };
 type GeneratedLink = { email: string; link: string };
+
+const senderMessages: Record<string, string> = {
+  verified:
+    "O domínio de envio está verificado no Resend. Isso NÃO comprova a entrega na caixa de entrada.",
+  pending:
+    "O domínio de envio está aguardando verificação DNS no Resend. Revise os registros no painel do provedor.",
+  partially_verified:
+    "A verificação DNS está incompleta. Confira os registros pendentes no Resend.",
+  failed:
+    "O domínio de envio falhou na verificação do Resend. Corrija os registros DNS indicados no painel.",
+  partially_failed:
+    "Parte da configuração DNS falhou. Confira o painel Resend antes de reenviar convites.",
+  not_started:
+    "O domínio ainda não iniciou a verificação no Resend. É necessário configurar o DNS.",
+  "sender-invalid": "O endereço de remetente configurado é inválido. Corrija AFFILIATE_FROM_EMAIL.",
+  "not-configured":
+    "A chave de envio do Resend não está configurada. O fluxo pode usar Supabase Auth como alternativa.",
+  "key-unauthorized":
+    "A API do Resend rejeitou a chave de consulta (HTTP 401). Verifique a credencial no painel Resend; os envios também podem estar bloqueados.",
+  "read-restricted":
+    "Esta chave pode ter permissão somente de envio; não foi possível consultar os domínios. Verifique o estado do domínio diretamente no painel Resend. Isso não prova falha na entrega.",
+  "rate-limited":
+    "O Resend limitou esta consulta. Confira o domínio no painel ou tente novamente depois.",
+  "provider-unavailable":
+    "O diagnóstico do Resend não respondeu. Não há confirmação de domínio nem prova de falha na entrega.",
+  "not-verifiable":
+    "Não foi possível identificar o domínio no resultado do Resend. Confira o endereço de remetente e a verificação no painel.",
+};
 
 /**
  * Owner-only interface. Never render, log, persist or embed action links in
@@ -25,6 +54,8 @@ export function AffiliateOwnerActivationPanel() {
   const [generated, setGenerated] = useState<GeneratedLink | null>(null);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
+  const [senderBusy, setSenderBusy] = useState(false);
+  const [senderStatus, setSenderStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -75,6 +106,25 @@ export function AffiliateOwnerActivationPanel() {
         </button>
       </section>
     ) : null;
+
+  async function verifySenderWithoutEmail() {
+    if (busy || senderBusy || generated) return;
+    setSenderBusy(true);
+    setSenderStatus(null);
+    try {
+      const result = await inspectAffiliateOwnerSenderStatus();
+      if (!result.ok) {
+        setAvailable(false);
+        setOwners(null);
+        return;
+      }
+      setSenderStatus(result.diagnosis.status);
+    } catch {
+      setSenderStatus("provider-unavailable");
+    } finally {
+      setSenderBusy(false);
+    }
+  }
 
   async function reload() {
     if (busy) return;
@@ -194,6 +244,28 @@ export function AffiliateOwnerActivationPanel() {
         também é possível gerar um link Supabase e compartilhá-lo em conversa individual segura. Não
         envie links em grupos. O aceite do provedor não comprova a entrega nem a leitura.
       </p>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void verifySenderWithoutEmail()}
+          disabled={busy || senderBusy || !!generated}
+          className="min-h-11 rounded-full border border-[#cdaeb5] bg-[#faf2f0] px-5 text-sm font-semibold text-[#633845] disabled:opacity-50"
+        >
+          {senderBusy ? "Consultando Resend..." : "Verificar domínio do e-mail sem enviar"}
+        </button>
+        <p className="text-xs text-[#806a6c]">
+          Apenas leitura. Nenhum convite, OTP ou mensagem é enviado neste teste.
+        </p>
+      </div>
+      {senderStatus && (
+        <p
+          role="status"
+          aria-label="Diagnóstico do remetente de convites"
+          className="mt-3 rounded-xl border border-[#e8d9d5] bg-[#fffaf7] p-4 text-sm text-[#734750]"
+        >
+          {senderMessages[senderStatus] ?? "Diagnóstico indisponível. Consulte o painel Resend."}
+        </p>
+      )}
       <div className="mt-5 rounded-xl border border-[#ebdadc] bg-[#fcf8f7] p-4">
         <label className="flex cursor-pointer items-start gap-3 text-sm font-medium">
           <input

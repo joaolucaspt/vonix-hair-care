@@ -9,8 +9,12 @@ const gates = vi.hoisted(() => ({
   emailReady: vi.fn(),
   sendEmail: vi.fn(),
   managedEmail: vi.fn(),
+  inspectDomain: vi.fn(),
 }));
 
+vi.mock("@/lib/affiliate-resend-domain.server", () => ({
+  inspectAffiliateResendSenderDomain: gates.inspectDomain,
+}));
 vi.mock("@/lib/affiliate-admin-session.server", () => ({
   affiliateAdminSameOrigin: gates.origin,
 }));
@@ -34,6 +38,7 @@ import {
   generatePendingAffiliateOwnerActivationLink,
   listPendingAffiliateOwnerActivations,
   sendPendingAffiliateOwnerActivationEmail,
+  diagnoseAffiliateOwnerSender,
 } from "@/lib/affiliate-owner-activation.server";
 
 const root = "https://jewbzrbbvxyqmxqbrwrq.supabase.co";
@@ -68,6 +73,7 @@ beforeEach(() => {
   gates.emailReady.mockReturnValue(true);
   gates.sendEmail.mockResolvedValue(true);
   gates.managedEmail.mockResolvedValue(true);
+  gates.inspectDomain.mockResolvedValue({ status: "verified", domain: "vonixhair.com" });
 });
 
 afterEach(() => {
@@ -265,4 +271,35 @@ it("does not claim accepted email when the managed provider rejects it", async (
   mockFetch(Response.json(owner), Response.json(pending));
   expect((await sendPendingAffiliateOwnerActivationEmail(email)).ok).toBe(false);
   expect(gates.managedEmail).toHaveBeenCalledOnce();
+});
+
+it("rejects read-only sender diagnosis for nonowners without reaching Resend", async () => {
+  gates.member.mockReturnValue(null);
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  expect(await diagnoseAffiliateOwnerSender()).toEqual({ ok: false });
+  expect(gates.inspectDomain).not.toHaveBeenCalled();
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it("revalidates owner activation before reading provider status without emailing anyone", async () => {
+  const fetcher = mockFetch(Response.json(owner));
+  expect(await diagnoseAffiliateOwnerSender()).toEqual({
+    ok: true,
+    diagnosis: { status: "verified", domain: "vonixhair.com" },
+  });
+  expect(fetcher).toHaveBeenCalledOnce();
+  expect(fetcher.mock.calls[0]![0]).toContain("/rest/v1/vonix_affiliate_admin_invites");
+  expect(gates.inspectDomain).toHaveBeenCalledOnce();
+  expect(gates.sendEmail).not.toHaveBeenCalled();
+  expect(gates.managedEmail).not.toHaveBeenCalled();
+});
+
+it("never diagnoses a deactivated owner even if an old signed cookie exists", async () => {
+  const fetcher = mockFetch(
+    Response.json([{ email: actor, role: "owner", password_set_at: null }]),
+  );
+  expect(await diagnoseAffiliateOwnerSender()).toEqual({ ok: false });
+  expect(fetcher).toHaveBeenCalledOnce();
+  expect(gates.inspectDomain).not.toHaveBeenCalled();
 });
