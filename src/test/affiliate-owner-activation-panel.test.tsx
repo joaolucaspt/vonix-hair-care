@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -40,6 +40,124 @@ afterEach(() => {
 });
 
 describe("owner activation control, private one-time links", () => {
+  it("revokes an untransferred private activation link when the owner hides the tab", async () => {
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateOwnerActivationPanel />);
+      await screen.findByText(email);
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+      expect(
+        await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+      ).toBeInTheDocument();
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(
+        screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+      ).not.toBeInTheDocument();
+      expect(mocks.clipboard).not.toHaveBeenCalled();
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByRole("button", { name: "Gerar link individual" })).toBeDisabled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("discards an activation token that arrives after tab hide even if it becomes visible again", async () => {
+    let release!: (result: unknown) => void;
+    mocks.generate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateOwnerActivationPanel />);
+      await screen.findByText(email);
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+      await waitFor(() => expect(mocks.generate).toHaveBeenCalledOnce());
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        release({ ok: true, recipient: email, link: token });
+        await Promise.resolve();
+      });
+      expect(
+        screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+      ).not.toBeInTheDocument();
+      expect(mocks.clipboard).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("does not reveal pending owner addresses from a roster response that finishes in a hidden tab", async () => {
+    let release!: (value: unknown) => void;
+    mocks.list.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateOwnerActivationPanel />);
+      await waitFor(() => expect(mocks.list).toHaveBeenCalledOnce());
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        release({ ok: true, owners: [{ email }] });
+        await Promise.resolve();
+      });
+      expect(screen.queryByText(email)).not.toBeInTheDocument();
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByText(email)).toBeInTheDocument();
+      expect(mocks.list).toHaveBeenCalledTimes(2);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("never claims a sensitive invitation link was copied after the tab was hidden", async () => {
+    let finish!: () => void;
+    mocks.clipboard.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateOwnerActivationPanel />);
+      await screen.findByText(email);
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: /Copiar link para compartilhar em privado/,
+        }),
+      );
+      await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledOnce());
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        finish();
+        await Promise.resolve();
+      });
+      expect(screen.queryByText(/Link copiado\. Envie-o agora/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+      ).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("does not render addresses or controls for non-owner sessions", async () => {
     mocks.list.mockResolvedValue({ ok: false, owners: [] });
     const { container } = render(<AffiliateOwnerActivationPanel />);

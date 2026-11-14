@@ -238,6 +238,19 @@ export function AffiliateAdminPage() {
   const retentionVersion = useRef(0);
   // Invalidate pending confidential reads on logout, tab hide or filter changes.
   const privateDetailVersion = useRef(0);
+  // Never retain a legacy TOTP or password across an inactive tab.
+  const legacyLoginEpoch = useRef(0);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "hidden") return;
+      legacyLoginEpoch.current++;
+      setPassword("");
+      setOtp("");
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
 
   function clearPrivateData() {
     setSessionRechecking(false);
@@ -436,6 +449,7 @@ export function AffiliateAdminPage() {
   }, [authorized, sessionRecheckRetry]);
 
   async function login(event: FormEvent<HTMLFormElement>) {
+    const epoch = legacyLoginEpoch.current;
     event.preventDefault();
     if (loading) return;
     setLoading(true);
@@ -444,6 +458,7 @@ export function AffiliateAdminPage() {
       const result = await loginAffiliateAdmin({ data: { password, otp } });
       setPassword("");
       setOtp("");
+      if (epoch !== legacyLoginEpoch.current || document.visibilityState === "hidden") return;
       if (!result.ok) {
         setError(result.reason);
         return;
