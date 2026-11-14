@@ -85,7 +85,7 @@ afterEach(() => {
 });
 const fill = async () => {
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
-  await screen.findByText(/Correios PAC/);
+  await screen.findByText(/4 a 5 dias úteis/);
   for (const [label, value] of [
     ["Nome completo", "Pessoa Teste"],
     ["E-mail", "teste@example.com"],
@@ -106,14 +106,15 @@ describe("checkout auditado sem chamadas reais", () => {
     if (!card) throw new Error("Formulário de cartão ausente");
     const cta = screen.getByRole("button", { name: /Pagar .* no cartão/ });
     expect(card.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // O botão agora fica dentro da caixa do método escolhido (como nos grandes e-commerces); o resumo continua visível.
+    // O resumo continua visível acima do botão de pagar.
     expect(screen.getByTestId("summary")).toBeInTheDocument();
     expect(container.querySelector("form form")).toBeNull();
     expect(card).toHaveAttribute("data-appmax-checkout");
     for (const name of ["card-number", "card-holder-name", "exp-month", "exp-year", "cvv"])
       expect(container.querySelector(`[name="${name}"]`)).toHaveAttribute("form", "card-form");
     expect(screen.getByLabelText("Parcelas").querySelectorAll("option")).toHaveLength(6);
-    expect(cta).toHaveAttribute("form", "checkout-form");
+    // O botão de pagar é único e fica flutuante e fixo na base da tela (envia o formulário principal).
+    expect(cta).toHaveAttribute("data-testid", "checkout-pay-float");
     fireEvent.click(cta);
     expect(mocks.payment).not.toHaveBeenCalled();
   });
@@ -262,7 +263,8 @@ describe("checkout auditado sem chamadas reais", () => {
     fireEvent.change(screen.getByLabelText("CEP de entrega"), { target: { value: "69005070" } });
     fireEvent.click(screen.getByRole("button", { name: "Calcular" }));
     expect(await screen.findByText(/Estimativa de frete/)).toBeInTheDocument();
-    expect(screen.getByText("Correios PAC")).toBeInTheDocument();
+    expect(screen.getByText("Frete grátis")).toBeInTheDocument();
+    expect(screen.queryByText(/Correios/)).not.toBeInTheDocument();
     expect(mocks.quote).toHaveBeenCalledTimes(1);
   });
   it("view_cart e add_shipping_info sem duplicatas ou dados pessoais", async () => {

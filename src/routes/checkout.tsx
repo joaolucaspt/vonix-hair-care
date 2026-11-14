@@ -26,6 +26,7 @@ import {
   maskCep,
   missingForFreeShipping,
   saveCep,
+  shippingText,
   useCart,
   useHydrated,
 } from "@/lib/store";
@@ -367,19 +368,6 @@ function Checkout() {
   const [showCompl, setShowCompl] = useState(false);
   const lastQuotedCep = useRef("");
   const [quoteTry, setQuoteTry] = useState(0);
-  const [payEl, setPayEl] = useState<HTMLButtonElement | null>(null);
-  const [payVisible, setPayVisible] = useState(false);
-  useEffect(() => {
-    if (!payEl || typeof IntersectionObserver === "undefined") {
-      setPayVisible(false);
-      return;
-    }
-    const io = new IntersectionObserver(([e]) => setPayVisible(!!e?.isIntersecting), {
-      rootMargin: "0px 0px -90px 0px",
-    });
-    io.observe(payEl);
-    return () => io.disconnect();
-  }, [payEl]);
   const compactAddr = !editAddr && !!(f.rua && f.bairro && f.cidade && f.uf);
   const [pay, setPay] = useState<"pix" | "card">("pix");
   const [showCoupon, setShowCoupon] = useState(false);
@@ -761,7 +749,7 @@ function Checkout() {
   const renderPay = (floating: boolean) => (
     <>
       {/* O erro aparece sempre junto do botão que o cliente está vendo: na barra fixa, ou na caixa quando o botão está na tela. */}
-      {error && (floating || payVisible) && (
+      {error && (
         <p role="alert" className="rounded-lg border border-destructive bg-white p-2.5 text-small text-destructive">
           {error}
         </p>
@@ -770,11 +758,8 @@ function Checkout() {
         <p className="text-center text-small text-muted-foreground">Digite o CEP para liberar o pagamento</p>
       )}
       <button
-        ref={floating ? undefined : setPayEl}
         type={floating ? "button" : "submit"}
         form={floating ? undefined : "checkout-form"}
-        aria-hidden={floating ? true : undefined}
-        tabIndex={floating ? -1 : undefined}
         onClick={floating ? () => (document.getElementById("checkout-form") as HTMLFormElement | null)?.requestSubmit() : undefined}
         disabled={payDisabled}
         data-testid={floating ? "checkout-pay-float" : "checkout-pay-button"}
@@ -795,7 +780,6 @@ function Checkout() {
       </button>
     </>
   );
-  const payButton = <div className="space-y-2">{renderPay(false)}</div>;
   const stepsDone = [!!(f.nome && f.email && f.whatsapp && f.cpf), !!chosen, false];
   const progress = (stepsDone.filter(Boolean).length + 1) / 3;
 
@@ -1142,8 +1126,8 @@ function Checkout() {
                           onChange={() => setServiceId(o.id)}
                         />
                         <span>
-                          {o.company} {o.name}{" "}
-                          <span className="text-muted-foreground">· até {o.days} dias úteis</span>
+                          {shippingText(o).title}{" "}
+                          <span className="text-muted-foreground">· {shippingText(o).eta}</span>
                         </span>
                       </span>
                       <b>{o.free ? "Grátis" : brl(o.price)}</b>
@@ -1202,7 +1186,6 @@ function Checkout() {
 
               {pay === "pix" && (
                 <div className="space-y-3 pt-1">
-                  {payButton}
                   <p className="text-small text-muted-foreground">
                     Na próxima tela você recebe o QR Code e o código para copiar e colar. O total final já inclui o frete escolhido.
                   </p>
@@ -1315,7 +1298,6 @@ function Checkout() {
                   </option>
                 ))}
               </select>
-              {pay === "card" && payButton}
             </form>
             <form data-appmax-customer hidden />
           </div>
@@ -1380,16 +1362,14 @@ function Checkout() {
               .
             </p>
           )}
-          {!payVisible && (
-            <div
-              data-testid="checkout-pay-bar"
-              className={lateral
-                ? "sticky bottom-0 z-20 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur"
-                : "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background px-4 py-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.3)]"}
-            >
-              <div className="mx-auto w-full max-w-xl space-y-2">{renderPay(true)}</div>
-            </div>
-          )}
+          <div
+            data-testid="checkout-pay-bar"
+            className={lateral
+              ? "sticky bottom-0 z-20 -mx-4 space-y-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur"
+              : "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background px-4 py-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.3)]"}
+          >
+            <div className="mx-auto w-full max-w-xl space-y-2">{renderPay(true)}</div>
+          </div>
           <CheckoutTimer />
           {cfg?.sandbox && (
             <p role="note" className="rounded-lg border border-foreground bg-muted p-3 text-body">

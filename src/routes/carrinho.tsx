@@ -12,6 +12,7 @@ import {
   getSavedCep,
   maskCep,
   saveCep,
+  shippingText,
   useCart,
   useHydrated,
 } from "@/lib/store";
@@ -108,7 +109,7 @@ function CartShipping({
               className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 text-small"
             >
               <span>
-                {o.company} {o.name} · {o.days} dia{o.days === 1 ? "" : "s"} úteis
+                {o.free ? `${shippingText(o).title} · ${shippingText(o).eta}` : `${o.company} ${o.name} · ${o.days} dia${o.days === 1 ? "" : "s"} úteis`}
                 {i === 0 && opts.length > 1 ? " · mais barato" : ""}
               </span>
               <span className="money font-semibold">{o.free ? "Grátis" : brl(o.price)}</span>
