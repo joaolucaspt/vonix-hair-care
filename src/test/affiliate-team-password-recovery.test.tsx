@@ -223,6 +223,49 @@ describe("Verified existing-owner password recovery", () => {
     }
   });
 
+  it("C42 never completes a pending password-reset login after hiding the tab", async () => {
+    let completeUpdate!: (value: { data: object; error: null }) => void;
+    mocks.updateUser.mockReturnValueOnce(
+      new Promise((resolve) => {
+        completeUpdate = resolve;
+      }),
+    );
+    mocks.getUser.mockResolvedValueOnce(signedOut).mockResolvedValue(verified);
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateTeamAccess />);
+      fireEvent.change(await screen.findByLabelText("E-mail autorizado"), {
+        target: { value: "owner@example.invalid" },
+      });
+      fireEvent.change(screen.getByLabelText("Código recebido, se disponível"), {
+        target: { value: "123456" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Validar" }));
+      await screen.findByRole("heading", { name: "Redefinir sua senha pessoal" });
+      fireEvent.change(screen.getByLabelText("Nova senha"), {
+        target: { value: "SyntheticStrongPassword-2026" },
+      });
+      fireEvent.change(screen.getByLabelText("Confirme a senha"), {
+        target: { value: "SyntheticStrongPassword-2026" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Redefinir senha e acessar" }));
+      await waitFor(() => expect(mocks.updateUser).toHaveBeenCalledOnce());
+      visibility.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        completeUpdate({ data: {}, error: null });
+        await Promise.resolve();
+      });
+      expect(mocks.loginAffiliateAdminMember).not.toHaveBeenCalled();
+      expect(screen.queryByText("Sua senha pessoal foi atualizada.")).not.toBeInTheDocument();
+      visibility.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByRole("heading", { name: "Entrar na gestão" })).toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it("never opens a reset form if Supabase rejects the submitted OTP", async () => {
     mocks.verifyOtp.mockResolvedValueOnce({ data: {}, error: { message: "expired" } });
     render(<AffiliateTeamAccess />);

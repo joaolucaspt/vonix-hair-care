@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -97,6 +97,35 @@ describe("Vonix affiliate team safe account switching", () => {
     expect(
       screen.queryByRole("heading", { name: "Confirmar e-mail da equipe" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("C42 rechecks the current identity when tab resumes before a prior sign-out completes", async () => {
+    let resolveSignOut!: (value: { error: null }) => void;
+    mocks.signOut.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSignOut = resolve;
+      }),
+    );
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateTeamAccess />);
+      expect(await screen.findByRole("heading", { name: "Entrar na gestão" })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Trocar e-mail ou recuperar acesso" }));
+      await waitFor(() => expect(mocks.signOut).toHaveBeenCalledOnce());
+      visibility.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      visibility.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await waitFor(() => expect(mocks.getUser).toHaveBeenCalledTimes(2));
+      expect(screen.getByRole("heading", { name: "Entrar na gestão" })).toBeInTheDocument();
+      await act(async () => {
+        resolveSignOut({ error: null });
+        await Promise.resolve();
+      });
+      expect(screen.getByRole("heading", { name: "Entrar na gestão" })).toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
   });
 
   it("clears the previous identity only after confirmed signOut", async () => {

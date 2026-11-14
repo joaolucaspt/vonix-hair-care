@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -175,6 +176,37 @@ describe("Current invite and fresh Auth identity mandatory for first admin activ
     );
     expect(mocks.updateUser).not.toHaveBeenCalled();
     expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("C42 does not exchange an administrative password grant from a completed activation after tab hide", async () => {
+    let releaseMark!: (value: { error: null; data: true }) => void;
+    mocks.rpc.mockReturnValueOnce(
+      new Promise((resolve) => {
+        releaseMark = resolve;
+      }),
+    );
+    mocks.getUser.mockResolvedValueOnce(noUser).mockResolvedValue(yesUser);
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      await verifyFreshOtp();
+      submitFirstPassword();
+      await waitFor(() => expect(mocks.rpc).toHaveBeenCalledOnce());
+      visibility.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        releaseMark({ error: null, data: true });
+        await Promise.resolve();
+      });
+      expect(mocks.loginAffiliateAdminMember).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("Sua senha pessoal foi criada e o convite administrativo foi ativado."),
+      ).not.toBeInTheDocument();
+      visibility.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(mocks.loginAffiliateAdminMember).not.toHaveBeenCalled();
+    } finally {
+      visibility.mockRestore();
+    }
   });
 
   it("allows a verified pending invite to set its own password after a fresh identity and roster check", async () => {

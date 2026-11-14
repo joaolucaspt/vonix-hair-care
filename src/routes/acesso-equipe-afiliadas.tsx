@@ -163,6 +163,10 @@ export function AffiliateTeamAccess() {
         // Invalidate pending identity lookups and clear secrets from the DOM.
         ++versionRef.current;
         ++visibilityEpoch.current;
+        // A provider Promise may never settle while the tab is backgrounded.
+        // A new visible flow must not inherit a stale disabled state.
+        setBusy(false);
+        leavingIdentity.current = false;
         freshVerifiedAddress.current = null;
         setPassword("");
         setRepeatPassword("");
@@ -188,7 +192,8 @@ export function AffiliateTeamAccess() {
   }, [inspectIdentity]);
 
   async function leaveCurrentIdentity() {
-    if (leavingIdentity.current || busy) return;
+    if (leavingIdentity.current || busy || teamTabHidden()) return;
+    const epoch = visibilityEpoch.current;
     leavingIdentity.current = true;
     freshVerifiedAddress.current = null;
     // Invalidate old getUser/roster replies before attempting a provider logout.
@@ -200,6 +205,7 @@ export function AffiliateTeamAccess() {
     setOtp("");
     try {
       const result = await vonixAffiliateAuth.auth.signOut();
+      if (epoch !== visibilityEpoch.current || teamTabHidden()) return;
       if (result.error) throw new Error("Provider did not confirm logout.");
       // Do not advertise a new account until Supabase actually confirms exit.
       identityVersion.current++;
@@ -207,12 +213,15 @@ export function AffiliateTeamAccess() {
       setEmail("");
       setNotice("");
     } catch {
-      setError(
-        "Não foi possível encerrar sua sessão. A conta anterior pode continuar conectada. Tente novamente.",
-      );
+      if (epoch === visibilityEpoch.current && !teamTabHidden())
+        setError(
+          "Não foi possível encerrar sua sessão. A conta anterior pode continuar conectada. Tente novamente.",
+        );
     } finally {
-      leavingIdentity.current = false;
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) {
+        leavingIdentity.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -256,13 +265,13 @@ export function AffiliateTeamAccess() {
     } catch {
       pendingManualHash.current = null;
       // A provider error may arrive after the tab was hidden. The one-time
-      // invitation is no longer safe to retry, but do not resurrect an old
-      // error from a different visibility epoch.
-      setStage("email");
-      if (epoch === visibilityEpoch.current && !teamTabHidden())
+      // invitation is no longer safe to retry; avoid restoring an old stage.
+      if (epoch === visibilityEpoch.current && !teamTabHidden()) {
+        setStage("email");
         setError("Não foi possível validar o convite. Confira sua conexão ou solicite outro link.");
+      }
     } finally {
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
 
@@ -308,7 +317,7 @@ export function AffiliateTeamAccess() {
     } catch {
       if (stillCurrent()) setError("Falha de conexão ao solicitar acesso.");
     } finally {
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
 
@@ -340,13 +349,15 @@ export function AffiliateTeamAccess() {
     } catch {
       if (stillCurrent()) setError("Não foi possível validar o código.");
     } finally {
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
 
   async function activatePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || teamTabHidden()) return;
+    const epoch = visibilityEpoch.current;
+    const active = () => epoch === visibilityEpoch.current && !teamTabHidden();
     const verified = freshVerifiedAddress.current;
     if (!verified || verified !== email.trim().toLowerCase()) {
       setError("Confirme novamente seu e-mail pelo código ou link individual.");
@@ -361,6 +372,7 @@ export function AffiliateTeamAccess() {
     try {
       // Revalidate Auth identity and invite before touching a password.
       const identity = await vonixAffiliateAuth.auth.getUser();
+      if (!active()) return;
       if (
         identity.error ||
         !identity.data.user?.email_confirmed_at ||
@@ -372,6 +384,7 @@ export function AffiliateTeamAccess() {
         .select("role,password_set_at,ever_activated_at")
         .eq("email", verified)
         .maybeSingle();
+      if (!active()) return;
       if (
         row.error ||
         !row.data ||
@@ -383,10 +396,12 @@ export function AffiliateTeamAccess() {
       if (teamTabHidden() || freshVerifiedAddress.current !== verified)
         throw new Error("Fresh authorization expired on backgrounding.");
       const updated = await vonixAffiliateAuth.auth.updateUser({ password });
+      if (!active()) return;
       if (updated.error) throw new Error("Password update failed.");
       if (teamTabHidden() || freshVerifiedAddress.current !== verified)
         throw new Error("Fresh authorization expired before activation.");
       const marked = await vonixAffiliateAuth.rpc("vonix_affiliate_activate_admin_account");
+      if (!active()) return;
       if (marked.error || marked.data !== true) throw new Error("Activation failed.");
       freshVerifiedAddress.current = null;
       setRepeatPassword("");
@@ -397,6 +412,7 @@ export function AffiliateTeamAccess() {
       const login = await loginAffiliateAdminMember({
         data: { email: email.trim().toLowerCase(), password },
       });
+      if (!active()) return;
       setPassword("");
       if (!login.ok) {
         setError(
@@ -406,15 +422,20 @@ export function AffiliateTeamAccess() {
       }
       window.location.assign("/admin/afiliadas");
     } catch {
-      setError("Não foi possível concluir a ativação. Confira sua sessão ou solicite novo acesso.");
+      if (active())
+        setError(
+          "Não foi possível concluir a ativação. Confira sua sessão ou solicite novo acesso.",
+        );
     } finally {
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
 
   async function resetPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || teamTabHidden()) return;
+    const epoch = visibilityEpoch.current;
+    const active = () => epoch === visibilityEpoch.current && !teamTabHidden();
     const verified = freshVerifiedAddress.current;
     if (!verified || verified !== email.trim().toLowerCase()) {
       setError("Confirme novamente seu e-mail pelo código ou link individual.");
@@ -431,6 +452,7 @@ export function AffiliateTeamAccess() {
       // A fresh OTP is not enough if Auth changed identities or the owner
       // was removed from the allowlist after the one-time verification.
       const identity = await vonixAffiliateAuth.auth.getUser();
+      if (!active()) return;
       if (
         identity.error ||
         !identity.data.user?.email_confirmed_at ||
@@ -442,12 +464,14 @@ export function AffiliateTeamAccess() {
         .select("role,password_set_at,ever_activated_at")
         .eq("email", verified)
         .maybeSingle();
+      if (!active()) return;
       if (row.error || !row.data?.password_set_at || !row.data?.ever_activated_at) {
         throw new Error("Owner is not activated.");
       }
       if (teamTabHidden() || freshVerifiedAddress.current !== verified)
         throw new Error("Fresh authorization expired on backgrounding.");
       const updated = await vonixAffiliateAuth.auth.updateUser({ password });
+      if (!active()) return;
       if (updated.error) throw new Error("Password update failed.");
       passwordUpdated = true;
       freshVerifiedAddress.current = null;
@@ -457,6 +481,7 @@ export function AffiliateTeamAccess() {
       // The server issues admin access only after a fresh password grant,
       // not from the OTP Auth session alone.
       const login = await loginAffiliateAdminMember({ data: { email: verified, password } });
+      if (!active()) return;
       setPassword("");
       if (!login.ok) {
         setError(
@@ -466,13 +491,14 @@ export function AffiliateTeamAccess() {
       }
       window.location.assign("/admin/afiliadas");
     } catch {
-      setError(
-        passwordUpdated
-          ? "Sua senha foi atualizada, mas o acesso ao painel não foi confirmado. Entre novamente com a nova senha."
-          : "Não foi possível redefinir a senha. Confirme novamente seu e-mail ou solicite outro código.",
-      );
+      if (active())
+        setError(
+          passwordUpdated
+            ? "Sua senha foi atualizada, mas o acesso ao painel não foi confirmado. Entre novamente com a nova senha."
+            : "Não foi possível redefinir a senha. Confirme novamente seu e-mail ou solicite outro código.",
+        );
     } finally {
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
 
@@ -505,7 +531,7 @@ export function AffiliateTeamAccess() {
     } catch {
       if (stillCurrent()) setError("Login não autorizado. Confira seu e-mail e sua senha pessoal.");
     } finally {
-      setBusy(false);
+      if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
 
