@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -102,6 +102,36 @@ describe("Vonix affiliate already-activated owner password sign-in", () => {
     expect(window.location.hash).toBe("");
   });
 
+  it("releases a manual invite that completed after tab hiding so a fresh OTP can be requested", async () => {
+    const hash = "d".repeat(64);
+    window.history.replaceState({}, "", "/acesso-equipe-afiliadas#vonix_invite=" + hash);
+    let release!: (answer: unknown) => void;
+    mocks.verifyOtp.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateTeamAccess />);
+      fireEvent.click(await screen.findByRole("button", { name: "Confirmar ativação" }));
+      await waitFor(() => expect(mocks.verifyOtp).toHaveBeenCalledOnce());
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        release({ data: {}, error: null });
+        await Promise.resolve();
+      });
+      expect(
+        await screen.findByRole("heading", { name: "Confirmar e-mail da equipe" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Confirmar ativação" })).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("opens the administrator shortcut directly on personal password sign-in", async () => {
     window.history.replaceState({}, "", "/acesso-equipe-afiliadas?login=senha");
     render(<AffiliateTeamAccess />);
@@ -146,6 +176,26 @@ describe("Vonix affiliate already-activated owner password sign-in", () => {
     expect(screen.getByRole("button", { name: "Enviar acesso por e-mail" })).toBeInTheDocument();
     expect(screen.getByLabelText("Código recebido, se disponível")).toBeInTheDocument();
     expect(mocks.signOut).not.toHaveBeenCalled();
+  });
+
+  it("removes an entered personal password on tab background and rechecks access on return", async () => {
+    window.history.replaceState({}, "", "/acesso-equipe-afiliadas?login=senha");
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateTeamAccess />);
+      const field = await screen.findByLabelText("Senha pessoal");
+      fireEvent.change(field, { target: { value: "SensitiveSyntheticPassword123!" } });
+      expect(field).toHaveValue("SensitiveSyntheticPassword123!");
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.queryByDisplayValue("SensitiveSyntheticPassword123!")).not.toBeInTheDocument();
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByLabelText("Senha pessoal")).toHaveValue("");
+      await waitFor(() => expect(mocks.getUser).toHaveBeenCalledTimes(2));
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("does not make a password grant with an incomplete password", async () => {

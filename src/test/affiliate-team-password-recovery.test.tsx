@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -156,6 +156,71 @@ describe("Verified existing-owner password recovery", () => {
       data: { email: "owner@example.invalid", password: "AnotherStrongPersonalPassword-2026" },
     });
     expect(await screen.findByRole("alert")).toHaveTextContent("senha foi atualizada");
+  });
+
+  it("revokes a freshly verified password reset after the tab is hidden", async () => {
+    mocks.getUser.mockResolvedValueOnce(signedOut).mockResolvedValue(verified);
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateTeamAccess />);
+      fireEvent.change(await screen.findByRole("textbox", { name: "E-mail autorizado" }), {
+        target: { value: "owner@example.invalid" },
+      });
+      fireEvent.change(screen.getByLabelText("Código recebido, se disponível"), {
+        target: { value: "123456" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Validar" }));
+      await screen.findByRole("heading", { name: "Redefinir sua senha pessoal" });
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(
+        screen.queryByRole("heading", { name: "Redefinir sua senha pessoal" }),
+      ).not.toBeInTheDocument();
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByRole("heading", { name: "Entrar na gestão" })).toBeInTheDocument();
+      expect(mocks.updateUser).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("never accepts a delayed one-time response after the tab loses focus", async () => {
+    let release!: (value: unknown) => void;
+    mocks.verifyOtp.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    mocks.getUser.mockResolvedValueOnce(signedOut).mockResolvedValue(verified);
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateTeamAccess />);
+      fireEvent.change(await screen.findByRole("textbox", { name: "E-mail autorizado" }), {
+        target: { value: "owner@example.invalid" },
+      });
+      fireEvent.change(screen.getByLabelText("Código recebido, se disponível"), {
+        target: { value: "123456" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Validar" }));
+      await waitFor(() => expect(mocks.verifyOtp).toHaveBeenCalledOnce());
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        release({ data: {}, error: null });
+        await Promise.resolve();
+      });
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByRole("heading", { name: "Entrar na gestão" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Redefinir sua senha pessoal" }),
+      ).not.toBeInTheDocument();
+      expect(mocks.updateUser).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("never opens a reset form if Supabase rejects the submitted OTP", async () => {
