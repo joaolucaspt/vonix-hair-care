@@ -143,11 +143,15 @@ export function AffiliateOwnerActivationPanel() {
     ) : null;
 
   async function verifySenderWithoutEmail() {
-    if (busy || senderBusy || generated) return;
+    if (busy || senderBusy || generated || pageHidden()) return;
+    const epoch = visibilityEpoch.current;
     setSenderBusy(true);
     setSenderStatus(null);
     try {
       const result = await inspectAffiliateOwnerSenderStatus();
+      // A pending Resend request cannot restore an old diagnostic after
+      // owner permissions are refreshed on return from a hidden tab.
+      if (epoch !== visibilityEpoch.current || pageHidden()) return;
       if (!result.ok) {
         setAvailable(false);
         setOwners(null);
@@ -155,9 +159,10 @@ export function AffiliateOwnerActivationPanel() {
       }
       setSenderStatus(result.diagnosis.status);
     } catch {
-      setSenderStatus("provider-unavailable");
+      if (epoch === visibilityEpoch.current && !pageHidden())
+        setSenderStatus("provider-unavailable");
     } finally {
-      setSenderBusy(false);
+      if (epoch === visibilityEpoch.current && !pageHidden()) setSenderBusy(false);
     }
   }
 

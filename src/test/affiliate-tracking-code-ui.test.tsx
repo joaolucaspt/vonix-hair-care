@@ -369,3 +369,68 @@ describe("Private Vonix email-less applicant status portal", () => {
     expect(screen.queryByText(/Motivo:/)).not.toBeInTheDocument();
   });
 });
+
+// C37 regression: private clipboard actions must be single-flight, even if React
+// has not yet committed the disabled state on rapid repeated user gestures.
+it("C37 refuses duplicate private status-code clipboard writes while pending", async () => {
+  let resolveCopy!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    resolveCopy = resolve;
+  });
+  const writeText = vi.fn().mockReturnValue(pending);
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  try {
+    render(<AffiliateTrackingCodePage />);
+    fireEvent.change(screen.getByLabelText("Código privado de acompanhamento"), {
+      target: { value: code },
+    });
+    const copy = screen.getByRole("button", { name: "Copiar código para guardar" });
+    fireEvent.click(copy);
+    fireEvent.click(copy);
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(copy).toBeDisabled();
+    await act(async () => {
+      resolveCopy();
+      await pending;
+    });
+    expect(screen.getByRole("button", { name: "Código copiado!" })).toBeInTheDocument();
+  } finally {
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
+});
+
+it("C37 never selects a secret field if clipboard fails while tab is hidden before the event", async () => {
+  let rejectCopy!: (reason: Error) => void;
+  const writeText = vi.fn().mockReturnValue(
+    new Promise<void>((_, reject) => {
+      rejectCopy = reject;
+    }),
+  );
+  const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    render(<AffiliateTrackingCodePage />);
+    const field = screen.getByLabelText("Código privado de acompanhamento") as HTMLInputElement;
+    fireEvent.change(field, { target: { value: code } });
+    const select = vi.spyOn(field, "select");
+    const focus = vi.spyOn(field, "focus");
+    fireEvent.click(screen.getByRole("button", { name: "Copiar código para guardar" }));
+    expect(writeText).toHaveBeenCalledOnce();
+    visibility.mockReturnValue("hidden");
+    await act(async () => {
+      rejectCopy(new Error("synthetic permission denied"));
+      await Promise.resolve();
+    });
+    expect(select).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+    expect(field).toHaveAttribute("type", "password");
+    expect(screen.queryByRole("button", { name: "Código copiado!" })).not.toBeInTheDocument();
+  } finally {
+    visibility.mockRestore();
+    if (original) Object.defineProperty(navigator, "clipboard", original);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  }
+});

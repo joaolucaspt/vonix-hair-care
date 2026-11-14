@@ -116,5 +116,5 @@ describe("Checklist do cadastro sem serviços de comissão", () => {
       expect(output.canOpenFromConfiguration).toBe(false);
       expect(output.missing.length).toBeGreaterThan(0);
     }
-  });
+  }, 20_000); // Six isolated Windows child processes can exceed the default 5s under full-suite CI.
 });

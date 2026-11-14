@@ -33,29 +33,57 @@ const privateStatusResponseSchema = z.object({
   reviewedAt: z.string().datetime({ offset: true }).max(70).nullable(),
 });
 
+function clipboardTabHidden() {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
+}
+
 export function AffiliateTrackingCodePage() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [codeRevealed, setCodeRevealed] = useState(false);
   const lookupVersion = useRef(0);
+  const clipboardEpoch = useRef(0);
+  const clipboardInFlight = useRef(false);
 
   async function copyPrivateCode() {
-    if (!/^[A-Za-z0-9_-]{32}$/.test(code)) return;
+    if (!/^[A-Za-z0-9_-]{32}$/.test(code) || clipboardTabHidden() || clipboardInFlight.current)
+      return;
     const requestId = lookupVersion.current;
+    const copyEpoch = ++clipboardEpoch.current;
+    // The ref blocks overlapping clipboard writes before React commits
+    // the disabled button state on a rapid double-click.
+    clipboardInFlight.current = true;
+    setCopying(true);
     try {
       await navigator.clipboard.writeText(code);
-      if (lookupVersion.current === requestId && document.visibilityState !== "hidden")
+      if (
+        lookupVersion.current === requestId &&
+        clipboardEpoch.current === copyEpoch &&
+        !clipboardTabHidden()
+      )
         setCopied(true);
     } catch {
-      // Never select another code due to an obsolete clipboard rejection.
-      if (lookupVersion.current !== requestId) return;
+      // Never focus/select a bearer token in a hidden tab or after its
+      // source code changes, even before visibilitychange is dispatched.
+      if (
+        lookupVersion.current !== requestId ||
+        clipboardEpoch.current !== copyEpoch ||
+        clipboardTabHidden()
+      )
+        return;
       setCopied(false);
       const field = document.getElementById("affiliate-private-code") as HTMLInputElement | null;
       field?.focus();
       field?.select();
+    } finally {
+      if (clipboardEpoch.current === copyEpoch) {
+        clipboardInFlight.current = false;
+        setCopying(false);
+      }
     }
   }
 
@@ -117,6 +145,9 @@ export function AffiliateTrackingCodePage() {
     const onVisibilityChange = () => {
       if (document.visibilityState !== "hidden") return;
       lookupVersion.current++;
+      clipboardEpoch.current++;
+      clipboardInFlight.current = false;
+      setCopying(false);
       setBusy(false);
       setResult(null);
       setError("");
@@ -163,6 +194,9 @@ export function AffiliateTrackingCodePage() {
                 value={code}
                 onChange={(event) => {
                   lookupVersion.current++;
+                  clipboardEpoch.current++;
+                  clipboardInFlight.current = false;
+                  setCopying(false);
                   setBusy(false);
                   setCode(event.target.value.trim());
                   setCopied(false);
@@ -195,9 +229,14 @@ export function AffiliateTrackingCodePage() {
                 <button
                   type="button"
                   onClick={() => void copyPrivateCode()}
-                  className="mt-3 min-h-11 w-full rounded-full border border-[#b9969e] px-5 text-sm font-bold text-[#633847]"
+                  disabled={copying}
+                  className="mt-3 min-h-11 w-full rounded-full border border-[#b9969e] px-5 text-sm font-bold text-[#633847] disabled:opacity-50"
                 >
-                  {copied ? "Código copiado!" : "Copiar código para guardar"}
+                  {copying
+                    ? "Copiando código..."
+                    : copied
+                      ? "Código copiado!"
+                      : "Copiar código para guardar"}
                 </button>
               )}
             </form>
