@@ -62,6 +62,8 @@ export function AffiliateTeamAccess() {
   const pendingManualHash = useRef<string | null>(null);
   const identityVersion = useRef(0);
   const visibilityEpoch = useRef(0);
+  // A pending delivery response belongs to the exact email input revision.
+  const emailEditVersion = useRef(0);
   const leavingIdentity = useRef(false);
   // A password reset can only follow freshly verified one-time Auth proof
   // for the exact owner address. A pre-existing browser session is not proof.
@@ -262,14 +264,24 @@ export function AffiliateTeamAccess() {
 
   async function requestInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || teamTabHidden()) return;
+    const epoch = visibilityEpoch.current;
+    const emailVersion = emailEditVersion.current;
+    const identityId = identityVersion.current;
+    const requestedEmail = email.trim().toLowerCase();
+    const stillCurrent = () =>
+      epoch === visibilityEpoch.current &&
+      emailVersion === emailEditVersion.current &&
+      identityId === identityVersion.current &&
+      !teamTabHidden();
     setBusy(true);
     setNotice("");
     setError("");
     try {
       const alternate = await requestAffiliateAccessEmail({
-        data: { email: email.trim().toLowerCase(), purpose: "owner" },
+        data: { email: requestedEmail, purpose: "owner" },
       });
+      if (!stillCurrent()) return;
       if (alternate.status === "requested") {
         setNotice(
           "Se seu e-mail está autorizado, solicitamos o acesso. A mensagem pode conter um código numérico ou um link. Digite o código aqui, quando disponível, ou abra somente o link mais recente. Confira entrada e spam; a entrega depende do provedor.",
@@ -290,7 +302,7 @@ export function AffiliateTeamAccess() {
         "Envio temporariamente indisponível. Peça ao proprietário que reenvie o convite individual pelo painel.",
       );
     } catch {
-      setError("Falha de conexão ao solicitar acesso.");
+      if (stillCurrent()) setError("Falha de conexão ao solicitar acesso.");
     } finally {
       setBusy(false);
     }
@@ -455,7 +467,13 @@ export function AffiliateTeamAccess() {
 
   async function loginPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (busy || teamTabHidden()) return;
+    const epoch = visibilityEpoch.current;
+    const identityId = identityVersion.current;
+    const stillCurrent = () =>
+      epoch === visibilityEpoch.current &&
+      identityId === identityVersion.current &&
+      !teamTabHidden();
     if (password.length < 12 || password.length > 128 || !email.trim()) {
       setError("Informe o e-mail administrativo e sua senha pessoal de pelo menos 12 caracteres.");
       return;
@@ -466,6 +484,7 @@ export function AffiliateTeamAccess() {
       const exchanged = await loginAffiliateAdminMember({
         data: { email: email.trim().toLowerCase(), password },
       });
+      if (!stillCurrent()) return;
       setPassword("");
       if (!exchanged.ok) {
         setError(exchanged.reason);
@@ -473,7 +492,7 @@ export function AffiliateTeamAccess() {
       }
       window.location.assign("/admin/afiliadas");
     } catch {
-      setError("Login não autorizado. Confira seu e-mail e sua senha pessoal.");
+      if (stillCurrent()) setError("Login não autorizado. Confira seu e-mail e sua senha pessoal.");
     } finally {
       setBusy(false);
     }
@@ -553,7 +572,11 @@ export function AffiliateTeamAccess() {
                     autoComplete="email"
                     maxLength={180}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      emailEditVersion.current++;
+                      setEmail(e.target.value);
+                      setNotice("");
+                    }}
                     className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
                   />
                   <button
@@ -632,7 +655,11 @@ export function AffiliateTeamAccess() {
                     required
                     maxLength={180}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      emailEditVersion.current++;
+                      setEmail(e.target.value);
+                      setNotice("");
+                    }}
                     className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
                   />
                   <label htmlFor="team-existing-password" className="block text-sm font-semibold">
