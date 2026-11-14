@@ -590,16 +590,15 @@ export function ProductCard({ p }: { p: Product }) {
   const cart = useCart();
   const nav = useNavigate();
   const par = installments(pricing.price);
-  // Products with a single size are added straight to the bag; the rest open the product page to choose.
+  // A sacolinha SEMPRE adiciona 1 unidade (tamanho padrão do produto) direto ao carrinho; o resto do card abre a página.
+  // Escolher outro tamanho ou as ofertas Leve 2 / Leve 3 continua na página do produto (o aviso diz qual tamanho entrou).
   const bag = () => {
-    if (p.variants.length > 1 || pricing.professional) {
-      nav({ to: "/produto/$slug", params: { slug: p.slug } });
-      return;
-    }
     const v = p.variants[0];
     cart.add(p.slug, v.label, 1);
     track("add_to_cart", { value: v.price, items: [toItem(p, v.label, v.price)] });
-    toast.success(`${p.name} adicionado à sacola`);
+    toast.success(`${p.name}${p.variants.length > 1 ? ` (${v.label})` : ""} adicionado à sacola`, {
+      action: { label: "Ver sacola", onClick: () => nav({ to: "/carrinho" }) },
+    });
   };
   return (
     <div className="group relative flex h-full cursor-pointer flex-col rounded-2xl border border-border bg-white p-2.5 shadow-sm md:p-3">
@@ -643,7 +642,7 @@ export function ProductCard({ p }: { p: Product }) {
         <button
           type="button"
           onClick={bag}
-          aria-label={p.variants.length > 1 || pricing.professional ? `Escolher opções de ${p.name}` : `Adicionar ${p.name} à sacola`}
+          aria-label={`Adicionar ${p.name} à sacola`}
           className="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-sm transition-transform active:scale-95 md:h-11 md:w-11"
         >
           <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
