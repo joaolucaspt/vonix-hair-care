@@ -22,18 +22,18 @@ describe("Black Friday 2026", () => {
       expect(lineTotals(180.9, 1, undefined, "botox-vonix", d).net).toBe(180.9);
     }
   });
-  it("durante a oferta: kits 20%, Botox 30%, Fio de Luz 15%, Monovonix e o resto ficam como estão", () => {
+  it("durante a oferta: kits 20%, Botox 25%, Fio de Luz 15%, Monovonix e o resto ficam como estão", () => {
     expect(bfPct("kit-cronograma-capilar", durante)).toBe(20);
-    expect(bfPct("botox-vonix", durante)).toBe(30);
-    expect(bfPct("botox-line-matizador", durante)).toBe(30);
+    expect(bfPct("botox-vonix", durante)).toBe(25);
+    expect(bfPct("botox-line-matizador", durante)).toBe(25);
     expect(bfPct("progressiva-fio-de-luz", durante)).toBe(15);
     expect(bfPct("kit-monovonix", durante)).toBe(0);
     expect(bfPct("plex-vonix", durante)).toBe(0);
-    expect(lineTotals(180.9, 1, undefined, "botox-vonix", durante).net).toBe(126.63);
+    expect(lineTotals(180.9, 1, undefined, "botox-vonix", durante).net).toBe(135.68);
     expect(lineTotals(184.9, 1, undefined, "kit-cronograma-capilar", durante).net).toBe(147.92);
   });
   it("não soma com o leve 2 / leve 3: vale o maior", () => {
-    expect(linePct(2, "botox-vonix", durante)).toBe(30);
+    expect(linePct(2, "botox-vonix", durante)).toBe(25);
     expect(linePct(3, "progressiva-fio-de-luz", durante)).toBe(15);
     expect(linePct(2, "kit-cronograma-capilar", durante)).toBe(20);
     expect(linePct(2, "plex-vonix", durante)).toBe(12);

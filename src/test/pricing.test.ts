@@ -62,8 +62,8 @@ describe("regras comerciais", () => {
   });
   it("depois de 20/11 às 23h59 os preços voltam sozinhos aos de antes (prazo real)", () => {
     vi.setSystemTime(new Date("2026-11-21T00:00:01-03:00"));
-    expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(191.9);
-    expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([97.9, 213.9]);
+    expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(131.9);
+    expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([59.9, 143.9]);
     vi.setSystemTime(new Date("2026-11-14T12:00:00-03:00"));
   });
   it("frete grátis somente acima de 150", () => {

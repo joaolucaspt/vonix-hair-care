@@ -192,3 +192,11 @@ Cuidado: itens baratos subiram 30% ou mais; acompanhar conversão. Custo do anú
 - Google Analytics (G-J8TYLB425K): não abriu neste login (pede criar propriedade), sem dados lidos.
 - Nenhum Pix gerado sem pagamento nem erro de pagamento visto. Não achei um bug único e claro sem assistir às gravações do checkout: próximo passo é abrir as gravações de fhhwpm/i4q1zj/w5nf9k (mobile, saíram em /checkout) e o LCP.
 - Como desfazer: nada alterado além deste diário.
+
+## 14/11/2026 (noite) — preços de depois do teste e Black Friday (ordem do Lucas: "pode mexer nos preços em tudo", teto de R$ 100/dia de anúncio)
+- O teste de preços continua até 20/11 23h59 (nada muda hoje no site). Mudou o que vale **depois** do teste: os preços de `products.json` caíram dos antigos (ex.: Fio de Luz R$ 191,90 → R$ 131,90; Botox R$ 180,90 → R$ 126,90; Combo Banana e Mel R$ 169,90 → R$ 122,90) para uma faixa entre o preço de teste e o antigo, calculada pela margem de cada produto (tabela de distribuidores do dono, mantida fora do repositório porque ele é público). Motivo: com o preço de teste a margem por pedido é pequena e não paga anúncio de R$ 100/dia; com o preço antigo ficava caro demais para a conversão. Meta de margem: mais folga nos produtos principais (química, kits, máscaras grandes) e preço do teste mantido nos de entrada (shampoos, ampolas, finalizadores), que ajudam a fechar o carrinho.
+- Produtos sem custo na tabela (Lift em gel, Selagem Diamond, Perfume capilar, Shampoo Anabolizante, Kit Coco Nutri, Kit Monovonix 260 ml) ficaram com preço estimado por semelhança: conferir com o custo real.
+- Black Friday: Botox e Botox Line/Matizador passam de 30% para 25% (com o preço base novo, 30% deixaria a margem abaixo do aceitável). Kits 20% e Fio de Luz 15% mantidos; continua valendo o maior entre BF e leve 2/leve 3.
+- O feed do catálogo da Meta lê `products.json` na hora: acompanha o preço novo sozinho em 21/11.
+- Não consegui mexer na Meta: o Chrome conectado está numa conta do Facebook que não tem a conta de anúncios da Vonix. Plano pronto (CBO única, R$ 100/dia no máximo, pausar o MORNO) aguardando acesso.
+- Como desfazer: git revert desta PR (os preços antigos voltam; o teste continua igual).
