@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ClipboardCheck, LockKeyhole, CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
@@ -22,6 +23,16 @@ type Result = {
   reviewedAt: string | null;
 };
 
+// Decode the response at the browser boundary as well: old cached clients
+// must not render unrecognized decisions, raw server data or invalid dates.
+const privateStatusResponseSchema = z.object({
+  ok: z.literal(true),
+  status: z.enum(["pendente", "aprovada", "recusada"]),
+  rejectionReason: z.string().max(55).nullable(),
+  submittedAt: z.string().datetime({ offset: true }).max(70),
+  reviewedAt: z.string().datetime({ offset: true }).max(70).nullable(),
+});
+
 export function AffiliateTrackingCodePage() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState<Result | null>(null);
@@ -36,7 +47,8 @@ export function AffiliateTrackingCodePage() {
     const requestId = lookupVersion.current;
     try {
       await navigator.clipboard.writeText(code);
-      if (lookupVersion.current === requestId) setCopied(true);
+      if (lookupVersion.current === requestId && document.visibilityState !== "hidden")
+        setCopied(true);
     } catch {
       // Never select another code due to an obsolete clipboard rejection.
       if (lookupVersion.current !== requestId) return;
@@ -66,15 +78,16 @@ export function AffiliateTrackingCodePage() {
         return;
       }
       if (!response.ok) setError(response.reason);
-      else
-        setResult({
-          status: response.status,
-          rejectionReason: response.rejectionReason,
-          submittedAt: response.submittedAt,
-          reviewedAt: response.reviewedAt,
-        });
+      else {
+        const parsed = privateStatusResponseSchema.safeParse(response);
+        if (!parsed.success) {
+          setError("Não foi possível validar os dados da candidatura. Tente novamente mais tarde.");
+          return;
+        }
+        setResult(parsed.data);
+      }
     } catch {
-      if (lookupVersion.current === requestId) {
+      if (lookupVersion.current === requestId && document.visibilityState !== "hidden") {
         setError("Falha ao consultar. Confira sua conexão e tente novamente.");
       }
     } finally {
