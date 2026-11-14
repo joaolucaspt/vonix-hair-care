@@ -426,3 +426,13 @@ export function complementsFor(cartSlugs: string[], max = 3): Product[] {
   }
   return out;
 }
+
+/**
+ * Texto de uma opção de frete na tela. Frete grátis: só "Frete grátis" (sem o nome da transportadora)
+ * e prazo em faixa ("2 a 3 dias úteis"), sem nunca prometer menos do que o prazo real da cotação.
+ */
+export function shippingText(o: { company: string; name: string; days: number; free: boolean }) {
+  if (!o.free) return { title: `${o.company} ${o.name}`, eta: `até ${o.days} dias úteis` };
+  const eta = o.days <= 3 ? "2 a 3 dias úteis" : `${o.days - 1} a ${o.days} dias úteis`;
+  return { title: "Frete grátis", eta };
+}

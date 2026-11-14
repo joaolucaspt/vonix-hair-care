@@ -28,6 +28,7 @@ import {
   maskCep,
   products,
   saveCep,
+  shippingText,
   useAudience,
   useCart,
   useFavorites,
@@ -241,8 +242,8 @@ export function ShippingCalc({
             {opts.map((o) => (
               <li key={o.id} className="flex justify-between gap-3">
                 <span>
-                  {o.company} {o.name}{" "}
-                  <span className="text-muted-foreground">· até {o.days} dias úteis</span>
+                  {shippingText(o).title}{" "}
+                  <span className="text-muted-foreground">· {shippingText(o).eta}</span>
                 </span>
                 <b>{o.free ? "Grátis" : brl(o.price)}</b>
               </li>
