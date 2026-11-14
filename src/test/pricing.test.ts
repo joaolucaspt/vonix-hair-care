@@ -15,17 +15,17 @@ describe("ambiente e preços dos cards", () => {
     expect(resolveAudience("salao")).toBe("salao");
     expect(resolveAudience(null)).toBe(null);
   });
-  it("Fio de Luz no salão: preço do teste, Pix no mesmo preço (sem desconto) e promoção de kits", () => {
+  it("Fio de Luz no salão: preço novo, Pix no mesmo preço (sem desconto) e promoção de kits", () => {
     const p = getProduct("progressiva-fio-de-luz");
     if (!p) throw new Error("Produto obrigatório ausente");
-    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 109.9, pix: 109.9, parcels: { count: 6, value: 18.31, first: 18.35 } });
-    expect(cardPricing(p, "casa").price).toBe(109.9);
+    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 131.9, pix: 131.9, parcels: { count: 6, value: 21.98, first: 22 } });
+    expect(cardPricing(p, "casa").price).toBe(131.9);
   });
   it("kits prontos também têm a promoção de levar 2 ou 3, sem 5% extra, no salão e em casa", () => {
     const p = getProduct("kit-banana-e-mel");
     if (!p) throw new Error("Produto obrigatório ausente");
-    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 99.9, pix: 99.9 });
-    expect(cardPricing(p, "casa")).toMatchObject({ professional: true, price: 99.9, pix: 99.9 });
+    expect(cardPricing(p, "salao")).toMatchObject({ professional: true, price: 122.9, pix: 122.9 });
+    expect(cardPricing(p, "casa")).toMatchObject({ professional: true, price: 122.9, pix: 122.9 });
   });
   it("todo produto do site tem a promoção de levar mais de um, em qualquer área", () => {
     for (const a of ["casa", "salao", null] as const)
@@ -56,11 +56,11 @@ describe("ambiente e preços dos cards", () => {
 
 describe("regras comerciais", () => {
   it("catálogo tem 42 produtos (Plex Vonix sem estoque)", () => expect(products.length).toBe(42));
-  it("durante o teste de preços valem os preços de teste", () => {
-    expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(109.9);
-    expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([59.9, 119.9]);
+  it("com o teste encerrado (14/11) valem os preços de products.json", () => {
+    expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(131.9);
+    expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([59.9, 143.9]);
   });
-  it("depois de 20/11 às 23h59 os preços voltam sozinhos aos de antes (prazo real)", () => {
+  it("depois da data, os preços seguem os de products.json (teste encerrado)", () => {
     vi.setSystemTime(new Date("2026-11-21T00:00:01-03:00"));
     expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(131.9);
     expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([59.9, 143.9]);

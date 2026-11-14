@@ -200,3 +200,8 @@ Cuidado: itens baratos subiram 30% ou mais; acompanhar conversão. Custo do anú
 - O feed do catálogo da Meta lê `products.json` na hora: acompanha o preço novo sozinho em 21/11.
 - Não consegui mexer na Meta: o Chrome conectado está numa conta do Facebook que não tem a conta de anúncios da Vonix. Plano pronto (CBO única, R$ 100/dia no máximo, pausar o MORNO) aguardando acesso.
 - Como desfazer: git revert desta PR (os preços antigos voltam; o teste continua igual).
+
+## 14/11/2026 (noite) — teste de preços encerrado hoje e campanha pausada (ordem do Lucas: "resolva tudo hoje", sobram só ~R$ 1.000 para gastar)
+- Ordem do Lucas: não esperar 20/11. `teste-precos.json` agora tem `fim` no passado, então valem desde já os preços novos de `products.json` (PR #183: ex.: Fio de Luz R$ 131,90, Botox R$ 126,90, Combo Banana e Mel R$ 122,90). O relógio "preços baixos por tempo limitado" some sozinho. Testes atualizados.
+- Meta: a campanha LUCAS NOVA (Advantage+, MG e SP, cabeleireiras, R$ 100/dia) foi **pausada**: R$ 281 gastos, 13 carrinhos, 1 compra (CPA R$ 281, acima da margem por pedido). Só religa com o site já com os preços novos e com limite de gasto na campanha, para não passar do que o Lucas ainda pode gastar.
+- Como desfazer: git revert desta PR devolve o teste (e seus preços) até a data antiga; religar a campanha é o interruptor no Gerenciador.
