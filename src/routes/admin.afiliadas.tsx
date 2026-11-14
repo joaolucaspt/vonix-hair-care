@@ -465,7 +465,9 @@ export function AffiliateAdminPage() {
       }
       await load("pendente", 0, "");
     } catch {
-      setError("Não foi possível autenticar. Tente novamente.");
+      // Discard delayed errors when hiding the tab invalidated legacy login.
+      if (epoch === legacyLoginEpoch.current && document.visibilityState === "visible")
+        setError("Não foi possível autenticar. Tente novamente.");
     } finally {
       setLoading(false);
     }

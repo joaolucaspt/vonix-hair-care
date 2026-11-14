@@ -110,6 +110,44 @@ describe("Vonix affiliate private panel", () => {
     }
   });
 
+  it("ignores a stale legacy administrator login error after the tab is hidden", async () => {
+    server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
+    let rejectLogin!: (reason: Error) => void;
+    const pending = new Promise<never>((_resolve, reject) => {
+      rejectLogin = reject;
+    });
+    server.loginAffiliateAdmin.mockReturnValueOnce(pending);
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<Page />);
+      await screen.findByText("Acesso da equipe");
+      fireEvent.click(screen.getByText("Acesso antigo com aplicativo autenticador (uso restrito)"));
+      fireEvent.change(screen.getByLabelText("Senha administrativa"), {
+        target: { value: "Synthetic-Legacy-Password-Not-Real" },
+      });
+      fireEvent.change(screen.getByLabelText("Código do autenticador"), {
+        target: { value: "123456" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Acessar inscrições/ }));
+      await waitFor(() => expect(server.loginAffiliateAdmin).toHaveBeenCalledOnce());
+      visibility.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        rejectLogin(new Error("synthetic network error"));
+        try {
+          await pending;
+        } catch {
+          /* synthetic rejection expected */
+        }
+      });
+      expect(
+        screen.queryByText("Não foi possível autenticar. Tente novamente."),
+      ).not.toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it("supports Instagram, TikTok and email searches without exposing private applicant fields", async () => {
     render(<Page />);
     await screen.findByText("Segredo da candidata");

@@ -255,8 +255,12 @@ export function AffiliateTeamAccess() {
       await inspectIdentity();
     } catch {
       pendingManualHash.current = null;
+      // A provider error may arrive after the tab was hidden. The one-time
+      // invitation is no longer safe to retry, but do not resurrect an old
+      // error from a different visibility epoch.
       setStage("email");
-      setError("Não foi possível validar o convite. Confira sua conexão ou solicite outro link.");
+      if (epoch === visibilityEpoch.current && !teamTabHidden())
+        setError("Não foi possível validar o convite. Confira sua conexão ou solicite outro link.");
     } finally {
       setBusy(false);
     }
@@ -310,24 +314,31 @@ export function AffiliateTeamAccess() {
 
   async function verifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || !/^\d{6,8}$/.test(otp)) return;
+    if (busy || teamTabHidden() || !/^\d{6,8}$/.test(otp)) return;
     const epoch = visibilityEpoch.current;
+    const emailVersion = emailEditVersion.current;
+    const verifiedEmail = email.trim().toLowerCase();
+    const stillCurrent = () =>
+      epoch === visibilityEpoch.current &&
+      emailVersion === emailEditVersion.current &&
+      !teamTabHidden();
     setBusy(true);
     setError("");
     try {
       const response = await vonixAffiliateAuth.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
+        email: verifiedEmail,
         token: otp,
         type: "email",
       });
-      if (epoch !== visibilityEpoch.current || teamTabHidden()) return;
+      // A late Auth reply is not proof for a different address or hidden tab.
+      if (!stillCurrent()) return;
       if (response.error) setError("Código inválido ou expirado.");
       else {
-        freshVerifiedAddress.current = email.trim().toLowerCase();
+        freshVerifiedAddress.current = verifiedEmail;
         await inspectIdentity();
       }
     } catch {
-      setError("Não foi possível validar o código.");
+      if (stillCurrent()) setError("Não foi possível validar o código.");
     } finally {
       setBusy(false);
     }
@@ -574,7 +585,9 @@ export function AffiliateTeamAccess() {
                     value={email}
                     onChange={(e) => {
                       emailEditVersion.current++;
+                      freshVerifiedAddress.current = null;
                       setEmail(e.target.value);
+                      setOtp("");
                       setNotice("");
                     }}
                     className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
@@ -657,7 +670,9 @@ export function AffiliateTeamAccess() {
                     value={email}
                     onChange={(e) => {
                       emailEditVersion.current++;
+                      freshVerifiedAddress.current = null;
                       setEmail(e.target.value);
+                      setOtp("");
                       setNotice("");
                     }}
                     className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
