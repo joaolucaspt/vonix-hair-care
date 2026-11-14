@@ -167,6 +167,197 @@ describe("Vonix short single-page application form", () => {
     }
   });
 
+  it("does not claim a confirmed private receipt was copied after backgrounding the browser", async () => {
+    let release!: () => void;
+    const delayed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const writeText = vi.fn().mockReturnValueOnce(delayed);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateSimpleForm />);
+      fill();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+      const input = await screen.findByLabelText("Código privado de acompanhamento");
+      fireEvent.click(screen.getByRole("button", { name: "Copiar código" }));
+      await waitFor(() =>
+        expect(writeText).toHaveBeenCalledWith((input as HTMLInputElement).value),
+      );
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        release();
+        await delayed;
+      });
+      expect(screen.getByRole("button", { name: "Copiar código" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Código copiado!" })).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  it("does not claim an unconfirmed attempt code was copied after a hidden-tab return", async () => {
+    server.submit.mockRejectedValueOnce(new TypeError("synthetic lost response"));
+    let release!: () => void;
+    const delayed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const writeText = vi.fn().mockReturnValueOnce(delayed);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateSimpleForm />);
+      fill();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+      const input = await screen.findByLabelText("Código privado da tentativa não confirmada");
+      fireEvent.click(screen.getByRole("button", { name: "Copiar código de tentativa" }));
+      await waitFor(() =>
+        expect(writeText).toHaveBeenCalledWith((input as HTMLInputElement).value),
+      );
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      spy.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        release();
+        await delayed;
+      });
+      expect(
+        screen.getByRole("button", { name: "Copiar código de tentativa" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Código de tentativa copiado!" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  it("prevents two concurrent clipboard writes from a double click on a confirmed receipt", async () => {
+    let release!: () => void;
+    const delayed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const writeText = vi.fn().mockReturnValueOnce(delayed).mockResolvedValue(undefined);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      render(<AffiliateSimpleForm />);
+      fill();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+      await screen.findByLabelText("Código privado de acompanhamento");
+      const button = screen.getByRole("button", { name: "Copiar código" });
+      fireEvent.click(button);
+      fireEvent.click(button);
+      await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+      await act(async () => {
+        release();
+        await delayed;
+      });
+      expect(screen.getByRole("button", { name: "Código copiado!" })).toBeInTheDocument();
+    } finally {
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  it("does not focus a private receipt field after a clipboard error in a hidden tab", async () => {
+    let reject!: (e: Error) => void;
+    const delayed = new Promise<void>((_resolve, fail) => {
+      reject = fail;
+    });
+    const writeText = vi.fn().mockReturnValueOnce(delayed);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateSimpleForm />);
+      fill();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+      const field = await screen.findByLabelText("Código privado de acompanhamento");
+      fireEvent.click(screen.getByRole("button", { name: "Copiar código" }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        reject(new Error("synthetic clipboard denied"));
+        await delayed.catch(() => {});
+      });
+      expect(document.activeElement).not.toBe(field);
+      expect(screen.queryByRole("button", { name: "Código copiado!" })).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  it("does not restore a copied notification after an uncertain receipt is discarded mid-copy", async () => {
+    server.submit.mockRejectedValueOnce(new TypeError("synthetic lost network response"));
+    let release!: () => void;
+    const delayed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const writeText = vi.fn().mockReturnValueOnce(delayed);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      render(<AffiliateSimpleForm />);
+      fill();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+      await screen.findByLabelText("Código privado da tentativa não confirmada");
+      fireEvent.click(screen.getByRole("button", { name: "Copiar código de tentativa" }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Descartar código e iniciar nova tentativa",
+        }),
+      );
+      await act(async () => {
+        release();
+        await delayed;
+      });
+      expect(
+        screen.queryByRole("button", { name: "Código de tentativa copiado!" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Código privado da tentativa não confirmada"),
+      ).not.toBeInTheDocument();
+    } finally {
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  it("ignores copying a private receipt when the form is already in a hidden tab", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const original = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateSimpleForm />);
+      fill();
+      fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+      await screen.findByLabelText("Código privado de acompanhamento");
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      fireEvent.click(screen.getByRole("button", { name: "Copiar código" }));
+      expect(writeText).not.toHaveBeenCalled();
+      expect(screen.queryByRole("button", { name: "Código copiado!" })).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+      if (original) Object.defineProperty(navigator, "clipboard", original);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
   it("masks an unconfirmed receipt when a network response is lost", async () => {
     server.submit.mockRejectedValue(new Error("synthetic network lost"));
     render(<AffiliateSimpleForm />);

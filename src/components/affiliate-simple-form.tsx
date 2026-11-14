@@ -23,6 +23,13 @@ type Key =
 
 const pendingReceiptSessionKey = "vonix-affiliate-unconfirmed-code";
 
+/** Resolve visibility at callback time, not from TypeScript's earlier narrowing.
+ * Clipboard and visibility events can complete between awaited operations.
+ */
+function receiptTabHidden(): boolean {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
+}
+
 /** Web Crypto creates 192 unpredictable bits before the request begins.
  * The code is a private bearer token: never include it in a URL or analytics.
  */
@@ -167,6 +174,10 @@ export function AffiliateSimpleForm({
   const [sent, setSent] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
   const [trackingCopied, setTrackingCopied] = useState(false);
+  // Async clipboard callbacks must never publish a result from a previous
+  // receipt or a background tab. A synchronous guard prevents double-copy.
+  const receiptCopyEpoch = useRef(0);
+  const receiptCopying = useRef(false);
   const [codeRevealed, setCodeRevealed] = useState(false);
   const [trackingNavigationError, setTrackingNavigationError] = useState("");
   const attemptCode = useRef("");
@@ -198,7 +209,13 @@ export function AffiliateSimpleForm({
   // The receipt is a bearer token. Mask it again if a shared device changes tabs.
   useEffect(() => {
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") setCodeRevealed(false);
+      if (receiptTabHidden()) {
+        receiptCopyEpoch.current++;
+        receiptCopying.current = false;
+        setCodeRevealed(false);
+        setTrackingCopied(false);
+        setUnconfirmedCopied(false);
+      }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -218,21 +235,35 @@ export function AffiliateSimpleForm({
   }
 
   async function copyUnconfirmedCode() {
-    if (!/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode)) return;
+    if (
+      !/^[A-Za-z0-9_-]{32}$/.test(unconfirmedCode) ||
+      receiptCopying.current ||
+      receiptTabHidden()
+    )
+      return;
+    const epoch = ++receiptCopyEpoch.current;
+    receiptCopying.current = true;
+    setUnconfirmedCopied(false);
     try {
       await navigator.clipboard.writeText(unconfirmedCode);
+      if (epoch !== receiptCopyEpoch.current || receiptTabHidden()) return;
       setUnconfirmedCopied(true);
     } catch {
+      if (epoch !== receiptCopyEpoch.current || receiptTabHidden()) return;
       setUnconfirmedCopied(false);
       const field = document.getElementById(
         "affiliate-unconfirmed-code",
       ) as HTMLInputElement | null;
       field?.focus();
       field?.select();
+    } finally {
+      if (epoch === receiptCopyEpoch.current) receiptCopying.current = false;
     }
   }
 
   function discardUnconfirmedCode() {
+    receiptCopyEpoch.current++;
+    receiptCopying.current = false;
     setUnconfirmedHandoffError("");
     setDownloadFeedback("");
     attemptCode.current = "";
@@ -270,13 +301,20 @@ export function AffiliateSimpleForm({
   }
 
   async function copyTrackingCode() {
-    if (!trackingCode) return;
+    if (!trackingCode || receiptCopying.current || receiptTabHidden()) return;
+    const epoch = ++receiptCopyEpoch.current;
+    receiptCopying.current = true;
+    setTrackingCopied(false);
     try {
       await navigator.clipboard.writeText(trackingCode);
+      if (epoch !== receiptCopyEpoch.current || receiptTabHidden()) return;
       setTrackingCopied(true);
     } catch {
+      if (epoch !== receiptCopyEpoch.current || receiptTabHidden()) return;
       setTrackingCopied(false);
       document.getElementById("affiliate-confirmed-code")?.focus();
+    } finally {
+      if (epoch === receiptCopyEpoch.current) receiptCopying.current = false;
     }
   }
 
