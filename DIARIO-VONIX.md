@@ -211,3 +211,10 @@ Cuidado: itens baratos subiram 30% ou mais; acompanhar conversão. Custo do anú
 - Meta Ads: o Gerenciador não carregou no Chrome (página travou, sem texto nem captura); sem números novos. Campanha LUCAS NOVA segue pausada pela ordem do Lucas (14/11 noite).
 - Clarity, compra teste e celular 390 px não reabertos nesta rodada. Nenhuma mudança no site ou anúncio; "ainda é cedo" (menos de 100 visitas pagas após a mudança de preços).
 - Como desfazer: nada alterado além deste diário.
+
+## 14/11/2026 (17h30) — relatório diário e compra teste segura (só observação, sem mudança no site)
+- Compra teste sem pagar: Botox Vonix → carrinho → checkout, CEP 01310-100: frete JeT Standard grátis (até 3 dias úteis), botão "Gerar Pix" liberado, sem erro. Computador OK; celular testado em quadro de 390 px (sem rolagem lateral, botão ativo).
+- Pixel Meta ("Vonix | E-commerce"): PageView, Ver conteúdo, Adicionar ao carrinho e Iniciar finalização chegando hoje; Compra: último evento há 4 dias (sem venda nova).
+- Preços do site conferidos contra a tabela de custo: nenhuma variante sem custo e nenhuma abaixo da margem mínima sem anúncio. Nada alterado em preço, frete ou anúncio.
+- Pendências: confirmar se o relógio de 15 minutos do checkout é tempo real; atendimento IG/FB sem acesso à caixa nas rodadas de hoje.
+- Como desfazer: nada alterado além deste diário.
