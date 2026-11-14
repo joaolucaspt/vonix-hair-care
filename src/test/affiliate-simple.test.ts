@@ -127,6 +127,47 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
     });
   });
 
+  it("C43 refuses standalone TikTok follower counts when its optional profile is absent", async () => {
+    for (const count of [0, 4300]) {
+      const mismatch = { ...valid, tiktok: "", tiktokFollowers: count };
+      expect(affiliateSimpleSchema.safeParse(mismatch).success, String(count)).toBe(false);
+    }
+    expect(
+      affiliateSimpleSchema.safeParse({ ...valid, tiktok: "", tiktokFollowers: null }).success,
+    ).toBe(true);
+    expect(
+      affiliateSimpleSchema.safeParse({ ...valid, tiktok: "@maria.exemplo", tiktokFollowers: null })
+        .success,
+    ).toBe(true);
+    const fetched = vi.fn();
+    vi.stubGlobal("fetch", fetched);
+    await expect(
+      createSimpleAffiliateApplication({
+        ...valid,
+        tiktok: "",
+        tiktokFollowers: 4300,
+      }),
+    ).rejects.toThrow();
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it("C43 keeps older encrypted applications readable even if their optional TikTok data was inconsistent", () => {
+    // Previously persisted v3 records may contain a follower count despite
+    // lacking a TikTok handle; new submissions reject this, old records must
+    // remain available to authorized reviewers rather than disappearing.
+    const historical = { ...valid, tiktok: "", tiktokFollowers: 4300 };
+    expect(affiliateSimpleSchema.safeParse(historical).success).toBe(false);
+    const ciphertext = encryptSimpleAffiliateApplication(historical);
+    expect(affiliateWizardSummary(ciphertext)).toMatchObject({
+      kind: "simple",
+      tiktokFollowers: "4.300",
+    });
+    expect(decryptAffiliateWizardForAdmin(ciphertext)?.answers).toMatchObject({
+      tiktokUsername: "",
+      tiktokFollowers: "4.300",
+    });
+  });
+
   it("stores absent TikTok as SQL null, never as a malformed URL", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal(
