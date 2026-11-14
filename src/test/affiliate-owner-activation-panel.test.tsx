@@ -412,3 +412,34 @@ it("refuses overlapping mobile shares and falls back to copy after unsupported s
     Reflect.deleteProperty(navigator, "share");
   }
 });
+
+it("C37 discards a delayed Resend diagnosis after owner tab hide and reactivation", async () => {
+  let resolveInspect!: (value: unknown) => void;
+  mocks.inspect.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        resolveInspect = resolve;
+      }),
+  );
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("button", { name: "Verificar domínio do e-mail sem enviar" }));
+    expect(mocks.inspect).toHaveBeenCalledOnce();
+    visibility.mockReturnValue("hidden");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(await screen.findByText(email)).toBeInTheDocument();
+    await act(async () => {
+      resolveInspect({ ok: true, diagnosis: { status: "verified" } });
+      await Promise.resolve();
+    });
+    expect(
+      screen.queryByRole("status", { name: "Diagnóstico do remetente de convites" }),
+    ).not.toBeInTheDocument();
+  } finally {
+    visibility.mockRestore();
+  }
+});
