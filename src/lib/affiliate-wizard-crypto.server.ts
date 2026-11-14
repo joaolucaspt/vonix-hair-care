@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { z } from "zod";
 import { env } from "./env.server";
 import type { ValidatedAffiliateWizard } from "./affiliate-wizard";
-import { affiliateSimpleSchema, type AffiliateSimpleInput } from "./affiliate-simple";
+import { affiliateSimpleBaseSchema, type AffiliateSimpleInput } from "./affiliate-simple";
 
 function encryptionKey(): Buffer | null {
   const supplied = env("AFFILIATE_QUESTIONNAIRE_KEY");
@@ -35,7 +35,7 @@ export const affiliateQuestionnaireEncryptionReady = () => encryptionKey() !== n
 
 // New lightweight application data (phone and full postal address) remains
 // encrypted at rest. Old v2 questionnaires are still readable for moderation.
-const simpleAnswersSchema = affiliateSimpleSchema.omit({
+const simpleAnswersSchema = affiliateSimpleBaseSchema.omit({
   privacyAccepted: true,
   website: true,
   trackingCode: true,

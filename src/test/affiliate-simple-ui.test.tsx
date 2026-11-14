@@ -83,6 +83,23 @@ describe("Vonix short single-page application form", () => {
     }
   });
 
+  it("C43 asks for a TikTok profile when follower numbers are supplied, without requiring TikTok otherwise", async () => {
+    render(<AffiliateSimpleForm />);
+    fill();
+    fireEvent.change(screen.getByLabelText(/^TikTok/), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText(/Seguidores no TikTok/), {
+      target: { value: "4300" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/TikTok/);
+    expect(server.submit).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/Seguidores no TikTok/), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar minha inscrição" }));
+    await waitFor(() => expect(server.submit).toHaveBeenCalledOnce());
+  });
+
   it("locks applicant fields while the private receipt is being committed and unlocks on failure", async () => {
     let finish!: (result: { ok: false; reason: string }) => void;
     server.submit.mockReturnValueOnce(

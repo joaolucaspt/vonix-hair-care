@@ -13,7 +13,9 @@ import {
 const socialHandle = z.string().trim().min(1, "Informe o usuário da rede social.").max(50);
 const followerCount = z.number().int().min(0).max(1_000_000_000);
 
-export const affiliateSimpleSchema = z
+// Keep the original object schema for read-only decoding of historical v3
+// ciphertexts. New submissions must always use the refined public schema.
+export const affiliateSimpleBaseSchema = z
   .object({
     fullName: z
       .string()
@@ -72,6 +74,18 @@ export const affiliateSimpleSchema = z
     website: z.string().max(120).default(""), // anti-bot honeypot
   })
   .strict();
+
+export const affiliateSimpleSchema = affiliateSimpleBaseSchema.superRefine((values, context) => {
+  // TikTok is optional. A follower count without a profile cannot be
+  // corroborated or meaningfully reviewed by the selection team.
+  if (values.tiktok === "" && values.tiktokFollowers !== null) {
+    context.addIssue({
+      code: "custom",
+      path: ["tiktokFollowers"],
+      message: "Informe seu TikTok para declarar seguidores, ou deixe o número em branco.",
+    });
+  }
+});
 
 export type AffiliateSimpleInput = z.infer<typeof affiliateSimpleSchema>;
 export type AffiliateSimpleDraft = z.input<typeof affiliateSimpleSchema>;
