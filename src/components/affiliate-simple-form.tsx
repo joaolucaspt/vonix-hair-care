@@ -347,6 +347,19 @@ export function AffiliateSimpleForm({
   const submitting = useRef(false);
   const dirty = Object.values(values).some(Boolean) || accepted || !!trap;
 
+  // Address data returned by a third-party CEP provider must not silently
+  // update a private application draft while the page is backgrounded.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (!receiptTabHidden()) return;
+      zipRequest.current++;
+      setZipLoading(false);
+      setZipFeedback("");
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   useEffect(() => {
     onDraftChange?.(dirty && !sent);
   }, [dirty, sent, onDraftChange]);
@@ -401,7 +414,7 @@ export function AffiliateSimpleForm({
 
   async function lookupPostalCode() {
     const digits = onlyDigits(values.postalCode);
-    if (digits.length !== 8 || zipLoading) return;
+    if (digits.length !== 8 || zipLoading || receiptTabHidden()) return;
     const request = ++zipRequest.current;
     setZipLoading(true);
     setZipFeedback("");
@@ -409,6 +422,8 @@ export function AffiliateSimpleForm({
       const res = await fetch("https://viacep.com.br/ws/" + digits + "/json/", {
         signal: AbortSignal.timeout(5000),
       });
+      // A CEP response has no authority over a form hidden in another tab.
+      if (zipRequest.current !== request || receiptTabHidden()) return;
       if (!res.ok) {
         if (zipRequest.current === request)
           setZipFeedback(
@@ -417,7 +432,7 @@ export function AffiliateSimpleForm({
         return;
       }
       const data: unknown = await res.json();
-      if (zipRequest.current !== request) return;
+      if (zipRequest.current !== request || receiptTabHidden()) return;
       if (typeof data !== "object" || !data || "erro" in data) {
         setZipFeedback("CEP não encontrado. Preencha o endereço manualmente.");
         return;
@@ -434,7 +449,12 @@ export function AffiliateSimpleForm({
       }
       setZipFeedback("CEP consultado. Confira os dados e complete o endereço.");
       setValues((prev) => {
-        if (zipRequest.current !== request || onlyDigits(prev.postalCode) !== digits) return prev;
+        if (
+          zipRequest.current !== request ||
+          receiptTabHidden() ||
+          onlyDigits(prev.postalCode) !== digits
+        )
+          return prev;
         const suggested = {
           street: text("logradouro", 120),
           district: text("bairro", 90),
@@ -451,7 +471,7 @@ export function AffiliateSimpleForm({
         return next;
       });
     } catch {
-      if (zipRequest.current === request)
+      if (zipRequest.current === request && !receiptTabHidden())
         setZipFeedback(
           "Não foi possível consultar o CEP. Você pode preencher o endereço manualmente.",
         );
