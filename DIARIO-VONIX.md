@@ -205,3 +205,9 @@ Cuidado: itens baratos subiram 30% ou mais; acompanhar conversão. Custo do anú
 - Ordem do Lucas: não esperar 20/11. `teste-precos.json` agora tem `fim` no passado, então valem desde já os preços novos de `products.json` (PR #183: ex.: Fio de Luz R$ 131,90, Botox R$ 126,90, Combo Banana e Mel R$ 122,90). O relógio "preços baixos por tempo limitado" some sozinho. Testes atualizados.
 - Meta: a campanha LUCAS NOVA (Advantage+, MG e SP, cabeleireiras, R$ 100/dia) foi **pausada**: R$ 281 gastos, 13 carrinhos, 1 compra (CPA R$ 281, acima da margem por pedido). Só religa com o site já com os preços novos e com limite de gasto na campanha, para não passar do que o Lucas ainda pode gastar.
 - Como desfazer: git revert desta PR devolve o teste (e seus preços) até a data antiga; religar a campanha é o interruptor no Gerenciador.
+
+## 14/11/2026 (conferência automática) — só observação
+- Site no ar: home 200 em 0,9 s, loja 200 em 0,2 s (servidor, sem navegador).
+- Meta Ads: o Gerenciador não carregou no Chrome (página travou, sem texto nem captura); sem números novos. Campanha LUCAS NOVA segue pausada pela ordem do Lucas (14/11 noite).
+- Clarity, compra teste e celular 390 px não reabertos nesta rodada. Nenhuma mudança no site ou anúncio; "ainda é cedo" (menos de 100 visitas pagas após a mudança de preços).
+- Como desfazer: nada alterado além deste diário.
