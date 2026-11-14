@@ -813,6 +813,90 @@ describe("Vonix affiliate private panel", () => {
     expect(server.getAffiliateApplications).toHaveBeenCalledTimes(1);
   });
 
+  it("C41 rechecks a resumed admin session even if its previous focus request remains unresolved", async () => {
+    let resolveOld!: (result: { authenticated: boolean }) => void;
+    let resolveFresh!: (result: { authenticated: boolean }) => void;
+    const oldSession = new Promise<{ authenticated: boolean }>((resolve) => {
+      resolveOld = resolve;
+    });
+    const freshSession = new Promise<{ authenticated: boolean }>((resolve) => {
+      resolveFresh = resolve;
+    });
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    let state: DocumentVisibilityState = "visible";
+    visibility.mockImplementation(() => state);
+    try {
+      render(<Page />);
+      expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+      server.getAffiliateAdminSession
+        .mockReturnValueOnce(oldSession)
+        .mockReturnValueOnce(freshSession);
+      act(() => window.dispatchEvent(new Event("focus")));
+      expect(screen.getByText("Protegendo dados das candidatas")).toBeInTheDocument();
+      state = "hidden";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      state = "visible";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await waitFor(() => expect(server.getAffiliateAdminSession).toHaveBeenCalledTimes(3));
+      await act(async () => {
+        resolveOld({ authenticated: true });
+        await oldSession;
+      });
+      expect(screen.getByText("Protegendo dados das candidatas")).toBeInTheDocument();
+      expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+      await act(async () => {
+        resolveFresh({ authenticated: false });
+        await freshSession;
+      });
+      expect(screen.getByText("Acesso da equipe")).toBeInTheDocument();
+      expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
+  it("C41 ignores an obsolete failed admin session check after a fresh successful revalidation", async () => {
+    let rejectOld!: (error: Error) => void;
+    let resolveFresh!: (value: { authenticated: boolean }) => void;
+    const oldSession = new Promise<{ authenticated: boolean }>((_resolve, reject) => {
+      rejectOld = reject;
+    });
+    const freshSession = new Promise<{ authenticated: boolean }>((resolve) => {
+      resolveFresh = resolve;
+    });
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    let state: DocumentVisibilityState = "visible";
+    visibility.mockImplementation(() => state);
+    try {
+      render(<Page />);
+      expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+      server.getAffiliateAdminSession
+        .mockReturnValueOnce(oldSession)
+        .mockReturnValueOnce(freshSession);
+      act(() => window.dispatchEvent(new Event("focus")));
+      state = "hidden";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      state = "visible";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await waitFor(() => expect(server.getAffiliateAdminSession).toHaveBeenCalledTimes(3));
+      await act(async () => {
+        rejectOld(new Error("synthetic abandoned session request"));
+        await oldSession.catch(() => undefined);
+      });
+      expect(screen.getByText("Protegendo dados das candidatas")).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Os dados continuam ocultos até uma nova verificação/),
+      ).not.toBeInTheDocument();
+      await act(async () => {
+        resolveFresh({ authenticated: true });
+        await freshSession;
+      });
+      expect(screen.getByText("Segredo da candidata")).toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it("keeps PII hidden after a network failure and allows rechecking without another login", async () => {
     const listenerSpy = vi.spyOn(window, "addEventListener");
     render(<Page />);

@@ -54,6 +54,8 @@ export function AffiliateOwnerActivationPanel() {
   const [initialRetry, setInitialRetry] = useState(0);
   const copyingLink = useRef(false);
   const visibilityEpoch = useRef(0);
+  // Invalidate link generation when the intended recipient is unconfirmed.
+  const recipientConfirmationEpoch = useRef(0);
   const [busy, setBusy] = useState(false);
   const [confirmedPrivateRecipient, setConfirmedPrivateRecipient] = useState(false);
   const [generated, setGenerated] = useState<GeneratedLink | null>(null);
@@ -201,12 +203,18 @@ export function AffiliateOwnerActivationPanel() {
   async function create(email: string) {
     if (!confirmedPrivateRecipient || busy || generated || pageHidden()) return;
     const epoch = visibilityEpoch.current;
+    const confirmedEpoch = recipientConfirmationEpoch.current;
     setBusy(true);
     setMessage("");
     setFailure("");
     try {
       const result = await createPendingAffiliateOwnerActivationLink({ data: { email } });
-      if (epoch !== visibilityEpoch.current || pageHidden()) return;
+      if (
+        epoch !== visibilityEpoch.current ||
+        confirmedEpoch !== recipientConfirmationEpoch.current ||
+        pageHidden()
+      )
+        return;
       if (!result.ok) {
         setFailure(result.reason);
         return;
@@ -261,18 +269,29 @@ export function AffiliateOwnerActivationPanel() {
     )
       return;
     const epoch = visibilityEpoch.current;
+    const confirmedEpoch = recipientConfirmationEpoch.current;
     copyingLink.current = true;
     setBusy(true);
     setFailure("");
     try {
       await navigator.share({ title: "Convite individual Vonix Hair", url: generated.link });
-      if (epoch !== visibilityEpoch.current || pageHidden()) return;
+      if (
+        epoch !== visibilityEpoch.current ||
+        confirmedEpoch !== recipientConfirmationEpoch.current ||
+        pageHidden()
+      )
+        return;
       setGenerated(null);
       setMessage(
         "Compartilhamento aberto no dispositivo. Isso não comprova que o destinatário recebeu; confirme o envio no aplicativo escolhido.",
       );
     } catch (error) {
-      if (epoch !== visibilityEpoch.current || pageHidden()) return;
+      if (
+        epoch !== visibilityEpoch.current ||
+        confirmedEpoch !== recipientConfirmationEpoch.current ||
+        pageHidden()
+      )
+        return;
       if (error instanceof Error && error.name === "AbortError") {
         setMessage(
           "Compartilhamento cancelado. O link ainda está disponível para copiar ou compartilhar em privado.",
@@ -292,19 +311,30 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function copy() {
-    if (!generated || busy || copyingLink.current || pageHidden()) return;
+    if (!generated || !confirmedPrivateRecipient || busy || copyingLink.current || pageHidden())
+      return;
     const epoch = visibilityEpoch.current;
+    const confirmedEpoch = recipientConfirmationEpoch.current;
     copyingLink.current = true;
     setBusy(true);
     try {
       await navigator.clipboard.writeText(generated.link);
-      if (epoch !== visibilityEpoch.current || pageHidden()) return;
+      if (
+        epoch !== visibilityEpoch.current ||
+        confirmedEpoch !== recipientConfirmationEpoch.current ||
+        pageHidden()
+      )
+        return;
       setGenerated(null);
       setMessage(
         "Link copiado. Envie-o agora, em conversa privada com a pessoa certa. Ele é de uso único e deixa de ser exibido aqui.",
       );
     } catch {
-      if (epoch === visibilityEpoch.current && !pageHidden())
+      if (
+        epoch === visibilityEpoch.current &&
+        confirmedEpoch === recipientConfirmationEpoch.current &&
+        !pageHidden()
+      )
         setFailure(
           "O navegador bloqueou a cópia. Permita o acesso à área de transferência e clique novamente.",
         );
@@ -373,7 +403,18 @@ export function AffiliateOwnerActivationPanel() {
           <input
             type="checkbox"
             checked={confirmedPrivateRecipient}
-            onChange={(event) => setConfirmedPrivateRecipient(event.target.checked)}
+            onChange={(event) => {
+              recipientConfirmationEpoch.current++;
+              const isConfirmed = event.target.checked;
+              setConfirmedPrivateRecipient(isConfirmed);
+              if (!isConfirmed) {
+                // Remove the unused bearer link from the UI immediately;
+                // checking the box again requires generating a fresh link.
+                setGenerated(null);
+                setMessage("");
+                setFailure("");
+              }
+            }}
             className="mt-1 h-4 w-4 accent-[#693440]"
           />
           Confirmo que conheço os destinatários, vou conferir a identidade de cada pessoa e enviar

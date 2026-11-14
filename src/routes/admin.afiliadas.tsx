@@ -395,18 +395,21 @@ export function AffiliateAdminPage() {
     if (!authorized) return;
     let active = true;
     let inFlight = false;
+    // Hidden tabs invalidate earlier session checks even if the network hangs.
+    let visibilityVersion = 0;
 
     async function verifyResumedSession() {
       if (!active || inFlight) return;
       inFlight = true;
       const sessionId = sessionVersion.current;
+      const epoch = visibilityVersion;
       // Never render applicant PII before an active tab has revalidated the
       // signed cookie. A transient network failure must leave data concealed.
       setSessionRechecking(true);
       setSessionRecheckFailed(false);
       try {
         const session = await getAffiliateAdminSession();
-        if (!active || sessionId !== sessionVersion.current) return;
+        if (!active || sessionId !== sessionVersion.current || epoch !== visibilityVersion) return;
         if (!session.authenticated) {
           sessionExpired("Acesso negado. Faça login novamente.");
         } else if (document.visibilityState === "visible") {
@@ -415,9 +418,11 @@ export function AffiliateAdminPage() {
       } catch {
         // An uncertain session stays masked; the operator can retry without
         // discarding the page's state or exposing applicants.
-        if (active && sessionId === sessionVersion.current) setSessionRecheckFailed(true);
+        if (active && sessionId === sessionVersion.current && epoch === visibilityVersion)
+          setSessionRecheckFailed(true);
       } finally {
-        inFlight = false;
+        // Old callbacks cannot unlock a newer visibility cycle's request.
+        if (epoch === visibilityVersion) inFlight = false;
       }
     }
 
@@ -426,6 +431,8 @@ export function AffiliateAdminPage() {
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
+        visibilityVersion++;
+        inFlight = false;
         privateDetailVersion.current++;
         setPrivateDetail(null);
         setPrivateDetailLoading(null);

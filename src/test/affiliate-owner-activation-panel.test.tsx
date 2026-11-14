@@ -476,6 +476,107 @@ it("C40 allows clipboard recovery when an old native share never settles after h
   }
 });
 
+it("C41 discards a pending private owner link when recipient confirmation is withdrawn", async () => {
+  let resolveLink!: (result: { ok: true; recipient: string; link: string }) => void;
+  mocks.generate.mockReturnValueOnce(
+    new Promise((resolve) => {
+      resolveLink = resolve;
+    }),
+  );
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  const confirmation = screen.getByRole("checkbox");
+  fireEvent.click(confirmation);
+  fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+  await waitFor(() => expect(mocks.generate).toHaveBeenCalledOnce());
+  fireEvent.click(confirmation);
+  await act(async () => {
+    resolveLink({ ok: true, recipient: email, link: token });
+  });
+  expect(confirmation).not.toBeChecked();
+  expect(
+    screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+  ).not.toBeInTheDocument();
+  expect(document.body.textContent).not.toContain("vonix_invite");
+  expect(mocks.clipboard).not.toHaveBeenCalled();
+});
+
+it("C41 revokes a generated owner link from the UI when the recipient is unconfirmed", async () => {
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  const confirmation = screen.getByRole("checkbox");
+  fireEvent.click(confirmation);
+  fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+  expect(
+    await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+  ).toBeInTheDocument();
+  fireEvent.click(confirmation);
+  expect(confirmation).not.toBeChecked();
+  expect(
+    screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+  ).not.toBeInTheDocument();
+  expect(mocks.clipboard).not.toHaveBeenCalled();
+  fireEvent.click(confirmation);
+  expect(screen.getByRole("button", { name: "Gerar link individual" })).toBeEnabled();
+});
+
+it("C41 does not claim a private owner link was copied after recipient confirmation was withdrawn", async () => {
+  let release!: () => void;
+  mocks.clipboard.mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  );
+  render(<AffiliateOwnerActivationPanel />);
+  await screen.findByText(email);
+  const confirmation = screen.getByRole("checkbox");
+  fireEvent.click(confirmation);
+  fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+  );
+  await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledOnce());
+  fireEvent.click(confirmation);
+  await act(async () => {
+    release();
+  });
+  expect(screen.queryByText(/Link copiado/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+  ).not.toBeInTheDocument();
+});
+
+it("C41 does not publish an obsolete mobile share success after recipient confirmation is withdrawn", async () => {
+  let release!: () => void;
+  const share = vi.fn().mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  );
+  Object.defineProperty(navigator, "share", { configurable: true, value: share });
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    const confirmation = screen.getByRole("checkbox");
+    fireEvent.click(confirmation);
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Compartilhar link individual no celular/ }),
+    );
+    await waitFor(() => expect(share).toHaveBeenCalledOnce());
+    fireEvent.click(confirmation);
+    await act(async () => {
+      release();
+    });
+    expect(screen.queryByText(/Compartilhamento aberto no dispositivo/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    ).not.toBeInTheDocument();
+  } finally {
+    Reflect.deleteProperty(navigator, "share");
+  }
+});
+
 it("C37 discards a delayed Resend diagnosis after owner tab hide and reactivation", async () => {
   let resolveInspect!: (value: unknown) => void;
   mocks.inspect.mockImplementationOnce(
