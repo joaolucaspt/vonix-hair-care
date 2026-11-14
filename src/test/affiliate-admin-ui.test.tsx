@@ -82,6 +82,34 @@ afterEach(() => {
 });
 
 describe("Vonix affiliate private panel", () => {
+  it("clears legacy administrative password and authenticator OTP when a background tab is hidden", async () => {
+    server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<Page />);
+      await screen.findByText("Acesso da equipe");
+      const legacy = screen.getByText("Acesso antigo com aplicativo autenticador (uso restrito)");
+      fireEvent.click(legacy);
+      fireEvent.change(screen.getByLabelText("Senha administrativa"), {
+        target: { value: "Synthetic-Secret-C35-Not-Real" },
+      });
+      fireEvent.change(screen.getByLabelText("Código do autenticador"), {
+        target: { value: "123456" },
+      });
+      expect(screen.getByLabelText("Senha administrativa")).toHaveValue(
+        "Synthetic-Secret-C35-Not-Real",
+      );
+      expect(screen.getByLabelText("Código do autenticador")).toHaveValue("123456");
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.getByLabelText("Senha administrativa")).toHaveValue("");
+      expect(screen.getByLabelText("Código do autenticador")).toHaveValue("");
+      expect(server.loginAffiliateAdmin).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("supports Instagram, TikTok and email searches without exposing private applicant fields", async () => {
     render(<Page />);
     await screen.findByText("Segredo da candidata");
