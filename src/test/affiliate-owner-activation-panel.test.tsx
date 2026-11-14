@@ -413,6 +413,69 @@ it("refuses overlapping mobile shares and falls back to copy after unsupported s
   }
 });
 
+it("C40 unlocks a new owner's link after tab hide interrupts an unresolved clipboard request", async () => {
+  mocks.clipboard.mockImplementationOnce(() => new Promise<void>(() => {}));
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    );
+    await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledTimes(1));
+    visibility.mockReturnValue("hidden");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(
+      screen.queryByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    ).not.toBeInTheDocument();
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    );
+    await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/Link copiado/)).toBeInTheDocument();
+  } finally {
+    visibility.mockRestore();
+  }
+});
+
+it("C40 allows clipboard recovery when an old native share never settles after hiding the tab", async () => {
+  const nativeShare = vi.fn().mockReturnValue(new Promise<void>(() => {}));
+  Object.defineProperty(navigator, "share", { configurable: true, value: nativeShare });
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  try {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Compartilhar link individual no celular/ }),
+    );
+    expect(nativeShare).toHaveBeenCalledTimes(1);
+    visibility.mockReturnValue("hidden");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar link individual" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Copiar link para compartilhar em privado/ }),
+    );
+    await waitFor(() => expect(mocks.clipboard).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/Link copiado/)).toBeInTheDocument();
+  } finally {
+    visibility.mockRestore();
+    Reflect.deleteProperty(navigator, "share");
+  }
+});
+
 it("C37 discards a delayed Resend diagnosis after owner tab hide and reactivation", async () => {
   let resolveInspect!: (value: unknown) => void;
   mocks.inspect.mockImplementationOnce(

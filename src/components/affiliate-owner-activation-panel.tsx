@@ -73,6 +73,9 @@ export function AffiliateOwnerActivationPanel() {
       // A single-use invite is a bearer credential; revoke untransferred
       // browser state and stale async completions on shared-device tab hide.
       visibilityEpoch.current++;
+      // A native share or clipboard Promise can remain unsettled while hidden.
+      // Release its lock; callbacks from the earlier epoch cannot restore it.
+      copyingLink.current = false;
       setGenerated(null);
       setConfirmedPrivateRecipient(false);
       setMessage("");
@@ -280,8 +283,11 @@ export function AffiliateOwnerActivationPanel() {
         );
       }
     } finally {
-      copyingLink.current = false;
-      if (epoch === visibilityEpoch.current) setBusy(false);
+      // Old callbacks must not release a newer copy/share operation.
+      if (epoch === visibilityEpoch.current) {
+        copyingLink.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -303,8 +309,11 @@ export function AffiliateOwnerActivationPanel() {
           "O navegador bloqueou a cópia. Permita o acesso à área de transferência e clique novamente.",
         );
     } finally {
-      copyingLink.current = false;
-      if (epoch === visibilityEpoch.current) setBusy(false);
+      // Old callbacks must not release a newer copy/share operation.
+      if (epoch === visibilityEpoch.current) {
+        copyingLink.current = false;
+        setBusy(false);
+      }
     }
   }
 

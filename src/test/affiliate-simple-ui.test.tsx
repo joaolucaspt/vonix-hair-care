@@ -605,6 +605,55 @@ describe("Vonix short single-page application form", () => {
     expect(screen.queryByText(/CEP não encontrado/)).not.toBeInTheDocument();
   });
 
+  it("C40 does not silently overwrite a draft from a delayed CEP lookup after the tab is hidden", async () => {
+    let resolveFirst!: (value: Response) => void;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const provider = vi
+      .fn()
+      .mockReturnValueOnce(pending)
+      .mockResolvedValueOnce(
+        Response.json({
+          logradouro: "Rua do CEP Atual",
+          bairro: "Bairro Novo",
+          localidade: "Contagem",
+          uf: "MG",
+        }),
+      );
+    vi.stubGlobal("fetch", provider);
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateSimpleForm />);
+      fireEvent.change(screen.getByLabelText(/CEP/), { target: { value: "30110012" } });
+      fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }));
+      await waitFor(() => expect(provider).toHaveBeenCalledTimes(1));
+      visibility.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        resolveFirst(
+          Response.json({
+            logradouro: "Rua de uma Consulta Oculta",
+            bairro: "Bairro Antigo",
+            localidade: "Belo Horizonte",
+            uf: "MG",
+          }),
+        );
+        await pending;
+      });
+      expect(screen.getByLabelText(/Rua \/ Avenida/)).toHaveValue("");
+      expect(screen.getByLabelText(/Cidade/)).toHaveValue("");
+      visibility.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.getByRole("button", { name: "Buscar CEP" })).toBeEnabled();
+      fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }));
+      await waitFor(() => expect(provider).toHaveBeenCalledTimes(2));
+      expect(await screen.findByDisplayValue("Rua do CEP Atual")).toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it("provides a manual fallback when the CEP provider is unavailable", async () => {
     vi.stubGlobal(
       "fetch",
