@@ -293,6 +293,68 @@ describe("Private Vonix email-less applicant status portal", () => {
     expect(screen.getByRole("button", { name: "Consultar minha inscrição" })).toBeEnabled();
   });
 
+  it("does not publish a network error after the document becomes hidden without a visibility event", async () => {
+    let reject!: (error: Error) => void;
+    server.getAffiliateStatusByCode.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    render(<AffiliateTrackingCodePage />);
+    fireEvent.change(screen.getByLabelText("Código privado de acompanhamento"), {
+      target: { value: code },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    await waitFor(() => expect(server.getAffiliateStatusByCode).toHaveBeenCalledOnce());
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    try {
+      await act(async () => {
+        reject(new Error("synthetic network lost"));
+        await Promise.resolve();
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("does not show Invalid Date or an approval for an invalid date returned by an outdated client contract", async () => {
+    server.getAffiliateStatusByCode.mockResolvedValue({
+      ok: true,
+      status: "aprovada",
+      rejectionReason: null,
+      submittedAt: "not-an-ISO-timestamp",
+      reviewedAt: null,
+    });
+    render(<AffiliateTrackingCodePage />);
+    fireEvent.change(screen.getByLabelText("Código privado de acompanhamento"), {
+      target: { value: code },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/validar os dados/i);
+    expect(screen.queryByText("Candidatura aprovada")).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Invalid Date");
+  });
+
+  it("fails closed on an unrecognized private status instead of silently showing 'em análise'", async () => {
+    server.getAffiliateStatusByCode.mockResolvedValue({
+      ok: true,
+      status: "estado_desconhecido",
+      rejectionReason: null,
+      submittedAt: "2026-11-11T12:00:00Z",
+      reviewedAt: null,
+    });
+    render(<AffiliateTrackingCodePage />);
+    fireEvent.change(screen.getByLabelText("Código privado de acompanhamento"), {
+      target: { value: code },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/validar os dados/i);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
   it("rejects invalid codes without exposing candidate data", async () => {
     server.getAffiliateStatusByCode.mockResolvedValue({
       ok: false,
