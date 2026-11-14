@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, ChevronDown, CreditCard, Lock, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, CreditCard, Lock, ShieldCheck, Truck } from "lucide-react";
+import heroLogo from "@/assets/vonix-logo.webp";
 import { SecuritySeal, Shell } from "@/components/site";
 import { ShippingBar } from "@/components/cart-summary";
 import { useCepAddress } from "@/hooks/use-cep-address";
@@ -51,11 +52,17 @@ const inp =
 const tint = "border-emerald-200 bg-emerald-50";
 
 const panel =
-  "space-y-2 rounded-xl border border-border bg-white p-3.5 sm:p-4";
+  "space-y-2 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_18px_-14px_rgba(60,40,10,0.35)] sm:p-5";
+
+/** Selo dourado de cada forma de pagamento: marcado = borda e fundo dourados da marca. */
+const payTile = (on: boolean) =>
+  `relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-xl border-2 p-3.5 transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-action/60 ${
+    on ? "border-[#c9a45c] bg-[#1b1209] text-white shadow-sm" : "border-border bg-white hover:border-[#c9a45c]/60"
+  }`;
 
 const StepTitle = ({ n, children }: { n: number; children: React.ReactNode }) => (
   <>
-  <legend className="float-left mb-2 w-full text-body font-bold" data-step={n}>
+  <legend className="float-left mb-2 flex w-full items-center gap-2.5 font-display text-name" data-step={n}>
     {children}
   </legend>
   <div className="clear-both" />
@@ -267,7 +274,7 @@ function PixPanel({
   );
 }
 
-const STEPS = ["Contato", "Entrega", "Pagamento"];
+const STEPS = ["Dados", "Entrega", "Pagamento"];
 
 /** Losangos do Pix (desenho próprio, só o símbolo). */
 function PixMark() {
@@ -358,7 +365,6 @@ function Checkout() {
   // Checkout curto: com o endereço já preenchido pelo CEP, rua/bairro/cidade/UF ficam recolhidos numa linha só.
   const [editAddr, setEditAddr] = useState(false);
   const [showCompl, setShowCompl] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
   const lastQuotedCep = useRef("");
   const [quoteTry, setQuoteTry] = useState(0);
   const [payEl, setPayEl] = useState<HTMLButtonElement | null>(null);
@@ -793,124 +799,228 @@ function Checkout() {
   const stepsDone = [!!(f.nome && f.email && f.whatsapp && f.cpf), !!chosen, false];
   const progress = (stepsDone.filter(Boolean).length + 1) / 3;
 
+  const totalsCard = (
+            <section aria-label="Resumo do pedido" data-testid="order-summary-body" className={`${panel} space-y-2`}>
+              <div className="space-y-2 text-body" data-testid="summary">
+                <div className="flex justify-between">
+                  <span>Produtos</span>
+                  <span>{brl(t.gross)}</span>
+                </div>
+                {t.offerDiscount > 0 && (
+                  <div className="flex justify-between text-[#2c6e55]">
+                    <span>Economia das ofertas</span>
+                    <span>− {brl(t.offerDiscount)}</span>
+                  </div>
+                )}
+                {t.couponDiscount > 0 && applied && (
+                  <div className="flex justify-between text-[#2c6e55]">
+                    <span>Cupom {applied.code}</span>
+                    <span>− {brl(t.couponDiscount)}</span>
+                  </div>
+                )}
+                {t.pixDiscount > 0 && (
+                  <div className="flex justify-between text-[#2c6e55]">
+                    <span>Desconto no Pix</span>
+                    <span>− {brl(t.pixDiscount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Frete</span>
+                  <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : "A calcular"}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border-t border-[#c9a45c]/50 bg-[#fbf5e6] px-3 py-2.5 text-name font-bold">
+                  <span>
+                    {chosen ? `Total ${pay === "pix" ? "no Pix" : "no cartão"}` : `Produtos ${pay === "pix" ? "no Pix" : "no cartão"}`}
+                  </span>
+                  <span className="money text-h2">{brl(total)}</span>
+                </div>
+                <p className="text-small text-muted-foreground">
+                  {chosen ? "Total com o frete escolhido." : "Total final após calcular o frete."}
+                </p>
+                {pay === "card" && (
+                  <div className="text-small text-muted-foreground">
+                    até 6x de {brl(inst.value)} sem juros
+                    {inst.first !== inst.value ? ` (1ª de ${brl(inst.first)})` : ""}
+                  </div>
+                )}
+              </div>
+            </section>
+  );
+
   const body = (
-      <div className={lateral ? "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 p-3" : "container-site grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 py-4 pb-40 lg:gap-8 lg:py-8 lg:pb-40 lg:grid-cols-[minmax(0,1fr)_380px]"}>
+      <div className={lateral ? "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 p-3" : "container-site mx-auto grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 pb-40 pt-0 sm:pt-4"} style={lateral ? undefined : { maxWidth: "42rem" }}>
         <div className="min-w-0 space-y-3">
           <form id="checkout-form" className="min-w-0 space-y-3" onSubmit={onSubmit}>
-            <div>
-              <h1 className={lateral ? "sr-only" : "font-display text-h2 lg:text-h1"}>Finalizar compra</h1>
-              <p className="mt-2 flex cursor-default select-none items-center gap-2 text-small font-medium text-[#2c6e55]">
-                <Truck className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-                {missingForFreeShipping(gross) > 0
-                  ? `Faltam ${brl(missingForFreeShipping(gross))} para ganhar frete grátis`
-                  : "Você ganhou frete grátis"}
-              </p>
-              <CheckoutTimer />
-              {cfg?.sandbox && (
-                <p
-                  role="note"
-                  className="mt-3 rounded-lg border border-foreground bg-muted p-3 text-body"
-                >
-                  <b>Ambiente de testes.</b> Nenhuma cobrança real será feita.
+            {!lateral && (
+              <div data-testid="checkout-hero" className="relative -mx-4 overflow-hidden bg-[#1a1209] sm:mx-0 sm:rounded-2xl">
+                <img src="/images/categorias/hidratacao.jpg" alt="" width={480} height={480} className="absolute inset-y-0 right-0 h-full w-3/5 object-cover object-[50%_22%]" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-[#1a1209] via-[#1a1209]/85 to-transparent" />
+                <div className="relative px-5 py-6">
+                  <img src={heroLogo} alt="Vonix Hair" width={420} height={163} className="h-11 w-auto brightness-0 invert" />
+                  <p className="mt-2 font-display text-body italic text-[#e3c07a]">Seu cuidado começa aqui</p>
+                </div>
+              </div>
+            )}
+            <div className="pt-1">
+              {!lateral && (
+                <p className="mb-1 flex items-center gap-3 text-small font-semibold uppercase tracking-[0.14em] text-[#8a6a1c]">
+                  Pedido à vista
+                  <span aria-hidden="true" className="h-px flex-1 bg-[#c9a45c]/50" />
                 </p>
               )}
+              <h1 className={lateral ? "sr-only" : "font-display text-h1 leading-tight"}>Sua compra, sem surpresas</h1>
             </div>
 
-            <ul
-              aria-label="Garantias da compra"
-              data-testid="checkout-trust"
-              className="flex cursor-default select-none flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-[0.78rem] font-medium text-emerald-900"
-            >
-              {(
-                [
-                  [Lock, "Ambiente seguro"],
-                  [ShieldCheck, "Pagamento processado pela Appmax"],
-                  [Truck, `Frete grátis acima de ${brl(FREE_SHIPPING_ABOVE)}`],
-                ] as const
-              ).map(([Icon, text]) => (
-                <li key={text} className={`items-center gap-1.5 ${Icon === Truck ? "hidden sm:flex" : "flex"}`}>
-                  <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden="true" />
-                  {text}
-                </li>
-              ))}
-            </ul>
+            <section aria-label="Revise seu pedido" data-testid="checkout-review" className={`${panel} space-y-3`}>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-display text-name">Revise seu pedido</h2>
+                <Link to="/carrinho" className="shrink-0 text-small font-medium text-[#8a6a1c] underline">
+                  Editar pedido
+                </Link>
+              </div>
+              <ul className="divide-y divide-border">
+                {c.lines.map((l) => (
+                  <li
+                    key={l.slug + l.variant + (l.offer ?? "")}
+                    className="grid grid-cols-[92px_minmax(0,1fr)] items-center gap-4 py-3 first:pt-0 last:pb-0"
+                  >
+                    <img
+                      src={l.product.images[0]}
+                      alt={l.product.name}
+                      width={104}
+                      height={104}
+                      className="h-[92px] w-[92px] rounded-2xl bg-card-image object-contain p-2 shadow-[inset_0_0_0_1px_rgba(201,164,92,0.28)]"
+                    />
+                    <div className="min-w-0 space-y-3">
+                      <b className="block break-words text-name font-semibold leading-snug">
+                        {l.product.name} <span className="font-medium text-muted-foreground">• {l.variant}</span>
+                      </b>
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                        <div className="inline-flex items-center rounded-lg border border-border bg-white" role="group" aria-label={`Quantidade de ${l.product.name}`}>
+                          <button
+                            type="button"
+                            aria-label="Diminuir quantidade"
+                            disabled={l.qty <= 1}
+                            onClick={() => c.setQty(l.slug, l.variant, l.qty - 1, l.offer)}
+                            className="grid h-9 w-9 place-items-center text-name disabled:opacity-35"
+                          >
+                            −
+                          </button>
+                          <span className="min-w-8 text-center text-body font-semibold" aria-live="polite">
+                            {l.qty}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label="Aumentar quantidade"
+                            onClick={() => c.setQty(l.slug, l.variant, l.qty + 1, l.offer)}
+                            className="grid h-9 w-9 place-items-center text-name"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <span className="money whitespace-nowrap text-name font-bold">{brl(l.net)}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            <fieldset className={panel}>
-              <StepTitle n={1}>Contato</StepTitle>
-              <input
-                required
-                aria-label="Nome completo"
-                placeholder="Nome completo"
-                value={f.nome}
-                onChange={set("nome")}
-                autoComplete="name"
-                className={inp}
-              />
-              <input
-                required
-                type="email"
-                inputMode="email"
-                aria-label="E-mail"
-                placeholder="E-mail"
-                value={f.email}
-                onChange={set("email")}
-                autoComplete="email"
-                className={inp}
-              />
+
+            <p className="flex cursor-default select-none items-center gap-2 text-small font-medium text-[#2c6e55]">
+              <Truck className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              {missingForFreeShipping(gross) > 0
+                ? `Faltam ${brl(missingForFreeShipping(gross))} para ganhar frete grátis`
+                : "Você ganhou frete grátis"}
+            </p>
+
+            <fieldset className="space-y-2">
+              <StepTitle n={1}>Como você quer pagar?</StepTitle>
               <div className="grid grid-cols-2 gap-2">
-<input
-                required
-                inputMode="tel"
-                aria-label="WhatsApp com DDD"
-                placeholder="WhatsApp (DDD)"
-                value={f.whatsapp}
-                onChange={set("whatsapp")}
-                autoComplete="tel"
-                className={inp}
-              />
-              <input
-                required
-                inputMode="numeric"
-                aria-label="CPF"
-                placeholder="CPF"
-                value={f.cpf}
-                maxLength={14}
-                onChange={(e) => setF((old) => ({ ...old, cpf: maskCpf(e.target.value) }))}
-                className={inp}
-              />
-</div>
-              </fieldset>
+                <label data-testid="pay-option-pix" className={payTile(pay === "pix")}>
+                  <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <input
+                        type="radio"
+                        name="pay"
+                        aria-label="Pix"
+                        className="h-5 w-5 shrink-0 accent-[#e3c07a]"
+                        checked={pay === "pix"}
+                        onChange={() => setPay("pix")}
+                      />
+                      <span className="truncate">Pix</span>
+                    </span>
+                    <PixMark />
+                  </span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
+                    {!chosen && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>+ frete</span>}
+                  </span>
+                  <span className={`text-small leading-snug ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>Aprovação na hora</span>
+                </label>
+                <label data-testid="pay-option-card" className={payTile(pay === "card")}>
+                  <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <input
+                        type="radio"
+                        name="pay"
+                        aria-label="Cartão de crédito"
+                        className="h-5 w-5 shrink-0 accent-[#e3c07a]"
+                        checked={pay === "card"}
+                        onChange={() => setPay("card")}
+                      />
+                      <span className="truncate">Cartão</span>
+                    </span>
+                    <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="money block text-name font-semibold">{brl(chosen ? tCard.net + shipping : tCard.net)}</span>
+                    {!chosen && <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>+ frete</span>}
+                  </span>
+                  <span className={`text-small leading-snug ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Em até 6x sem juros</span>
+                </label>
+              </div>
+            </fieldset>
 
             <fieldset className={panel}>
-              <StepTitle n={2}>Entrega</StepTitle>
-              <div className="grid grid-cols-[1.4fr_1fr] gap-2">
-<input
-                required
-                inputMode="numeric"
-                aria-label="CEP"
-                placeholder="CEP (00000-000)"
-                value={f.cep}
-                maxLength={9}
-                onChange={(e) => {
-                  const m = maskCep(e.target.value);
-                  // CEP novo = endereço novo: apaga o do CEP anterior para nunca ficar rua/cidade de outro lugar escondida.
-                  setF((old) => (old.cep === m ? old : { ...old, cep: m, rua: "", bairro: "", cidade: "", uf: "" }));
-                }}
-                autoComplete="postal-code"
-                className={inp}
-              />
-<input
-                  ref={numeroRef}
+              <StepTitle n={2}>Onde vamos entregar?</StepTitle>
+                            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <input
                   required
                   inputMode="numeric"
-                  aria-label="Número"
-                  placeholder="Número"
-                  value={f.numero}
-                  onChange={set("numero")}
-                  autoComplete="off"
+                  aria-label="CEP"
+                  placeholder="CEP"
+                  value={f.cep}
+                  maxLength={9}
+                  onChange={(e) => {
+                    const m = maskCep(e.target.value);
+                    // CEP novo = endereço novo: apaga o do CEP anterior para nunca ficar rua/cidade de outro lugar escondida.
+                    setF((old) => (old.cep === m ? old : { ...old, cep: m, rua: "", bairro: "", cidade: "", uf: "" }));
+                  }}
+                  autoComplete="postal-code"
                   className={inp}
                 />
-</div>
+                <button
+                  type="button"
+                  onClick={() => setQuoteTry((n) => n + 1)}
+                  disabled={f.cep.replace(/\D/g, "").length !== 8 || quoting}
+                  className="h-11 rounded-lg bg-foreground px-5 text-body font-semibold text-background transition active:scale-[0.98] disabled:opacity-40"
+                >
+                  Calcular
+                </button>
+              </div>
+              <p className="text-small text-muted-foreground">Veja valor e prazo da entrega.</p>
+              <input
+                ref={numeroRef}
+                required
+                inputMode="numeric"
+                aria-label="Número"
+                placeholder="Número"
+                value={f.numero}
+                onChange={set("numero")}
+                autoComplete="off"
+                className={inp}
+              />
 {cepLoading && (
                 <p role="status" className="text-body text-muted-foreground">
                   Buscando endereço…
@@ -1042,65 +1152,74 @@ function Checkout() {
               </div>
             </fieldset>
 
-            <fieldset className="space-y-2">
-              <StepTitle n={3}>Pagamento</StepTitle>
-              <div
-                data-testid="pay-option-pix"
-                className={`space-y-3 rounded-xl border bg-white p-3.5 ${pay === "pix" ? "border-border border-l-4 border-l-[#111]" : "border-border"}`}
-              >
-                <label className="flex cursor-pointer items-center justify-between gap-3 text-body font-semibold">
-                  <span className="flex items-center gap-2.5">
-                    <input
-                      type="radio"
-                      name="pay"
-                      className="h-5 w-5 accent-[#111]"
-                      checked={pay === "pix"}
-                      onChange={() => setPay("pix")}
-                    />
-                    Pix
-                  </span>
-                  <PixMark />
-                </label>
-                {pay === "pix" && (
-                  <>
-                    {payButton}
-                    <p className="text-small text-muted-foreground">
-                      Aprovação na hora. Na próxima tela você recebe o QR Code e o código para copiar e colar.
-                    </p>
-                  </>
-                )}
-              </div>
-              <div
-                data-testid="pay-option-card"
-                className={`rounded-xl border bg-white p-3.5 ${pay === "card" ? "rounded-b-none border-b-0 border-border border-l-4 border-l-[#111]" : "border-border"}`}
-              >
-                <label className="flex cursor-pointer items-center justify-between gap-3 text-body font-semibold">
-                  <span className="flex items-center gap-2.5">
-                    <input
-                      type="radio"
-                      name="pay"
-                      className="h-5 w-5 accent-[#111]"
-                      checked={pay === "card"}
-                      onChange={() => setPay("card")}
-                    />
-                    Cartão de crédito
-                  </span>
-                  <CardBrands />
-                </label>
-              </div>
-            </fieldset>
+            <fieldset className={panel}>
+              <StepTitle n={3}>Seus dados</StepTitle>
+              <input
+                required
+                aria-label="Nome completo"
+                placeholder="Nome completo"
+                value={f.nome}
+                onChange={set("nome")}
+                autoComplete="name"
+                className={inp}
+              />
+              <input
+                required
+                type="email"
+                inputMode="email"
+                aria-label="E-mail"
+                placeholder="E-mail"
+                value={f.email}
+                onChange={set("email")}
+                autoComplete="email"
+                className={inp}
+              />
+              <div className="space-y-2">
+<input
+                required
+                inputMode="tel"
+                aria-label="WhatsApp com DDD"
+                placeholder="WhatsApp"
+                value={f.whatsapp}
+                onChange={set("whatsapp")}
+                autoComplete="tel"
+                className={inp}
+              />
+              <input
+                required
+                inputMode="numeric"
+                aria-label="CPF"
+                placeholder="CPF"
+                value={f.cpf}
+                maxLength={14}
+                onChange={(e) => setF((old) => ({ ...old, cpf: maskCpf(e.target.value) }))}
+                className={inp}
+              />
+</div>
+              </fieldset>
+
+            {totalsCard}
+
+              {pay === "pix" && (
+                <div className="space-y-3 pt-1">
+                  {payButton}
+                  <p className="text-small text-muted-foreground">
+                    Na próxima tela você recebe o QR Code e o código para copiar e colar. O total final já inclui o frete escolhido.
+                  </p>
+                </div>
+              )}
 
           </form>
 
           {/* Card fields live in their own form so Appmax JS can tokenize them; the main form triggers it. */}
-          <div className={pay === "card" ? "-mt-3" : ""}>
-            {/* Continuação visual da caixa "Cartão de crédito": mesma barra preta à esquerda, sem espaço entre as duas. */}
+          <div>
+            {/* Dados do cartão: caixa própria logo abaixo da escolha de pagamento (só aparece com o cartão marcado). */}
             <form
               id="card-form"
               data-appmax-checkout
               hidden={pay !== "card"}
               data-testid="card-form"
-              className="min-w-0 space-y-3 rounded-b-xl border border-t-0 border-l-4 border-border border-l-[#111] bg-white p-3.5 pt-1"
+              className="min-w-0 space-y-3 rounded-2xl border border-[#c9a45c]/60 bg-white p-4 shadow-[0_6px_18px_-14px_rgba(60,40,10,0.35)]"
               onSubmit={(e) => e.preventDefault()}
             >
               <input
@@ -1250,92 +1369,7 @@ function Checkout() {
             </p>
           </div>
         </div>
-
-        <aside
-          className="h-fit min-w-0 space-y-4 rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5 order-first lg:order-none lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1 data-[lateral=true]:!static data-[lateral=true]:!col-start-1 data-[lateral=true]:!row-start-auto"
-          aria-label="Resumo do pedido"
-          data-lateral={lateral}
-        >
-          <button
-            type="button"
-            aria-expanded={showSummary}
-            onClick={() => setShowSummary((v) => !v)}
-            className="flex w-full items-center justify-between gap-3 text-left text-body font-semibold lg:hidden"
-          >
-            <span>
-              Resumo do pedido · {c.lines.reduce((n, l) => n + l.units, 0)} {c.lines.reduce((n, l) => n + l.units, 0) === 1 ? "item" : "itens"}
-            </span>
-            <span className="flex items-center gap-1">
-              {brl(total)}
-              <ChevronDown className={`h-4 w-4 transition ${showSummary ? "rotate-180" : ""}`} aria-hidden="true" />
-            </span>
-          </button>
-          <div className={`space-y-4 ${showSummary ? "" : "hidden"} lg:block`} data-testid="order-summary-body">
-          <ul className="space-y-2 text-body">
-            {c.lines.map((l) => (
-              <li
-                key={l.slug + l.variant + (l.offer ?? "")}
-                className="grid grid-cols-[48px_minmax(0,1fr)_auto] items-start gap-2"
-              >
-                <img
-                  src={l.product.images[0]}
-                  alt={l.product.name}
-                  width={48}
-                  height={48}
-                  className="h-12 w-12 rounded border border-border bg-background object-contain"
-                />
-                <span className="min-w-0 break-words">
-                  {l.units}× {l.product.name}{" "}
-                  <span className="text-muted-foreground">({l.variant})</span>
-                </span>
-                <span className="whitespace-nowrap font-medium">{brl(l.net)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="space-y-2 text-body" data-testid="summary">
-            <div className="flex justify-between">
-              <span>Subtotal dos produtos</span>
-              <span>{brl(t.gross)}</span>
-            </div>
-            {t.offerDiscount > 0 && (
-              <div className="flex justify-between">
-                <span>Economia das ofertas</span>
-                <span>− {brl(t.offerDiscount)}</span>
-              </div>
-            )}
-            {t.couponDiscount > 0 && applied && (
-              <div className="flex justify-between">
-                <span>Cupom {applied.code}</span>
-                <span>− {brl(t.couponDiscount)}</span>
-              </div>
-            )}
-            {t.pixDiscount > 0 && (
-              <div className="flex justify-between">
-                <span>Desconto Pix</span>
-                <span>− {brl(t.pixDiscount)}</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span>Frete</span>
-              <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : "Informe o CEP"}</span>
-            </div>
-            <div className="flex justify-between border-t border-border pt-2 text-body font-semibold">
-              <span>
-                Total {pay === "pix" ? "no Pix" : "no cartão"}
-                {chosen ? "" : " (sem frete)"}
-              </span>
-              <span>{brl(total)}</span>
-            </div>
-            {pay === "card" && (
-              <div className="text-muted-foreground">
-                até 6x de {brl(inst.value)} sem juros
-                {inst.first !== inst.value ? ` (1ª de ${brl(inst.first)})` : ""}
-              </div>
-            )}
-          </div>
-          </div>
-        </aside>
-        <div className="min-w-0 space-y-4 lg:col-start-1">
+        <div className="min-w-0 space-y-4">
           {cfg && !cfg.pixEnabled && (
             <p role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
               Estamos ativando os pagamentos desta loja. Em breve você poderá finalizar por aqui.
@@ -1356,6 +1390,30 @@ function Checkout() {
               <div className="mx-auto w-full max-w-xl space-y-2">{renderPay(true)}</div>
             </div>
           )}
+          <CheckoutTimer />
+          {cfg?.sandbox && (
+            <p role="note" className="rounded-lg border border-foreground bg-muted p-3 text-body">
+              <b>Ambiente de testes.</b> Nenhuma cobrança real será feita.
+            </p>
+          )}
+          <ul
+            aria-label="Garantias da compra"
+            data-testid="checkout-trust"
+            className="flex cursor-default select-none flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-[0.78rem] font-medium text-emerald-900"
+          >
+            {(
+              [
+                [Lock, "Ambiente seguro"],
+                [ShieldCheck, "Pagamento processado pela Appmax"],
+                [Truck, `Frete grátis acima de ${brl(FREE_SHIPPING_ABOVE)}`],
+              ] as const
+            ).map(([Icon, text]) => (
+              <li key={text} className={`items-center gap-1.5 ${Icon === Truck ? "hidden sm:flex" : "flex"}`}>
+                <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden="true" />
+                {text}
+              </li>
+            ))}
+          </ul>
           <div className="flex justify-center">
             <SecuritySeal />
           </div>
