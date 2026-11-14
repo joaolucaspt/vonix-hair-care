@@ -602,7 +602,7 @@ export function ProductCard({ p }: { p: Product }) {
     toast.success(`${p.name} adicionado à sacola`);
   };
   return (
-    <div className="group flex h-full flex-col rounded-2xl border border-border bg-white p-2.5 shadow-sm md:p-3">
+    <div className="group relative flex h-full cursor-pointer flex-col rounded-2xl border border-border bg-white p-2.5 shadow-sm md:p-3">
       <div className="relative overflow-hidden rounded-xl bg-white">
         {off > 0 && (
           <span className="absolute left-2 top-2 z-10 rounded-md bg-[#7a5a2e] px-1.5 py-0.5 text-small font-semibold text-white">
@@ -630,7 +630,7 @@ export function ProductCard({ p }: { p: Product }) {
           <span className="rounded-md bg-foreground px-1.5 py-0.5 text-small font-semibold tracking-wide text-background">LEVE 2: 12% · LEVE 3: 15%</span>
         )}
       </div>
-      <Link to="/produto/$slug" params={{ slug: p.slug }} className="mt-0.5 line-clamp-2 min-h-[2.4rem] text-name font-semibold leading-tight hover:underline md:leading-snug">
+      <Link to="/produto/$slug" params={{ slug: p.slug }} className="mt-0.5 line-clamp-2 min-h-[2.4rem] text-name font-semibold leading-tight after:absolute after:inset-0 after:z-[1] after:rounded-2xl after:content-[''] hover:underline md:leading-snug">
         {p.name}
       </Link>
       <div className="mt-1.5"><Stars slug={p.slug} big hideEmpty /></div>
@@ -644,7 +644,7 @@ export function ProductCard({ p }: { p: Product }) {
           type="button"
           onClick={bag}
           aria-label={p.variants.length > 1 || pricing.professional ? `Escolher opções de ${p.name}` : `Adicionar ${p.name} à sacola`}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-sm transition-transform active:scale-95 md:h-11 md:w-11"
+          className="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-action text-action-foreground shadow-sm transition-transform active:scale-95 md:h-11 md:w-11"
         >
           <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
         </button>
