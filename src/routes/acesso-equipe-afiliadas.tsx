@@ -37,6 +37,11 @@ type Invitation = {
   ever_activated_at: string | null;
 };
 
+/** Read visibility per call: browser focus can change between awaited operations. */
+function teamTabHidden(): boolean {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
+}
+
 /** A display-only shortcut; no authentication or authorization bypass. */
 function unauthenticatedTeamAccessStage(): Stage {
   return typeof window !== "undefined" &&
@@ -56,6 +61,7 @@ export function AffiliateTeamAccess() {
   const [error, setError] = useState("");
   const pendingManualHash = useRef<string | null>(null);
   const identityVersion = useRef(0);
+  const visibilityEpoch = useRef(0);
   const leavingIdentity = useRef(false);
   // A password reset can only follow freshly verified one-time Auth proof
   // for the exact owner address. A pre-existing browser session is not proof.
@@ -66,9 +72,10 @@ export function AffiliateTeamAccess() {
     // Clear the previous owner's onboarding state while revalidating Auth.
     setStage("checking");
     setEmail("");
+    if (teamTabHidden()) return;
     try {
       const identity = await vonixAffiliateAuth.auth.getUser();
-      if (requestId !== identityVersion.current) return;
+      if (requestId !== identityVersion.current || teamTabHidden()) return;
       const user = identity.data.user;
       if (identity.error || !user?.email || !user.email_confirmed_at) {
         freshVerifiedAddress.current = null;
@@ -82,7 +89,7 @@ export function AffiliateTeamAccess() {
         .select("role,password_set_at,ever_activated_at")
         .eq("email", normalized)
         .maybeSingle();
-      if (requestId !== identityVersion.current) return;
+      if (requestId !== identityVersion.current || teamTabHidden()) return;
       if (row.error || !row.data) {
         freshVerifiedAddress.current = null;
         setStage("denied");
@@ -109,7 +116,8 @@ export function AffiliateTeamAccess() {
             : "password",
       );
     } catch {
-      if (requestId === identityVersion.current) setStage(unauthenticatedTeamAccessStage());
+      if (requestId === identityVersion.current && !teamTabHidden())
+        setStage(unauthenticatedTeamAccessStage());
     }
   }, []);
 
@@ -142,13 +150,37 @@ export function AffiliateTeamAccess() {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       queueMicrotask(() => {
-        if (active && !leavingIdentity.current && !pendingManualHash.current)
+        if (active && !teamTabHidden() && !leavingIdentity.current && !pendingManualHash.current)
           void inspectIdentity();
       });
     });
+    const onVisibilityChange = () => {
+      if (!active) return;
+      if (teamTabHidden()) {
+        // A temporary OTP proof must not survive leaving a shared-device tab.
+        // Invalidate pending identity lookups and clear secrets from the DOM.
+        ++versionRef.current;
+        ++visibilityEpoch.current;
+        freshVerifiedAddress.current = null;
+        setPassword("");
+        setRepeatPassword("");
+        setOtp("");
+        setNotice("");
+        setError("");
+        if (!pendingManualHash.current) setStage("checking");
+      } else if (
+        document.visibilityState === "visible" &&
+        !leavingIdentity.current &&
+        !pendingManualHash.current
+      ) {
+        void inspectIdentity();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       active = false;
       ++versionRef.current;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       subscription.unsubscribe();
     };
   }, [inspectIdentity]);
@@ -185,6 +217,7 @@ export function AffiliateTeamAccess() {
   async function confirmManualInvitation() {
     const tokenHash = pendingManualHash.current;
     if (!tokenHash || busy) return;
+    const epoch = visibilityEpoch.current;
     setBusy(true);
     setError("");
     try {
@@ -192,6 +225,13 @@ export function AffiliateTeamAccess() {
         token_hash: tokenHash,
         type: "magiclink",
       });
+      if (epoch !== visibilityEpoch.current || teamTabHidden()) {
+        pendingManualHash.current = null;
+        // The one-use link may already have been consumed. Offer a fresh
+        // email proof instead of leaving a confirmation button with no token.
+        setStage("email");
+        return;
+      }
       pendingManualHash.current = null;
       if (result.error) {
         setStage("email");
@@ -203,6 +243,7 @@ export function AffiliateTeamAccess() {
       // Confirm which person redeemed the one-use link before offering
       // recovery of an existing password or onboarding of a new owner.
       const identity = await vonixAffiliateAuth.auth.getUser();
+      if (epoch !== visibilityEpoch.current || teamTabHidden()) return;
       if (identity.error || !identity.data.user?.email || !identity.data.user.email_confirmed_at) {
         setStage("email");
         setError("Não foi possível confirmar o titular do convite. Solicite um novo acesso.");
@@ -258,6 +299,7 @@ export function AffiliateTeamAccess() {
   async function verifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || !/^\d{6,8}$/.test(otp)) return;
+    const epoch = visibilityEpoch.current;
     setBusy(true);
     setError("");
     try {
@@ -266,6 +308,7 @@ export function AffiliateTeamAccess() {
         token: otp,
         type: "email",
       });
+      if (epoch !== visibilityEpoch.current || teamTabHidden()) return;
       if (response.error) setError("Código inválido ou expirado.");
       else {
         freshVerifiedAddress.current = email.trim().toLowerCase();
@@ -314,8 +357,12 @@ export function AffiliateTeamAccess() {
         row.data.ever_activated_at !== null
       )
         throw new Error("Invitation absent, invalid or not pending.");
+      if (teamTabHidden() || freshVerifiedAddress.current !== verified)
+        throw new Error("Fresh authorization expired on backgrounding.");
       const updated = await vonixAffiliateAuth.auth.updateUser({ password });
       if (updated.error) throw new Error("Password update failed.");
+      if (teamTabHidden() || freshVerifiedAddress.current !== verified)
+        throw new Error("Fresh authorization expired before activation.");
       const marked = await vonixAffiliateAuth.rpc("vonix_affiliate_activate_admin_account");
       if (marked.error || marked.data !== true) throw new Error("Activation failed.");
       freshVerifiedAddress.current = null;
@@ -375,6 +422,8 @@ export function AffiliateTeamAccess() {
       if (row.error || !row.data?.password_set_at || !row.data?.ever_activated_at) {
         throw new Error("Owner is not activated.");
       }
+      if (teamTabHidden() || freshVerifiedAddress.current !== verified)
+        throw new Error("Fresh authorization expired on backgrounding.");
       const updated = await vonixAffiliateAuth.auth.updateUser({ password });
       if (updated.error) throw new Error("Password update failed.");
       passwordUpdated = true;
