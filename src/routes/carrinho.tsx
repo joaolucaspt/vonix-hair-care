@@ -138,7 +138,7 @@ function Suggestions() {
           return (
             <div
               key={p.slug}
-              className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-3 text-body"
+              className="relative flex min-w-0 cursor-pointer flex-col rounded-xl border border-border bg-card p-3 text-body"
             >
               <Link to="/produto/$slug" params={{ slug: p.slug }} className="block">
                 <img
@@ -150,7 +150,7 @@ function Suggestions() {
               <Link
                 to="/produto/$slug"
                 params={{ slug: p.slug }}
-                className="mt-2 font-medium hover:underline"
+                className="mt-2 font-medium after:absolute after:inset-0 after:z-[1] after:rounded-xl after:content-[''] hover:underline"
               >
                 {p.name}
               </Link>
@@ -166,7 +166,7 @@ function Suggestions() {
               </div>
               <button
                 onClick={() => c.add(p.slug, v.label, 1, "comp5")}
-                className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                className="relative z-10 mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100"
               >
                 Adicionar
               </button>
