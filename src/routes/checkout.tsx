@@ -412,12 +412,31 @@ function Checkout() {
     pixEnabled?: boolean;
   } | null>(null);
   const ip = useRef("");
+  useEffect(() => {
+    if (!f.nome && !f.email && !f.whatsapp) return;
+    try {
+      localStorage.setItem(
+        "vonix-checkout-contato",
+        JSON.stringify({ nome: f.nome, email: f.email, whatsapp: f.whatsapp }),
+      );
+    } catch { /* sem armazenamento */ }
+  }, [f.nome, f.email, f.whatsapp]);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF((old) => ({ ...old, [k]: e.target.value }));
 
   useEffect(() => {
     const saved = getSavedCep();
     if (saved) setF((old) => (old.cep ? old : { ...old, cep: saved }));
+    // Quem volta ao checkout não redigita: nome, e-mail e WhatsApp ficam só neste aparelho (nunca CPF nem cartão).
+    try {
+      const d = JSON.parse(localStorage.getItem("vonix-checkout-contato") || "{}");
+      setF((old) => ({
+        ...old,
+        nome: old.nome || (typeof d.nome === "string" ? d.nome : ""),
+        email: old.email || (typeof d.email === "string" ? d.email : ""),
+        whatsapp: old.whatsapp || (typeof d.whatsapp === "string" ? d.whatsapp : ""),
+      }));
+    } catch { /* sem armazenamento */ }
     getPaymentConfig()
       .then(setCfg)
       .catch(() => setCfg({ externalId: "", sandbox: true, pixEnabled: false }));
