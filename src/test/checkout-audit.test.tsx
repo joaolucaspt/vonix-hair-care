@@ -335,3 +335,25 @@ describe("C86 — total integral ao lado do parcelamento no checkout", () => {
     expect(mocks.payment).not.toHaveBeenCalled();
   });
 });
+
+describe("C86 — transparência dos centavos na parcela escolhida", () => {
+  it("informa primeira parcela diferente no botão e no resumo quando cliente escolhe 6x", () => {
+    render(<Checkout />);
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    fireEvent.change(screen.getByLabelText("Parcelas"), { target: { value: "6" } });
+    const price = getProduct("kit-banana-e-mel")!.variants[0]!.price;
+    const totalCents = Math.round(price * 100);
+    const regular = Math.floor(totalCents / 6);
+    const first = totalCents - regular * 5;
+    expect(first).toBeGreaterThan(regular);
+    const money = (cents: number) =>
+      new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+        .format(cents / 100).replace(/\u00a0/g, " ");
+    const expected = `6x de ${money(regular)} sem juros (1ª de ${money(first)})`;
+    const button = (screen.getByTestId("checkout-pay-float").textContent ?? "").replace(/\u00a0/g, " ");
+    const summary = (screen.getByTestId("summary").textContent ?? "").replace(/\u00a0/g, " ");
+    expect(button).toContain(expected);
+    expect(summary).toContain("Parcelamento escolhido: " + expected);
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+});

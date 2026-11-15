@@ -81,7 +81,8 @@ const maskCpf = (v: string) =>
 /** Apresentação apenas: o cálculo compartilhado mantém os centavos na primeira parcela. */
 const installmentText = (total: number, count: number, interestFree = true) => {
   const split = installments(total, count);
-  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}`;
+  const firstDiffers = split.first !== split.value ? ` (1ª de ${brl(split.first)})` : "";
+  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}${firstDiffers}`;
 };
 
 type ShipOption = {
