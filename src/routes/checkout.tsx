@@ -820,16 +820,16 @@ function Checkout() {
                 )}
                 <div className="flex justify-between">
                   <span>Frete</span>
-                  <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : "A calcular"}</span>
+                  <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : freeShip ? "Grátis" : "A calcular"}</span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border-t border-[#c9a45c]/50 bg-[#fbf5e6] px-3 py-2.5 text-name font-bold">
                   <span className="min-w-0">
-                    {chosen ? `Total ${pay === "pix" ? "no Pix" : "no cartão"}` : `Produtos ${pay === "pix" ? "no Pix" : "no cartão"}`}
+                    {chosen || freeShip ? `Total ${pay === "pix" ? "no Pix" : "no cartão"}` : `Produtos ${pay === "pix" ? "no Pix" : "no cartão"}`}
                   </span>
                   <span className="money text-h2">{brl(total)}</span>
                 </div>
                 <p className="text-small text-muted-foreground">
-                  {chosen ? "Total com o frete escolhido." : "Total final após calcular o frete."}
+                  {chosen ? (chosen.free ? "Frete grátis: você não paga frete." : "Total com o frete escolhido.") : freeShip ? "Frete grátis: você não paga frete." : "Total final após calcular o frete."}
                 </p>
                 {pay === "card" && (
                   <div className="min-w-0 break-words text-small text-muted-foreground" aria-live="polite">
