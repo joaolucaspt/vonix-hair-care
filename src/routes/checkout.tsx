@@ -926,7 +926,7 @@ function Checkout() {
 
             <fieldset className="space-y-2">
               <StepTitle n={1}>Como você quer pagar?</StepTitle>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label data-testid="pay-option-pix" className={payTile(pay === "pix")}>
                   <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
                     <span className="flex min-w-0 items-center gap-2">
@@ -963,12 +963,12 @@ function Checkout() {
                     </span>
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
-                  <span className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-1 leading-tight" aria-live="polite">
-                    <span className="min-w-0 break-words">
-                      <span className="block text-name font-bold tabular-nums">{brl(cardTotal)}</span>
+                  <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 leading-tight" aria-live="polite">
+                    <span className="min-w-0">
+                      <span className="block whitespace-nowrap text-name font-bold tabular-nums">{brl(cardTotal)}</span>
                       <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Valor total{!chosen ? " (sem frete)" : ""}</span>
                     </span>
-                    <span className="min-w-0 break-words whitespace-normal text-small font-semibold tabular-nums">{installmentText(cardTotal, 6)}</span>
+                    <span className="min-w-0 break-words text-small font-semibold leading-snug tabular-nums">{installmentText(cardTotal, 6)}</span>
                   </span>
                 </label>
               </div>
