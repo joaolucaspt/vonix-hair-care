@@ -78,6 +78,12 @@ const maskCpf = (v: string) =>
     .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1-$2");
 
+/** Apresentação apenas: o cálculo compartilhado mantém os centavos na primeira parcela. */
+const installmentText = (total: number, count: number, interestFree = true) => {
+  const split = installments(total, count);
+  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}${split.first !== split.value ? ` (1ª de ${brl(split.first)})` : ""}`;
+};
+
 type ShipOption = {
   id: number;
   name: string;
@@ -743,7 +749,8 @@ function Checkout() {
       </Shell>
     );
 
-  const inst = installments(total);
+  const cardTotal = tCard.net + shipping;
+  const selectedInstallments = installmentText(total, parcels);
   const payDisabled = busy || quoting || !chosen || !cfg || !cfg.pixEnabled;
   // Botão de pagar: o de verdade fica dentro da caixa do método escolhido; quando ele sai da tela, uma barra fixa o repete.
   const renderPay = (floating: boolean) => (
@@ -770,10 +777,10 @@ function Checkout() {
         </span>
         <span className="min-w-0 flex-1 leading-tight">
           <span className="block text-name font-semibold tracking-wide">
-            {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${brl(total)} no cartão`}
+            {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${installmentText(total, parcels, parcels > 1)} no cartão`}
           </span>
           <span className="mt-0.5 block text-[0.72rem] font-normal tracking-wide text-white/70 group-disabled:text-neutral-500">
-            {pay === "pix" ? "Aprovação na hora · pagamento seguro" : "Em até 6x sem juros · pagamento seguro"}
+            {pay === "pix" ? "Aprovação na hora · pagamento seguro" : "Pagamento seguro"}
           </span>
         </span>
         <ArrowRight className="h-5 w-5 shrink-0 text-[#e3c07a] transition group-hover:translate-x-0.5 group-disabled:text-neutral-400" strokeWidth={2} aria-hidden="true" />
@@ -812,8 +819,8 @@ function Checkout() {
                   <span>Frete</span>
                   <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : "A calcular"}</span>
                 </div>
-                <div className="flex items-center justify-between rounded-xl border-t border-[#c9a45c]/50 bg-[#fbf5e6] px-3 py-2.5 text-name font-bold">
-                  <span>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border-t border-[#c9a45c]/50 bg-[#fbf5e6] px-3 py-2.5 text-name font-bold">
+                  <span className="min-w-0">
                     {chosen ? `Total ${pay === "pix" ? "no Pix" : "no cartão"}` : `Produtos ${pay === "pix" ? "no Pix" : "no cartão"}`}
                   </span>
                   <span className="money text-h2">{brl(total)}</span>
@@ -822,9 +829,8 @@ function Checkout() {
                   {chosen ? "Total com o frete escolhido." : "Total final após calcular o frete."}
                 </p>
                 {pay === "card" && (
-                  <div className="text-small text-muted-foreground">
-                    até 6x de {brl(inst.value)} sem juros
-                    {inst.first !== inst.value ? ` (1ª de ${brl(inst.first)})` : ""}
+                  <div className="min-w-0 break-words text-small text-muted-foreground" aria-live="polite">
+                    Parcelamento escolhido: {selectedInstallments}
                   </div>
                 )}
               </div>
@@ -957,11 +963,10 @@ function Checkout() {
                     </span>
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 leading-tight">
-                    <span className="money block text-name font-semibold">{brl(chosen ? tCard.net + shipping : tCard.net)}</span>
-                    {!chosen && <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>+ frete</span>}
+                  <span className="min-w-0 break-words leading-tight" aria-live="polite">
+                    <span className="money block text-name font-semibold">{installmentText(cardTotal, 6)}</span>
                   </span>
-                  <span className={`text-small leading-snug ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Em até 6x sem juros</span>
+                  <span className={`min-w-0 break-words text-small leading-snug ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Total no cartão: {brl(cardTotal)}{!chosen ? " (sem frete)" : ""}</span>
                 </label>
               </div>
             </fieldset>
