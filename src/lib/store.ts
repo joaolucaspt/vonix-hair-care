@@ -167,8 +167,14 @@ export type CartItem = { slug: string; variant: string; qty: number; offer?: Off
  */
 export function migrateCart(items: CartItem[]): CartItem[] {
   const out: CartItem[] = [];
+  if (!Array.isArray(items)) return out;
   for (const i of items) {
-    const units = i.offer === "kit2" ? i.qty * 2 : i.offer === "kit3" ? i.qty * 3 : i.qty;
+    if (!i || typeof i !== "object" || typeof i.slug !== "string" || !i.slug.trim() || typeof i.variant !== "string" || !i.variant.trim()) continue;
+    const rawQty: unknown = i.qty;
+    const qty = typeof rawQty === "number" ? rawQty : typeof rawQty === "string" && /^\d+$/.test(rawQty.trim()) ? Number(rawQty.trim()) : NaN;
+    if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty <= 0) continue;
+    const safeQty = Math.min(99, qty);
+    const units = i.offer === "kit2" ? safeQty * 2 : i.offer === "kit3" ? safeQty * 3 : safeQty;
     const offer: Offer | undefined = i.offer === "comp5" ? "comp5" : undefined;
     const ex = out.find((o) => o.slug === i.slug && o.variant === i.variant && o.offer === offer);
     if (ex) ex.qty = Math.min(99, ex.qty + units);
@@ -202,7 +208,11 @@ function createStore<T>(key: string, initial: T, kind: "local" | "session" = "lo
     set: (fn: (s: T) => T) => {
       load();
       state = fn(state);
-      storage().setItem(key, JSON.stringify(state));
+      try {
+        storage().setItem(key, JSON.stringify(state));
+      } catch {
+        /* Keep the in-memory cart usable even when browser storage is unavailable or full. */
+      }
       subs.forEach((f) => f());
     },
     sub: (f: () => void) => {
