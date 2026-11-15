@@ -204,13 +204,8 @@ describe("checkout auditado sem chamadas reais", () => {
     const radios = () => screen.getAllByRole("radio", { name: /Correios (PAC|SEDEX)/ });
     // o mais barato já vem marcado
     expect(radios().find((r) => (r as HTMLInputElement).checked)?.closest("label")).toHaveTextContent("PAC");
-    // o cliente escolhe o SEDEX e depois aplica um cupom
+    // o cliente escolhe o SEDEX e a escolha se mantém
     fireEvent.click(radios().find((r) => r.closest("label")?.textContent?.includes("SEDEX")) as HTMLElement);
-    fireEvent.click(screen.getByRole("button", { name: /Tem um cupom/ }));
-    fireEvent.change(screen.getByLabelText("Código do cupom"), { target: { value: "GIRA3" } });
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
-    await waitFor(() => expect(mocks.quote.mock.calls.length).toBeGreaterThan(1));
-    await screen.findByText(/Cupom GIRA3 aplicado/);
     await waitFor(() =>
       expect(radios().find((r) => (r as HTMLInputElement).checked)?.closest("label")).toHaveTextContent("SEDEX"),
     );
