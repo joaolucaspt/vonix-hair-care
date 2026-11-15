@@ -783,7 +783,7 @@ function Checkout() {
             {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${installmentText(total, parcels, parcels > 1)} no cartão`}
           </span>
           <span className="mt-0.5 block text-[0.72rem] font-normal tracking-wide text-white/70 group-disabled:text-neutral-500">
-            {pay === "pix" ? "Aprovação na hora · pagamento seguro" : "Pagamento seguro"}
+            Pagamento seguro
           </span>
         </span>
         <ArrowRight className="h-5 w-5 shrink-0 text-[#e3c07a] transition group-hover:translate-x-0.5 group-disabled:text-neutral-400" strokeWidth={2} aria-hidden="true" />
@@ -949,7 +949,6 @@ function Checkout() {
                     <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
                     {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "sem frete"}</span>}
                   </span>
-                  <span className={`text-small leading-snug ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>Aprovação na hora</span>
                 </label>
                 <label data-testid="pay-option-card" className={payTile(pay === "card")}>
                   <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
