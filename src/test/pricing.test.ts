@@ -55,7 +55,7 @@ describe("ambiente e preços dos cards", () => {
 });
 
 describe("regras comerciais", () => {
-  it("catálogo tem 42 produtos (Plex Vonix sem estoque)", () => expect(products.length).toBe(42));
+  it("catálogo tem 71 produtos (42 + 29 unidades avulsas dos kits; Plex Vonix sem estoque)", () => expect(products.length).toBe(71));
   it("com o teste encerrado (14/11) valem os preços de products.json", () => {
     expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(131.9);
     expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([59.9, 143.9]);

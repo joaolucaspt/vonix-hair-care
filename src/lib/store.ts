@@ -379,8 +379,8 @@ const SALAO_TEXT = new Set([
   "kit-matizador-shampoo-e-mascara", "progressiva-lift-em-gel", "progressiva-vonix-special-matizadora", "kit-cachos", "defrizante", "serum-argan",
 ]);
 export const USAGE: Record<string, (p: Product) => boolean> = {
-  casa: (p) => !isProOnly(p.slug) && (p.category === "kits" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
-  salao: (p) => isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || SALAO_TEXT.has(p.slug),
+  casa: (p) => !isProOnly(p.slug) && (p.category === "kits" || p.category === "avulsos" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
+  salao: (p) => isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || p.category === "avulsos" || SALAO_TEXT.has(p.slug),
 };
 
 /** Professional relevance only; stable families based on catalog identifiers, never kit text. */
@@ -422,6 +422,38 @@ export function complementsFor(cartSlugs: string[], max = 3): Product[] {
     seen.add(s);
     const p = getProduct(s);
     if (p && p.category !== "kits") out.push(p);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/**
+ * Unidades avulsas dos kits que ajudam a chegar ao frete grátis: só aparecem quando ainda falta valor
+ * (subtotal antes dos descontos, a mesma conta do frete). Primeiro as que sozinhas completam o que falta,
+ * da mais barata para a mais cara; se nenhuma completa, as mais caras (menos itens para chegar lá).
+ * Nunca repete um produto que já está no carrinho.
+ */
+export function fillersForFreeShipping(cartSlugs: string[], subtotal: number, max = 3): { product: Product; variant: Product["variants"][number] }[] {
+  const missing = missingForFreeShipping(subtotal);
+  if (missing <= 0) return [];
+  const inCart = new Set(cartSlugs);
+  const options = products
+    .filter((p) => p.category === "avulsos" && !inCart.has(p.slug))
+    .map((p) => {
+      const reach = p.variants.filter((v) => v.price >= missing).sort((a, b) => a.price - b.price)[0];
+      const variant = reach ?? [...p.variants].sort((a, b) => b.price - a.price)[0]!;
+      return { product: p, variant, reaches: !!reach };
+    });
+  const reaching = options.filter((o) => o.reaches).sort((a, b) => a.variant.price - b.variant.price);
+  const rest = options.filter((o) => !o.reaches).sort((a, b) => b.variant.price - a.variant.price);
+  // no máximo uma sugestão por linha (ex.: Banana e Mel), para a lista não ficar repetitiva
+  const seenLine = new Set<string>();
+  const out: { product: Product; variant: Product["variants"][number] }[] = [];
+  for (const o of [...reaching, ...rest]) {
+    const line = o.product.slug.replace(/^(shampoo|condicionador|mascara|leave-in|modelador|finalizador|keratina)-/, "");
+    if (seenLine.has(line)) continue;
+    seenLine.add(line);
+    out.push({ product: o.product, variant: o.variant });
     if (out.length >= max) break;
   }
   return out;
