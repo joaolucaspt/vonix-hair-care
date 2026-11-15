@@ -46,6 +46,9 @@ export function AffiliateTrackingCodePage() {
   const [copying, setCopying] = useState(false);
   const [codeRevealed, setCodeRevealed] = useState(false);
   const lookupVersion = useRef(0);
+  // React state can batch two submissions into one render. The ref prevents
+  // duplicate private-status requests from spending two rate-limit quotas.
+  const lookupInFlight = useRef<string | null>(null);
   const clipboardEpoch = useRef(0);
   const clipboardInFlight = useRef(false);
 
@@ -88,6 +91,8 @@ export function AffiliateTrackingCodePage() {
   }
 
   async function lookup(codeValue: string) {
+    if (lookupInFlight.current === codeValue) return;
+    lookupInFlight.current = codeValue;
     const requestId = ++lookupVersion.current;
     setBusy(true);
     setError("");
@@ -119,7 +124,10 @@ export function AffiliateTrackingCodePage() {
         setError("Falha ao consultar. Confira sua conexão e tente novamente.");
       }
     } finally {
-      if (lookupVersion.current === requestId) setBusy(false);
+      if (lookupVersion.current === requestId) {
+        if (lookupInFlight.current === codeValue) lookupInFlight.current = null;
+        setBusy(false);
+      }
     }
   }
 
@@ -145,6 +153,7 @@ export function AffiliateTrackingCodePage() {
     const onVisibilityChange = () => {
       if (document.visibilityState !== "hidden") return;
       lookupVersion.current++;
+      lookupInFlight.current = null;
       clipboardEpoch.current++;
       clipboardInFlight.current = false;
       setCopying(false);
@@ -194,6 +203,7 @@ export function AffiliateTrackingCodePage() {
                 value={code}
                 onChange={(event) => {
                   lookupVersion.current++;
+                  lookupInFlight.current = null;
                   clipboardEpoch.current++;
                   clipboardInFlight.current = false;
                   setCopying(false);
