@@ -56,6 +56,82 @@ afterEach(() => {
 });
 
 describe("C39 private team OTP and invitation replay safety", () => {
+  it("C48 submits a one-time OTP only once when the same form fires twice before React updates", async () => {
+    const old = deferred<{ data: object; error: { message: string } }>();
+    m.verifyOtp.mockReturnValue(old.promise);
+    render(<AffiliateTeamAccess />);
+    fireEvent.change(await screen.findByLabelText("E-mail autorizado"), {
+      target: { value: "member@example.invalid" },
+    });
+    fireEvent.change(screen.getByLabelText("Código recebido, se disponível"), {
+      target: { value: "123456" },
+    });
+    const form = screen.getByRole("button", { name: "Validar" }).closest("form");
+    expect(form).not.toBeNull();
+    act(() => {
+      fireEvent.submit(form!);
+      fireEvent.submit(form!);
+    });
+    expect(m.verifyOtp).toHaveBeenCalledOnce();
+    await act(async () => {
+      old.resolve({ data: {}, error: { message: "synthetic invalid token" } });
+      await old.promise;
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Código inválido ou expirado.");
+  });
+
+  it("C48 lets the corrected identity retry OTP without stale verification unlocking its newer attempt", async () => {
+    const old = deferred<{ data: object; error: null }>();
+    const fresh = deferred<{ data: object; error: { message: string } }>();
+    m.verifyOtp.mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise);
+    render(<AffiliateTeamAccess />);
+    const email = await screen.findByLabelText("E-mail autorizado");
+    fireEvent.change(email, { target: { value: "first.member@example.invalid" } });
+    fireEvent.change(screen.getByLabelText("Código recebido, se disponível"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Validar" }));
+    await waitFor(() => expect(m.verifyOtp).toHaveBeenCalledTimes(1));
+    fireEvent.change(email, { target: { value: "second.member@example.invalid" } });
+    fireEvent.change(screen.getByLabelText("Código recebido, se disponível"), {
+      target: { value: "654321" },
+    });
+    expect(screen.getByRole("button", { name: "Validar" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Validar" }));
+    await waitFor(() => expect(m.verifyOtp).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      old.resolve({ data: {}, error: null });
+      await old.promise;
+    });
+    expect(m.getUser).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Validar" })).toBeDisabled();
+    expect(email).toHaveValue("second.member@example.invalid");
+    await act(async () => {
+      fresh.resolve({ data: {}, error: { message: "synthetic invalid token" } });
+      await fresh.promise;
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Código inválido ou expirado.");
+  });
+
+  it("C48 confirms a bearer invitation only once on duplicate same-tick clicks", async () => {
+    window.history.replaceState({}, "", "/acesso-equipe-afiliadas#vonix_invite=" + "k".repeat(64));
+    const old = deferred<{ data: object; error: { message: string } }>();
+    m.verifyOtp.mockReturnValue(old.promise);
+    render(<AffiliateTeamAccess />);
+    const button = await screen.findByRole("button", { name: "Confirmar ativação" });
+    act(() => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+    expect(m.verifyOtp).toHaveBeenCalledOnce();
+    await act(async () => {
+      old.resolve({ data: {}, error: { message: "synthetic expired invitation" } });
+      await old.promise;
+    });
+    expect(m.getUser).not.toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("alert")).toHaveTextContent("Este link expirou");
+  });
+
   it("does not display a stale network error after an OTP request rejects in a hidden tab", async () => {
     const pending = deferred<never>();
     m.verifyOtp.mockReturnValueOnce(pending.promise);
