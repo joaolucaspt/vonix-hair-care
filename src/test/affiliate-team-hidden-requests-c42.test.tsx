@@ -57,6 +57,57 @@ afterEach(() => {
 });
 
 describe("C42 private team recovery after interrupted provider requests", () => {
+  it("C47 sends at most one team access email for same-tick duplicate form submits", async () => {
+    const pending = deferred<{ status: "requested" }>();
+    mocks.request.mockReturnValue(pending.promise);
+    render(<AffiliateTeamAccess />);
+    fireEvent.change(await screen.findByLabelText("E-mail autorizado"), {
+      target: { value: email },
+    });
+    const form = screen.getByRole("button", { name: "Enviar acesso por e-mail" }).closest("form");
+    expect(form).not.toBeNull();
+    act(() => {
+      fireEvent.submit(form!);
+      fireEvent.submit(form!);
+    });
+    expect(mocks.request).toHaveBeenCalledOnce();
+    await act(async () => {
+      pending.resolve({ status: "requested" });
+      await pending.promise;
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Se seu e-mail está autorizado");
+  });
+
+  it("C47 lets corrected email retry immediately, ignoring an older pending provider reply", async () => {
+    const older = deferred<{ status: "rate-limited" }>();
+    const fresh = deferred<{ status: "requested" }>();
+    mocks.request.mockReturnValueOnce(older.promise).mockReturnValueOnce(fresh.promise);
+    render(<AffiliateTeamAccess />);
+    const field = await screen.findByLabelText("E-mail autorizado");
+    fireEvent.change(field, { target: { value: email } });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar acesso por e-mail" }));
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledOnce());
+    fireEvent.change(field, { target: { value: "another.owner@example.invalid" } });
+    const button = screen.getByRole("button", { name: "Enviar acesso por e-mail" });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(mocks.request).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      older.resolve({ status: "rate-limited" });
+      await older.promise;
+    });
+    expect(screen.getByRole("button", { name: "Verificando..." })).toBeDisabled();
+    expect(
+      screen.queryByText("Limite temporário de solicitações. Tente novamente mais tarde."),
+    ).not.toBeInTheDocument();
+    await act(async () => {
+      fresh.resolve({ status: "requested" });
+      await fresh.promise;
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Se seu e-mail está autorizado");
+    expect(screen.getByRole("button", { name: "Enviar acesso por e-mail" })).toBeEnabled();
+  });
+
   it("unlocks a fresh email request on resume without letting an older completion unlock a newer request", async () => {
     const oldRequest = deferred<{ status: "requested" }>();
     const newRequest = deferred<{ status: "requested" }>();

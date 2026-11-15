@@ -64,6 +64,10 @@ export function AffiliateTeamAccess() {
   const visibilityEpoch = useRef(0);
   // A pending delivery response belongs to the exact email input revision.
   const emailEditVersion = useRef(0);
+  // React may batch two submits before busy renders. Restrict every email
+  // request to one active identity revision, without spending duplicate OTP quotas.
+  const emailRequestVersion = useRef(0);
+  const emailRequestPending = useRef(false);
   const leavingIdentity = useRef(false);
   // A password reset can only follow freshly verified one-time Auth proof
   // for the exact owner address. A pre-existing browser session is not proof.
@@ -163,6 +167,8 @@ export function AffiliateTeamAccess() {
         // Invalidate pending identity lookups and clear secrets from the DOM.
         ++versionRef.current;
         ++visibilityEpoch.current;
+        ++emailRequestVersion.current;
+        emailRequestPending.current = false;
         // A provider Promise may never settle while the tab is backgrounded.
         // A new visible flow must not inherit a stale disabled state.
         setBusy(false);
@@ -277,7 +283,9 @@ export function AffiliateTeamAccess() {
 
   async function requestInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || teamTabHidden()) return;
+    if (busy || emailRequestPending.current || teamTabHidden()) return;
+    const requestVersion = ++emailRequestVersion.current;
+    emailRequestPending.current = true;
     const epoch = visibilityEpoch.current;
     const emailVersion = emailEditVersion.current;
     const identityId = identityVersion.current;
@@ -317,7 +325,10 @@ export function AffiliateTeamAccess() {
     } catch {
       if (stillCurrent()) setError("Falha de conexão ao solicitar acesso.");
     } finally {
-      if (epoch === visibilityEpoch.current) setBusy(false);
+      if (requestVersion === emailRequestVersion.current) {
+        emailRequestPending.current = false;
+        if (epoch === visibilityEpoch.current) setBusy(false);
+      }
     }
   }
 
@@ -611,6 +622,11 @@ export function AffiliateTeamAccess() {
                     value={email}
                     onChange={(e) => {
                       emailEditVersion.current++;
+                      if (emailRequestPending.current) {
+                        ++emailRequestVersion.current;
+                        emailRequestPending.current = false;
+                        setBusy(false);
+                      }
                       freshVerifiedAddress.current = null;
                       setEmail(e.target.value);
                       setOtp("");
@@ -696,6 +712,11 @@ export function AffiliateTeamAccess() {
                     value={email}
                     onChange={(e) => {
                       emailEditVersion.current++;
+                      if (emailRequestPending.current) {
+                        ++emailRequestVersion.current;
+                        emailRequestPending.current = false;
+                        setBusy(false);
+                      }
                       freshVerifiedAddress.current = null;
                       setEmail(e.target.value);
                       setOtp("");
