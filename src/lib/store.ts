@@ -21,7 +21,7 @@ export type Product = {
 };
 
 /** Produtos sem estoque por enquanto: saem da loja, do sitemap e do catálogo da Meta. Para voltar, é só remover o slug daqui. */
-export const OUT_OF_STOCK = new Set<string>(["plex-vonix"]);
+export const OUT_OF_STOCK = new Set<string>(["plex-vonix", "perfume-capilar-vonix"]);
 
 /**
  * Teste de preços (13/11 a 20/11/2026): até "fim" valem os preços de teste-precos.json;
@@ -420,7 +420,7 @@ export const professionalRelevance = (items: Product[]) =>
 const COMPLEMENT_RULES: [RegExp, string[]][] = [
   [/progressiva-fio-de-luz/, ["shampoo-fio-de-luz-anti-residuo", "serum-argan", "reparador-de-pontas"]],
   [/progressiva|botox|selagem|cauterizacao/, ["shampoo-diamond-anti-residuo", "defrizante", "mascara-efeito-teia-tomba-cabelo"]],
-  [/kit-banana-e-mel|kit-cafe-verde|kit-coco-nutri|kit-cachos|kit-cronograma|kit-whey|kit-desmaia/, ["serum-argan", "defrizante", "perfume-capilar-vonix"]],
+  [/kit-banana-e-mel|kit-cafe-verde|kit-coco-nutri|kit-cachos|kit-cronograma|kit-whey|kit-desmaia/, ["serum-argan", "defrizante", "perfume-capilar-vonix-rubi"]],
   [/cacho/, ["mascara-efeito-teia-coco-nutri", "defrizante", "serum-argan"]],
   [/mascara|hidrat|nutri|reconstru|queratina|whey/, ["reparador-de-pontas", "serum-argan", "ampola-de-hidratacao-mousse-flash"]],
   [/matiz/, ["kit-matizador-shampoo-e-mascara", "serum-argan"]],

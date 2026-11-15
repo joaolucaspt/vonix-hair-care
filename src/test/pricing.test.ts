@@ -55,7 +55,7 @@ describe("ambiente e preços dos cards", () => {
 });
 
 describe("regras comerciais", () => {
-  it("catálogo tem 71 produtos (42 + 29 unidades avulsas dos kits; Plex Vonix sem estoque)", () => expect(products.length).toBe(71));
+  it("catálogo tem 74 produtos (42 + 29 avulsos + 4 perfumes separados − perfume antigo; Plex Vonix sem estoque)", () => expect(products.length).toBe(74));
   it("com o teste encerrado (14/11) valem os preços de products.json", () => {
     expect(getProduct("progressiva-fio-de-luz")!.variants[0]?.price).toBe(131.9);
     expect(getProduct("kit-cachos")!.variants.map((v) => v.price)).toEqual([59.9, 143.9]);
@@ -200,7 +200,7 @@ describe("classificação e complementos", () => {
   });
   it("kits de casa sugerem Sérum Argan / Defrizante / Perfume Capilar", () => {
     const s = complementsFor(["kit-banana-e-mel", "kit-cafe-verde"]).map((p) => p.slug);
-    expect(s).toEqual(["serum-argan", "defrizante", "perfume-capilar-vonix"]);
+    expect(s).toEqual(["serum-argan", "defrizante", "perfume-capilar-vonix-rubi"]);
   });
   it("nunca sugere o que já está no carrinho nem kits", () => {
     const s = complementsFor(["kit-banana-e-mel", "serum-argan"]).map((p) => p.slug);
