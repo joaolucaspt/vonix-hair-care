@@ -4,11 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { toItem, track } from "@/lib/analytics";
 import { Minus, Plus, Trash2, Truck } from "lucide-react";
 import { Shell } from "@/components/site";
+import { thumb } from "@/lib/images";
 import {
   OFFER_LABEL,
   brl,
   complementPrice,
   complementsFor,
+  fillersForFreeShipping,
   getSavedCep,
   maskCep,
   saveCep,
@@ -118,6 +120,41 @@ function CartShipping({
         </ul>
       )}
     </div>
+  );
+}
+
+/** "Complete seu pedido": unidades avulsas dos kits para chegar ao frete grátis (acima de R$ 150 em produtos). */
+function FreeShippingFillers() {
+  const c = useCart();
+  const list = fillersForFreeShipping(c.lines.map((l) => l.slug), c.subtotal);
+  if (!list.length) return null;
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4" aria-label="Complete seu pedido para ter frete grátis" data-testid="free-shipping-fillers">
+      <h2 className="text-body font-semibold">Complete para ganhar frete grátis</h2>
+      <p className="mt-0.5 text-small text-muted-foreground">Unidades avulsas dos kits, para você levar só o que falta.</p>
+      <ul className="mt-3 space-y-2">
+        {list.map(({ product: p, variant: v }) => (
+          <li key={p.slug} className="flex items-center gap-3 rounded-lg border border-border bg-background p-2">
+            <img src={thumb(p.images[0]!)} alt="" width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 shrink-0 rounded-md bg-card-image object-contain" />
+            <div className="min-w-0 flex-1 leading-tight">
+              <Link to="/produto/$slug" params={{ slug: p.slug }} className="block truncate text-small font-medium hover:underline">
+                {p.name}
+              </Link>
+              <span className="text-small text-muted-foreground">
+                {v.label === "Unidade" ? "Unidade" : v.label} · <b className="money text-foreground">{brl(v.price)}</b>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => c.add(p.slug, v.label, 1)}
+              className="shrink-0 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              Adicionar
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -284,6 +321,7 @@ function Cart() {
             </div>
             <aside className="space-y-4">
               <ShippingBar subtotal={c.subtotal} />
+              <FreeShippingFillers />
               <CartShipping
                 items={c.lines.map((l) => ({
                   slug: l.slug,

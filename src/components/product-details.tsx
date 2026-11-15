@@ -50,9 +50,9 @@ function Row({ title, children, open = false }: { title: string; children: React
 
 export function ProductDetails({ p }: { p: Product }) {
   const { intro, sections } = parse(p.description);
-  // Intro = short line (already on the card) + lead paragraph; show only the lead here.
+  // Intro = gancho + parágrafos persuasivos. Só tira a primeira linha se ela repetir o texto curto do cartão (descrições antigas).
   const blocks = intro.split(/\n{2,}/);
-  const details = blocks.length > 1 ? blocks.slice(1).join("\n\n") : intro;
+  const details = blocks.length > 1 && blocks[0]!.trim() === p.short.trim() ? blocks.slice(1).join("\n\n") : intro;
   const action = sections["AÇÃO / RESULTADO"];
   const contains = sections["O QUE VEM NO KIT"] ?? sections["O QUE VEM NO KIT"];
   const sizes = p.variants.map((v) => v.label.replace(/^[^\d]*/, "").replace(/\s+/g, "")).filter(Boolean).join(" · ");

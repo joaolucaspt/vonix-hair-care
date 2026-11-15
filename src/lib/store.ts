@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import raw from "@/data/products.json";
 import teste from "@/data/teste-precos.json";
 import { bfPct } from "@/lib/black-friday";
+import { soldFor } from "@/lib/sales";
 
 export type Variant = { label: string; price: number };
 export type Product = {
@@ -15,10 +16,12 @@ export type Product = {
   variants: [Variant, ...Variant[]];
   compareBase: number | null;
   reviews: number;
+  /** Só nas unidades avulsas: slug do kit de onde a unidade veio. */
+  kit?: string;
 };
 
 /** Produtos sem estoque por enquanto: saem da loja, do sitemap e do catálogo da Meta. Para voltar, é só remover o slug daqui. */
-export const OUT_OF_STOCK = new Set<string>(["plex-vonix"]);
+export const OUT_OF_STOCK = new Set<string>(["plex-vonix", "perfume-capilar-vonix"]);
 
 /**
  * Teste de preços (13/11 a 20/11/2026): até "fim" valem os preços de teste-precos.json;
@@ -295,6 +298,7 @@ export const TYPES: Record<string, (p: Product) => boolean> = {
   Progressiva: (p) => /progressiva/i.test(p.name),
   "Máscara": (p) => /máscara/i.test(p.name),
   Kits: (p) => p.category === "kits",
+  Avulsos: (p) => p.category === "avulsos",
   Finalizadores: (p) => p.category === "finalizadores",
 };
 export const BEST_SELLERS = ["progressiva-fio-de-luz", "kit-banana-e-mel", "kit-coco-nutri", "botox-vonix", "botox-line", "mascara-efeito-teia-coco-nutri"];
@@ -369,6 +373,18 @@ export const forAudience = (items: Product[], audience: Audience) => {
   }
   return items;
 };
+/** Unidades avulsas de um kit, na ordem do kit. */
+export const kitItems = (kitSlug: string): Product[] => products.filter((p) => p.category === "avulsos" && p.kit === kitSlug);
+
+/** Ordem de vitrine do curso: o que mais vende vem primeiro (da esquerda para a direita). Avulsos herdam a venda do kit. Estável: empate mantém a ordem do catálogo. */
+const saleRank = (p: Product) => soldFor(p.slug) || (p.kit ? soldFor(p.kit) : 0);
+export const bySales = <T extends Product>(items: T[]): T[] =>
+  items.map((p, i) => [p, i] as const).sort((a, b) => saleRank(b[0]) - saleRank(a[0]) || a[1] - b[1]).map(([p]) => p);
+
+/** "Mais desejados" da home: o que mais vende (sem as unidades avulsas), já na ordem da área escolhida. */
+export const homeBestSellers = (audience: Audience, max = 8): Product[] =>
+  forAudience(bySales(products.filter((p) => p.category !== "avulsos")), audience).slice(0, max);
+
 export function useAudience() {
   const audience = useSyncExternalStore(audienceStore.sub, audienceStore.get, audienceStore.server);
   return { audience, set: (a: Audience) => audienceStore.set(() => a) };
@@ -389,8 +405,8 @@ const SALAO_TEXT = new Set([
   "kit-matizador-shampoo-e-mascara", "progressiva-lift-em-gel", "progressiva-vonix-special-matizadora", "kit-cachos", "defrizante", "serum-argan",
 ]);
 export const USAGE: Record<string, (p: Product) => boolean> = {
-  casa: (p) => !isProOnly(p.slug) && (p.category === "kits" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
-  salao: (p) => isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || SALAO_TEXT.has(p.slug),
+  casa: (p) => !isProOnly(p.slug) && (p.category === "kits" || p.category === "avulsos" || p.category === "finalizadores" || CASA_TEXT.has(p.slug)),
+  salao: (p) => isProOnly(p.slug) || (p.category === "quimica" && p.slug.startsWith("botox-")) || p.category === "kits" || p.category === "avulsos" || SALAO_TEXT.has(p.slug),
 };
 
 /** Professional relevance only; stable families based on catalog identifiers, never kit text. */
@@ -414,7 +430,7 @@ export const professionalRelevance = (items: Product[]) =>
 const COMPLEMENT_RULES: [RegExp, string[]][] = [
   [/progressiva-fio-de-luz/, ["shampoo-fio-de-luz-anti-residuo", "serum-argan", "reparador-de-pontas"]],
   [/progressiva|botox|selagem|cauterizacao/, ["shampoo-diamond-anti-residuo", "defrizante", "mascara-efeito-teia-tomba-cabelo"]],
-  [/kit-banana-e-mel|kit-cafe-verde|kit-coco-nutri|kit-cachos|kit-cronograma|kit-whey|kit-desmaia/, ["serum-argan", "defrizante", "perfume-capilar-vonix"]],
+  [/kit-banana-e-mel|kit-cafe-verde|kit-coco-nutri|kit-cachos|kit-cronograma|kit-whey|kit-desmaia/, ["serum-argan", "defrizante", "perfume-capilar-vonix-rubi"]],
   [/cacho/, ["mascara-efeito-teia-coco-nutri", "defrizante", "serum-argan"]],
   [/mascara|hidrat|nutri|reconstru|queratina|whey/, ["reparador-de-pontas", "serum-argan", "ampola-de-hidratacao-mousse-flash"]],
   [/matiz/, ["kit-matizador-shampoo-e-mascara", "serum-argan"]],
@@ -432,6 +448,38 @@ export function complementsFor(cartSlugs: string[], max = 3): Product[] {
     seen.add(s);
     const p = getProduct(s);
     if (p && p.category !== "kits") out.push(p);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/**
+ * Unidades avulsas dos kits que ajudam a chegar ao frete grátis: só aparecem quando ainda falta valor
+ * (subtotal antes dos descontos, a mesma conta do frete). Primeiro as que sozinhas completam o que falta,
+ * da mais barata para a mais cara; se nenhuma completa, as mais caras (menos itens para chegar lá).
+ * Nunca repete um produto que já está no carrinho.
+ */
+export function fillersForFreeShipping(cartSlugs: string[], subtotal: number, max = 3): { product: Product; variant: Product["variants"][number] }[] {
+  const missing = missingForFreeShipping(subtotal);
+  if (missing <= 0) return [];
+  const inCart = new Set(cartSlugs);
+  const options = products
+    .filter((p) => p.category === "avulsos" && !inCart.has(p.slug))
+    .map((p) => {
+      const reach = p.variants.filter((v) => v.price >= missing).sort((a, b) => a.price - b.price)[0];
+      const variant = reach ?? [...p.variants].sort((a, b) => b.price - a.price)[0]!;
+      return { product: p, variant, reaches: !!reach };
+    });
+  const reaching = options.filter((o) => o.reaches).sort((a, b) => a.variant.price - b.variant.price);
+  const rest = options.filter((o) => !o.reaches).sort((a, b) => b.variant.price - a.variant.price);
+  // no máximo uma sugestão por linha (ex.: Banana e Mel), para a lista não ficar repetitiva
+  const seenLine = new Set<string>();
+  const out: { product: Product; variant: Product["variants"][number] }[] = [];
+  for (const o of [...reaching, ...rest]) {
+    const line = o.product.slug.replace(/^(shampoo|condicionador|mascara|leave-in|modelador|finalizador|keratina)-/, "");
+    if (seenLine.has(line)) continue;
+    seenLine.add(line);
+    out.push({ product: o.product, variant: o.variant });
     if (out.length >= max) break;
   }
   return out;
