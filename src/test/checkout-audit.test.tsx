@@ -289,3 +289,49 @@ describe("checkout auditado sem chamadas reais", () => {
     expect(vi.mocked(fbq).mock.calls.some((c) => c[1] === "Purchase")).toBe(false);
   });
 });
+
+describe("C86 — total integral ao lado do parcelamento no checkout", () => {
+  it("destaca valor integral primeiro, 6x ao lado e informa a diferença de centavos", () => {
+    render(<Checkout />);
+    const tile = screen.getByTestId("pay-option-card");
+    const text = (tile.textContent ?? "").replace(/\u00a0/g, " ");
+    const price = getProduct("kit-banana-e-mel")!.variants[0]!.price;
+    const cents = Math.round(price * 100);
+    const each = Math.floor(cents / 6);
+    const first = cents - each * 5;
+    const money = (v: number) =>
+      new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+        .format(v)
+        .replace(/\u00a0/g, " ");
+    expect(tile.querySelector('[aria-live="polite"]')?.className).toContain(
+      "grid-cols-[auto_minmax(0,1fr)]",
+    );
+    expect(tile.closest("fieldset")?.querySelector(".grid-cols-1")).not.toBeNull();
+    expect(text.indexOf(money(price))).toBeLessThan(text.indexOf("6x de"));
+    expect(text).toContain("Valor total");
+    expect(text).toContain("6x de " + money(each / 100));
+    expect(text).toContain("sem juros");
+    if (first !== each) expect(text).toContain("1ª de " + money(first / 100));
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+
+  it("recalcula integral e 6x para frete cotado e mantem 1x selecionado", async () => {
+    mocks.quote.mockResolvedValue({
+      ok: true,
+      options: [{ ...option, price: 12.03, free: false }],
+    });
+    render(<Checkout />);
+    fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
+    await screen.findByText(/Correios PAC/);
+    const total = getProduct("kit-banana-e-mel")!.variants[0]!.price + 12.03;
+    const amount = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+      .format(total)
+      .replace(/\u00a0/g, " ");
+    const text = (screen.getByTestId("pay-option-card").textContent ?? "").replace(/\u00a0/g, " ");
+    expect(text).toContain(amount);
+    expect(text).toContain("6x de");
+    fireEvent.click(screen.getByRole("radio", { name: /Cartão de crédito/ }));
+    expect(screen.getByLabelText("Parcelas")).toHaveValue("1");
+    expect(mocks.payment).not.toHaveBeenCalled();
+  });
+});
