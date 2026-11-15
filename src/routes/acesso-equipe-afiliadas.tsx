@@ -68,6 +68,11 @@ export function AffiliateTeamAccess() {
   // request to one active identity revision, without spending duplicate OTP quotas.
   const emailRequestVersion = useRef(0);
   const emailRequestPending = useRef(false);
+  // Verification and invite redemption are one-use operations; their busy
+  // state must be enforced synchronously before React commits a new render.
+  const otpVerificationVersion = useRef(0);
+  const otpVerificationPending = useRef(false);
+  const manualInvitationPending = useRef(false);
   const leavingIdentity = useRef(false);
   // A password reset can only follow freshly verified one-time Auth proof
   // for the exact owner address. A pre-existing browser session is not proof.
@@ -169,6 +174,9 @@ export function AffiliateTeamAccess() {
         ++visibilityEpoch.current;
         ++emailRequestVersion.current;
         emailRequestPending.current = false;
+        ++otpVerificationVersion.current;
+        otpVerificationPending.current = false;
+        manualInvitationPending.current = false;
         // A provider Promise may never settle while the tab is backgrounded.
         // A new visible flow must not inherit a stale disabled state.
         setBusy(false);
@@ -233,7 +241,8 @@ export function AffiliateTeamAccess() {
 
   async function confirmManualInvitation() {
     const tokenHash = pendingManualHash.current;
-    if (!tokenHash || busy) return;
+    if (!tokenHash || busy || manualInvitationPending.current || teamTabHidden()) return;
+    manualInvitationPending.current = true;
     const epoch = visibilityEpoch.current;
     setBusy(true);
     setError("");
@@ -277,7 +286,10 @@ export function AffiliateTeamAccess() {
         setError("Não foi possível validar o convite. Confira sua conexão ou solicite outro link.");
       }
     } finally {
-      if (epoch === visibilityEpoch.current) setBusy(false);
+      if (epoch === visibilityEpoch.current) {
+        manualInvitationPending.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -334,13 +346,16 @@ export function AffiliateTeamAccess() {
 
   async function verifyCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || teamTabHidden() || !/^\d{6,8}$/.test(otp)) return;
+    if (busy || otpVerificationPending.current || teamTabHidden() || !/^\d{6,8}$/.test(otp)) return;
+    const verificationVersion = ++otpVerificationVersion.current;
+    otpVerificationPending.current = true;
     const epoch = visibilityEpoch.current;
     const emailVersion = emailEditVersion.current;
     const verifiedEmail = email.trim().toLowerCase();
     const stillCurrent = () =>
       epoch === visibilityEpoch.current &&
       emailVersion === emailEditVersion.current &&
+      verificationVersion === otpVerificationVersion.current &&
       !teamTabHidden();
     setBusy(true);
     setError("");
@@ -360,7 +375,10 @@ export function AffiliateTeamAccess() {
     } catch {
       if (stillCurrent()) setError("Não foi possível validar o código.");
     } finally {
-      if (epoch === visibilityEpoch.current) setBusy(false);
+      if (verificationVersion === otpVerificationVersion.current) {
+        otpVerificationPending.current = false;
+        if (epoch === visibilityEpoch.current) setBusy(false);
+      }
     }
   }
 
@@ -627,6 +645,11 @@ export function AffiliateTeamAccess() {
                         emailRequestPending.current = false;
                         setBusy(false);
                       }
+                      if (otpVerificationPending.current) {
+                        ++otpVerificationVersion.current;
+                        otpVerificationPending.current = false;
+                        setBusy(false);
+                      }
                       freshVerifiedAddress.current = null;
                       setEmail(e.target.value);
                       setOtp("");
@@ -715,6 +738,11 @@ export function AffiliateTeamAccess() {
                       if (emailRequestPending.current) {
                         ++emailRequestVersion.current;
                         emailRequestPending.current = false;
+                        setBusy(false);
+                      }
+                      if (otpVerificationPending.current) {
+                        ++otpVerificationVersion.current;
+                        otpVerificationPending.current = false;
                         setBusy(false);
                       }
                       freshVerifiedAddress.current = null;
