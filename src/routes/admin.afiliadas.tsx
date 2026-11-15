@@ -242,6 +242,9 @@ export function AffiliateAdminPage() {
   const loadVersion = useRef(0);
   // A preview becomes obsolete as soon as the operator changes either interval.
   const retentionVersion = useRef(0);
+  // A backgrounded diagnostic may never complete. Its response cannot block
+  // a fresh check, nor overwrite the current authorized diagnostic.
+  const readinessVersion = useRef(0);
   // Invalidate pending confidential reads on logout, tab hide or filter changes.
   const privateDetailVersion = useRef(0);
   // Never retain a legacy TOTP or password across an inactive tab.
@@ -254,6 +257,13 @@ export function AffiliateAdminPage() {
     const onVisibilityChange = () => {
       if (document.visibilityState !== "hidden") return;
       legacyLoginEpoch.current++;
+      readinessVersion.current++;
+      retentionVersion.current++;
+      setReadinessBusy(false);
+      setReadiness(null);
+      setRetentionBusy(false);
+      setRetentionError("");
+      setRetentionResult(null);
       if (legacyLoginPending.current) {
         legacyLoginPending.current = false;
         setLoading(false);
@@ -288,6 +298,7 @@ export function AffiliateAdminPage() {
     setNotice("");
     setErasureId(null);
     setErasureEmail("");
+    readinessVersion.current += 1;
     setReadiness(null);
     setReadinessBusy(false);
     retentionVersion.current += 1;
@@ -683,30 +694,34 @@ export function AffiliateAdminPage() {
   }
 
   async function inspectReadiness() {
-    if (!authorized || loading || readinessBusy) return;
+    if (!authorized || loading || readinessBusy || document.visibilityState === "hidden") return;
     const sessionId = sessionVersion.current;
+    const requestId = ++readinessVersion.current;
+    const isCurrent = () =>
+      sessionId === sessionVersion.current &&
+      requestId === readinessVersion.current &&
+      document.visibilityState === "visible";
     setReadinessBusy(true);
     setReadiness(null);
     setError("");
     try {
       const result = await getAffiliateOperationalReadiness();
-      if (sessionId !== sessionVersion.current) return;
+      if (!isCurrent()) return;
       if (!result.ok) {
         if (!sessionExpired(result.reason)) setError(result.reason);
         return;
       }
       setReadiness(result);
     } catch {
-      if (sessionId === sessionVersion.current)
-        setError("Não foi possível verificar a preparação do programa.");
+      if (isCurrent()) setError("Não foi possível verificar a preparação do programa.");
     } finally {
-      if (sessionId === sessionVersion.current) setReadinessBusy(false);
+      if (requestId === readinessVersion.current) setReadinessBusy(false);
     }
   }
 
   async function inspectRetention(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!authorized || retentionBusy) return;
+    if (!authorized || retentionBusy || document.visibilityState === "hidden") return;
     if (
       !Number.isInteger(retentionPendingDays) ||
       retentionPendingDays < 30 ||
@@ -723,7 +738,9 @@ export function AffiliateAdminPage() {
     const sessionId = sessionVersion.current;
     const requestId = ++retentionVersion.current;
     const isCurrent = () =>
-      sessionId === sessionVersion.current && requestId === retentionVersion.current;
+      sessionId === sessionVersion.current &&
+      requestId === retentionVersion.current &&
+      document.visibilityState === "visible";
     setRetentionBusy(true);
     setRetentionError("");
     setRetentionResult(null);

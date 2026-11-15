@@ -716,6 +716,107 @@ describe("Vonix affiliate private panel", () => {
     expect(screen.queryByText(/Exclusões executadas por esta consulta/)).not.toBeInTheDocument();
   });
 
+  it("C45 rechecks operational readiness after a hidden tab even if its previous probe never completes", async () => {
+    let finishOld!: (value: unknown) => void;
+    server.getAffiliateOperationalReadiness
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishOld = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: true,
+        recruitmentOpen: false,
+        databaseResponding: true,
+        governanceResponding: true,
+        checks: [{ id: "current", label: "Nova conferência autorizada", ok: true }],
+      });
+    let visibilityState: DocumentVisibilityState = "visible";
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockImplementation(() => visibilityState);
+    try {
+      render(<Page />);
+      expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Verificar preparação" }));
+      await waitFor(() => expect(server.getAffiliateOperationalReadiness).toHaveBeenCalledOnce());
+      visibilityState = "hidden";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.queryByText("Segredo da candidata")).not.toBeInTheDocument();
+      visibilityState = "visible";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+      const retry = screen.getByRole("button", { name: "Verificar preparação" });
+      expect(retry).toBeEnabled();
+      fireEvent.click(retry);
+      expect(await screen.findByText("Nova conferência autorizada")).toBeInTheDocument();
+      expect(server.getAffiliateOperationalReadiness).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        finishOld({
+          ok: true,
+          recruitmentOpen: true,
+          databaseResponding: true,
+          governanceResponding: true,
+          checks: [{ id: "stale", label: "Sinalização privada antiga", ok: true }],
+        });
+        await Promise.resolve();
+      });
+      expect(screen.queryByText("Sinalização privada antiga")).not.toBeInTheDocument();
+      expect(screen.getByText("Nova conferência autorizada")).toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
+  it("C45 retries the read-only retention preview after returning from a hidden tab without stale completion", async () => {
+    let finishOld!: (value: unknown) => void;
+    server.getAffiliateRetentionPreview
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishOld = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        ok: true,
+        pendingEligible: 73,
+        rejectedEligible: 12,
+        executedDeletions: 0,
+      });
+    let visibilityState: DocumentVisibilityState = "visible";
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockImplementation(() => visibilityState);
+    try {
+      render(<Page />);
+      expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Consultar prévia" }));
+      await waitFor(() => expect(server.getAffiliateRetentionPreview).toHaveBeenCalledOnce());
+      visibilityState = "hidden";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      visibilityState = "visible";
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(await screen.findByText("Segredo da candidata")).toBeInTheDocument();
+      const retry = screen.getByRole("button", { name: "Consultar prévia" });
+      expect(retry).toBeEnabled();
+      fireEvent.click(retry);
+      expect(await screen.findByText("73")).toBeInTheDocument();
+      await waitFor(() => expect(server.getAffiliateRetentionPreview).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        finishOld({
+          ok: true,
+          pendingEligible: 999,
+          rejectedEligible: 999,
+          executedDeletions: 0,
+        });
+        await Promise.resolve();
+      });
+      expect(screen.queryByText("999")).not.toBeInTheDocument();
+      expect(screen.getByText("73")).toBeInTheDocument();
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it("prevents duplicate private readiness probes and hides stale responses on logout", async () => {
     let finish!: (value: {
       ok: true;
