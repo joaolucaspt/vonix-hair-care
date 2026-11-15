@@ -6,7 +6,8 @@ import { AffiliateHomeInvite } from "@/components/affiliate-home-invite";
 import { ProvasEmVideo } from "@/components/provas-em-video";
 import { ComentariosInstagram } from "@/components/comentarios-instagram";
 import { Benefits, Grid, Shell } from "@/components/site";
-import { BEST_SELLERS, SITE_URL, brl, discountPct, forAudience, getProduct, products, useAudience } from "@/lib/store";
+import { SITE_URL, brl, bySales, discountPct, forAudience, getProduct, homeBestSellers, products, useAudience } from "@/lib/store";
+import { soldFor } from "@/lib/sales";
 
 /**
  * Banner da home: a arte (título, produtos e fundo) é a imagem enviada pela loja;
@@ -54,10 +55,11 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const BANNERS = [
-  "kit-banana-e-mel", "kit-cachos", "kit-coco-nutri", "kit-cronograma-capilar",
-  "kit-desmaia", "kit-whey-protein", "kit-matizador-shampoo-e-mascara",
-] as const;
+/** Banners dos kits que têm arte, do que mais vende para o que menos vende (o primeiro é a oferta principal da loja). */
+const BANNERS = ["kit-banana-e-mel", "kit-cachos", "kit-coco-nutri", "kit-cronograma-capilar", "kit-desmaia", "kit-whey-protein", "kit-matizador-shampoo-e-mascara"]
+  .map((s, i) => [s, i] as const)
+  .sort((a, b) => soldFor(b[0]) - soldFor(a[0]) || a[1] - b[1])
+  .map(([s]) => s);
 const NEEDS = [
   ["Hidratação", "Mais maciez e brilho", "hidratacao", "Hidratação"],
   ["Reconstrução", "Fios mais fortes", "reconstrucao", "Reconstrução"],
@@ -85,11 +87,12 @@ function Title({ a, b, to }: { a: string; b: string; to?: Record<string, string>
 function Home() {
   const [i, setI] = useState(0);
   const { audience } = useAudience();
-  const bestSellers = forAudience(BEST_SELLERS.map((s) => getProduct(s)!), audience);
-  const kits = forAudience(products.filter((p) => p.category === "kits"), audience);
+  const bestSellers = homeBestSellers(audience);
+  const kits = forAudience(bySales(products.filter((p) => p.category === "kits")), audience);
+  const avulsos = bySales(products.filter((p) => p.category === "avulsos"));
   // "Todos os Produtos" não repete o que já apareceu nas duas vitrines de cima.
   const shown = new Set([...bestSellers, ...kits].map((p) => p.slug));
-  const others = forAudience(products, audience).filter((p) => !shown.has(p.slug)).slice(0, 8);
+  const others = forAudience(bySales(products.filter((p) => p.category !== "avulsos")), audience).filter((p) => !shown.has(p.slug)).slice(0, 8);
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % BANNERS.length), 6000);
     return () => clearInterval(t);
@@ -124,6 +127,12 @@ function Home() {
       <section className="container-site mt-16">
         <Title a="Todos os" b="Kits" to={{ tiposProduto: "Kits" }} />
         <Grid carousel items={kits} />
+      </section>
+
+      <section className="container-site mt-16" data-testid="home-avulsos">
+        <Title a="Leve só o que" b="Precisa" to={{ tiposProduto: "Avulsos" }} />
+        <p className="-mt-4 mb-4 text-body text-muted-foreground">Unidades dos kits vendidas separadas. Leve 2 e ganhe 12% OFF, leve 3 e ganhe 15% OFF. Acima de R$ 150,00 em produtos o frete é grátis.</p>
+        <Grid carousel items={avulsos} />
       </section>
 
       <section className="container-site mt-20 text-center">

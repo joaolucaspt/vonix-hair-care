@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import raw from "@/data/products.json";
 import teste from "@/data/teste-precos.json";
 import { bfPct } from "@/lib/black-friday";
+import { soldFor } from "@/lib/sales";
 
 export type Variant = { label: string; price: number };
 export type Product = {
@@ -15,6 +16,8 @@ export type Product = {
   variants: [Variant, ...Variant[]];
   compareBase: number | null;
   reviews: number;
+  /** Só nas unidades avulsas: slug do kit de onde a unidade veio. */
+  kit?: string;
 };
 
 /** Produtos sem estoque por enquanto: saem da loja, do sitemap e do catálogo da Meta. Para voltar, é só remover o slug daqui. */
@@ -285,6 +288,7 @@ export const TYPES: Record<string, (p: Product) => boolean> = {
   Progressiva: (p) => /progressiva/i.test(p.name),
   "Máscara": (p) => /máscara/i.test(p.name),
   Kits: (p) => p.category === "kits",
+  Avulsos: (p) => p.category === "avulsos",
   Finalizadores: (p) => p.category === "finalizadores",
 };
 export const BEST_SELLERS = ["progressiva-fio-de-luz", "kit-banana-e-mel", "kit-coco-nutri", "botox-vonix", "botox-line", "mascara-efeito-teia-coco-nutri"];
@@ -359,6 +363,18 @@ export const forAudience = (items: Product[], audience: Audience) => {
   }
   return items;
 };
+/** Unidades avulsas de um kit, na ordem do kit. */
+export const kitItems = (kitSlug: string): Product[] => products.filter((p) => p.category === "avulsos" && p.kit === kitSlug);
+
+/** Ordem de vitrine do curso: o que mais vende vem primeiro (da esquerda para a direita). Avulsos herdam a venda do kit. Estável: empate mantém a ordem do catálogo. */
+const saleRank = (p: Product) => soldFor(p.slug) || (p.kit ? soldFor(p.kit) : 0);
+export const bySales = <T extends Product>(items: T[]): T[] =>
+  items.map((p, i) => [p, i] as const).sort((a, b) => saleRank(b[0]) - saleRank(a[0]) || a[1] - b[1]).map(([p]) => p);
+
+/** "Mais desejados" da home: o que mais vende (sem as unidades avulsas), já na ordem da área escolhida. */
+export const homeBestSellers = (audience: Audience, max = 8): Product[] =>
+  forAudience(bySales(products.filter((p) => p.category !== "avulsos")), audience).slice(0, max);
+
 export function useAudience() {
   const audience = useSyncExternalStore(audienceStore.sub, audienceStore.get, audienceStore.server);
   return { audience, set: (a: Audience) => audienceStore.set(() => a) };

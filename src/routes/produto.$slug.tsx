@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BuyDrawer } from "@/components/buy-drawer";
 import { ProductGallery } from "@/components/product-gallery";
+import { thumb } from "@/lib/images";
 import { ProductDetails } from "@/components/product-details";
 import { ProductReviews, ReviewStrip, reviewsFor } from "@/components/reviews";
 import { ProvasEmVideo } from "@/components/provas-em-video";
@@ -24,6 +25,7 @@ import {
   forAudience,
   getSavedCep,
   hasFreeShipping,
+  kitItems,
   lineTotals,
   maskCep,
   products,
@@ -261,6 +263,47 @@ const QTY_OPTIONS: { n: number; label: string }[] = [
   { n: 2, label: "Leve 2 unidades" },
   { n: 3, label: "Leve 3 unidades" },
 ];
+
+/**
+ * Kit ↔ unidades. Na página do kit: "Prefere levar só um item?" com as unidades avulsas.
+ * Na página de uma unidade avulsa: o kit completo como opção maior (upsell do curso: "kit mais vantajoso").
+ */
+function KitCross({ p }: { p: NonNullable<ReturnType<typeof getProduct>> }) {
+  if (p.category === "kits") {
+    const items = kitItems(p.slug);
+    if (!items.length) return null;
+    return (
+      <section className="mt-16" data-testid="kit-avulsos">
+        <h2 className="mb-2 [&_em]:not-italic">
+          Prefere levar só <em>um item?</em>
+        </h2>
+        <p className="mb-4 text-body text-muted-foreground">As unidades deste kit também são vendidas separadas. Leve 2 e ganhe 12% OFF, leve 3 e ganhe 15% OFF.</p>
+        <Grid carousel items={items} />
+      </section>
+    );
+  }
+  const kit = p.kit ? getProduct(p.kit) : undefined;
+  if (!kit) return null;
+  const n = kitItems(kit.slug).length;
+  const price = kit.variants[0]!.price;
+  return (
+    <section className="mt-16 rounded-2xl border border-border bg-card p-4 sm:p-6" data-testid="kit-completo">
+      <div className="flex items-center gap-4">
+        <img src={thumb(kit.images[0]!)} alt="" width={96} height={96} loading="lazy" decoding="async" className="h-24 w-24 shrink-0 rounded-xl bg-card-image object-contain" />
+        <div className="min-w-0 flex-1">
+          <p className="text-small uppercase tracking-[0.15em] text-muted-foreground">Esta unidade faz parte de um kit</p>
+          <h2 className="font-display text-h2 leading-tight">{kit.name}</h2>
+          <p className="mt-1 text-body text-muted-foreground">
+            {n > 0 ? `Kit completo com ${n} produtos` : "Kit completo"} · <b className="money text-foreground">{brl(price)}</b> · 6x sem juros
+          </p>
+        </div>
+      </div>
+      <Link to="/produto/$slug" params={{ slug: kit.slug }} className="mt-4 block rounded-md bg-emerald-600 py-3 text-center font-bold text-white transition hover:bg-emerald-700">
+        Ver o kit completo
+      </Link>
+    </section>
+  );
+}
 
 function ProductPage() {
   const p = Route.useLoaderData();
@@ -538,6 +581,7 @@ function ProductPage() {
             <ComentariosInstagram slug={p.slug} max={4} />
           </div>
         </div>
+        <KitCross p={p} />
         {p.description && <ProductDetails p={p} />}
         <ProductReviews slug={p.slug} />
         {related.length > 0 && (

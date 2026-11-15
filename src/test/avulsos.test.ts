@@ -42,3 +42,25 @@ describe("unidades avulsas dos kits", () => {
     expect(list[0]!.variant.price).toBeGreaterThanOrEqual(Math.min(missing, ...avulsos.flatMap((p) => p.variants.map((v) => v.price)).filter((x) => x >= missing)));
   });
 });
+
+describe("vitrine na ordem do curso (mais vendidos primeiro)", () => {
+  it("cada avulso aponta para um kit que existe e os kits listam suas unidades", async () => {
+    const { kitItems } = await import("@/lib/store");
+    for (const p of avulsos) {
+      expect(p.kit, p.slug).toBeTruthy();
+      expect(getProduct(p.kit!)?.category, p.slug).toBe("kits");
+    }
+    expect(kitItems("kit-banana-e-mel").map((p) => p.slug)).toEqual(["shampoo-banana-e-mel", "condicionador-banana-e-mel", "mascara-banana-e-mel", "leave-in-banana-e-mel"]);
+  });
+
+  it("'mais desejados' da home: sem avulsos, o que mais vende vem antes e, em casa, química por último", async () => {
+    const { homeBestSellers, bySales } = await import("@/lib/store");
+    const casa = homeBestSellers("casa");
+    expect(casa.length).toBe(8);
+    expect(casa.every((p) => p.category !== "avulsos")).toBe(true);
+    expect(casa[0]!.slug).toBe("kit-banana-e-mel");
+    const kits = bySales(products.filter((p) => p.category === "kits")).map((p) => p.slug);
+    expect(kits[0]).toBe("kit-banana-e-mel");
+    expect(kits[1]).toBe("kit-cronograma-capilar");
+  });
+});
