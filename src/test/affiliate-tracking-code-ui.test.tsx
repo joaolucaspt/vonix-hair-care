@@ -232,6 +232,60 @@ describe("Private Vonix email-less applicant status portal", () => {
     expect(document.body.innerHTML).not.toContain("e-mail da candidata");
   });
 
+  it("C46 does not spend two private-status quotas on same-tick duplicate submissions", async () => {
+    let finish!: (result: unknown) => void;
+    server.getAffiliateStatusByCode.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(<AffiliateTrackingCodePage />);
+    const field = screen.getByLabelText("Código privado de acompanhamento");
+    fireEvent.change(field, { target: { value: code } });
+    const form = screen.getByRole("button", { name: "Consultar minha inscrição" }).closest("form");
+    expect(form).not.toBeNull();
+    act(() => {
+      fireEvent.submit(form!);
+      fireEvent.submit(form!);
+    });
+    expect(server.getAffiliateStatusByCode).toHaveBeenCalledOnce();
+    await act(async () => {
+      finish({
+        ok: true,
+        status: "pendente",
+        rejectionReason: null,
+        submittedAt: "2026-11-11T12:00:00Z",
+        reviewedAt: null,
+      });
+      await Promise.resolve();
+    });
+    expect(screen.getByText("Candidatura em análise")).toBeInTheDocument();
+  });
+
+  it("C46 permits a fresh retry of the same private code after a finished denied lookup", async () => {
+    server.getAffiliateStatusByCode
+      .mockResolvedValueOnce({ ok: false, reason: "Consulta temporariamente indisponível." })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: "pendente",
+        rejectionReason: null,
+        submittedAt: "2026-11-11T12:00:00Z",
+        reviewedAt: null,
+      });
+    render(<AffiliateTrackingCodePage />);
+    fireEvent.change(screen.getByLabelText("Código privado de acompanhamento"), {
+      target: { value: code },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Consulta temporariamente indisponível.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Consultar minha inscrição" }));
+    expect(await screen.findByText("Candidatura em análise")).toBeInTheDocument();
+    expect(server.getAffiliateStatusByCode).toHaveBeenCalledTimes(2);
+  });
+
   it("never displays a stale rejected result for code A after code B was submitted", async () => {
     const codeB = "abcdefghijklmnopqrstuvwxABCDEFGH";
     let releaseOld!: (result: unknown) => void;
