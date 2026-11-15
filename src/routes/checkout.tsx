@@ -122,7 +122,17 @@ function CheckoutTimer() {
     } catch {
       /* sem sessionStorage: conta a partir de agora */
     }
-    const tick = () => setLeft(start + 15 * 60_000 - Date.now());
+    const tick = () => {
+      if (start + 15 * 60_000 - Date.now() <= 0) {
+        start = Date.now();
+        try {
+          sessionStorage.setItem("vonix-checkout-inicio", String(start));
+        } catch {
+          /* segue sem guardar */
+        }
+      }
+      setLeft(start + 15 * 60_000 - Date.now());
+    };
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
@@ -135,7 +145,7 @@ function CheckoutTimer() {
       role="timer"
       aria-live="off"
       data-testid="checkout-timer"
-      className="mt-3 flex cursor-default select-none items-center justify-between gap-3 rounded-xl border border-[#c9a45c]/50 bg-gradient-to-b from-[#232323] to-[#0b0b0b] px-4 py-3 text-small font-medium text-white"
+      className="flex cursor-default select-none items-center justify-between gap-3 rounded-xl border border-[#c9a45c]/50 bg-gradient-to-b from-[#232323] to-[#0b0b0b] px-4 py-3 text-small font-medium text-white"
     >
       <span className="leading-snug">Você tem 15 minutos para finalizar com tranquilidade</span>
       <span className="money shrink-0 rounded-lg border border-[#c9a45c]/40 bg-black/30 px-3 py-1.5 text-body font-semibold tabular-nums tracking-wider text-[#e3c07a]">
@@ -828,6 +838,9 @@ function Checkout() {
                   </span>
                   <span className="money text-h2">{brl(total)}</span>
                 </div>
+                <div className="flex justify-center">
+                  <SecuritySeal />
+                </div>
                 <p className="text-small text-muted-foreground">
                   {chosen ? (chosen.free ? "Frete grátis: você não paga frete." : "Total com o frete escolhido.") : freeShip ? "Frete grátis: você não paga frete." : "Total final após calcular o frete."}
                 </p>
@@ -841,12 +854,12 @@ function Checkout() {
   );
 
   const body = (
-      <div className={lateral ? "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 p-3" : "container-site mx-auto grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 pb-40 pt-0 sm:pt-4"} style={lateral ? undefined : { maxWidth: "42rem" }}>
+      <div className={lateral ? "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 p-3" : "container-site mx-auto grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 pb-28 pt-0 sm:pt-4"} style={lateral ? undefined : { maxWidth: "42rem" }}>
         <div className="min-w-0 space-y-3">
           <form id="checkout-form" className="min-w-0 space-y-3" onSubmit={onSubmit}>
             {!lateral && (
-              <div data-testid="checkout-hero" className="relative -mx-4 overflow-hidden bg-[#1a1209] sm:mx-0 sm:rounded-2xl">
-                <img src="/images/categorias/hidratacao.jpg" alt="" width={480} height={480} className="absolute inset-y-0 right-0 h-full w-3/5 object-cover object-[50%_22%]" />
+              <div data-testid="checkout-hero" className="relative -mx-4 flex min-h-[176px] items-center overflow-hidden bg-[#1a1209] sm:mx-0 sm:rounded-2xl">
+                <img src="/images/categorias/hidratacao.jpg" alt="" width={480} height={480} className="absolute inset-y-0 right-0 h-full w-[62%] object-cover object-[50%_38%]" />
                 <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-[#1a1209] via-[#1a1209]/85 to-transparent" />
                 <div className="relative px-5 py-6">
                   <img src={heroLogo} alt="Vonix Hair" width={420} height={163} className="h-11 w-auto brightness-0 invert" />
@@ -854,6 +867,7 @@ function Checkout() {
                 </div>
               </div>
             )}
+            <CheckoutTimer />
             <div className="pt-1">
               {!lateral && (
                 <p className="mb-1 flex items-center gap-3 text-small font-semibold uppercase tracking-[0.14em] text-[#8a6a1c]">
@@ -929,7 +943,7 @@ function Checkout() {
 
             <fieldset className="space-y-2">
               <StepTitle n={1}>Como você quer pagar?</StepTitle>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2">
                 <label data-testid="pay-option-pix" className={payTile(pay === "pix")}>
                   <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
                     <span className="flex min-w-0 items-center gap-2">
@@ -1191,13 +1205,6 @@ function Checkout() {
 
             {totalsCard}
 
-              {pay === "pix" && (
-                <div className="space-y-3 pt-1">
-                  <p className="text-small text-muted-foreground">
-                    Na próxima tela você recebe o QR Code e o código para copiar e colar. O total final já inclui o frete escolhido.
-                  </p>
-                </div>
-              )}
 
           </form>
 
@@ -1310,11 +1317,7 @@ function Checkout() {
           </div>
 
           <div className="space-y-2">
-            {!showCoupon ? (
-              <button type="button" onClick={() => setShowCoupon(true)} className="text-body underline">
-                Tem um cupom?
-              </button>
-            ) : (
+            {showCoupon && (
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <input
@@ -1352,23 +1355,9 @@ function Checkout() {
                 )}
               </div>
             )}
-            <p className="flex items-center gap-2 pt-1 text-small text-muted-foreground">
-              <Lock className="h-4 w-4 shrink-0 text-[#8a6a1c]" aria-hidden="true" />
-              Seu pagamento é protegido e criptografado, processado pela Appmax.
-            </p>
           </div>
         </div>
         <div className="min-w-0 space-y-4">
-          {cfg && !cfg.pixEnabled && (
-            <p role="status" className="rounded-lg border border-border bg-muted p-3 text-body">
-              Estamos ativando os pagamentos desta loja. Em breve você poderá finalizar por aqui.
-              Para comprar agora,{" "}
-              <a href={WHATSAPP} target="_blank" rel="noreferrer" className="underline">
-                fale com a gente no WhatsApp
-              </a>
-              .
-            </p>
-          )}
           <div
             data-testid="checkout-pay-bar"
             className={lateral
@@ -1376,33 +1365,6 @@ function Checkout() {
               : "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background px-4 py-3 shadow-[0_-8px_20px_-12px_rgba(0,0,0,0.3)]"}
           >
             <div className="mx-auto w-full max-w-xl space-y-2">{renderPay(true)}</div>
-          </div>
-          <CheckoutTimer />
-          {cfg?.sandbox && (
-            <p role="note" className="rounded-lg border border-foreground bg-muted p-3 text-body">
-              <b>Ambiente de testes.</b> Nenhuma cobrança real será feita.
-            </p>
-          )}
-          <ul
-            aria-label="Garantias da compra"
-            data-testid="checkout-trust"
-            className="flex cursor-default select-none flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-[0.78rem] font-medium text-emerald-900"
-          >
-            {(
-              [
-                [Lock, "Ambiente seguro"],
-                [ShieldCheck, "Pagamento processado pela Appmax"],
-                [Truck, `Frete grátis acima de ${brl(FREE_SHIPPING_ABOVE)}`],
-              ] as const
-            ).map(([Icon, text]) => (
-              <li key={text} className={`items-center gap-1.5 ${Icon === Truck ? "hidden sm:flex" : "flex"}`}>
-                <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden="true" />
-                {text}
-              </li>
-            ))}
-          </ul>
-          <div className="flex justify-center">
-            <SecuritySeal />
           </div>
           <p className="text-center text-small text-muted-foreground">
             Vonix Hair · CNPJ 68.272.005/0001-07 · 7 dias para desistir da compra, conforme a lei
