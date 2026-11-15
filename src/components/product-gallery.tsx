@@ -1,4 +1,4 @@
-import { webp } from "@/lib/images";
+import { thumb, webp } from "@/lib/images";
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 type GalleryCard = { id: string; title: string; lines: string[] };
@@ -116,7 +116,7 @@ export function ProductGallery({ images, name, cards = [] }: { images: string[];
         {slides.map((sl, k) => (
           <button key={k} type="button" aria-label={`Ver imagem ${k + 1}`} onClick={() => { setI(k); setBig(false); }} className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-card-image ${k === i ? "border-foreground" : "border-transparent"}`}>
             {sl.kind === "img" ? (
-              <img src={sl.src} alt="" loading="lazy" decoding="async" fetchPriority="low" className="h-full w-full object-cover" style={sl.detail ? { transform: "scale(1.9)", transformOrigin: "50% 42%" } : undefined} />
+              <img src={thumb(sl.src)} alt="" width={80} height={80} loading="lazy" decoding="async" fetchPriority="low" className="h-full w-full object-cover" style={sl.detail ? { transform: "scale(1.9)", transformOrigin: "50% 42%" } : undefined} />
             ) : (
               <CardFace card={sl.card} photo={photo} small />
             )}
