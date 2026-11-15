@@ -2,8 +2,9 @@ import { webp } from "@/lib/images";
 import { Check, Lock, Minus, Plus, Trash2, Truck } from "lucide-react";
 import { toItem, track } from "@/lib/analytics";
 import { useState } from "react";
-import { pickExtras } from "@/lib/upsell";
-import { FREE_SHIPPING_ABOVE, brl, missingForFreeShipping, useCart, type Product } from "@/lib/store";
+import { upsellPlan, type Extra } from "@/lib/upsell";
+import { thumb } from "@/lib/images";
+import { FREE_SHIPPING_ABOVE, brl, complementPrice, missingForFreeShipping, useCart } from "@/lib/store";
 
 /**
  * Gaveta que abre ao clicar em "Comprar agora": confirma o item, mostra quanto falta para o frete grátis,
@@ -12,15 +13,17 @@ import { FREE_SHIPPING_ABOVE, brl, missingForFreeShipping, useCart, type Product
 export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () => void }) {
   const cart = useCart();
   const inCart = new Set(cart.lines.map((l) => l.slug));
-  // Sorteado uma vez a cada abertura (não muda enquanto a pessoa adiciona itens).
-  const [extras] = useState<Product[]>(() => pickExtras(cart.lines.map((l) => l.slug)));
+  // Personalizado pelo que está no carrinho; calculado uma vez por abertura (não muda enquanto a pessoa adiciona itens).
+  const [plan] = useState(() => upsellPlan(cart.lines.map((l) => l.slug)));
   const missing = missingForFreeShipping(cart.netSubtotal);
   const pct = Math.min(100, Math.round((cart.netSubtotal / FREE_SHIPPING_ABOVE) * 100));
 
-  const addExtra = (p: Product) => {
+  /** O complemento entra com 5% OFF neste item (mesma regra do "Complete seu tratamento" do carrinho). */
+  const addExtra = ({ product: p }: Extra) => {
     const v = p.variants[0]!;
-    cart.add(p.slug, v.label, 1);
-    track("add_to_cart", { value: v.price, items: [toItem(p, v.label, v.price, 1)] });
+    const price = complementPrice(v.price);
+    cart.add(p.slug, v.label, 1, "comp5");
+    track("add_to_cart", { value: price, items: [toItem(p, v.label, price, 1)] });
   };
 
   return (
@@ -77,30 +80,42 @@ export function BuyDrawer({ onClose, onPay }: { onClose: () => void; onPay: () =
             </div>
           </div>
 
-          {extras.length > 0 && (
-            <div>
-              <div className="mb-2 text-body font-bold">Aproveite e leve também</div>
-              <ul className="space-y-2">
-                {extras.map((p) => {
+          {plan.items.length > 0 && (
+            <div data-testid="order-bump">
+              <div className="rounded-t-xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-3 py-2 text-white">
+                <div className="text-name font-bold">{plan.title}</div>
+                <div className="text-small text-white/85">{plan.subtitle} · 5% OFF em cada item</div>
+              </div>
+              <ul className="space-y-2 rounded-b-xl border border-t-0 border-emerald-200 bg-emerald-50/40 p-2">
+                {plan.items.map((e) => {
+                  const p = e.product;
                   const v = p.variants[0]!;
+                  const offer = complementPrice(v.price);
+                  const added = inCart.has(p.slug);
                   return (
-                    <li key={p.slug} className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border bg-white p-2">
-                      <img src={webp(p.images[0]!)} alt={p.name} width={56} height={56} loading="lazy" className="h-14 w-14 rounded-lg object-contain" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-body font-medium">{p.name}</span>
-                        <b className="text-body">{brl(v.price)}</b>
-                      </span>
-                      {inCart.has(p.slug) ? (
-                        <span className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-body font-bold text-white"><Check className="h-4 w-4" aria-hidden="true" /> Adicionado</span>
-                      ) : (
-                      <button
-                        type="button"
-                        onClick={() => addExtra(p)}
-                        className="flex items-center gap-1 rounded-md bg-emerald-50 px-3 py-2 text-body font-bold text-emerald-800 ring-1 ring-emerald-300 transition active:scale-95"
-                      >
-                        <Plus className="h-4 w-4" aria-hidden="true" /> Adicionar
-                      </button>
-                      )}
+                    <li key={p.slug} className="grid grid-cols-[56px_minmax(0,1fr)] gap-3 rounded-xl border border-border bg-white p-2">
+                      <img src={thumb(p.images[0]!)} alt={p.name} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 rounded-lg bg-card-image object-contain" />
+                      <div className="min-w-0">
+                        <div className="text-body font-semibold leading-tight">{p.name}</div>
+                        <p className="mt-0.5 text-small leading-snug text-muted-foreground">{e.reason}</p>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <span className="min-w-0">
+                            <span className="text-small text-muted-foreground line-through">{brl(v.price)}</span>{" "}
+                            <b className="money text-body text-emerald-800">{brl(offer)}</b>
+                          </span>
+                          {added ? (
+                            <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-body font-bold text-white"><Check className="h-4 w-4" aria-hidden="true" /> Adicionado</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => addExtra(e)}
+                              className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-body font-bold text-white transition hover:bg-emerald-700 active:scale-95"
+                            >
+                              <Plus className="h-4 w-4" aria-hidden="true" /> Adicionar
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </li>
                   );
                 })}
