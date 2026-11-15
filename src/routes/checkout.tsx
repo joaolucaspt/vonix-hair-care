@@ -751,6 +751,8 @@ function Checkout() {
 
   const cardTotal = tCard.net + shipping;
   const card6 = installments(cardTotal, 6);
+  const freeShip = missingForFreeShipping(gross) === 0;
+  const shipNote = chosen ? (chosen.free ? "frete grátis" : "com frete") : freeShip ? "frete grátis" : "sem frete";
   const selectedInstallments = installmentText(total, parcels);
   const payDisabled = busy || quoting || !chosen || !cfg || !cfg.pixEnabled;
   // Botão de pagar: o de verdade fica dentro da caixa do método escolhido; quando ele sai da tela, uma barra fixa o repete.
@@ -945,7 +947,7 @@ function Checkout() {
                   </span>
                   <span className="min-w-0 leading-tight">
                     <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
-                    {!chosen && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>+ frete</span>}
+                    {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "+ frete"}</span>}
                   </span>
                   <span className={`text-small leading-snug ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>Aprovação na hora</span>
                 </label>
@@ -966,7 +968,7 @@ function Checkout() {
                   </span>
                   <span className="block min-w-0 leading-tight" aria-live="polite">
                     <span className="block text-name font-bold tabular-nums">{card6.count}x de {brl(card6.value)}</span>
-                    <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>sem juros · {brl(cardTotal)}{!chosen ? " (sem frete)" : ""}</span>
+                    <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>sem juros · {brl(cardTotal)} · {shipNote}</span>
                   </span>
                 </label>
               </div>
