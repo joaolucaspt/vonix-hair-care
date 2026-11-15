@@ -81,7 +81,7 @@ const maskCpf = (v: string) =>
 /** Apresentação apenas: o cálculo compartilhado mantém os centavos na primeira parcela. */
 const installmentText = (total: number, count: number, interestFree = true) => {
   const split = installments(total, count);
-  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}${split.first !== split.value ? ` (1ª de ${brl(split.first)})` : ""}`;
+  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}`;
 };
 
 type ShipOption = {
@@ -750,6 +750,9 @@ function Checkout() {
     );
 
   const cardTotal = tCard.net + shipping;
+  const card6 = installments(cardTotal, 6);
+  const freeShip = missingForFreeShipping(gross) === 0;
+  const shipNote = chosen ? (chosen.free ? "frete grátis" : "com frete") : freeShip ? "frete grátis" : "sem frete";
   const selectedInstallments = installmentText(total, parcels);
   const payDisabled = busy || quoting || !chosen || !cfg || !cfg.pixEnabled;
   // Botão de pagar: o de verdade fica dentro da caixa do método escolhido; quando ele sai da tela, uma barra fixa o repete.
@@ -780,7 +783,7 @@ function Checkout() {
             {busy ? "Processando…" : pay === "pix" ? `Gerar Pix · ${brl(total)}` : `Pagar ${installmentText(total, parcels, parcels > 1)} no cartão`}
           </span>
           <span className="mt-0.5 block text-[0.72rem] font-normal tracking-wide text-white/70 group-disabled:text-neutral-500">
-            {pay === "pix" ? "Aprovação na hora · pagamento seguro" : "Pagamento seguro"}
+            Pagamento seguro
           </span>
         </span>
         <ArrowRight className="h-5 w-5 shrink-0 text-[#e3c07a] transition group-hover:translate-x-0.5 group-disabled:text-neutral-400" strokeWidth={2} aria-hidden="true" />
@@ -817,16 +820,16 @@ function Checkout() {
                 )}
                 <div className="flex justify-between">
                   <span>Frete</span>
-                  <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : "A calcular"}</span>
+                  <span>{chosen ? (chosen.free ? "Grátis" : brl(chosen.price)) : freeShip ? "Grátis" : "A calcular"}</span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border-t border-[#c9a45c]/50 bg-[#fbf5e6] px-3 py-2.5 text-name font-bold">
                   <span className="min-w-0">
-                    {chosen ? `Total ${pay === "pix" ? "no Pix" : "no cartão"}` : `Produtos ${pay === "pix" ? "no Pix" : "no cartão"}`}
+                    {chosen || freeShip ? `Total ${pay === "pix" ? "no Pix" : "no cartão"}` : `Produtos ${pay === "pix" ? "no Pix" : "no cartão"}`}
                   </span>
                   <span className="money text-h2">{brl(total)}</span>
                 </div>
                 <p className="text-small text-muted-foreground">
-                  {chosen ? "Total com o frete escolhido." : "Total final após calcular o frete."}
+                  {chosen ? (chosen.free ? "Frete grátis: você não paga frete." : "Total com o frete escolhido.") : freeShip ? "Frete grátis: você não paga frete." : "Total final após calcular o frete."}
                 </p>
                 {pay === "card" && (
                   <div className="min-w-0 break-words text-small text-muted-foreground" aria-live="polite">
@@ -944,9 +947,8 @@ function Checkout() {
                   </span>
                   <span className="min-w-0 leading-tight">
                     <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
-                    {!chosen && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>+ frete</span>}
+                    {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "sem frete"}</span>}
                   </span>
-                  <span className={`text-small leading-snug ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>Aprovação na hora</span>
                 </label>
                 <label data-testid="pay-option-card" className={payTile(pay === "card")}>
                   <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
@@ -963,12 +965,9 @@ function Checkout() {
                     </span>
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
-                  <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 leading-tight" aria-live="polite">
-                    <span className="min-w-0">
-                      <span className="block whitespace-nowrap text-name font-bold tabular-nums">{brl(cardTotal)}</span>
-                      <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Valor total{!chosen ? " (sem frete)" : ""}</span>
-                    </span>
-                    <span className="min-w-0 break-words text-small font-semibold leading-snug tabular-nums">{installmentText(cardTotal, 6)}</span>
+                  <span className="block min-w-0 leading-tight" aria-live="polite">
+                    <span className="block text-name font-bold tabular-nums">{card6.count}x de {brl(card6.value)}</span>
+                    <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>sem juros · {brl(cardTotal)} · {shipNote}</span>
                   </span>
                 </label>
               </div>
