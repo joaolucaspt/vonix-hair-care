@@ -947,7 +947,7 @@ function Checkout() {
                   </span>
                   <span className="min-w-0 leading-tight">
                     <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
-                    {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "+ frete"}</span>}
+                    {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "sem frete"}</span>}
                   </span>
                   <span className={`text-small leading-snug ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>Aprovação na hora</span>
                 </label>
