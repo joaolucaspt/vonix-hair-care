@@ -838,12 +838,14 @@ function Checkout() {
                   </span>
                   <span className="money text-h2">{brl(total)}</span>
                 </div>
+                {!(chosen ? chosen.free : freeShip) && (
+                  <p className="text-small text-muted-foreground">
+                    {chosen ? "Total com o frete escolhido." : "Total final após calcular o frete."}
+                  </p>
+                )}
                 <div className="flex justify-center">
                   <SecuritySeal />
                 </div>
-                <p className="text-small text-muted-foreground">
-                  {chosen ? (chosen.free ? "Frete grátis: você não paga frete." : "Total com o frete escolhido.") : freeShip ? "Frete grátis: você não paga frete." : "Total final após calcular o frete."}
-                </p>
                 {pay === "card" && (
                   <div className="min-w-0 break-words text-small text-muted-foreground" aria-live="polite">
                     Parcelamento escolhido: {selectedInstallments}
