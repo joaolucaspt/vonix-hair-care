@@ -1,4 +1,4 @@
-import { webp } from "@/lib/images";
+import { thumb, webp } from "@/lib/images";
 import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, ChevronLeft, ChevronRight, CreditCard, Facebook, Heart, Star, House, Instagram, Menu, QrCode, Scissors, Search, ShieldCheck, ShoppingBag, ShoppingCart, Truck, User, X, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -616,7 +616,7 @@ export function ProductCard({ p }: { p: Product }) {
           <Heart className={`h-4 w-4 ${fav.has(p.slug) ? "fill-foreground" : ""}`} />
         </button>
         <Link to="/produto/$slug" params={{ slug: p.slug }}>
-          <img src={webp(p.images[0]!)} alt={`Vonix Hair ${p.name}`} loading="lazy" className="aspect-square w-full scale-110 object-contain transition-transform duration-500 group-hover:scale-[1.18]" />
+          <img src={thumb(p.images[0]!)} srcSet={`${thumb(p.images[0]!)} 480w, ${webp(p.images[0]!)} 1080w`} sizes="(min-width: 1024px) 280px, 50vw" width={480} height={480} decoding="async" alt={`Vonix Hair ${p.name}`} loading="lazy" className="aspect-square w-full scale-110 object-contain transition-transform duration-500 group-hover:scale-[1.18]" />
         </Link>
       </div>
       <div className="mt-2 flex min-h-[22px] flex-wrap items-center gap-1">
