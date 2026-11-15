@@ -963,10 +963,13 @@ function Checkout() {
                     </span>
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 break-words leading-tight" aria-live="polite">
-                    <span className="block whitespace-normal text-name font-semibold tabular-nums">{installmentText(cardTotal, 6)}</span>
+                  <span className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-1 leading-tight" aria-live="polite">
+                    <span className="min-w-0 break-words">
+                      <span className="block text-name font-bold tabular-nums">{brl(cardTotal)}</span>
+                      <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Valor total{!chosen ? " (sem frete)" : ""}</span>
+                    </span>
+                    <span className="min-w-0 break-words whitespace-normal text-small font-semibold tabular-nums">{installmentText(cardTotal, 6)}</span>
                   </span>
-                  <span className={`min-w-0 break-words text-small leading-snug ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Total no cartão: {brl(cardTotal)}{!chosen ? " (sem frete)" : ""}</span>
                 </label>
               </div>
             </fieldset>
