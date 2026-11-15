@@ -81,7 +81,7 @@ const maskCpf = (v: string) =>
 /** Apresentação apenas: o cálculo compartilhado mantém os centavos na primeira parcela. */
 const installmentText = (total: number, count: number, interestFree = true) => {
   const split = installments(total, count);
-  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}${split.first !== split.value ? ` (1ª de ${brl(split.first)})` : ""}`;
+  return `${split.count}x de ${brl(split.value)}${interestFree ? " sem juros" : ""}`;
 };
 
 type ShipOption = {
@@ -750,6 +750,7 @@ function Checkout() {
     );
 
   const cardTotal = tCard.net + shipping;
+  const card6 = installments(cardTotal, 6);
   const selectedInstallments = installmentText(total, parcels);
   const payDisabled = busy || quoting || !chosen || !cfg || !cfg.pixEnabled;
   // Botão de pagar: o de verdade fica dentro da caixa do método escolhido; quando ele sai da tela, uma barra fixa o repete.
@@ -963,12 +964,9 @@ function Checkout() {
                     </span>
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
-                  <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 leading-tight" aria-live="polite">
-                    <span className="min-w-0">
-                      <span className="block whitespace-nowrap text-name font-bold tabular-nums">{brl(cardTotal)}</span>
-                      <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>Valor total{!chosen ? " (sem frete)" : ""}</span>
-                    </span>
-                    <span className="min-w-0 break-words text-small font-semibold leading-snug tabular-nums">{installmentText(cardTotal, 6)}</span>
+                  <span className="block min-w-0 leading-tight" aria-live="polite">
+                    <span className="block text-name font-bold tabular-nums">{card6.count}x de {brl(card6.value)}</span>
+                    <span className={`block text-small ${pay === "card" ? "text-white/70" : "text-muted-foreground"}`}>sem juros · {brl(cardTotal)}{!chosen ? " (sem frete)" : ""}</span>
                   </span>
                 </label>
               </div>
