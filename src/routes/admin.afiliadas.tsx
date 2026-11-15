@@ -160,6 +160,12 @@ function safeProfileLink(value: string | null | undefined, platform: "instagram"
   }
 }
 
+// Resolve document visibility at callback time: an await can resume after
+// another tab change, and TypeScript must not freeze an earlier narrowing.
+function legacyAdminTabHidden() {
+  return typeof document !== "undefined" && document.visibilityState === "hidden";
+}
+
 export function AffiliateAdminPage() {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -240,11 +246,18 @@ export function AffiliateAdminPage() {
   const privateDetailVersion = useRef(0);
   // Never retain a legacy TOTP or password across an inactive tab.
   const legacyLoginEpoch = useRef(0);
+  // A provider request may never settle after backgrounding the tab. Keep
+  // only the current login locked; obsolete callbacks cannot release it.
+  const legacyLoginPending = useRef(false);
 
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.visibilityState !== "hidden") return;
       legacyLoginEpoch.current++;
+      if (legacyLoginPending.current) {
+        legacyLoginPending.current = false;
+        setLoading(false);
+      }
       setPassword("");
       setOtp("");
     };
@@ -458,14 +471,15 @@ export function AffiliateAdminPage() {
   async function login(event: FormEvent<HTMLFormElement>) {
     const epoch = legacyLoginEpoch.current;
     event.preventDefault();
-    if (loading) return;
+    if (loading || legacyLoginPending.current || legacyAdminTabHidden()) return;
+    legacyLoginPending.current = true;
     setLoading(true);
     setError("");
     try {
       const result = await loginAffiliateAdmin({ data: { password, otp } });
+      if (epoch !== legacyLoginEpoch.current || legacyAdminTabHidden()) return;
       setPassword("");
       setOtp("");
-      if (epoch !== legacyLoginEpoch.current || document.visibilityState === "hidden") return;
       if (!result.ok) {
         setError(result.reason);
         return;
@@ -476,7 +490,10 @@ export function AffiliateAdminPage() {
       if (epoch === legacyLoginEpoch.current && document.visibilityState === "visible")
         setError("Não foi possível autenticar. Tente novamente.");
     } finally {
-      setLoading(false);
+      if (epoch === legacyLoginEpoch.current) {
+        legacyLoginPending.current = false;
+        setLoading(false);
+      }
     }
   }
 

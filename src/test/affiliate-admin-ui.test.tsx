@@ -110,6 +110,67 @@ describe("Vonix affiliate private panel", () => {
     }
   });
 
+  it("C44 unlocks a new legacy login after backgrounding an indefinitely pending attempt", async () => {
+    server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
+    let finishOld!: (value: { ok: boolean }) => void;
+    let finishFresh!: (value: { ok: boolean; reason?: string }) => void;
+    server.loginAffiliateAdmin
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishOld = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFresh = resolve;
+          }),
+      );
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<Page />);
+      await screen.findByText("Acesso da equipe");
+      fireEvent.click(screen.getByText("Acesso antigo com aplicativo autenticador (uso restrito)"));
+      const password = screen.getByLabelText("Senha administrativa");
+      const otp = screen.getByLabelText("Código do autenticador");
+      fireEvent.change(password, { target: { value: "Synthetic-Old-Admin-Password" } });
+      fireEvent.change(otp, { target: { value: "123456" } });
+      fireEvent.click(screen.getByRole("button", { name: /Acessar inscrições/ }));
+      await waitFor(() => expect(server.loginAffiliateAdmin).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole("button", { name: /Verificando acesso/ })).toBeDisabled();
+      visibility.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      visibility.mockReturnValue("visible");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.queryByRole("button", { name: /Verificando acesso/ })).not.toBeInTheDocument();
+      fireEvent.change(password, { target: { value: "Synthetic-New-Admin-Password" } });
+      fireEvent.change(otp, { target: { value: "654321" } });
+      expect(screen.getByRole("button", { name: /Acessar inscrições/ })).toBeEnabled();
+      fireEvent.click(screen.getByRole("button", { name: /Acessar inscrições/ }));
+      await waitFor(() => expect(server.loginAffiliateAdmin).toHaveBeenCalledTimes(2));
+      await act(async () => {
+        finishOld({ ok: true });
+        await Promise.resolve();
+      });
+      // The old response must not release the new busy lock or clear new OTP.
+      expect(screen.getByRole("button", { name: /Verificando acesso/ })).toBeDisabled();
+      expect(password).toHaveValue("Synthetic-New-Admin-Password");
+      expect(otp).toHaveValue("654321");
+      expect(server.getAffiliateApplications).not.toHaveBeenCalled();
+      await act(async () => {
+        finishFresh({ ok: false, reason: "Synthetic invalid credentials" });
+        await Promise.resolve();
+      });
+      expect(screen.getByText("Synthetic invalid credentials")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Verificando acesso/ })).not.toBeInTheDocument();
+      expect(password).toHaveValue("");
+      expect(otp).toHaveValue("");
+    } finally {
+      visibility.mockRestore();
+    }
+  });
+
   it("ignores a stale legacy administrator login error after the tab is hidden", async () => {
     server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
     let rejectLogin!: (reason: Error) => void;
