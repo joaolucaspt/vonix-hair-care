@@ -87,6 +87,8 @@ export function track(event: string, params: Record<string, unknown> = {}) {
     window.gtag?.("event", event, { currency: "BRL", ...params });
     window.clarity?.("event", event);
     const metaEvent = META_EVENTS[event];
+    // O pixel baixa de forma tardia (primeiro toque ou 3,5 s). Num evento de loja ele carrega já, para o navegador não atrasar nem perder o AddToCart.
+    if (metaEvent) (window as unknown as { __vonixLoadTrackers?: () => void }).__vonixLoadTrackers?.();
     if (metaEvent && window.fbq) {
       const eventID = `${event}-${params["transaction_id"] ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`;
       const customData = metaParams(params);
