@@ -2,7 +2,7 @@ import { env } from "./env.server";
 import type { Coupon } from "./coupons";
 
 /** Endereço público do app de afiliadas (só confirma que o cupom existe; não precisa de segredo). Dá para trocar por AFFILIATE_COUPON_URL. */
-const COUPON_URL = "https://vonix-expedicao-facil.lovable.app";
+const COUPON_URL = "https://vonix-expedicao-facil.vonixhair.workers.dev";
 
 /** Desconto padrão do cupom de afiliada (o app de afiliadas confirma que a pessoa existe e está ativa). */
 export const AFFILIATE_COUPON_PERCENT = 10;
