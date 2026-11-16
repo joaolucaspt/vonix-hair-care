@@ -159,10 +159,10 @@
   --lh-heading: 1.2;
   --lh-text: 1.5;
 }
-/* Celular: escala geral ~12% menor (tudo em rem acompanha) */
+/* Celular: escala geral 15% menor (tudo em rem acompanha) */
 @media (max-width: 767px) {
   html {
-    font-size: 14px;
+    font-size: 13.6px;
   }
 }
 @media (min-width: 768px) {
