@@ -987,6 +987,8 @@ function Checkout() {
                   </span>
                   <span className="min-w-0 leading-tight">
                     <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
+                    {tPix.pixDiscount > 0 && <span className="block text-small font-semibold text-[#e3c07a]">5% OFF no Pix</span>}
+                    {applied && tPix.pixDiscount === 0 && <span className="block text-small text-white/70">Com cupom, o Pix não tem 5% OFF</span>}
                     {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "sem frete"}</span>}
                   </span>
                 </label>
