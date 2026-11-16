@@ -198,12 +198,12 @@ function Home() {
         </div>
       </section>
 
+      <AffiliateHomeInvite />
+
       {/* Comentários escritos lá embaixo, perto do rodapé */}
       <section className="container-site mt-16" data-testid="home-comentarios">
         <ComentariosInstagram max={10} />
       </section>
-
-      <AffiliateHomeInvite />
     </Shell>
   );
 }
