@@ -86,6 +86,9 @@ afterEach(() => {
 const fill = async () => {
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
   await screen.findByText(/4 a 5 dias úteis/);
+  // Nenhum frete vem marcado: o cliente escolhe.
+  expect(screen.queryByRole("radio", { name: /dias úteis/, checked: true })).toBeNull();
+  fireEvent.click(screen.getAllByRole("radio", { name: /dias úteis/ })[0] as HTMLElement);
   for (const [label, value] of [
     ["Nome completo", "Pessoa Teste"],
     ["E-mail", "teste@example.com"],
@@ -197,13 +200,23 @@ describe("checkout auditado sem chamadas reais", () => {
   it("aplicar cupom não troca o frete que o cliente escolheu; falha passageira tem 'Tentar de novo'", async () => {
     const barato = { id: 1, name: "PAC", company: "Correios", price: 20, days: 5, free: false };
     const rapido = { id: 2, name: "SEDEX", company: "Correios", price: 40, days: 2, free: false };
-    mocks.quote.mockResolvedValue({ ok: true, options: [rapido, barato] });
+    const caro = { id: 3, name: "Expresso", company: "Jadlog", price: 70, days: 1, free: false };
+    const muitoCaro = { id: 4, name: "Premium", company: "Jadlog", price: 120, days: 1, free: false };
+    mocks.quote.mockResolvedValue({ ok: true, options: [muitoCaro, caro, rapido, barato] });
     render(<Checkout />);
     fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
     await screen.findByText(/Correios SEDEX/);
     const radios = () => screen.getAllByRole("radio", { name: /Correios (PAC|SEDEX)/ });
-    // o mais barato já vem marcado
-    expect(radios().find((r) => (r as HTMLInputElement).checked)?.closest("label")).toHaveTextContent("PAC");
+    // 2 mais baratas + 1 intermediária (até 3 dias); a mais cara fica de fora; nenhuma vem marcada
+    expect(radios()).toHaveLength(2);
+    expect(screen.getByText(/Jadlog Expresso/)).toBeInTheDocument();
+    expect(screen.queryByText(/Jadlog Premium/)).toBeNull();
+    expect(radios().some((r) => (r as HTMLInputElement).checked)).toBe(false);
+    expect(screen.getByText("Escolha o frete para liberar o pagamento")).toBeInTheDocument();
+    fireEvent.click(radios().find((r) => r.closest("label")?.textContent?.includes("PAC")) as HTMLElement);
+    await waitFor(() =>
+      expect(radios().find((r) => (r as HTMLInputElement).checked)?.closest("label")).toHaveTextContent("PAC"),
+    );
     // o cliente escolhe o SEDEX e a escolha se mantém
     fireEvent.click(radios().find((r) => r.closest("label")?.textContent?.includes("SEDEX")) as HTMLElement);
     await waitFor(() =>
@@ -323,6 +336,7 @@ describe("C86 — total integral ao lado do parcelamento no checkout", () => {
     render(<Checkout />);
     fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "30140010" } });
     await screen.findByText(/Correios PAC/);
+    fireEvent.click(screen.getByRole("radio", { name: /Correios PAC/ }));
     const total = getProduct("kit-banana-e-mel")!.variants[0]!.price + 12.03;
     const amount = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
       .format(total)
