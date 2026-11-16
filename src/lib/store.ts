@@ -49,7 +49,7 @@ export const MAX_INSTALLMENTS = 6;
 /** Desconto no Pix: zero desde 12/11/2026 (preço único, Pix e cartão no mesmo valor). */
 export const PIX_DISCOUNT = 0;
 export const WHATSAPP =
-  "https://wa.me/5531990086296?text=Ol%C3%A1%2C+vim+do+site+e+preciso+de+ajuda.";
+  "https://wa.me/5531971185662?text=Ol%C3%A1%21+Vim+pelo+SITE+vonixhair.com+e+preciso+de+ajuda.";
 
 export const SITE_URL = "https://vonixhair.com";
 export const INSTAGRAM ="https://www.instagram.com/vonixhairoficial";
