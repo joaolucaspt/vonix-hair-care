@@ -1237,6 +1237,10 @@ function Checkout() {
                 className={inp}
               />
 </div>
+              <p className="flex items-start gap-2 pt-1 text-small text-muted-foreground" data-testid="dados-confianca">
+                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
+                <span>Usamos o CPF só para emitir o pedido e o e-mail e o WhatsApp só para enviar o rastreio. O pagamento é processado pela Appmax e você tem 7 dias para desistir da compra.</span>
+              </p>
               </fieldset>
 
             {totalsCard}
