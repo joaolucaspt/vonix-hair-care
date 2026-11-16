@@ -1017,7 +1017,6 @@ function Checkout() {
                     </span>
                     <span className="min-w-0 text-body font-semibold leading-snug tabular-nums">
                       {card6.count}x de {brl(card6.value)} sem juros
-                      {card6.first !== card6.value ? <span className="block text-small font-normal">{` (1ª de ${brl(card6.first)})`}</span> : null}
                     </span>
                   </span>
                 </label>

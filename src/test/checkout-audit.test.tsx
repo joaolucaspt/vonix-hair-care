@@ -324,7 +324,8 @@ describe("C86 — total integral ao lado do parcelamento no checkout", () => {
     expect(text).toContain("Valor total");
     expect(text).toContain("6x de " + money(each / 100));
     expect(text).toContain("sem juros");
-    if (first !== each) expect(text).toContain("1ª de " + money(first / 100));
+    // A caixa do cartão não mostra a 1ª parcela (decisão do dono); a diferença de centavos fica no botão e no resumo.
+    if (first !== each) expect(text).not.toContain("1ª de");
     expect(mocks.payment).not.toHaveBeenCalled();
   });
 
