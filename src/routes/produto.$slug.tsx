@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { Check, Heart, Minus, Plus, Truck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BuyDrawer } from "@/components/buy-drawer";
 import { ProductGallery } from "@/components/product-gallery";
 import { thumb } from "@/lib/images";
 import { ProductDetails } from "@/components/product-details";
@@ -313,7 +312,6 @@ function ProductPage() {
   const nav = useNavigate();
   const [vi, setVi] = useState(0);
   const [qty, setQty] = useState(1);
-  const [buyOpen, setBuyOpen] = useState(false);
   const v = p.variants[vi] ?? p.variants[0]!;
   const compare = vi === 0 ? p.compareBase : null;
   const off = discountPct(compare, v.price);
@@ -327,14 +325,6 @@ function ProductPage() {
   useEffect(() => {
     track("view_item", { value: v.price, items: [toItem(p, v.label, v.price)] });
   }, [p.slug]);
-  /** Comprar agora: pula o carrinho e vai direto ao pagamento (gaveta lateral no computador). */
-  const goCheckout = () => {
-    try {
-      if (window.innerWidth >= 1024) sessionStorage.setItem("vonix-lateral", "1");
-      else sessionStorage.removeItem("vonix-lateral");
-    } catch { /* sem armazenamento */ }
-    nav({ to: "/checkout" });
-  };
   const add = () => {
     cart.add(p.slug, v.label, qty);
     track("add_to_cart", {
@@ -345,7 +335,6 @@ function ProductPage() {
   const total = sel.net;
   return (
     <Shell>
-      {buyOpen && <BuyDrawer onClose={() => setBuyOpen(false)} onPay={goCheckout} />}
       <div className="container-site py-4 pb-28 sm:py-8 lg:pb-8">
         <nav className="mb-6 hidden text-small text-muted-foreground sm:block">
           <Link to="/">Início</Link> /{" "}
@@ -532,7 +521,7 @@ function ProductPage() {
                 className="rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] py-3.5"
                 onClick={() => {
                   add();
-                  setBuyOpen(true);
+                  nav({ to: "/carrinho" });
                 }}
               >
                 Comprar agora
@@ -602,7 +591,7 @@ function ProductPage() {
           className="ml-auto shrink-0 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] px-6 py-3 text-body"
           onClick={() => {
             add();
-            setBuyOpen(true);
+            nav({ to: "/carrinho" });
           }}
         >
           Comprar agora
