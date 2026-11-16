@@ -135,7 +135,6 @@ function Home() {
         <Title a="Vídeos de quem" b="Usa Vonix" to={{ q: "botox vonix" }} />
         <p className="-mt-4 mb-4 text-body text-muted-foreground">Veja quem usa os produtos da Vonix Hair. Toque para assistir.</p>
         <ProvasEmVideo all seed="home" />
-        <ComentariosInstagram max={10} />
       </section>
 
       {/* 3) Quem ainda não decidiu escolhe pela necessidade do cabelo */}
@@ -197,6 +196,11 @@ function Home() {
             <Link to="/loja" className="mt-5 rounded-full bg-background px-6 py-2.5 text-body text-foreground">Ver ofertas</Link>
           </div>
         </div>
+      </section>
+
+      {/* Comentários escritos lá embaixo, perto do rodapé */}
+      <section className="container-site mt-16" data-testid="home-comentarios">
+        <ComentariosInstagram max={10} />
       </section>
 
       <AffiliateHomeInvite />
