@@ -122,7 +122,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               url: SITE_URL,
               logo: `${SITE_URL}/vonix-pedidos-512.png`,
               sameAs: [INSTAGRAM, FACEBOOK],
-              contactPoint: { "@type": "ContactPoint", telephone: "+55-31-99008-6296", contactType: "customer service", areaServed: "BR", availableLanguage: "pt-BR" },
+              contactPoint: { "@type": "ContactPoint", telephone: "+55-31-97118-5662", contactType: "customer service", areaServed: "BR", availableLanguage: "pt-BR" },
             },
             {
               "@type": "WebSite",
