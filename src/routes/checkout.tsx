@@ -349,7 +349,7 @@ function Drawer({ children, progress, steps }: { children: React.ReactNode; prog
             ))}
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
       </div>
     </div>
   );
@@ -516,12 +516,14 @@ function Checkout() {
       .then((r) => {
         if (cancelled) return;
         if (r.ok) {
-          setOptions(r.options);
-          // Pré-seleciona sempre o frete MAIS BARATO (o cliente troca pelo mais rápido se quiser).
-          const cheapest = [...r.options].sort((a, b) => a.price - b.price || a.days - b.days)[0];
-          setServiceId((cur) =>
-            r.options.some((o) => o.id === cur) ? cur : (cheapest?.id ?? null),
-          );
+          // 3 opções: as 2 mais baratas + 1 intermediária mais rápida (a mais barata que chega em até 3 dias; senão a do meio).
+          // NENHUMA vem marcada: quem escolhe o frete é o cliente.
+          const byPrice = [...r.options].sort((a, b) => a.price - b.price || a.days - b.days);
+          const rest = byPrice.slice(2);
+          const medium = rest.find((o) => o.days <= 3) ?? rest[Math.floor((rest.length - 1) / 2)];
+          const picked = [...byPrice.slice(0, 2), ...(medium ? [medium] : [])];
+          setOptions(picked);
+          setServiceId((cur) => (picked.some((o) => o.id === cur) ? cur : null));
           if (!r.options.length)
             setQuoteErr("Nenhuma transportadora atende este CEP. Fale com a gente no WhatsApp.");
         } else {
@@ -795,7 +797,9 @@ function Checkout() {
         </p>
       )}
       {!chosen && !quoting && (
-        <p className="text-center text-small text-muted-foreground">Digite o CEP para liberar o pagamento</p>
+        <p className="text-center text-small text-muted-foreground">
+          {options.length > 0 ? "Escolha o frete para liberar o pagamento" : "Digite o CEP para liberar o pagamento"}
+        </p>
       )}
       <button
         type={floating ? "button" : "submit"}
@@ -965,7 +969,7 @@ function Checkout() {
 
             <fieldset className="space-y-2">
               <StepTitle n={1}>Como você quer pagar?</StepTitle>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2">
                 <label data-testid="pay-option-pix" className={payTile(pay === "pix")}>
                   <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
                     <span className="flex min-w-0 items-center gap-2">
@@ -1002,7 +1006,7 @@ function Checkout() {
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
                   <span
-                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1 leading-tight"
+                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-1 leading-tight"
                     aria-live="polite"
                   >
                     <span className="min-w-0">
@@ -1011,9 +1015,8 @@ function Checkout() {
                       </span>
                       <span className="block text-small">Valor total · {shipNote}</span>
                     </span>
-                    <span className="min-w-0 break-words text-small font-semibold leading-snug tabular-nums">
+                    <span className="min-w-0 text-body font-semibold leading-snug tabular-nums">
                       {card6.count}x de {brl(card6.value)} sem juros
-                      {card6.first !== card6.value ? ` (1ª de ${brl(card6.first)})` : ""}
                     </span>
                   </span>
                 </label>
