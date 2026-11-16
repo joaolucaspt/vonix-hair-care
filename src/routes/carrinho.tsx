@@ -203,7 +203,7 @@ function Suggestions() {
               </div>
               <button
                 onClick={() => c.add(p.slug, v.label, 1, "comp5")}
-                className="relative z-10 mt-auto rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-small font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                className="relative z-10 mt-auto rounded-md border border-neutral-700 bg-neutral-700 px-4 py-2 text-small font-semibold text-white transition hover:bg-neutral-800"
               >
                 Adicionar
               </button>
