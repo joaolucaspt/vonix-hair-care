@@ -303,8 +303,8 @@ describe("checkout auditado sem chamadas reais", () => {
   });
 });
 
-describe("C86 — total integral ao lado do parcelamento no checkout", () => {
-  it("destaca valor integral primeiro, 6x ao lado e informa a diferença de centavos", () => {
+describe("C86 — parcela em destaque e total informado no cartão do checkout", () => {
+  it("destaca o 6x primeiro, informa o total embaixo e Pix e Cartão lado a lado", () => {
     render(<Checkout />);
     const tile = screen.getByTestId("pay-option-card");
     const text = (tile.textContent ?? "").replace(/\u00a0/g, " ");
@@ -316,11 +316,9 @@ describe("C86 — total integral ao lado do parcelamento no checkout", () => {
       new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
         .format(v)
         .replace(/\u00a0/g, " ");
-    expect(tile.querySelector('[aria-live="polite"]')?.className).toContain(
-      "grid-cols-[auto_minmax(0,1fr)]",
-    );
-    expect(tile.closest("fieldset")?.querySelector(".grid-cols-1")).not.toBeNull();
-    expect(text.indexOf(money(price))).toBeLessThan(text.indexOf("6x de"));
+    expect(tile.parentElement?.className).toContain("grid-cols-2");
+    expect(screen.getByTestId("pay-option-pix").parentElement).toBe(tile.parentElement);
+    expect(text.indexOf("6x de")).toBeLessThan(text.indexOf(money(price)));
     expect(text).toContain("Valor total");
     expect(text).toContain("6x de " + money(each / 100));
     expect(text).toContain("sem juros");
