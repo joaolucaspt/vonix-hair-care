@@ -186,6 +186,11 @@ function Home() {
         </div>
       </section>
 
+      {/* Comentários escritos lá embaixo, perto do rodapé */}
+      <section className="container-site mt-16" data-testid="home-comentarios">
+        <ComentariosInstagram max={10} />
+      </section>
+
       <section className="container-site mt-20">
         <div className="relative overflow-hidden rounded-2xl">
           <div aria-hidden className="h-72 w-full" style={{ background: "radial-gradient(90% 120% at 15% 10%, oklch(0.66 0.13 82) 0%, oklch(0.4 0.08 70) 45%, oklch(0.2 0.02 60) 100%)" }} />
@@ -199,11 +204,6 @@ function Home() {
       </section>
 
       <AffiliateHomeInvite />
-
-      {/* Comentários escritos lá embaixo, perto do rodapé */}
-      <section className="container-site mt-16" data-testid="home-comentarios">
-        <ComentariosInstagram max={10} />
-      </section>
     </Shell>
   );
 }
