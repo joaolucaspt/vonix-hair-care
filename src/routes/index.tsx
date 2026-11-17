@@ -60,14 +60,6 @@ const BANNERS = ["kit-banana-e-mel", "kit-cachos", "kit-coco-nutri", "kit-cronog
   .map((s, i) => [s, i] as const)
   .sort((a, b) => soldFor(b[0]) - soldFor(a[0]) || a[1] - b[1])
   .map(([s]) => s);
-const NEEDS = [
-  ["Hidratação", "Mais maciez e brilho", "hidratacao", "Hidratação"],
-  ["Reconstrução", "Fios mais fortes", "reconstrucao", "Reconstrução"],
-  ["Controle de Frizz", "Cabelos mais alinhados", "frizz", "Controle de Frizz"],
-  ["Cachos", "Definição e movimento", "cachos", "Definição de Cachos"],
-  ["Com Química", "Cuidado e hidratação", "quimica", "Cabelos com Química"],
-  ["Nutrição", "Fios nutridos e macios", "nutricao", "Nutrição"],
-] as const;
 
 function Title({ a, b, to }: { a: string; b: string; to?: Record<string, string> }) {
   return (
@@ -96,8 +88,10 @@ function Home() {
     return out;
   };
   const kits = take(forAudience(bySales(products.filter((p) => p.category === "kits")), audience));
+  const hidratacao = take(forAudience(bySales(products.filter((p) => p.category === "hidratacao")), audience));
+  const lavatorio = take(forAudience(bySales(products.filter((p) => p.category === "lavatorio")), audience));
   const avulsos = take(bySales(products.filter((p) => p.category === "avulsos")), 12);
-  const others = take(forAudience(bySales(products.filter((p) => p.category !== "avulsos")), audience), 8);
+  const finalizadores = take(forAudience(bySales(products.filter((p) => p.category === "finalizadores")), audience));
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % BANNERS.length), 6000);
     return () => clearInterval(t);
@@ -130,63 +124,69 @@ function Home() {
         <Grid carousel items={bestSellers} />
       </section>
 
-      {/* 2) Prova social cedo: quem já usa conta como é */}
-      <section className="container-site mt-16" data-testid="home-prova-social">
-        <Title a="Vídeos de quem" b="Usa Vonix" to={{ q: "botox vonix" }} />
-        <p className="-mt-4 mb-4 text-body text-muted-foreground">Veja quem usa os produtos da Vonix Hair. Toque para assistir.</p>
-        <ProvasEmVideo all seed="home" />
-        <ComentariosInstagram max={10} />
-      </section>
-
-      {/* 3) Quem ainda não decidiu escolhe pela necessidade do cabelo */}
-      <section className="container-site mt-20 text-center">
-        <h2 className="[&_em]:not-italic">Encontre o Tratamento <em>Ideal</em></h2>
-        <p className="mt-2 text-muted-foreground">Escolha a necessidade do seu cabelo e veja os produtos indicados.</p>
-        <div className="mt-6 grid grid-cols-3 gap-x-3 gap-y-5 md:grid-cols-6">
-          {NEEDS.map(([t, s, img, q]) => (
-            <Link key={t} to="/loja" search={{ uso: "pessoal", necessidades: q }} className="group">
-              <img src={`/images/categorias/${img}.jpg`} alt={t} width={130} height={130} loading="lazy" className="mx-auto aspect-square w-full max-w-[84px] rounded-full object-cover transition-transform group-hover:scale-105 md:max-w-[120px]" />
-              <div className="mt-2 text-body font-medium">{t}</div>
-              <div className="text-small leading-tight text-muted-foreground">{s}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 4) Kits que ainda não apareceram: a rotina completa aumenta o valor do pedido */}
+      {/* 2) Kits: a rotina completa aumenta o valor do pedido */}
       {kits.length > 0 && (
-        <section className="container-site mt-20" data-testid="home-kits">
+        <section className="container-site mt-16" data-testid="home-kits">
           <Title a="Rotina Completa em" b="Kits" to={{ tiposProduto: "Kits" }} />
           <p className="-mt-4 mb-4 text-body text-muted-foreground">Todos os passos do cuidado em um só pedido. Leve 2 e ganhe 12% OFF, leve 3 e ganhe 15% OFF.</p>
           <Grid carousel items={kits} />
         </section>
       )}
 
+      {/* 3) Hidratação */}
+      {hidratacao.length > 0 && (
+        <section className="container-site mt-16" data-testid="home-hidratacao">
+          <Title a="Linha de" b="Hidratação" to={{ categoria: "hidratacao" }} />
+          <Grid carousel items={hidratacao} />
+        </section>
+      )}
+
+      {/* 4) Lavatório: shampoos e preparação */}
+      {lavatorio.length > 0 && (
+        <section className="container-site mt-16" data-testid="home-lavatorio">
+          <Title a="Lavatório e" b="Shampoos" to={{ categoria: "lavatorio" }} />
+          <Grid carousel items={lavatorio} />
+        </section>
+      )}
+
       {/* 5) Quem quer só um item leva só um item (e completa o carrinho até o frete grátis) */}
       {avulsos.length > 0 && (
         <section className="container-site mt-16" data-testid="home-avulsos">
-          <Title a="Leve só o que" b="Precisa" to={{ tiposProduto: "Avulsos" }} />
+          <Title a="Avulsos dos" b="Kits" to={{ tiposProduto: "Avulsos" }} />
           <p className="-mt-4 mb-4 text-body text-muted-foreground">Unidades dos kits vendidas separadas. Leve 2 e ganhe 12% OFF, leve 3 e ganhe 15% OFF. Acima de R$ 150,00 em produtos o frete é grátis.</p>
           <Grid carousel items={avulsos} />
+          <div className="mt-6 text-center">
+            <Link to="/loja" className="inline-flex items-center gap-2 rounded-full border border-foreground px-6 py-2.5 text-body">
+              Ver todos os produtos <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </section>
       )}
 
-      {others.length > 0 && (
-        <section className="container-site mt-20">
-          <Title a="Todos os" b="Produtos" to={{}} />
-          <Grid carousel items={others} />
+      {/* 6) Finalizadores */}
+      {finalizadores.length > 0 && (
+        <section className="container-site mt-16" data-testid="home-finalizadores">
+          <Title a="Linha de" b="Finalizadores" to={{ categoria: "finalizadores" }} />
+          <Grid carousel items={finalizadores} />
         </section>
       )}
 
-      {/* 6) Depoimentos e a oferta de quantidade logo antes do rodapé */}
-      <section className="container-site mt-20">
-        <Title a="Resultados que" b="Falam por Si" to={{ q: "botox vonix" }} />
-        <p className="-mt-4 mb-6 text-body text-muted-foreground">Depoimentos reais de cabeleireiras que usam o Botox Vonix.</p>
+      {/* 7) Prova social num bloco só: vídeos, depoimentos e comentários escritos */}
+      <section className="container-site mt-20" data-testid="home-prova-social">
+        <Title a="Quem usa" b="Aprova" to={{ q: "botox vonix" }} />
+        <p className="-mt-4 mb-4 text-body text-muted-foreground">Veja quem usa os produtos da Vonix Hair. Toque para assistir.</p>
+        <ProvasEmVideo all seed="home" />
+        <h3 className="mb-3 mt-10 font-display text-h2">Resultados que falam por si</h3>
+        <p className="mb-4 text-body text-muted-foreground">Depoimentos reais de cabeleireiras que usam o Botox Vonix.</p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {reviews.map((r) => <ReviewCard key={r.author + r.date} r={r} />)}
         </div>
+        <div data-testid="home-comentarios">
+          <ComentariosInstagram max={10} />
+        </div>
       </section>
 
+      {/* 8) Oferta de quantidade e convite de afiliadas, logo antes do rodapé */}
       <section className="container-site mt-20">
         <div className="relative overflow-hidden rounded-2xl">
           <div aria-hidden className="h-72 w-full" style={{ background: "radial-gradient(90% 120% at 15% 10%, oklch(0.66 0.13 82) 0%, oklch(0.4 0.08 70) 45%, oklch(0.2 0.02 60) 100%)" }} />

@@ -969,7 +969,7 @@ function Checkout() {
 
             <fieldset className="space-y-2">
               <StepTitle n={1}>Como você quer pagar?</StepTitle>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <label data-testid="pay-option-pix" className={payTile(pay === "pix")}>
                   <span className="flex min-w-0 items-center justify-between gap-2 text-body font-semibold">
                     <span className="flex min-w-0 items-center gap-2">
@@ -987,6 +987,8 @@ function Checkout() {
                   </span>
                   <span className="min-w-0 leading-tight">
                     <span className="money block text-name font-semibold">{brl(chosen ? tPix.net + shipping : tPix.net)}</span>
+                    {tPix.pixDiscount > 0 && <span className="block text-small font-semibold text-[#e3c07a]">5% OFF no Pix</span>}
+                    {applied && tPix.pixDiscount === 0 && <span className="block text-small text-white/70">Com cupom, o Pix não tem 5% OFF</span>}
                     {(!chosen || chosen.free) && <span className={`block text-small ${pay === "pix" ? "text-white/70" : "text-muted-foreground"}`}>{chosen?.free || freeShip ? "Frete grátis" : "sem frete"}</span>}
                   </span>
                 </label>
@@ -1006,17 +1008,17 @@ function Checkout() {
                     <CreditCard className={`h-6 w-6 shrink-0 ${pay === "card" ? "text-[#e3c07a]" : "text-neutral-500"}`} strokeWidth={1.6} aria-hidden="true" />
                   </span>
                   <span
-                    className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-1 leading-tight"
+                    className="grid min-w-0 grid-cols-1 items-start gap-y-1 leading-tight"
                     aria-live="polite"
                   >
                     <span className="min-w-0">
-                      <span className="block whitespace-nowrap text-name font-bold tabular-nums">
-                        {brl(cardTotal)}
+                      <span className="block text-name font-bold leading-snug tabular-nums">
+                        {card6.count}x de {brl(card6.value)}
                       </span>
-                      <span className="block text-small">Valor total · {shipNote}</span>
+                      <span className="block text-small">sem juros</span>
                     </span>
-                    <span className="min-w-0 text-body font-semibold leading-snug tabular-nums">
-                      {card6.count}x de {brl(card6.value)} sem juros
+                    <span className="min-w-0 text-small tabular-nums">
+                      Valor total {brl(cardTotal)} · {shipNote}
                     </span>
                   </span>
                 </label>

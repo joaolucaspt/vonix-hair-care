@@ -61,7 +61,7 @@ const MARQUEE = [
   "LEVE 2 UNIDADES: 12% OFF · LEVE 3: 15% OFF",
   "FRETE GRÁTIS ACIMA DE R$ 150 EM PRODUTOS, ANTES DOS DESCONTOS",
   "PARCELAMENTO EM ATÉ 6X SEM JUROS",
-  "PIX OU CARTÃO: O MESMO PREÇO",
+  "PIX COM 5% OFF NOS ITENS SEM OUTRA OFERTA",
 ];
 
 /** Relógio do teste de preços: conta até o prazo real (TESTE_FIM) e some sozinho quando acaba; depois os preços voltam aos de sempre. */
@@ -157,7 +157,7 @@ export function Benefits() {
   const items = [
     { Icon: Truck, title: "Frete grátis", text: `acima de R$ ${FREE_SHIPPING_ABOVE} em produtos` },
     { Icon: CreditCard, title: "Até 6x sem juros", text: "no cartão de crédito" },
-    { Icon: QrCode, title: "Pix ou cartão", text: "o mesmo preço" },
+    { Icon: QrCode, title: "Pix com 5% OFF", text: "nos itens sem outra oferta" },
     { Icon: ShieldCheck, title: "Compra segura", text: "seus dados protegidos" },
   ];
   return (

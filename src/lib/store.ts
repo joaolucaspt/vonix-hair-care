@@ -46,8 +46,8 @@ export const getProduct = (slug: string) => products.find((p) => p.slug === slug
 
 export const FREE_SHIPPING_ABOVE = 150;
 export const MAX_INSTALLMENTS = 6;
-/** Desconto no Pix: zero desde 12/11/2026 (preço único, Pix e cartão no mesmo valor). */
-export const PIX_DISCOUNT = 0;
+/** Desconto no Pix: 5% (volta em 16/11/2026), só em itens sem outra oferta e sem cupom por cima. */
+export const PIX_DISCOUNT = 0.05;
 export const WHATSAPP =
   "https://wa.me/5531971185662?text=Ol%C3%A1%21+Vim+pelo+SITE+vonixhair.com+e+preciso+de+ajuda.";
 
@@ -60,7 +60,7 @@ export const brl = (v: number) =>
 
 const cents = (v: number) => Math.round(v * 100);
 
-/** Pix price derived from the sale price (hoje igual ao preço: sem desconto no Pix). */
+/** Preço no Pix derivado do preço de venda (5% de desconto). */
 export const pixPrice = (v: number) => Math.round((cents(v) * (100 - PIX_DISCOUNT * 100)) / 100) / 100;
 
 /** Preço do complemento do carrinho (5% OFF no próprio item): regra própria, separada do Pix. */
@@ -308,7 +308,7 @@ export const MAX_DISCOUNT = Math.max(...products.map((p) => discountPct(p.compar
 /**
  * Order totals in cents, line-aware.
  * - Free shipping: product subtotal BEFORE any discount strictly above R$ 150.
- * - Pix: sem desconto (PIX_DISCOUNT = 0); o código fica para o caso de voltar um desconto no futuro.
+ * - Pix: PIX_DISCOUNT (5%) só nas linhas sem oferta de quantidade e só quando NÃO há cupom aplicado.
  * - Line offers (comp5/kit2/kit3) are already baked into each line's net and
  *   are NEVER cumulative: Pix 5% and coupons apply only to lines without an offer.
  */
@@ -322,7 +322,7 @@ export function checkoutTotals(
   const eligible = cents(lines.reduce((s, l) => s + (lineHasOffer(l) ? 0 : l.net), 0));
   const couponDisc = Math.round(eligible * couponPct);
   const pixDisc =
-    method === "pix" ? Math.round(((eligible - couponDisc) * (100 - PIX_DISCOUNT * 100)) / 100) - (eligible - couponDisc) : 0;
+    method === "pix" && couponPct === 0 ? Math.round(((eligible - couponDisc) * (100 - PIX_DISCOUNT * 100)) / 100) - (eligible - couponDisc) : 0;
   const total = net - couponDisc + pixDisc;
   return {
     gross: gross / 100,
