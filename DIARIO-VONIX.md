@@ -222,3 +222,10 @@ Cuidado: itens baratos subiram 30% ou mais; acompanhar conversão. Custo do anú
 ## 16/11/2026 — checkout: nota de confiança em "Seus dados" (PR #220)
 - Clarity (3 dias): produto 96 sessões, carrinho 24, checkout 23, frete 11, pagamento 1; o abandono é depois do frete, na etapa de dados. Mudança: nota curta sob os campos (uso do CPF/e-mail/WhatsApp, pagamento pela Appmax, 7 dias para desistir). Só texto; testes e tipos passam; conferido no checkout local.
 - Como desfazer: git revert do PR #220. Conferência ao vivo pendente (deploy ainda não refletia).
+
+## 17/11/2026 (17h30) — relatório diário e compra teste segura (só observação, sem mudança no site)
+- Compra teste sem pagar: Botox → checkout, CEP 01310-100: frete grátis (2 a 3 dias úteis), botão "Gerar Pix" liberou, sem erro. Computador OK; celular num quadro de 390 px sem rolagem lateral.
+- Pixel (Vonix | E-commerce): PageView e Ver conteúdo ativos (há 47 min), Carrinho e Iniciar finalização ativos (há 5 h). Purchase não visto na lista; não forçado.
+- Meta: campanha Power ativa, 0 compras, gasto acumulado maior que ontem; orçamento aparece como R$ 250/dia (acima do teto de R$ 100): aguardando confirmação do dono. Nada alterado.
+- Pix 5% (16/11) reduz a margem de venda por anúncio; decisão pendente do dono.
+- Como desfazer: nada alterado além deste diário.
