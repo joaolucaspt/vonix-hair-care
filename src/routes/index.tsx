@@ -60,12 +60,6 @@ const BANNERS = ["kit-banana-e-mel", "kit-cachos", "kit-coco-nutri", "kit-cronog
   .map((s, i) => [s, i] as const)
   .sort((a, b) => soldFor(b[0]) - soldFor(a[0]) || a[1] - b[1])
   .map(([s]) => s);
-const TIPOS = [
-  ["quimica", "Química e Progressivas", "Alinhamento e brilho", "quimica"],
-  ["hidratacao", "Hidratação", "Mais maciez e brilho", "hidratacao"],
-  ["reposicao-cauterizacao", "Cauterização e Reposição", "Fios mais fortes", "reconstrucao"],
-  ["finalizadores", "Finalizadores", "Frizz sob controle", "frizz"],
-] as const;
 
 function Title({ a, b, to }: { a: string; b: string; to?: Record<string, string> }) {
   return (
@@ -94,7 +88,10 @@ function Home() {
     return out;
   };
   const kits = take(forAudience(bySales(products.filter((p) => p.category === "kits")), audience));
+  const hidratacao = take(forAudience(bySales(products.filter((p) => p.category === "hidratacao")), audience));
+  const lavatorio = take(forAudience(bySales(products.filter((p) => p.category === "lavatorio")), audience));
   const avulsos = take(bySales(products.filter((p) => p.category === "avulsos")), 12);
+  const finalizadores = take(forAudience(bySales(products.filter((p) => p.category === "finalizadores")), audience));
   useEffect(() => {
     const t = setInterval(() => setI((x) => (x + 1) % BANNERS.length), 6000);
     return () => clearInterval(t);
@@ -136,29 +133,26 @@ function Home() {
         </section>
       )}
 
-      {/* 3) Compre por tipo: cada atalho abre uma categoria real do catálogo, com a quantidade de produtos */}
-      <section className="container-site mt-16 text-center" data-testid="home-por-tipo">
-        <h2 className="[&_em]:not-italic">Compre por <em>Tipo</em></h2>
-        <p className="mt-2 text-muted-foreground">Escolha a categoria e veja os produtos.</p>
-        <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-4">
-          {TIPOS.map(([cat, t, s, img]) => {
-            const n = products.filter((p) => p.category === cat).length;
-            return (
-              <Link key={cat} to="/loja" search={{ categoria: cat }} className="group">
-                <img src={`/images/categorias/${img}.jpg`} alt={t} width={130} height={130} loading="lazy" className="mx-auto aspect-square w-full max-w-[104px] rounded-full object-cover transition-transform group-hover:scale-105 md:max-w-[120px]" />
-                <div className="mt-2 text-body font-medium">{t}</div>
-                <div className="text-small leading-tight text-muted-foreground">{s}</div>
-                <div className="mt-0.5 text-small font-semibold">{n} produtos</div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      {/* 3) Hidratação */}
+      {hidratacao.length > 0 && (
+        <section className="container-site mt-16" data-testid="home-hidratacao">
+          <Title a="Linha de" b="Hidratação" to={{ categoria: "hidratacao" }} />
+          <Grid carousel items={hidratacao} />
+        </section>
+      )}
 
-      {/* 4) Quem quer só um item leva só um item (e completa o carrinho até o frete grátis) */}
+      {/* 4) Lavatório: shampoos e preparação */}
+      {lavatorio.length > 0 && (
+        <section className="container-site mt-16" data-testid="home-lavatorio">
+          <Title a="Lavatório e" b="Shampoos" to={{ categoria: "lavatorio" }} />
+          <Grid carousel items={lavatorio} />
+        </section>
+      )}
+
+      {/* 5) Quem quer só um item leva só um item (e completa o carrinho até o frete grátis) */}
       {avulsos.length > 0 && (
         <section className="container-site mt-16" data-testid="home-avulsos">
-          <Title a="Leve só o que" b="Precisa" to={{ tiposProduto: "Avulsos" }} />
+          <Title a="Avulsos dos" b="Kits" to={{ tiposProduto: "Avulsos" }} />
           <p className="-mt-4 mb-4 text-body text-muted-foreground">Unidades dos kits vendidas separadas. Leve 2 e ganhe 12% OFF, leve 3 e ganhe 15% OFF. Acima de R$ 150,00 em produtos o frete é grátis.</p>
           <Grid carousel items={avulsos} />
           <div className="mt-6 text-center">
@@ -169,7 +163,15 @@ function Home() {
         </section>
       )}
 
-      {/* 5) Prova social num bloco só: vídeos, depoimentos e comentários escritos */}
+      {/* 6) Finalizadores */}
+      {finalizadores.length > 0 && (
+        <section className="container-site mt-16" data-testid="home-finalizadores">
+          <Title a="Linha de" b="Finalizadores" to={{ categoria: "finalizadores" }} />
+          <Grid carousel items={finalizadores} />
+        </section>
+      )}
+
+      {/* 7) Prova social num bloco só: vídeos, depoimentos e comentários escritos */}
       <section className="container-site mt-20" data-testid="home-prova-social">
         <Title a="Quem usa" b="Aprova" to={{ q: "botox vonix" }} />
         <p className="-mt-4 mb-4 text-body text-muted-foreground">Veja quem usa os produtos da Vonix Hair. Toque para assistir.</p>
@@ -184,7 +186,7 @@ function Home() {
         </div>
       </section>
 
-      {/* 6) Oferta de quantidade e convite de afiliadas, logo antes do rodapé */}
+      {/* 8) Oferta de quantidade e convite de afiliadas, logo antes do rodapé */}
       <section className="container-site mt-20">
         <div className="relative overflow-hidden rounded-2xl">
           <div aria-hidden className="h-72 w-full" style={{ background: "radial-gradient(90% 120% at 15% 10%, oklch(0.66 0.13 82) 0%, oklch(0.4 0.08 70) 45%, oklch(0.2 0.02 60) 100%)" }} />
