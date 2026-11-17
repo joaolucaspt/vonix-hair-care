@@ -29,10 +29,12 @@ describe("tipografia: só Playfair Display e Inter", () => {
       .map((f) => f.replace(ROOT, "src"));
     expect(bad).toEqual([]);
   });
-  it("carrega apenas Playfair Display e Inter no Google Fonts", () => {
+  it("carrega apenas Playfair Display e Inter (fontes próprias, sem Google Fonts)", () => {
     const root = readFileSync(join(ROOT, "routes/__root.tsx"), "utf8");
-    const families = [...root.matchAll(/family=([A-Za-z+]+)/g)].map((m) => m[1]);
-    expect(families.sort()).toEqual(["Inter", "Playfair+Display"]);
+    expect(root).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
+    const css = readFileSync(join(ROOT, "styles.css"), "utf8");
+    const families = [...css.matchAll(/@font-face\s*\{[^}]*font-family:\s*"([^"]+)"/g)].map((m) => m[1]);
+    expect([...new Set(families)].sort()).toEqual(["Inter", "Playfair Display"]);
   });
   it("as variáveis de fonte do CSS são só as duas", () => {
     const css = readFileSync(join(ROOT, "styles.css"), "utf8");

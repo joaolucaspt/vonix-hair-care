@@ -11,4 +11,4 @@ Tamanhos: use só as classes `text-h1`, `text-h2`, `text-name`, `text-price`, `t
 
 Imagens (fotos de produto e categorias) **não levam texto desenhado**: o texto fica no código, em uma das duas fontes. Única exceção: a arte dos banners da home (`public/images/banners/*-home.webp`), enviada pela dona da loja, que traz o título dentro da imagem; preço e desconto continuam em HTML.
 
-O teste `src/test/typography.test.ts` falha se alguém usar outra família (`font-mono`, `Georgia`, `Arial` etc.) ou carregar outra fonte no Google Fonts.
+O teste `src/test/typography.test.ts` falha se alguém usar outra família (`font-mono`, `Georgia`, `Arial` etc.), se o site voltar a pedir fontes ao Google ou se declarar outra `@font-face`. As duas fontes ficam em `src/assets/fonts` (latin, woff2) e são servidas pelo próprio site, para a página não esperar fonts.googleapis.com no app do Instagram.

@@ -12,6 +12,8 @@ import {
 import { useEffect, useRef, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import interFont from "../assets/fonts/inter-latin.woff2?url";
+import playfairFont from "../assets/fonts/playfair-display-latin.woff2?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { META_PIXEL_ID } from "@/lib/analytics";
@@ -103,8 +105,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;500;600&display=swap" },
+      { rel: "preload", as: "font", type: "font/woff2", href: interFont, crossOrigin: "anonymous" },
+      { rel: "preload", as: "font", type: "font/woff2", href: playfairFont, crossOrigin: "anonymous" },
       { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png?v=3" },
       { rel: "icon", type: "image/png", sizes: "48x48", href: "/favicon-48.png?v=3" },
       { rel: "shortcut icon", href: "/favicon.ico?v=3" },
