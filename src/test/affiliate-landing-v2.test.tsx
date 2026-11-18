@@ -1,10 +1,8 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
-import {
-  illustrativeEarnings,
-  AffiliateEarningsSimulator,
-} from "@/components/affiliate-creator-opportunity";
+import { AffiliateEarningsSimulator } from "@/components/affiliate-creator-opportunity";
+import { illustrativeEarnings } from "@/lib/affiliate-marketing-math";
 
 afterEach(cleanup);
 

@@ -361,6 +361,16 @@ export function AffiliateLandingIntro({
                 key={item.id}
                 className="group flex min-w-[78vw] max-w-[21rem] snap-start flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:min-w-0 sm:max-w-none"
               >
+                <div className={"relative aspect-[4/3] overflow-hidden " + item.background}>
+                  <ProductImage
+                    src={item.image}
+                    alt={item.alt}
+                    className="p-5 transition-transform duration-500 group-hover:scale-105 motion-reduce:transform-none"
+                  />
+                  <span className="absolute left-4 top-4 rounded-full border border-border bg-background/95 px-3 py-1 text-[10px] font-bold tracking-wide text-primary">
+                    {item.id}
+                  </span>
+                </div>
                 <div className="flex flex-1 flex-col px-5 pb-6 pt-6 sm:px-6">
                   <p className="text-[10px] font-extrabold tracking-normal text-muted-foreground">
                     {item.tag}

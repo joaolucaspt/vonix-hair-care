@@ -1,22 +1,9 @@
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { illustrativeEarnings } from "@/lib/affiliate-marketing-math";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-/** Illustrative arithmetic only; never used to settle commissions or qualify bonuses. */
-export function illustrativeEarnings(input: number) {
-  const sales = Number.isFinite(input) ? Math.min(20000, Math.max(0, input)) : 0;
-  const salesCents = Math.round(sales * 100);
-  const commissionCents = Math.round((salesCents * 8) / 100);
-  const bonusCents = Math.floor(salesCents / 1000000) * 50000;
-  return {
-    sales: salesCents / 100,
-    commission: commissionCents / 100,
-    bonus: bonusCents / 100,
-    total: (commissionCents + bonusCents) / 100,
-  };
-}
 
 export function AffiliateEarningsSimulator() {
   const [sales, setSales] = useState(2500);
@@ -125,6 +112,24 @@ const catalog = [
   },
 ];
 
+/**
+ * Product feedback quoted from the official Botox Vonix storefront, checked
+ * on 2026-11-18. Not affiliate-program testimonials or earning claims.
+ */
+const verifiedProductFeedback = [
+  { name: "Fernanda Assis", month: "setembro de 2026", quote: "Adoreeeeeiii" },
+  {
+    name: "Ayla Muniz",
+    month: "agosto de 2026",
+    quote: "Já peguei logo o combo kkkkkkk minhas cliente amou",
+  },
+  {
+    name: "Mariana Andrade",
+    month: "julho de 2026",
+    quote: "Produto maravilhoso ❤️ eu amei trabalhar com ele",
+  },
+] as const;
+
 export function AffiliateCreatorOpportunity({
   recruitmentOpen = false,
 }: {
@@ -170,6 +175,58 @@ export function AffiliateCreatorOpportunity({
             </figure>
           ))}
         </div>
+        <aside
+          aria-labelledby="vonix-product-reviews-title"
+          className="mt-14 overflow-hidden rounded-[2rem] border border-border bg-background shadow-[0_16px_45px_rgba(70,36,49,.06)]"
+          data-testid="vonix-c53-real-product-reviews"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-5 px-6 py-8 sm:px-10">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[.14em] text-primary">
+                Avaliações publicadas na loja oficial
+              </p>
+              <h3
+                id="vonix-product-reviews-title"
+                className="mt-3 font-display text-3xl leading-tight text-foreground sm:text-4xl"
+              >
+                Quem conhece nossos produtos tem o que contar.
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Opiniões sobre o Botox Vonix de clientes que aparecem na página do produto.
+                <strong className="font-semibold">
+                  {" "}
+                  Não são depoimentos de afiliadas ou resultados do programa.
+                </strong>
+              </p>
+            </div>
+            <a
+              href="/produto/botox-vonix"
+              className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+            >
+              Conferir avaliações na loja <ArrowUpRight aria-hidden="true" className="size-4" />
+            </a>
+          </div>
+          <div className="grid gap-px bg-border md:grid-cols-3">
+            {verifiedProductFeedback.map((review) => (
+              <blockquote key={review.name} className="min-w-0 bg-card px-6 py-8 sm:px-8">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Sobre o Botox Vonix
+                </p>
+                <p className="mt-5 font-display text-xl leading-snug text-foreground">
+                  “{review.quote}”
+                </p>
+                <footer className="mt-6 border-t border-border pt-4">
+                  <p className="text-sm font-semibold text-foreground">{review.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Cliente · {review.month}</p>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+          <p className="bg-secondary/45 px-6 py-4 text-xs leading-relaxed text-muted-foreground sm:px-10">
+            Estes comentários documentam experiências com produtos da Vonix Hair. Eles não
+            representam renda, vendas, comissões ou participação no programa de afiliadas.
+          </p>
+        </aside>
         <div className="mt-9 flex flex-wrap items-center justify-between gap-6 border-t border-border pt-7">
           <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
             Galeria de produtos reais da loja oficial. Não são depoimentos de afiliadas,
