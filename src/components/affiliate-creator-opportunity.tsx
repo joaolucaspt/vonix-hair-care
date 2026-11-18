@@ -125,7 +125,11 @@ const catalog = [
   },
 ];
 
-export function AffiliateCreatorOpportunity() {
+export function AffiliateCreatorOpportunity({
+  recruitmentOpen = false,
+}: {
+  recruitmentOpen?: boolean;
+}) {
   return (
     <section aria-labelledby="creator-stories-title" className="bg-card px-5 py-16 sm:py-24">
       <div className="mx-auto max-w-7xl">
@@ -177,7 +181,8 @@ export function AffiliateCreatorOpportunity() {
           </p>
           <Button asChild className="min-h-12 h-auto whitespace-normal px-6 py-3">
             <a href="#inscricao">
-              Conhecer a candidatura <ArrowUpRight aria-hidden="true" />
+              {recruitmentOpen ? "Preencher candidatura" : "Conhecer a candidatura"}{" "}
+              <ArrowUpRight aria-hidden="true" />
             </a>
           </Button>
         </div>

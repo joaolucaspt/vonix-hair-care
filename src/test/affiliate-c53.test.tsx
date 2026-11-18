@@ -50,7 +50,8 @@ describe("C53 recruitment presentation boundaries", () => {
       const id = link.getAttribute("href")?.slice(1);
       expect(id && document.getElementById(id)).toBeTruthy();
     }
-    expect(screen.getByRole("link", { name: "Ganhos" })).toHaveAttribute("href", "#ganhos");
+    for (const link of screen.getAllByRole("link", { name: "Ganhos" }))
+      expect(link).toHaveAttribute("href", "#ganhos");
     expect(screen.getByRole("link", { name: "Status" })).toHaveAttribute(
       "href",
       "/consultar-candidatura",

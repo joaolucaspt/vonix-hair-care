@@ -31,6 +31,12 @@ export function AffiliateShell({
           --accent: oklch(0.90 0.035 20); --accent-foreground: var(--primary);
           --border: oklch(0.80 0.025 20); --input: var(--border); --ring: var(--primary);
           letter-spacing: 0;
+          --shadow-sm: 0 2px 6px color-mix(in oklch, var(--primary) 10%, transparent);
+        }
+        [data-testid="vonix-affiliate-shell"] :is(button,a[role="button"],a[href^="#"],header a) { min-height: 44px; }
+        [data-testid="vonix-affiliate-shell"] h1 { color: var(--foreground); }
+        [data-testid="vonix-affiliate-shell"] section { min-width: 0; }
+        [data-testid="vonix-affiliate-shell"] footer { --ring: var(--primary-foreground);
         }
         [data-testid="vonix-affiliate-shell"] :is(a,button,input,summary):focus-visible {
           outline: 2px solid var(--ring); outline-offset: 4px;

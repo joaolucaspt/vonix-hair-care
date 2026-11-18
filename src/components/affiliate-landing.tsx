@@ -182,9 +182,9 @@ export function AffiliateLandingIntro({
       <section
         data-testid="vonix-affiliate-hero"
         aria-labelledby="vonix-affiliate-title"
-        className="relative isolate min-h-[38rem] bg-card px-5 py-9 sm:min-h-[41rem] sm:py-14"
+        className="relative isolate min-h-[650px] bg-card px-5 py-9 sm:min-h-[41rem] sm:py-14"
       >
-        <picture className="pointer-events-none absolute inset-0 -z-10 block bg-card">
+        <picture className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 block h-[230px] bg-card sm:inset-0 sm:h-full">
           <source srcSet="/images/products/kit-banana-e-mel.webp" type="image/webp" />
           <img
             src="/images/products/kit-banana-e-mel.jpg"
@@ -194,7 +194,7 @@ export function AffiliateLandingIntro({
             fetchPriority="high"
             loading="eager"
             decoding="async"
-            className="h-full w-full object-contain object-right opacity-20 lg:opacity-100"
+            className="h-full w-full object-contain object-right opacity-30 sm:opacity-20 lg:opacity-100"
           />
         </picture>
         <div className="mx-auto max-w-7xl">
@@ -518,7 +518,7 @@ export function AffiliateLandingIntro({
         </div>
       </section>
 
-      <AffiliateCreatorOpportunity />
+      <AffiliateCreatorOpportunity recruitmentOpen={isOpen} />
 
       <section id="formatos" className="scroll-mt-24 bg-card px-5 py-20 sm:py-28">
         <div className="mx-auto max-w-7xl">
