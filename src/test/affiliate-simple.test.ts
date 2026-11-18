@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { affiliateSimpleSchema } from "@/lib/affiliate-simple";
+import { affiliateSimpleSchema, affiliateSimpleBaseSchema } from "@/lib/affiliate-simple";
 import {
   encryptSimpleAffiliateApplication,
   affiliateWizardSummary,
@@ -13,7 +13,7 @@ import { createHash, createCipheriv, randomBytes } from "node:crypto";
 
 const valid = {
   fullName: "Maria da Silva",
-  email: "",
+  email: "maria.c57@example.com",
   phone: "(31) 99999-9999",
   postalCode: "30110-012",
   street: "Rua da Bahia",
@@ -263,10 +263,10 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
       tiktokFollowers: "4.300",
     });
     expect(detail?.answers.cpf).toBe("");
-    expect(detail?.answers.email).toBe("");
+    expect(detail?.answers.email).toBe(valid.email);
   });
 
-  it("inserts no fabricated age, email, CPF or hair type into the dedicated database", async () => {
+  it("includes required e-mail and no fabricated age, CPF or hair type into the dedicated database", async () => {
     const posted: Record<string, unknown>[] = [];
     const mockedFetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
       expect(String(url)).toBe(
@@ -283,7 +283,7 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
       trackingCode: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/),
     });
     expect(posted[0]?.["status_token_hash"]).toMatch(/^[a-f0-9]{64}$/);
-    expect(posted[0]).toHaveProperty("email", null);
+    expect(posted[0]).toHaveProperty("email", valid.email);
     expect(JSON.stringify(posted)).not.toContain(submitted.trackingCode);
     expect(posted).toHaveLength(1);
     for (const field of [
@@ -501,20 +501,21 @@ it("rejects newline/tab control characters in phones that the protected WhatsApp
   );
 });
 
-describe("C56 optional candidate e-mail — backward compatible and authorized only", () => {
+describe("C57 required contact e-mail with C56 historical compatibility", () => {
   it("keeps historical simplified inputs valid with no invented e-mail", () => {
     const withoutEmail = { ...valid } as Record<string, unknown>;
     delete withoutEmail["email"];
-    const parsed = affiliateSimpleSchema.parse(withoutEmail);
+    expect(affiliateSimpleSchema.safeParse(withoutEmail).success).toBe(false);
+    const parsed = affiliateSimpleBaseSchema.parse(withoutEmail);
     expect(parsed.email).toBe("");
     expect(
       decryptAffiliateWizardForAdmin(encryptSimpleAffiliateApplication(parsed))?.answers.email,
     ).toBe("");
-    expect(affiliateSimpleSchema.parse({ ...valid, email: "" }).email).toBe("");
+    expect(affiliateSimpleSchema.safeParse({ ...valid, email: "" }).success).toBe(false);
     expect(affiliateSimpleSchema.safeParse({ ...valid, email: "bad-email" }).success).toBe(false);
   });
 
-  it("normalizes optional contact e-mail, includes it in authenticated ciphertext, and stores only if supplied", async () => {
+  it("normalizes required contact e-mail and encrypts and stores it for new candidates", async () => {
     const posted: Record<string, unknown>[] = [];
     vi.stubGlobal(
       "fetch",
@@ -569,4 +570,29 @@ it("C56 decrypts pre-existing v3 ciphertext with no email field without losing a
   expect(detail?.answers.email).toBe("");
   expect(detail?.answers.phone).toBe(valid.phone);
   expect(detail?.answers.street).toBe(valid.street);
+});
+
+describe("C57 mandatory e-mail integrity before any new application write", () => {
+  it("rejects missing, empty, whitespace, and invalid email while accepting valid normalized contact", async () => {
+    const missing = { ...valid } as Record<string, unknown>;
+    delete missing["email"];
+    for (const candidate of [
+      missing,
+      { ...valid, email: "" },
+      { ...valid, email: "   " },
+      { ...valid, email: "not-an-email" },
+      { ...valid, email: "maria@domain" },
+    ]) {
+      expect(affiliateSimpleSchema.safeParse(candidate).success, JSON.stringify(candidate)).toBe(
+        false,
+      );
+    }
+    const validEmail = affiliateSimpleSchema.parse({ ...valid, email: "  MARIA.C57@EXAMPLE.COM " });
+    expect(validEmail.email).toBe("maria.c57@example.com");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(createSimpleAffiliateApplication({ ...valid, email: "" })).rejects.toThrow();
+    await expect(createSimpleAffiliateApplication({ ...valid, email: "wrong" })).rejects.toThrow();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

@@ -30,6 +30,9 @@ afterEach(() => {
 
 function fill() {
   fireEvent.change(screen.getByLabelText(/Nome completo/), { target: { value: "Maria da Silva" } });
+  fireEvent.change(screen.getByLabelText(/^E-mail/), {
+    target: { value: "maria.c57@example.com" },
+  });
   fireEvent.change(screen.getByLabelText(/Telefone com DDD/), {
     target: { value: "(31) 99999-9999" },
   });
@@ -62,8 +65,8 @@ describe("Vonix short single-page application form", () => {
     expect(screen.getByText("Endereço completo")).toBeInTheDocument();
     expect(screen.getByLabelText(/Telefone com DDD/)).toHaveAttribute("type", "tel");
     expect(screen.getByLabelText(/Telefone com DDD/)).toBeRequired();
-    expect(screen.getByLabelText(/E-mail \(opcional\)/i)).toHaveAttribute("type", "email");
-    expect(screen.getByLabelText(/E-mail \(opcional\)/i)).not.toBeRequired();
+    expect(screen.getByLabelText(/^E-mail/)).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText(/^E-mail/)).toBeRequired();
     expect(screen.getByLabelText(/CEP/)).toBeRequired();
     expect(screen.getByLabelText(/Número/)).toBeRequired();
     expect(screen.getByLabelText(/^Instagram/)).toBeRequired();

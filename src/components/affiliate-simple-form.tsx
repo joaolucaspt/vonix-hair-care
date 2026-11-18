@@ -671,8 +671,8 @@ export function AffiliateSimpleForm({
         )}
         <p className="mx-auto mt-3 max-w-lg text-sm text-[#7c6369]">
           A candidatura não garante aprovação ou parceria. O código privado não é enviado por
-          e-mail: guarde-o, mesmo que informe um e-mail opcional. Se não for selecionada, você
-          poderá se candidatar novamente.
+          e-mail: guarde-o em local privado. Se não for selecionada, você poderá se candidatar
+          novamente.
         </p>
       </section>
     );
@@ -728,15 +728,15 @@ export function AffiliateSimpleForm({
             maxLength: 120,
             autoComplete: "name",
           })}
-          {field("email", "E-mail (opcional)", {
+          {field("email", "E-mail", {
             placeholder: "seu@email.com",
             maxLength: 180,
             autoComplete: "email",
-            required: false,
+            required: true,
           })}
           <p className="text-xs leading-relaxed text-[#80666a]">
-            Se informado, o e-mail poderá ser usado pela equipe para contato. Não enviaremos seu
-            código de acompanhamento por e-mail: guarde-o ao concluir a inscrição.
+            O e-mail é obrigatório para contato sobre sua candidatura. Não enviaremos seu código de
+            acompanhamento por e-mail: guarde-o ao concluir a inscrição.
           </p>
           {field("phone", "Telefone com DDD", {
             placeholder: "(31) 99999-9999",

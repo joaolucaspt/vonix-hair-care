@@ -8,8 +8,8 @@ import {
   WIZARD_BRAZIL_STATES,
 } from "./affiliate-wizard";
 
-/** Public intake is concise, with optional e-mail for future contacts. No required e-mail,
- * birth date, government identifiers, hair type or marketing questions. */
+/** Require e-mail in NEW submissions; historical encrypted v3 payloads can lack it.
+ * No birth date, government IDs, hair type or marketing questions in intake. */
 const socialHandle = z.string().trim().min(1, "Informe o usuário da rede social.").max(50);
 const followerCount = z.number().int().min(0).max(1_000_000_000);
 
@@ -86,6 +86,13 @@ export const affiliateSimpleBaseSchema = z
   .strict();
 
 export const affiliateSimpleSchema = affiliateSimpleBaseSchema.superRefine((values, context) => {
+  if (!values.email) {
+    context.addIssue({
+      code: "custom",
+      path: ["email"],
+      message: "Informe seu e-mail para contato sobre a candidatura.",
+    });
+  }
   // TikTok is optional. A follower count without a profile cannot be
   // corroborated or meaningfully reviewed by the selection team.
   if (values.tiktok === "" && values.tiktokFollowers !== null) {

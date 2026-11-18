@@ -17,15 +17,25 @@ export const Route = createFileRoute("/seja-afiliada")({
       {
         name: "description",
         content:
-          "Conheça o programa de afiliadas Vonix Hair. Candidatura gratuita para maiores de 18 anos, seleção individual e condições para aprovadas, sem garantia de ganhos.",
+          "Conheça o programa de afiliadas Vonix Hair: inscrição gratuita, comissão de 8% sobre vendas elegíveis após aprovação, sem estoque próprio e seleção individual, sem garantia de ganhos.",
       },
       { property: "og:title", content: "Afiliadas Vonix Hair | Seu jeito de criar" },
       {
         property: "og:description",
         content:
-          "Apresente seu perfil à Vonix Hair. Inscrição gratuita, formulário simples e TikTok opcional. Parceria e benefícios dependem de aprovação.",
+          "Sua criatividade pode abrir novas possibilidades. Conheça o programa de afiliadas Vonix Hair, as condições após aprovação e como enviar sua candidatura gratuita.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Vonix Hair" },
+      { property: "og:image", content: SITE_URL + "/affiliate-creators-share.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      {
+        property: "og:image:alt",
+        content:
+          "Programa de afiliadas Vonix Hair: inscrição gratuita e produtos oficiais da marca",
+      },
+      { name: "twitter:image", content: SITE_URL + "/affiliate-creators-share.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "index,follow" },
     ],
@@ -155,11 +165,11 @@ export function AffiliateApplicationPage() {
               Sua inscrição, de um jeito simples.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Só precisamos do seu nome completo, telefone, endereço com CEP e número, do seu perfil
-              no Instagram e da quantidade de seguidores. E-mail, TikTok e seguidores no TikTok são
-              opcionais. A inscrição é gratuita e não garante aprovação. Se sua candidatura não for
-              selecionada, você poderá se inscrever novamente com o mesmo Instagram. Guarde o código
-              de acompanhamento.
+              Só precisamos do seu nome completo, e-mail válido, telefone, endereço com CEP e
+              número, do seu perfil no Instagram e da quantidade de seguidores. TikTok e seguidores
+              no TikTok são opcionais. A inscrição é gratuita e não garante aprovação. Se sua
+              candidatura não for selecionada, você poderá se inscrever novamente com o mesmo
+              Instagram. Guarde o código de acompanhamento.
             </p>
           </div>
 
