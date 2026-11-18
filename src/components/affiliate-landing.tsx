@@ -70,6 +70,12 @@ const creativeIdeas = [
     number: "01",
     name: "Unboxing",
     text: "Apresente uma experiência real com um produto que você conhece.",
+    opening: "Primeiro olhar: o que é importante observar neste kit?",
+    takes: [
+      "Mostre a embalagem e os rótulos sem alterar informações.",
+      "Identifique o que a descrição oficial diz sobre o produto.",
+      "Compartilhe somente impressões que você realmente teve.",
+    ],
     image: "/images/products/kit-cronograma-capilar.jpg",
     alt: "Kit Cronograma Capilar Vonix Hair",
   },
@@ -77,6 +83,12 @@ const creativeIdeas = [
     number: "02",
     name: "Rotina capilar",
     text: "Mostre como o autocuidado entra na sua rotina, sem prometer resultados.",
+    opening: "Um cuidado simples que faz sentido para a minha rotina.",
+    takes: [
+      "Apresente o contexto da sua rotina capilar.",
+      "Mostre o produto apenas se de fato estiver usando-o.",
+      "Descreva sua experiência sem prometer o mesmo resultado a outras pessoas.",
+    ],
     image: "/images/products/kit-cachos.jpg",
     alt: "Kit Cachos Vonix Hair",
   },
@@ -84,6 +96,12 @@ const creativeIdeas = [
     number: "03",
     name: "Resenha sincera",
     text: "Explique sua experiência e suas impressões com transparência.",
+    opening: "Três pontos que observo antes de avaliar um produto capilar.",
+    takes: [
+      "Considere a indicação do rótulo e suas necessidades.",
+      "Distinga o que você observou de afirmações do fabricante.",
+      "Se não usou o produto, apresente como análise de informações, não como resenha de uso.",
+    ],
     image: "/images/products/mascara-reparacao-nutri-repair.jpg",
     alt: "Máscara de Reparação Nutri Repair Vonix Hair",
   },
@@ -91,6 +109,12 @@ const creativeIdeas = [
     number: "04",
     name: "Foto de produto",
     text: "Explore ângulos, cenários e composições que tenham a sua identidade.",
+    opening: "Uma embalagem, três detalhes visuais para explorar.",
+    takes: [
+      "Escolha uma composição com iluminação natural.",
+      "Registre rótulo, textura da embalagem e detalhe do produto.",
+      "Evite editar imagens para inventar resultados ou características.",
+    ],
     image: "/images/products/botox-vonix.jpg",
     alt: "Botox Vonix Hair",
   },
@@ -531,6 +555,43 @@ export function AffiliateLandingIntro({
                 <div className="p-6">
                   <h3 className="font-display text-2xl text-foreground">{idea.name}</h3>
                   <p className="mt-2 text-sm leading-[1.75] text-muted-foreground">{idea.text}</p>
+                  <details className="group/brief mt-5 rounded-xl border border-border bg-secondary/30">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+                      Ver ideia de roteiro
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 motion-safe:transition-transform group-open/brief:rotate-180"
+                      />
+                    </summary>
+                    <div className="border-t border-border px-4 pb-5 pt-4">
+                      <p className="text-[11px] font-bold uppercase tracking-[.11em] text-primary">
+                        Abertura original sugerida
+                      </p>
+                      <p className="mt-2 font-display text-lg leading-snug text-foreground">
+                        “{idea.opening}”
+                      </p>
+                      <p className="mt-4 text-xs font-bold uppercase tracking-[.1em] text-muted-foreground">
+                        Três ideias para a sequência
+                      </p>
+                      <ol className="mt-3 space-y-2">
+                        {idea.takes.map((take, index) => (
+                          <li
+                            key={take}
+                            className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"
+                          >
+                            <span aria-hidden="true" className="font-bold text-primary">
+                              {index + 1}.
+                            </span>
+                            <span>{take}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+                        Modelo educativo, não é conteúdo de afiliada nem orientação para simular uso
+                        ou resultado. Identifique publicidade quando houver parceria.
+                      </p>
+                    </div>
+                  </details>
                 </div>
               </article>
             ))}

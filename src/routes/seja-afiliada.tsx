@@ -5,6 +5,7 @@ import { AffiliateShell } from "@/components/affiliate-shell";
 import { getAffiliateRecruitmentStatus } from "@/lib/affiliate-functions";
 import { AffiliateSimpleForm } from "@/components/affiliate-simple-form";
 import { AffiliateApplicationPrep } from "@/components/affiliate-application-prep";
+import { AffiliateNextSteps } from "@/components/affiliate-next-steps";
 import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
 import { Button } from "@/components/ui/button";
 import { SITE_URL } from "@/lib/store";
@@ -275,6 +276,7 @@ export function AffiliateApplicationPage() {
             </>
           )}
         </section>
+        <AffiliateNextSteps recruitmentOpen={recruitment === "open" && !preview} />
         <AffiliateLandingFAQ />
       </div>
     </AffiliateShell>
