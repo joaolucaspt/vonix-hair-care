@@ -236,7 +236,7 @@ export async function createSimpleAffiliateApplication(raw: AffiliateSimpleInput
   const record = {
     status_token_hash: statusTokenHash,
     full_name: data.fullName,
-    email: data.email || null,
+    email: data.email,
     city: data.city,
     state: data.state,
     instagram_url: normalizedProfile(socials.instagram_url),

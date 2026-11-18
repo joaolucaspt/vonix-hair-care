@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AffiliateCreatorPaths } from "@/components/affiliate-creator-paths";
+import { AffiliateSellingFlow } from "@/components/affiliate-selling-flow";
 import {
   AffiliateCreatorOpportunity,
   AffiliateEarningsSimulator,
@@ -144,12 +145,12 @@ const questions = [
   {
     question: "Como funciona a avaliação?",
     answer:
-      "Você informa nome, telefone, endereço completo e Instagram com número de seguidores em um único formulário. TikTok e seus seguidores são opcionais. A equipe poderá entrar em contato pelo telefone informado. Não há prazo de resposta garantido.",
+      "Você informa nome, e-mail válido, telefone, endereço completo e Instagram com número de seguidores em um único formulário. TikTok e seus seguidores são opcionais. A equipe poderá entrar em contato pelo e-mail ou telefone informado. Não há prazo de resposta garantido.",
   },
   {
     question: "E-mail é obrigatório para se candidatar?",
     answer:
-      "Não. Nome, telefone, endereço e Instagram continuam sendo as informações essenciais do formulário simplificado. O e-mail é opcional, serve como contato adicional e pode ficar em branco. O código privado de acompanhamento não é enviado por e-mail: guarde-o após confirmar a inscrição.",
+      "Sim. Para enviar uma nova candidatura, informe nome completo, e-mail válido, telefone, endereço e Instagram com seguidores. O TikTok continua opcional. O e-mail serve para contato da equipe; seu código privado de acompanhamento não será enviado por e-mail e deve ser guardado ao finalizar.",
   },
   {
     question: "Já posso enviar meu cadastro?",
@@ -212,7 +213,7 @@ export function AffiliateLandingIntro({
       <section
         data-testid="vonix-affiliate-hero"
         aria-labelledby="vonix-affiliate-title"
-        className="relative isolate min-h-[650px] bg-card px-5 py-9 sm:min-h-[41rem] sm:py-14"
+        className="relative isolate min-h-[650px] overflow-hidden bg-gradient-to-br from-[#fffaf7] via-[#f8efeb] to-[#f0e0e3] px-5 py-9 sm:min-h-[41rem] sm:py-14"
       >
         <picture className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 block h-[230px] bg-card sm:inset-0 sm:h-full">
           <source srcSet="/images/products/kit-banana-e-mel.webp" type="image/webp" />
@@ -250,7 +251,7 @@ export function AffiliateLandingIntro({
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button asChild className="h-auto min-h-12 whitespace-normal px-6 py-3">
                 <a href="#inscricao">
-                  {isOpen ? "Enviar minha candidatura" : "Conhecer a inscrição"}
+                  {isOpen ? "Quero ser afiliada Vonix" : "Conhecer a inscrição"}
                   <ArrowUpRight aria-hidden="true" />
                 </a>
               </Button>
@@ -264,7 +265,7 @@ export function AffiliateLandingIntro({
               className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-foreground"
               aria-label="Informações da candidatura"
             >
-              {["Inscrição gratuita", "A partir de 18 anos", "Sem portfólio obrigatório"].map(
+              {["8% sobre vendas após aprovação", "Sem estoque próprio", "Inscrição gratuita"].map(
                 (text) => (
                   <li key={text} className="inline-flex items-center gap-2">
                     <Check aria-hidden="true" className="size-4 text-primary" />
@@ -383,6 +384,8 @@ export function AffiliateLandingIntro({
         </div>
       </section>
 
+      <AffiliateSellingFlow recruitmentOpen={isOpen} />
+
       <section id="criterios" className="scroll-mt-24 bg-card px-5 py-20 sm:py-28">
         <div className="mx-auto max-w-7xl">
           <div className="grid items-end gap-6 lg:grid-cols-[1.1fr_.9fr]">
@@ -469,7 +472,7 @@ export function AffiliateLandingIntro({
               {
                 number: "01",
                 title: "Apresente seu perfil",
-                text: "Preencha seus dados e Instagram com seguidores. TikTok é opcional.",
+                text: "Preencha nome, e-mail, telefone, endereço e Instagram com seguidores. TikTok é opcional.",
                 Icon: ClipboardList,
               },
               {

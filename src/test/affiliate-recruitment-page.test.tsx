@@ -300,7 +300,7 @@ describe("Landing editorial Vonix Hair — conteúdo próprio e promessas verifi
     server.status.mockResolvedValue({ open: true });
     render(<Page />);
     expect(await screen.findByText("Formulário de envio")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Enviar minha candidatura/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Quero ser afiliada Vonix/ })).toHaveAttribute(
       "href",
       "#inscricao",
     );

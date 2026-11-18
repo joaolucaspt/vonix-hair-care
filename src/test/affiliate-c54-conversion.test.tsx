@@ -54,7 +54,7 @@ describe("Vonix Afiliadas C54: escolha de estilo sem criar promessa comercial", 
     render(<AffiliateApplicationPrep />);
     const guide = screen.getByTestId("affiliate-c54-preparation");
     expect(within(guide).getAllByRole("listitem")).toHaveLength(4);
-    expect(guide).toHaveTextContent(/Nome completo e telefone/i);
+    expect(guide).toHaveTextContent(/Nome completo, e-mail válido e telefone/i);
     expect(guide).toHaveTextContent(/CEP, rua, número, bairro, cidade e estado/i);
     expect(guide).toHaveTextContent(/quantidade aproximada de seguidores/i);
     expect(guide).toHaveTextContent(/É opcional/i);
