@@ -55,6 +55,7 @@ describe("Vonix private admin role login", () => {
               role: "reviewer",
               password_set_at: "2026-11-10T03:10:00Z",
               ever_activated_at: "2026-11-10T03:10:00Z",
+              must_rotate_password: false,
             },
           ]),
           { status: 200 },
@@ -66,6 +67,35 @@ describe("Vonix private admin role login", () => {
     expect(request.mock.calls[0]![0]).toContain("grant_type=password");
     expect(JSON.parse(request.mock.calls[0]![1].body)).toEqual({ email, password });
     expect(deps.createSession).toHaveBeenCalledWith({ email, role: "reviewer" });
+  });
+
+  it("requires password rotation before creating any privileged member cookie", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          access_token: "a".repeat(150),
+          user: { email, email_confirmed_at: "2026-11-10T03:00:00Z" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json([
+          {
+            email,
+            role: "owner",
+            password_set_at: "2026-11-10T03:10:00Z",
+            ever_activated_at: "2026-11-10T03:10:00Z",
+            must_rotate_password: true,
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", request);
+    expect(await loginAffiliateTeamWithPassword(email, password)).toEqual({
+      ok: false,
+      requiresPasswordChange: true,
+      reason: "Troque sua senha provisória para continuar.",
+    });
+    expect(deps.createSession).not.toHaveBeenCalled();
   });
 
   it("refuses a row with a password stamp but no immutable first-activation marker", async () => {

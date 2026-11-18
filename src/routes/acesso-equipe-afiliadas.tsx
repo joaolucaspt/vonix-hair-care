@@ -27,6 +27,7 @@ type Stage =
   | "email"
   | "manual-confirm"
   | "existing-password"
+  | "rotate-password"
   | "password"
   | "first-password"
   | "reset-password"
@@ -55,6 +56,7 @@ export function AffiliateTeamAccess() {
   const [stage, setStage] = useState<Stage>("checking");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -77,6 +79,7 @@ export function AffiliateTeamAccess() {
   // A password reset can only follow freshly verified one-time Auth proof
   // for the exact owner address. A pre-existing browser session is not proof.
   const freshVerifiedAddress = useRef<string | null>(null);
+  const rotatingTemporaryPassword = useRef(false);
 
   const inspectIdentity = useCallback(async () => {
     const requestId = ++identityVersion.current;
@@ -161,7 +164,13 @@ export function AffiliateTeamAccess() {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       queueMicrotask(() => {
-        if (active && !teamTabHidden() && !leavingIdentity.current && !pendingManualHash.current)
+        if (
+          active &&
+          !teamTabHidden() &&
+          !leavingIdentity.current &&
+          !pendingManualHash.current &&
+          !rotatingTemporaryPassword.current
+        )
           void inspectIdentity();
       });
     });
@@ -531,6 +540,92 @@ export function AffiliateTeamAccess() {
     }
   }
 
+  async function rotateTemporaryPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || teamTabHidden()) return;
+    const normalized = email.trim().toLowerCase();
+    const epoch = visibilityEpoch.current;
+    const current = () => epoch === visibilityEpoch.current && !teamTabHidden();
+    if (
+      password.length < 12 ||
+      nextPassword.length < 14 ||
+      nextPassword.length > 128 ||
+      nextPassword !== repeatPassword ||
+      nextPassword === password
+    ) {
+      setError("A nova senha precisa ter pelo menos 14 caracteres e ser diferente da provisória.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    let changed = false;
+    rotatingTemporaryPassword.current = true;
+    try {
+      const granted = await vonixAffiliateAuth.auth.signInWithPassword({
+        email: normalized,
+        password,
+      });
+      if (!current()) return;
+      if (
+        granted.error ||
+        !granted.data.user?.email_confirmed_at ||
+        granted.data.user.email?.toLowerCase() !== normalized
+      )
+        throw new Error("invalid temporary credentials");
+      const roster = await vonixAffiliateAuth
+        .from("vonix_affiliate_admin_invites")
+        .select("must_rotate_password,password_set_at,ever_activated_at")
+        .eq("email", normalized)
+        .maybeSingle();
+      if (!current()) return;
+      if (
+        roster.error ||
+        !roster.data?.must_rotate_password ||
+        !roster.data.password_set_at ||
+        !roster.data.ever_activated_at
+      )
+        throw new Error("temporary credential no longer eligible");
+      const updated = await vonixAffiliateAuth.auth.updateUser({ password: nextPassword });
+      if (!current()) return;
+      if (updated.error) throw new Error("password update rejected");
+      changed = true;
+      const finished = await vonixAffiliateAuth.rpc("vonix_affiliate_finish_temporary_password");
+      if (!current()) return;
+      if (finished.error || finished.data !== true) throw new Error("rotation not confirmed");
+      const login = await loginAffiliateAdminMember({
+        data: { email: normalized, password: nextPassword },
+      });
+      if (!current()) return;
+      setPassword("");
+      setNextPassword("");
+      setRepeatPassword("");
+      if (!login.ok) {
+        setStage("existing-password");
+        setNotice("Senha atualizada. Faça login novamente com a nova senha.");
+        return;
+      }
+      window.location.assign("/admin/afiliadas");
+    } catch {
+      if (current()) {
+        if (changed) {
+          setStage("existing-password");
+          setPassword("");
+          setNotice(
+            "Senha alterada. Se o acesso continuar pendente, entre com a nova senha e repita a troca.",
+          );
+        }
+        setError(
+          changed
+            ? "A troca da senha foi processada, mas a liberação administrativa não foi confirmada."
+            : "Não foi possível validar ou substituir a senha provisória. Confira seus dados.",
+        );
+      }
+    } finally {
+      rotatingTemporaryPassword.current = false;
+      if (epoch === visibilityEpoch.current) setBusy(false);
+    }
+  }
+
   async function loginPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || teamTabHidden()) return;
@@ -553,6 +648,12 @@ export function AffiliateTeamAccess() {
       if (!stillCurrent()) return;
       setPassword("");
       if (!exchanged.ok) {
+        if ("requiresPasswordChange" in exchanged && exchanged.requiresPasswordChange) {
+          setPassword(password);
+          setStage("rotate-password");
+          setNotice("Primeiro acesso: crie uma senha pessoal para liberar a gestão.");
+          return;
+        }
         setError(exchanged.reason);
         return;
       }
@@ -786,6 +887,67 @@ export function AffiliateTeamAccess() {
                   }}
                 >
                   Ainda não tenho senha ou preciso recuperar acesso
+                </button>
+              </>
+            )}
+            {stage === "rotate-password" && (
+              <>
+                <KeyRound className="h-8 w-8 text-[#865766]" />
+                <h2 className="mt-4 font-display text-2xl">Primeiro acesso: altere sua senha</h2>
+                <p className="mt-2 text-sm leading-relaxed text-[#806970]">
+                  A senha provisória foi validada. Para proteger as candidaturas, você precisa
+                  escolher uma nova senha antes de entrar no painel administrativo.
+                </p>
+                <form onSubmit={rotateTemporaryPassword} className="mt-6 space-y-4">
+                  <label htmlFor="team-rotation-new" className="block text-sm font-semibold">
+                    Nova senha pessoal
+                  </label>
+                  <input
+                    id="team-rotation-new"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={14}
+                    maxLength={128}
+                    value={nextPassword}
+                    onChange={(e) => setNextPassword(e.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
+                  />
+                  <label htmlFor="team-rotation-repeat" className="block text-sm font-semibold">
+                    Confirmar nova senha
+                  </label>
+                  <input
+                    id="team-rotation-repeat"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={14}
+                    maxLength={128}
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="min-h-12 w-full rounded-full bg-[#633847] px-4 font-semibold text-white disabled:opacity-60"
+                  >
+                    {busy ? "Protegendo sua conta..." : "Trocar senha e liberar acesso"}
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="mt-4 text-sm font-semibold underline"
+                  onClick={() => {
+                    setStage("existing-password");
+                    setPassword("");
+                    setNextPassword("");
+                    setRepeatPassword("");
+                    setError("");
+                  }}
+                >
+                  Voltar ao login
                 </button>
               </>
             )}
