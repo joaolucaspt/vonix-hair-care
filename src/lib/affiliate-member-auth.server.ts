@@ -27,6 +27,7 @@ const teamSchema = z
       role: z.enum(["reviewer", "owner"]),
       password_set_at: z.string().datetime({ offset: true }).nullable(),
       ever_activated_at: z.string().datetime({ offset: true }).nullable(),
+      must_rotate_password: z.boolean(),
     }),
   )
   .max(1);
@@ -64,7 +65,7 @@ export async function loginAffiliateTeamWithPassword(email: string, password: st
 
     const membership = await fetch(
       VONIX_AFFILIATE_AUTH_URL +
-        "/rest/v1/vonix_affiliate_admin_invites?select=email,role,password_set_at,ever_activated_at&email=eq." +
+        "/rest/v1/vonix_affiliate_admin_invites?select=email,role,password_set_at,ever_activated_at,must_rotate_password&email=eq." +
         encodeURIComponent(verifiedEmail) +
         "&limit=1",
       {
@@ -87,6 +88,7 @@ export async function loginAffiliateTeamWithPassword(email: string, password: st
       !member.ever_activated_at
     )
       throw new Error("Invitation not activated.");
+    if (member.must_rotate_password) return { ok: false as const, requiresPasswordChange: true as const, reason: "Troque sua senha provisória para continuar." };
     if (!createAffiliateMemberSession({ email: verifiedEmail, role: member.role }))
       throw new Error("Secure session configuration unavailable.");
     return { ok: true as const };
