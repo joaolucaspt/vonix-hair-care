@@ -5,10 +5,12 @@ import {
   getPendingAffiliateOwnerActivations,
   inspectAffiliateOwnerSenderStatus,
   resendPendingAffiliateOwnerEmail,
+  provisionPendingAffiliateOwnerTemporaryPassword,
 } from "@/lib/affiliate-functions";
 
 type PendingOwner = { email: string };
 type GeneratedLink = { email: string; link: string };
+type TemporaryCredentials = { email: string; password: string };
 
 function pageHidden() {
   return typeof document !== "undefined" && document.visibilityState === "hidden";
@@ -59,6 +61,7 @@ export function AffiliateOwnerActivationPanel() {
   const [busy, setBusy] = useState(false);
   const [confirmedPrivateRecipient, setConfirmedPrivateRecipient] = useState(false);
   const [generated, setGenerated] = useState<GeneratedLink | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<TemporaryCredentials | null>(null);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [senderBusy, setSenderBusy] = useState(false);
@@ -79,6 +82,7 @@ export function AffiliateOwnerActivationPanel() {
       // Release its lock; callbacks from the earlier epoch cannot restore it.
       copyingLink.current = false;
       setGenerated(null);
+      setGeneratedPassword(null);
       setConfirmedPrivateRecipient(false);
       setMessage("");
       setFailure("");
@@ -201,7 +205,8 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function create(email: string) {
-    if (!confirmedPrivateRecipient || busy || generated || pageHidden()) return;
+    if (!confirmedPrivateRecipient || busy || generated || generatedPassword || pageHidden())
+      return;
     const epoch = visibilityEpoch.current;
     const confirmedEpoch = recipientConfirmationEpoch.current;
     setBusy(true);
@@ -232,7 +237,7 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function sendInvitationEmail(email: string) {
-    if (busy || generated || pageHidden()) return;
+    if (busy || generated || generatedPassword || pageHidden()) return;
     const epoch = visibilityEpoch.current;
     setBusy(true);
     setMessage("");
@@ -254,6 +259,66 @@ export function AffiliateOwnerActivationPanel() {
         setFailure("Não foi possível solicitar o e-mail. Verifique sua conexão.");
     } finally {
       if (epoch === visibilityEpoch.current) setBusy(false);
+    }
+  }
+
+  async function generateTemporaryPassword(email: string) {
+    if (busy || generated || generatedPassword || pageHidden() || !confirmedPrivateRecipient)
+      return;
+    const epoch = visibilityEpoch.current;
+    const confirmedEpoch = recipientConfirmationEpoch.current;
+    setBusy(true);
+    setMessage("");
+    setFailure("");
+    try {
+      const response = await provisionPendingAffiliateOwnerTemporaryPassword({ data: { email } });
+      if (
+        epoch !== visibilityEpoch.current ||
+        confirmedEpoch !== recipientConfirmationEpoch.current ||
+        pageHidden()
+      )
+        return;
+      if (!response.ok) {
+        setFailure(response.reason);
+        return;
+      }
+      setGeneratedPassword({ email: response.email, password: response.temporaryPassword });
+      setOwners((current) => current?.filter((person) => person.email !== response.email) ?? null);
+      setMessage(
+        "Senha temporária criada. Copie uma única vez e entregue somente ao destinatário. A conta exigirá uma nova senha no primeiro login.",
+      );
+    } catch {
+      if (epoch === visibilityEpoch.current && !pageHidden())
+        setFailure(
+          "Falha no provisionamento. Verifique a sessão administrativa e tente novamente.",
+        );
+    } finally {
+      if (epoch === visibilityEpoch.current) setBusy(false);
+    }
+  }
+
+  async function copyTemporaryPassword() {
+    if (!generatedPassword || busy || pageHidden() || copyingLink.current) return;
+    const epoch = visibilityEpoch.current;
+    copyingLink.current = true;
+    setBusy(true);
+    try {
+      await navigator.clipboard.writeText(generatedPassword.password);
+      if (epoch !== visibilityEpoch.current || pageHidden()) return;
+      setGeneratedPassword(null);
+      setMessage(
+        "Senha provisória copiada. Entregue-a em uma mensagem privada ao titular; ela deve ser trocada no primeiro login.",
+      );
+    } catch {
+      if (epoch === visibilityEpoch.current && !pageHidden())
+        setFailure(
+          "A cópia foi bloqueada pelo navegador. Selecione a senha exibida e copie manualmente.",
+        );
+    } finally {
+      if (epoch === visibilityEpoch.current) {
+        copyingLink.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -418,7 +483,7 @@ export function AffiliateOwnerActivationPanel() {
             className="mt-1 h-4 w-4 accent-[#693440]"
           />
           Confirmo que conheço os destinatários, vou conferir a identidade de cada pessoa e enviar
-          cada link somente ao seu contato privado.
+          cada link ou senha provisória somente ao seu destinatário confirmado.
         </label>
       </div>
       {owners.length === 0 ? (
@@ -437,6 +502,17 @@ export function AffiliateOwnerActivationPanel() {
                 <p className="mt-1 text-xs text-[#806a6c]">Convite ainda não ativado</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={
+                    busy || !!generated || !!generatedPassword || !confirmedPrivateRecipient
+                  }
+                  onClick={() => void generateTemporaryPassword(person.email)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#633847] bg-[#faf2ef] px-5 text-sm font-bold text-[#633847] disabled:opacity-50"
+                >
+                  <LockKeyhole className="h-4 w-4" />
+                  Criar senha temporária
+                </button>
                 <button
                   type="button"
                   onClick={() => void sendInvitationEmail(person.email)}
@@ -458,6 +534,66 @@ export function AffiliateOwnerActivationPanel() {
             </li>
           ))}
         </ul>
+      )}
+      <details className="mt-4 rounded-xl border border-[#ebdadc] bg-white p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[#704953]">
+          Recuperar senha provisória que não foi copiada
+        </summary>
+        <p className="mt-3 text-xs text-[#806a6c]">
+          Disponível apenas para convites pendentes ou senhas provisórias ainda não trocadas. A
+          reemissão invalida a senha anterior e pode exigir o intervalo de segurança.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(
+            [
+              "isabela.cpcontato@gmail.com",
+              "giovana.souza1.r@gmail.com",
+              "lucassiqueirahotmail22@gmail.com",
+            ] as const
+          ).map((email) => (
+            <button
+              key={email}
+              type="button"
+              onClick={() => void generateTemporaryPassword(email)}
+              disabled={busy || !!generated || !!generatedPassword || !confirmedPrivateRecipient}
+              className="min-h-11 rounded-xl border border-[#ceb6b8] px-4 py-2 text-xs font-semibold text-[#693440] disabled:opacity-50"
+            >
+              {email}
+            </button>
+          ))}
+        </div>
+      </details>
+      {generatedPassword && (
+        <div className="mt-4 rounded-xl border border-[#d5c1c3] bg-[#faf4f2] p-4">
+          <h3 className="font-display text-xl">Senha provisória individual</h3>
+          <p className="mt-2 break-all text-sm font-semibold">{generatedPassword.email}</p>
+          <p className="mt-2 text-sm text-[#806a6c]">
+            Copie a senha e entregue ao titular em canal privado. O sistema exigirá uma senha
+            própria antes de permitir o acesso ao painel.
+          </p>
+          <code className="mt-4 block break-all rounded-lg bg-white p-3 text-sm font-semibold select-all">
+            {generatedPassword.password}
+          </code>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void copyTemporaryPassword()}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#633847] px-5 text-sm font-bold text-white disabled:opacity-50"
+            >
+              <ClipboardCopy className="h-4 w-4" />
+              Copiar e ocultar senha
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setGeneratedPassword(null)}
+              className="min-h-11 rounded-full border border-[#cda9ad] px-5 text-sm font-semibold disabled:opacity-50"
+            >
+              Ocultar sem copiar
+            </button>
+          </div>
+        </div>
       )}
       {generated && (
         <div className="mt-4 rounded-xl border border-[#d5c1c3] bg-[#faf4f2] p-4">
