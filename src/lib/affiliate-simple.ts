@@ -8,7 +8,7 @@ import {
   WIZARD_BRAZIL_STATES,
 } from "./affiliate-wizard";
 
-/** Public intake contains only the fields requested by Vonix. No e-mail,
+/** Public intake is concise, with optional e-mail for future contacts. No required e-mail,
  * birth date, government identifiers, hair type or marketing questions. */
 const socialHandle = z.string().trim().min(1, "Informe o usuário da rede social.").max(50);
 const followerCount = z.number().int().min(0).max(1_000_000_000);
@@ -23,6 +23,16 @@ export const affiliateSimpleBaseSchema = z
       .min(3)
       .max(120)
       .refine((v) => v.split(/\s+/).length >= 2, "Informe nome e sobrenome."),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .max(180)
+      .refine(
+        (value) => value === "" || z.string().email().safeParse(value).success,
+        "Informe um e-mail válido, ou deixe em branco.",
+      )
+      .default(""),
     phone: z
       .string()
       .trim()

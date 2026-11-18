@@ -285,7 +285,7 @@ describe("Landing editorial Vonix Hair — conteúdo próprio e promessas verifi
     expect(await screen.findByText("Inscrições em preparação")).toBeInTheDocument();
     const faq = screen.getByTestId("vonix-affiliate-faq");
     const items = Array.from(faq.querySelectorAll("details"));
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(7);
     const question = screen.getByText("Preciso comprar algum produto para me inscrever?");
     const disclosure = question.closest("details");
     expect(disclosure).not.toBeNull();

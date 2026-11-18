@@ -239,6 +239,7 @@ export function matchesEncryptedSimpleAffiliateApplication(
   const a = detail.answers;
   return (
     a.firstName === input.fullName &&
+    a.email === input.email &&
     a.phone === input.phone &&
     a.postalCode === input.postalCode &&
     a.street === input.street &&
@@ -296,6 +297,7 @@ export function decryptAffiliateWizardForAdmin(
       const answers = privateAnswersSchema.parse({
         ...blank,
         firstName: data.fullName,
+        email: data.email,
         phone: data.phone,
         postalCode: data.postalCode,
         street: data.street,

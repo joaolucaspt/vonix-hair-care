@@ -8,6 +8,7 @@ import { WIZARD_BRAZIL_STATES, onlyDigits } from "@/lib/affiliate-wizard";
 
 type Key =
   | "fullName"
+  | "email"
   | "phone"
   | "postalCode"
   | "street"
@@ -44,6 +45,7 @@ function createBrowserPrivateReceipt(): string {
 
 const fields: Record<Key, string> = {
   fullName: "",
+  email: "",
   phone: "",
   postalCode: "",
   street: "",
@@ -604,7 +606,8 @@ export function AffiliateSimpleForm({
             <p className="text-sm font-bold text-[#633a43]">Guarde seu código de acompanhamento</p>
             <p className="mt-1 text-xs leading-relaxed text-[#775d65]">
               Este código é privado: com ele você consulta o resultado e o motivo de uma eventual
-              recusa. Salve agora, pois não enviamos por e-mail nem conseguimos recuperá-lo.
+              recusa. Salve agora, pois este código não é enviado por e-mail nem recuperado pela
+              equipe.
             </p>
             <input
               readOnly
@@ -667,9 +670,9 @@ export function AffiliateSimpleForm({
           </div>
         )}
         <p className="mx-auto mt-3 max-w-lg text-sm text-[#7c6369]">
-          A candidatura não garante aprovação ou parceria. Não será enviado código por e-mail, pois
-          este formulário não solicita e-mail. Se não for selecionada, você poderá se candidatar
-          novamente.
+          A candidatura não garante aprovação ou parceria. O código privado não é enviado por
+          e-mail: guarde-o, mesmo que informe um e-mail opcional. Se não for selecionada, você
+          poderá se candidatar novamente.
         </p>
       </section>
     );
@@ -688,7 +691,7 @@ export function AffiliateSimpleForm({
   ) => (
     <Field
       id={key}
-      type={key === "phone" ? "tel" : "text"}
+      type={key === "phone" ? "tel" : key === "email" ? "email" : "text"}
       label={label}
       value={values[key]}
       disabled={sending}
@@ -725,6 +728,16 @@ export function AffiliateSimpleForm({
             maxLength: 120,
             autoComplete: "name",
           })}
+          {field("email", "E-mail (opcional)", {
+            placeholder: "seu@email.com",
+            maxLength: 180,
+            autoComplete: "email",
+            required: false,
+          })}
+          <p className="text-xs leading-relaxed text-[#80666a]">
+            Se informado, o e-mail poderá ser usado pela equipe para contato. Não enviaremos seu
+            código de acompanhamento por e-mail: guarde-o ao concluir a inscrição.
+          </p>
           {field("phone", "Telefone com DDD", {
             placeholder: "(31) 99999-9999",
             maxLength: 20,

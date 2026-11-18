@@ -30,7 +30,7 @@ describe("Vonix affiliate V2 editorial journey", () => {
   it("preserves six independent, native and accessible FAQ disclosures", () => {
     render(<AffiliateLandingFAQ />);
     const faq = screen.getByTestId("vonix-affiliate-faq");
-    expect(faq.querySelectorAll("details")).toHaveLength(6);
+    expect(faq.querySelectorAll("details")).toHaveLength(7);
     expect(within(faq).getAllByText(/Quem pode apresentar uma candidatura/i)).toHaveLength(1);
   });
 

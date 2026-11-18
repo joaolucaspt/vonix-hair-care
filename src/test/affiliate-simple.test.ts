@@ -9,10 +9,11 @@ import {
   createSimpleAffiliateApplication,
   getAffiliateStatusWithCode,
 } from "@/lib/affiliate-applications.server";
-import { createHash } from "node:crypto";
+import { createHash, createCipheriv, randomBytes } from "node:crypto";
 
 const valid = {
   fullName: "Maria da Silva",
+  email: "",
   phone: "(31) 99999-9999",
   postalCode: "30110-012",
   street: "Rua da Bahia",
@@ -62,7 +63,7 @@ afterEach(() => {
 describe("short Vonix affiliate form and compatible encrypted storage", () => {
   it("accepts exactly the requested fields plus required consent and bot trap", () => {
     expect(affiliateSimpleSchema.parse(valid).instagramFollowers).toBe(12345);
-    for (const key of ["email", "age", "cpf", "hairType", "motivation", "wizard", "birthDate"]) {
+    for (const key of ["age", "cpf", "hairType", "motivation", "wizard", "birthDate"]) {
       expect(affiliateSimpleSchema.safeParse({ ...valid, [key]: "hidden" }).success).toBe(false);
     }
   });
@@ -282,11 +283,12 @@ describe("short Vonix affiliate form and compatible encrypted storage", () => {
       trackingCode: expect.stringMatching(/^[A-Za-z0-9_-]{32}$/),
     });
     expect(posted[0]?.["status_token_hash"]).toMatch(/^[a-f0-9]{64}$/);
+    expect(posted[0]).toHaveProperty("email", null);
     expect(JSON.stringify(posted)).not.toContain(submitted.trackingCode);
     expect(posted).toHaveLength(1);
     for (const field of [
       "age",
-      "email",
+
       "hair_type",
       "phone",
       "postal_code",
@@ -497,4 +499,74 @@ it("rejects newline/tab control characters in phones that the protected WhatsApp
   expect(affiliateSimpleSchema.safeParse({ ...valid, phone: "+55 (31) 99999 9999" }).success).toBe(
     true,
   );
+});
+
+describe("C56 optional candidate e-mail — backward compatible and authorized only", () => {
+  it("keeps historical simplified inputs valid with no invented e-mail", () => {
+    const withoutEmail = { ...valid } as Record<string, unknown>;
+    delete withoutEmail["email"];
+    const parsed = affiliateSimpleSchema.parse(withoutEmail);
+    expect(parsed.email).toBe("");
+    expect(
+      decryptAffiliateWizardForAdmin(encryptSimpleAffiliateApplication(parsed))?.answers.email,
+    ).toBe("");
+    expect(affiliateSimpleSchema.parse({ ...valid, email: "" }).email).toBe("");
+    expect(affiliateSimpleSchema.safeParse({ ...valid, email: "bad-email" }).success).toBe(false);
+  });
+
+  it("normalizes optional contact e-mail, includes it in authenticated ciphertext, and stores only if supplied", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        posted.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(null, { status: 201 });
+      }),
+    );
+    const parsed = affiliateSimpleSchema.parse({
+      ...valid,
+      email: "  Candidate.C56@EXAMPLE.com ",
+    });
+    expect(parsed.email).toBe("candidate.c56@example.com");
+    expect(await createSimpleAffiliateApplication(parsed)).toMatchObject({ ok: true });
+    expect(posted[0]).toHaveProperty("email", "candidate.c56@example.com");
+    const saved = decryptAffiliateWizardForAdmin(String(posted[0]?.["questionnaire_encrypted"]));
+    expect(saved?.kind).toBe("simple");
+    expect(saved?.answers.email).toBe("candidate.c56@example.com");
+    // A status code is hashed; neither e-mail nor ciphertext is returned in the applicant's receipt.
+    expect(posted[0]?.["status_token_hash"]).toMatch(/^[a-f0-9]{64}$/);
+  });
+});
+
+it("C56 decrypts pre-existing v3 ciphertext with no email field without losing approved contact details", () => {
+  // Entirely synthetic historical record; no real applicant or private key is read.
+  const oldAnswers = { ...valid } as Record<string, unknown>;
+  delete oldAnswers["email"];
+  delete oldAnswers["privacyAccepted"];
+  delete oldAnswers["website"];
+  const key = Buffer.from(String(process.env["AFFILIATE_QUESTIONNAIRE_KEY"]), "base64url");
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const body = Buffer.concat([
+    cipher.update(
+      JSON.stringify({
+        version: 3,
+        acceptedAt: "2026-11-10T11:00:00Z",
+        answers: oldAnswers,
+      }),
+      "utf8",
+    ),
+    cipher.final(),
+  ]);
+  const ciphertext = [
+    "v3",
+    iv.toString("base64url"),
+    cipher.getAuthTag().toString("base64url"),
+    body.toString("base64url"),
+  ].join(".");
+  const detail = decryptAffiliateWizardForAdmin(ciphertext);
+  expect(detail?.kind).toBe("simple");
+  expect(detail?.answers.email).toBe("");
+  expect(detail?.answers.phone).toBe(valid.phone);
+  expect(detail?.answers.street).toBe(valid.street);
 });
