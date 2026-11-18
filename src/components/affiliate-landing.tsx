@@ -14,6 +14,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AffiliateCreatorPaths } from "@/components/affiliate-creator-paths";
 import {
   AffiliateCreatorOpportunity,
   AffiliateEarningsSimulator,
@@ -243,6 +244,29 @@ export function AffiliateLandingIntro({
                 ),
               )}
             </ul>
+            <div
+              role="status"
+              className="mt-5 inline-flex max-w-lg flex-wrap items-center gap-2 rounded-full border border-border bg-background/85 px-4 py-2 text-xs font-semibold text-foreground"
+            >
+              <span
+                aria-hidden="true"
+                className={
+                  "h-2 w-2 shrink-0 rounded-full " +
+                  (isOpen
+                    ? "bg-emerald-600"
+                    : recruitmentStatus === "loading"
+                      ? "bg-amber-600"
+                      : "bg-primary")
+                }
+              />
+              {isOpen
+                ? "Candidaturas abertas para análise"
+                : recruitmentStatus === "loading"
+                  ? "Consultando disponibilidade de inscrição"
+                  : recruitmentStatus === "limited"
+                    ? "Inscrição temporariamente limitada nesta conexão"
+                    : "Conheça o formulário enquanto as inscrições estão em preparação"}
+            </div>
             <p className="mt-4 max-w-lg text-xs leading-relaxed text-muted-foreground">
               A candidatura não garante aprovação, benefícios ou vínculo comercial. Não exige
               estoque nem compra de produtos para se candidatar.
@@ -459,74 +483,7 @@ export function AffiliateLandingIntro({
         </div>
       </section>
 
-      <section className="bg-card px-5 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
-            <Eyebrow>Seu perfil, sua identidade</Eyebrow>
-            <h2 className="mt-5 font-display text-4xl leading-tight tracking-normal text-foreground sm:text-5xl lg:text-5xl">
-              Dois jeitos de criar.{" "}
-              <span className="italic text-primary">Infinitas ideias para contar.</span>
-            </h2>
-            <p className="mt-6 text-base leading-[1.8] text-muted-foreground">
-              Não é preciso se encaixar em um único formato. Abaixo estão perfis possíveis de
-              pessoas que podem apresentar sua candidatura — não modalidades de parceria previamente
-              contratadas.
-            </p>
-          </div>
-          <div className="mt-11 grid gap-5 lg:grid-cols-2">
-            <article className="relative flex min-h-[23rem] flex-col overflow-hidden rounded-lg bg-card p-7 sm:p-10">
-              <div className="relative z-10">
-                <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[10px] font-bold uppercase tracking-normal text-muted-foreground">
-                  <Heart aria-hidden="true" className="h-3.5 w-3.5" /> Possibilidade 01
-                </span>
-                <h3 className="mt-10 max-w-sm font-display text-3xl leading-tight text-foreground sm:text-4xl">
-                  Quero compartilhar minha rotina.
-                </h3>
-                <p className="mt-5 max-w-md text-sm leading-[1.8] text-muted-foreground">
-                  Você gosta de conversar com sua audiência sobre cabelo, beleza e autocuidado. Quer
-                  mostrar suas experiências com uma linguagem própria, sem precisar de um portfólio
-                  profissional para se apresentar.
-                </p>
-                <div className="mt-7 flex flex-wrap gap-2">
-                  {["Conteúdo autoral", "Rotina de beleza", "Comunidade"].map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </article>
-
-            <article className="relative flex min-h-[23rem] flex-col overflow-hidden rounded-lg bg-card p-7 sm:p-10">
-              <div className="relative z-10">
-                <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[10px] font-bold uppercase tracking-normal text-muted-foreground">
-                  <Camera aria-hidden="true" className="h-3.5 w-3.5" /> Possibilidade 02
-                </span>
-                <h3 className="mt-10 max-w-sm font-display text-3xl leading-tight text-foreground sm:text-4xl">
-                  Quero explorar conteúdos UGC.
-                </h3>
-                <p className="mt-5 max-w-md text-sm leading-[1.8] text-muted-foreground">
-                  Você se interessa por composição, edição, vídeos ou fotos de produtos. Seu perfil
-                  pode mostrar habilidades criativas, mesmo sem experiências anteriores com marcas.
-                </p>
-                <div className="mt-7 flex flex-wrap gap-2">
-                  {["Vídeos e fotos", "Composição", "Portfólio pessoal"].map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
+      <AffiliateCreatorPaths />
 
       <AffiliateCreatorOpportunity recruitmentOpen={isOpen} />
 

@@ -4,6 +4,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { AffiliateShell } from "@/components/affiliate-shell";
 import { getAffiliateRecruitmentStatus } from "@/lib/affiliate-functions";
 import { AffiliateSimpleForm } from "@/components/affiliate-simple-form";
+import { AffiliateApplicationPrep } from "@/components/affiliate-application-prep";
 import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
 import { Button } from "@/components/ui/button";
 import { SITE_URL } from "@/lib/store";
@@ -126,6 +127,10 @@ export function AffiliateApplicationPage() {
     <AffiliateShell>
       <div className="bg-background text-foreground">
         <AffiliateLandingIntro recruitmentStatus={recruitment} />
+
+        <div className="bg-card px-5 pt-14 sm:pt-20">
+          <AffiliateApplicationPrep />
+        </div>
 
         <section
           id="inscricao"
