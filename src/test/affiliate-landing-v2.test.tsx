@@ -1,7 +1,10 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { AffiliateLandingIntro, AffiliateLandingFAQ } from "@/components/affiliate-landing";
-import { illustrativeEarnings, AffiliateEarningsSimulator } from "@/components/affiliate-creator-opportunity";
+import {
+  illustrativeEarnings,
+  AffiliateEarningsSimulator,
+} from "@/components/affiliate-creator-opportunity";
 
 afterEach(cleanup);
 
@@ -39,13 +42,26 @@ describe("Vonix affiliate V2 editorial journey", () => {
     [10000, 800, 500, 1300],
     [20000, 1600, 1000, 2600],
     [NaN, 0, 0, 0],
-  ])("illustrates %s in sales without changing operational commission rules", (sales, commission, bonus, total) => {
-    expect(illustrativeEarnings(sales)).toEqual({ sales: Number.isNaN(sales) ? 0 : sales, commission, bonus, total });
-  });
+  ])(
+    "illustrates %s in sales without changing operational commission rules",
+    (sales, commission, bonus, total) => {
+      expect(illustrativeEarnings(sales)).toEqual({
+        sales: Number.isNaN(sales) ? 0 : sales,
+        commission,
+        bonus,
+        total,
+      });
+    },
+  );
 
   it("bounds invalid and out-of-range simulator input", () => {
     expect(illustrativeEarnings(-500).total).toBe(0);
-    expect(illustrativeEarnings(25000)).toEqual({ sales: 20000, commission: 1600, bonus: 1000, total: 2600 });
+    expect(illustrativeEarnings(25000)).toEqual({
+      sales: 20000,
+      commission: 1600,
+      bonus: 1000,
+      total: 2600,
+    });
     expect(illustrativeEarnings(Infinity).total).toBe(0);
   });
 
@@ -56,9 +72,15 @@ describe("Vonix affiliate V2 editorial journey", () => {
     expect(slider).toHaveAttribute("max", "20000");
     expect(slider).toHaveAttribute("step", "500");
     fireEvent.change(slider, { target: { value: "10000" } });
-    expect(screen.getByTestId("illustrative-commission").textContent?.replace(/\s/g, " ")).toBe("R$ 800,00");
-    expect(screen.getByTestId("illustrative-bonus").textContent?.replace(/\s/g, " ")).toBe("R$ 500,00");
-    expect(screen.getByTestId("illustrative-total").textContent?.replace(/\s/g, " ")).toBe("R$ 1.300,00");
+    expect(screen.getByTestId("illustrative-commission").textContent?.replace(/\s/g, " ")).toBe(
+      "R$ 800,00",
+    );
+    expect(screen.getByTestId("illustrative-bonus").textContent?.replace(/\s/g, " ")).toBe(
+      "R$ 500,00",
+    );
+    expect(screen.getByTestId("illustrative-total").textContent?.replace(/\s/g, " ")).toBe(
+      "R$ 1.300,00",
+    );
     expect(screen.getByText(/Não é promessa de ganhos/)).toBeInTheDocument();
     expect(screen.getByText(/Sem elegibilidade, o bônus não se aplica/)).toBeInTheDocument();
   });
