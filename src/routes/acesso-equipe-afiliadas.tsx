@@ -79,6 +79,7 @@ export function AffiliateTeamAccess() {
   // A password reset can only follow freshly verified one-time Auth proof
   // for the exact owner address. A pre-existing browser session is not proof.
   const freshVerifiedAddress = useRef<string | null>(null);
+  const rotatingTemporaryPassword = useRef(false);
 
   const inspectIdentity = useCallback(async () => {
     const requestId = ++identityVersion.current;
@@ -163,7 +164,13 @@ export function AffiliateTeamAccess() {
       data: { subscription },
     } = vonixAffiliateAuth.auth.onAuthStateChange(() => {
       queueMicrotask(() => {
-        if (active && !teamTabHidden() && !leavingIdentity.current && !pendingManualHash.current)
+        if (
+          active &&
+          !teamTabHidden() &&
+          !leavingIdentity.current &&
+          !pendingManualHash.current &&
+          !rotatingTemporaryPassword.current
+        )
           void inspectIdentity();
       });
     });
@@ -552,6 +559,7 @@ export function AffiliateTeamAccess() {
     setBusy(true);
     setError("");
     let changed = false;
+    rotatingTemporaryPassword.current = true;
     try {
       const granted = await vonixAffiliateAuth.auth.signInWithPassword({
         email: normalized,
@@ -613,6 +621,7 @@ export function AffiliateTeamAccess() {
         );
       }
     } finally {
+      rotatingTemporaryPassword.current = false;
       if (epoch === visibilityEpoch.current) setBusy(false);
     }
   }
