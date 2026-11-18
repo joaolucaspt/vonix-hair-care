@@ -135,7 +135,7 @@ export function AffiliateApplicationPage() {
   }
 
   return (
-    <AffiliateShell>
+    <AffiliateShell recruitmentStatus={recruitment}>
       <div className="bg-background text-foreground">
         <AffiliateLandingIntro recruitmentStatus={recruitment} />
 

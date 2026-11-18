@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AffiliateCreatorPaths } from "@/components/affiliate-creator-paths";
+import { AffiliateBrandTrust } from "@/components/affiliate-brand-trust";
 import { AffiliateSellingFlow } from "@/components/affiliate-selling-flow";
 import {
   AffiliateCreatorOpportunity,
@@ -325,6 +326,8 @@ export function AffiliateLandingIntro({
           <span>Vonix Hair</span>
         </div>
       </div>
+
+      <AffiliateBrandTrust recruitmentOpen={isOpen} />
 
       <section
         id="ganhos"

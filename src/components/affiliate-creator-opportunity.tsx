@@ -176,8 +176,9 @@ export function AffiliateCreatorOpportunity({
           ))}
         </div>
         <aside
+          id="avaliacoes-produtos"
           aria-labelledby="vonix-product-reviews-title"
-          className="mt-14 overflow-hidden rounded-[2rem] border border-border bg-background shadow-[0_16px_45px_rgba(70,36,49,.06)]"
+          className="scroll-mt-28 mt-14 overflow-hidden rounded-[2rem] border border-border bg-background shadow-[0_16px_45px_rgba(70,36,49,.06)]"
           data-testid="vonix-c53-real-product-reviews"
         >
           <div className="flex flex-wrap items-end justify-between gap-5 px-6 py-8 sm:px-10">

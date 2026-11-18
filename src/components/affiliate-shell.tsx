@@ -12,9 +12,11 @@ import { INSTAGRAM } from "@/lib/store";
 export function AffiliateShell({
   children,
   mode = "landing",
+  recruitmentStatus = "loading",
 }: {
   children: ReactNode;
   mode?: "landing" | "account";
+  recruitmentStatus?: "loading" | "open" | "limited" | "closed";
 }) {
   return (
     <div
@@ -126,8 +128,12 @@ export function AffiliateShell({
               href="#inscricao"
               className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring sm:px-5 sm:text-sm"
             >
-              <span className="sm:hidden">Ver inscrição</span>
-              <span className="hidden sm:inline">Conhecer a inscrição</span>
+              <span className="sm:hidden">
+                {recruitmentStatus === "open" ? "Quero participar" : "Ver inscrição"}
+              </span>
+              <span className="hidden sm:inline">
+                {recruitmentStatus === "open" ? "Enviar candidatura" : "Conhecer a inscrição"}
+              </span>
               <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </a>
           ) : (
