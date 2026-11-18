@@ -62,6 +62,7 @@ export function AffiliateOwnerActivationPanel() {
   const [confirmedPrivateRecipient, setConfirmedPrivateRecipient] = useState(false);
   const [generated, setGenerated] = useState<GeneratedLink | null>(null);
   const [generatedPassword, setGeneratedPassword] = useState<TemporaryCredentials | null>(null);
+  const [generatedBatch, setGeneratedBatch] = useState<TemporaryCredentials[]>([]);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [senderBusy, setSenderBusy] = useState(false);
@@ -78,6 +79,7 @@ export function AffiliateOwnerActivationPanel() {
       // A single-use invite is a bearer credential; revoke untransferred
       // browser state and stale async completions on shared-device tab hide.
       visibilityEpoch.current++;
+      setGeneratedBatch([]);
       // A native share or clipboard Promise can remain unsettled while hidden.
       // Release its lock; callbacks from the earlier epoch cannot restore it.
       copyingLink.current = false;
@@ -152,7 +154,7 @@ export function AffiliateOwnerActivationPanel() {
     ) : null;
 
   async function verifySenderWithoutEmail() {
-    if (busy || senderBusy || generated || pageHidden()) return;
+    if (busy || senderBusy || generated || generatedBatch.length || pageHidden()) return;
     const epoch = visibilityEpoch.current;
     setSenderBusy(true);
     setSenderStatus(null);
@@ -176,6 +178,7 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function reload() {
+    if (generatedBatch.length) return;
     if (busy || pageHidden()) return;
     const epoch = visibilityEpoch.current;
     setBusy(true);
@@ -205,7 +208,14 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function create(email: string) {
-    if (!confirmedPrivateRecipient || busy || generated || generatedPassword || pageHidden())
+    if (
+      !confirmedPrivateRecipient ||
+      busy ||
+      generated ||
+      generatedPassword ||
+      generatedBatch.length ||
+      pageHidden()
+    )
       return;
     const epoch = visibilityEpoch.current;
     const confirmedEpoch = recipientConfirmationEpoch.current;
@@ -237,6 +247,7 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function sendInvitationEmail(email: string) {
+    if (generatedBatch.length) return;
     if (busy || generated || generatedPassword || pageHidden()) return;
     const epoch = visibilityEpoch.current;
     setBusy(true);
@@ -263,7 +274,14 @@ export function AffiliateOwnerActivationPanel() {
   }
 
   async function generateTemporaryPassword(email: string) {
-    if (busy || generated || generatedPassword || pageHidden() || !confirmedPrivateRecipient)
+    if (
+      busy ||
+      generated ||
+      generatedPassword ||
+      generatedBatch.length ||
+      pageHidden() ||
+      !confirmedPrivateRecipient
+    )
       return;
     const epoch = visibilityEpoch.current;
     const confirmedEpoch = recipientConfirmationEpoch.current;
@@ -294,6 +312,94 @@ export function AffiliateOwnerActivationPanel() {
         );
     } finally {
       if (epoch === visibilityEpoch.current) setBusy(false);
+    }
+  }
+
+  /** Owner-reviewed batch: each password remains browser-memory-only until copied. */
+  async function regenerateThreeOwnerPasswords() {
+    if (
+      busy ||
+      generated ||
+      generatedPassword ||
+      generatedBatch.length ||
+      pageHidden() ||
+      !confirmedPrivateRecipient
+    )
+      return;
+    const epoch = visibilityEpoch.current;
+    const confirmedEpoch = recipientConfirmationEpoch.current;
+    const current = () =>
+      epoch === visibilityEpoch.current &&
+      confirmedEpoch === recipientConfirmationEpoch.current &&
+      !pageHidden();
+    setBusy(true);
+    setFailure("");
+    setMessage("");
+    const ready: TemporaryCredentials[] = [];
+    const targets = [
+      "isabela.cpcontato@gmail.com",
+      "giovana.souza1.r@gmail.com",
+      "lucassiqueirahotmail22@gmail.com",
+    ] as const;
+    try {
+      for (const email of targets) {
+        if (!current()) return;
+        const response = await provisionPendingAffiliateOwnerTemporaryPassword({ data: { email } });
+        if (!current()) return;
+        if (!response.ok || response.email !== email) {
+          setFailure(
+            "Não foi possível gerar todas as senhas. Copie primeiro os acessos que aparecerem; " +
+              "depois recupere individualmente os restantes.",
+          );
+          break;
+        }
+        ready.push({ email: response.email, password: response.temporaryPassword });
+        setGeneratedBatch([...ready]);
+        setOwners((prev) => prev?.filter((person) => person.email !== email) ?? null);
+      }
+      if (current() && ready.length === targets.length) {
+        setMessage(
+          "As três senhas foram renovadas. Copie todos os acessos antes de sair desta aba. " +
+            "Cada titular deverá trocar sua senha no primeiro login.",
+        );
+      }
+    } catch {
+      if (current()) {
+        setFailure(
+          "O provisionamento foi interrompido. Copie os acessos já exibidos " +
+            "e recupere individualmente os demais.",
+        );
+      }
+    } finally {
+      if (epoch === visibilityEpoch.current) setBusy(false);
+    }
+  }
+
+  async function copyBatchCredentials() {
+    if (busy || !generatedBatch.length || copyingLink.current || pageHidden()) return;
+    const epoch = visibilityEpoch.current;
+    copyingLink.current = true;
+    setBusy(true);
+    setFailure("");
+    try {
+      const payload = generatedBatch
+        .map(({ email, password }) => email + "\nSenha provisória: " + password)
+        .join("\n\n");
+      await navigator.clipboard.writeText(payload);
+      if (epoch !== visibilityEpoch.current || pageHidden()) return;
+      setGeneratedBatch([]);
+      setMessage(
+        "Acessos copiados. Cole-os somente em um local privado e envie cada senha " +
+          "ao destinatário correto. Apague a cópia quando terminar.",
+      );
+    } catch {
+      if (epoch === visibilityEpoch.current && !pageHidden())
+        setFailure("Cópia bloqueada. Selecione as credenciais exibidas para copiar manualmente.");
+    } finally {
+      if (epoch === visibilityEpoch.current) {
+        copyingLink.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -473,6 +579,7 @@ export function AffiliateOwnerActivationPanel() {
               const isConfirmed = event.target.checked;
               setConfirmedPrivateRecipient(isConfirmed);
               if (!isConfirmed) {
+                setGeneratedBatch([]);
                 // Remove the unused bearer link from the UI immediately;
                 // checking the box again requires generating a fresh link.
                 setGenerated(null);
@@ -535,6 +642,72 @@ export function AffiliateOwnerActivationPanel() {
           ))}
         </ul>
       )}
+      <div className="mt-5 rounded-xl border border-[#d5b5bb] bg-[#fcf7f5] p-5">
+        <h3 className="font-display text-xl">Entregar os três acessos juntos</h3>
+        <p className="mt-2 text-sm leading-relaxed text-[#806a6c]">
+          Renova as senhas provisórias das três contas já autorizadas e mostra cada e-mail com sua
+          senha para cópia única. Senhas anteriores deixam de funcionar. Não navegue para outra aba
+          antes de copiar: por segurança, os dados serão ocultados.
+        </p>
+        <button
+          type="button"
+          disabled={
+            busy ||
+            !!generated ||
+            !!generatedPassword ||
+            generatedBatch.length > 0 ||
+            !confirmedPrivateRecipient
+          }
+          onClick={() => void regenerateThreeOwnerPasswords()}
+          className="mt-4 min-h-12 w-full rounded-full bg-[#633847] px-5 font-semibold text-white disabled:opacity-60"
+        >
+          <LockKeyhole className="mr-2 inline h-4 w-4" />
+          {busy ? "Gerando credenciais..." : "Gerar e reunir as 3 senhas temporárias"}
+        </button>
+      </div>
+      {generatedBatch.length > 0 && (
+        <div
+          role="region"
+          aria-label="Credenciais temporárias geradas para entrega privada"
+          className="mt-4 rounded-xl border border-[#ccb2b6] bg-white p-5"
+        >
+          <h3 className="font-display text-xl">
+            Credenciais individuais: {generatedBatch.length} de 3
+          </h3>
+          <p className="mt-2 text-sm text-[#806a6c]">
+            Confirme cada destinatário antes de compartilhar. A senha expira após a troca
+            obrigatória no primeiro acesso ao painel.
+          </p>
+          <div className="mt-4 space-y-3">
+            {generatedBatch.map(({ email, password }) => (
+              <div key={email} className="rounded-lg border border-[#e9dadd] bg-[#fcf8f7] p-3">
+                <p className="break-all text-sm font-semibold">{email}</p>
+                <code className="mt-2 block select-all break-all rounded-lg bg-white p-3 text-sm">
+                  {password}
+                </code>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void copyBatchCredentials()}
+            className="mt-4 min-h-12 w-full rounded-full bg-[#633847] px-4 font-semibold text-white disabled:opacity-60"
+          >
+            <ClipboardCopy className="mr-2 inline h-4 w-4" />
+            Copiar {generatedBatch.length} {generatedBatch.length === 1 ? "acesso" : "acessos"} e
+            ocultar senhas
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setGeneratedBatch([])}
+            className="mt-3 min-h-11 w-full rounded-full border border-[#cda9ad] px-4 text-sm font-semibold disabled:opacity-60"
+          >
+            Ocultar sem copiar
+          </button>
+        </div>
+      )}
       <details className="mt-4 rounded-xl border border-[#ebdadc] bg-white p-4">
         <summary className="cursor-pointer text-sm font-semibold text-[#704953]">
           Recuperar senha provisória que não foi copiada
@@ -555,7 +728,13 @@ export function AffiliateOwnerActivationPanel() {
               key={email}
               type="button"
               onClick={() => void generateTemporaryPassword(email)}
-              disabled={busy || !!generated || !!generatedPassword || !confirmedPrivateRecipient}
+              disabled={
+                busy ||
+                !!generated ||
+                !!generatedPassword ||
+                !!generatedBatch.length ||
+                !confirmedPrivateRecipient
+              }
               className="min-h-11 rounded-xl border border-[#ceb6b8] px-4 py-2 text-xs font-semibold text-[#693440] disabled:opacity-50"
             >
               {email}

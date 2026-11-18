@@ -47,6 +47,89 @@ afterEach(() => {
 });
 
 describe("owner activation control, private one-time links", () => {
+  const batchEmails = [
+    "isabela.cpcontato@gmail.com",
+    "giovana.souza1.r@gmail.com",
+    "lucassiqueirahotmail22@gmail.com",
+  ];
+
+  it("generates all three owner credentials without caching and copies the entire set once", async () => {
+    mocks.provision.mockImplementation(async ({ data }: { data: { email: string } }) => ({
+      ok: true,
+      email: data.email,
+      temporaryPassword: "Example-Only-C52-" + data.email.split("@")[0],
+    }));
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    const batchButton = screen.getByRole("button", {
+      name: "Gerar e reunir as 3 senhas temporárias",
+    });
+    expect(batchButton).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(batchButton);
+    expect(await screen.findByText("Credenciais individuais: 3 de 3")).toBeInTheDocument();
+    expect(mocks.provision).toHaveBeenCalledTimes(3);
+    for (const [index, owner] of batchEmails.entries()) {
+      expect(mocks.provision).toHaveBeenNthCalledWith(index + 1, { data: { email: owner } });
+      expect(screen.getByText("Example-Only-C52-" + owner.split("@")[0])).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Copiar 3 acessos e ocultar senhas" }));
+    await waitFor(() => {
+      expect(mocks.clipboard).toHaveBeenCalledOnce();
+      const copied = mocks.clipboard.mock.calls[0]![0] as string;
+      for (const owner of batchEmails) {
+        expect(copied).toContain(owner);
+        expect(copied).toContain("Example-Only-C52-" + owner.split("@")[0]);
+      }
+      expect(screen.queryByText("Credenciais individuais: 3 de 3")).not.toBeInTheDocument();
+    });
+  });
+
+  it("exposes and preserves already-generated credentials if a later batch member fails", async () => {
+    mocks.provision.mockImplementation(async ({ data }: { data: { email: string } }) =>
+      data.email === batchEmails[0]
+        ? { ok: true, email: data.email, temporaryPassword: "Example-Only-C52-Partial" }
+        : { ok: false, reason: "limited" },
+    );
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Gerar e reunir as 3 senhas temporárias" }));
+    expect(await screen.findByText("Credenciais individuais: 1 de 3")).toBeInTheDocument();
+    expect(mocks.provision).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Example-Only-C52-Partial")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Copiar 1 acesso e ocultar senhas" }));
+    await waitFor(() => {
+      expect(mocks.clipboard).toHaveBeenCalledOnce();
+      expect(mocks.clipboard.mock.calls[0]![0]).toContain(batchEmails[0]);
+      expect(screen.queryByText("Example-Only-C52-Partial")).not.toBeInTheDocument();
+    });
+  });
+
+  it("clears an untransferred batch immediately when the browser tab is hidden", async () => {
+    mocks.provision.mockImplementation(async ({ data }: { data: { email: string } }) => ({
+      ok: true,
+      email: data.email,
+      temporaryPassword: "Example-Only-C52-" + data.email.split("@")[0],
+    }));
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateOwnerActivationPanel />);
+      await screen.findByText(email);
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Gerar e reunir as 3 senhas temporárias" }),
+      );
+      expect(await screen.findByText("Credenciais individuais: 3 de 3")).toBeInTheDocument();
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.queryByText("Credenciais individuais: 3 de 3")).not.toBeInTheDocument();
+      expect(mocks.clipboard).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("requires owner-recipient confirmation before creating temporary credentials and clears after copying", async () => {
     render(<AffiliateOwnerActivationPanel />);
     await screen.findByText(email);
