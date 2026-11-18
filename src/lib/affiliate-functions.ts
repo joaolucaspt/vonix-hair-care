@@ -10,6 +10,7 @@ import { affiliateSimpleSchema } from "./affiliate-simple";
 import { affiliateRejectionReasonSchema } from "./affiliate-rejection";
 import { attemptAffiliateAdminLogin } from "./affiliate-admin-auth.server";
 import { loginAffiliateTeamWithPassword } from "./affiliate-member-auth.server";
+import { provisionOwnerTemporaryPassword } from "./affiliate-owner-provision.server";
 import {
   generatePendingAffiliateOwnerActivationLink,
   diagnoseAffiliateOwnerSender,
@@ -344,6 +345,14 @@ export const createPendingAffiliateOwnerActivationLink = createServerFn({ method
     setResponseHeader("Cache-Control", "private, no-store, max-age=0");
     setResponseHeader("Referrer-Policy", "no-referrer");
     return generatePendingAffiliateOwnerActivationLink(data.email);
+  });
+
+/** Owner-only, one-time temporary credentials. Never cached, indexed, or logged. */
+export const provisionPendingAffiliateOwnerTemporaryPassword = createServerFn({ method: "POST" })
+  .validator(z.object({ email: z.string().trim().toLowerCase().email().max(180) }).strict())
+  .handler(async ({ data }) => {
+    privateAffiliateAuthResponse();
+    return provisionOwnerTemporaryPassword(data.email);
   });
 
 export const loginAffiliateAdminMember = createServerFn({ method: "POST" })

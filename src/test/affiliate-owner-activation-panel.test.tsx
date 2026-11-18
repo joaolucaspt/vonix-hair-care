@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   generate: vi.fn(),
+  provision: vi.fn(),
   clipboard: vi.fn(),
   inspect: vi.fn(),
 }));
@@ -12,6 +13,7 @@ vi.mock("@/lib/affiliate-functions", () => ({
   getPendingAffiliateOwnerActivations: mocks.list,
   inspectAffiliateOwnerSenderStatus: mocks.inspect,
   createPendingAffiliateOwnerActivationLink: mocks.generate,
+  provisionPendingAffiliateOwnerTemporaryPassword: mocks.provision,
 }));
 
 import { AffiliateOwnerActivationPanel } from "@/components/affiliate-owner-activation-panel";
@@ -23,6 +25,11 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.list.mockResolvedValue({ ok: true, owners: [{ email }] });
   mocks.generate.mockResolvedValue({ ok: true, recipient: email, link: token });
+  mocks.provision.mockResolvedValue({
+    ok: true,
+    email,
+    temporaryPassword: "Example-Only-C51-Temporary-Pass-2026",
+  });
   mocks.inspect.mockResolvedValue({
     ok: true,
     diagnosis: { status: "verified", domain: "vonixhair.com" },
@@ -40,6 +47,38 @@ afterEach(() => {
 });
 
 describe("owner activation control, private one-time links", () => {
+  it("requires owner-recipient confirmation before creating temporary credentials and clears after copying", async () => {
+    render(<AffiliateOwnerActivationPanel />);
+    await screen.findByText(email);
+    const provision = screen.getByRole("button", { name: "Criar senha temporária" });
+    expect(provision).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(provision);
+    expect(await screen.findByText("Example-Only-C51-Temporary-Pass-2026")).toBeInTheDocument();
+    expect(mocks.provision).toHaveBeenCalledWith({ data: { email } });
+    fireEvent.click(screen.getByRole("button", { name: "Copiar e ocultar senha" }));
+    await waitFor(() => {
+      expect(mocks.clipboard).toHaveBeenCalledWith("Example-Only-C51-Temporary-Pass-2026");
+      expect(screen.queryByText("Example-Only-C51-Temporary-Pass-2026")).not.toBeInTheDocument();
+    });
+  });
+
+  it("erases temporary credentials when the administrative tab is hidden", async () => {
+    const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      render(<AffiliateOwnerActivationPanel />);
+      await screen.findByText(email);
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(screen.getByRole("button", { name: "Criar senha temporária" }));
+      expect(await screen.findByText("Example-Only-C51-Temporary-Pass-2026")).toBeInTheDocument();
+      spy.mockReturnValue("hidden");
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      expect(screen.queryByText("Example-Only-C51-Temporary-Pass-2026")).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("revokes an untransferred private activation link when the owner hides the tab", async () => {
     const spy = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     try {
