@@ -133,10 +133,10 @@ function Eyebrow({ children, light = false }: { children: React.ReactNode; light
     <p
       className={
         "inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-normal " +
-        (light ? "text-muted-foreground" : "text-muted-foreground")
+        (light ? "text-primary-foreground" : "text-primary")
       }
     >
-      <span className={light ? "h-px w-7 bg-card" : "h-px w-7 bg-card"} />
+      <span className={light ? "h-px w-7 bg-primary-foreground" : "h-px w-7 bg-primary"} />
       {children}
     </p>
   );
@@ -194,7 +194,7 @@ export function AffiliateLandingIntro({
             fetchPriority="high"
             loading="eager"
             decoding="async"
-            className="h-full w-full object-contain object-right opacity-15 sm:opacity-25 lg:opacity-100"
+            className="h-full w-full object-contain object-right opacity-20 lg:opacity-100"
           />
         </picture>
         <div className="mx-auto max-w-7xl">
@@ -208,7 +208,7 @@ export function AffiliateLandingIntro({
             </p>
             <h1
               id="vonix-affiliate-title"
-              className="mt-3 font-display text-4xl leading-tight sm:text-5xl lg:text-6xl"
+              className="mt-3 font-display text-4xl leading-tight sm:text-5xl lg:text-5xl"
             >
               Seu jeito de <span className="italic text-primary">criar.</span>
               <span className="block">Nossa paixão por cabelos.</span>
@@ -219,27 +219,15 @@ export function AffiliateLandingIntro({
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button asChild className="h-auto min-h-12 whitespace-normal px-6 py-3">
-                <Button
-                  asChild
-                  variant="link"
-                  className="h-auto min-h-11 max-w-full whitespace-normal"
-                >
-                  <a href="#inscricao">
-                    {isOpen ? "Enviar minha candidatura" : "Conhecer a inscrição"}
-                    <ArrowUpRight aria-hidden="true" />
-                  </a>
-                </Button>
+                <a href="#inscricao">
+                  {isOpen ? "Enviar minha candidatura" : "Conhecer a inscrição"}
+                  <ArrowUpRight aria-hidden="true" />
+                </a>
               </Button>
-              <Button asChild variant="link" className="min-h-11 h-auto whitespace-normal">
-                <Button
-                  asChild
-                  variant="link"
-                  className="h-auto min-h-11 max-w-full whitespace-normal"
-                >
-                  <a href="#ganhos">
-                    Conhecer as condições <ArrowDownRight aria-hidden="true" />
-                  </a>
-                </Button>
+              <Button asChild variant="link" className="h-auto min-h-11 whitespace-normal">
+                <a href="#ganhos">
+                  Conhecer as condições <ArrowDownRight aria-hidden="true" />
+                </a>
               </Button>
             </div>
             <ul
@@ -265,19 +253,19 @@ export function AffiliateLandingIntro({
 
       <div
         aria-label="Universo criativo Vonix Hair"
-        className="overflow-hidden bg-card py-4 text-muted-foreground"
+        className="overflow-hidden bg-primary py-4 text-primary-foreground"
       >
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-5 gap-y-2 px-5 text-[10px] font-extrabold uppercase tracking-normal sm:gap-x-9 sm:text-xs">
           <span>Beleza capilar</span>
-          <span aria-hidden="true" className="text-muted-foreground">
+          <span aria-hidden="true" className="text-primary-foreground">
             ✦
           </span>
           <span>Conteúdo original</span>
-          <span aria-hidden="true" className="text-muted-foreground">
+          <span aria-hidden="true" className="text-primary-foreground">
             ✦
           </span>
           <span>Histórias reais</span>
-          <span aria-hidden="true" className="text-muted-foreground">
+          <span aria-hidden="true" className="text-primary-foreground">
             ✦
           </span>
           <span>Vonix Hair</span>
@@ -295,12 +283,10 @@ export function AffiliateLandingIntro({
             <Eyebrow>Quanto você ganha</Eyebrow>
             <h2
               id="vonix-affiliate-earnings-title"
-              className="mt-5 font-display text-4xl leading-tight tracking-normal text-muted-foreground sm:text-5xl"
+              className="mt-5 font-display text-4xl leading-tight tracking-normal text-foreground sm:text-5xl"
             >
               Para afiliadas aprovadas.{" "}
-              <span className="italic text-muted-foreground">
-                Condições claras, desde o começo.
-              </span>
+              <span className="italic text-primary">Condições claras, desde o começo.</span>
             </h2>
             <p className="mt-5 text-base leading-[1.8] text-muted-foreground">
               Após aprovação e definição das condições, você divulga pelo seu link. A Vonix Hair
@@ -328,10 +314,10 @@ export function AffiliateLandingIntro({
             ].map(({ big, title, text }) => (
               <article
                 key={title}
-                className="rounded-lg border border-border bg-card p-7 shadow-sm"
+                className="min-w-0 rounded-lg border border-border bg-background p-6 shadow-sm"
               >
-                <p className="font-display text-4xl text-muted-foreground sm:text-5xl">{big}</p>
-                <h3 className="mt-5 font-display text-2xl text-muted-foreground">{title}</h3>
+                <p className="font-display text-3xl text-primary sm:text-4xl">{big}</p>
+                <h3 className="mt-5 font-display text-2xl text-foreground">{title}</h3>
                 <p className="mt-3 text-sm leading-[1.75] text-muted-foreground">{text}</p>
               </article>
             ))}
@@ -349,9 +335,9 @@ export function AffiliateLandingIntro({
           <div className="grid items-end gap-6 lg:grid-cols-[1.1fr_.9fr]">
             <div>
               <Eyebrow>O universo Vonix Hair</Eyebrow>
-              <h2 className="mt-5 max-w-3xl font-display text-4xl leading-[1.12] tracking-normal text-muted-foreground sm:text-5xl lg:text-6xl">
+              <h2 className="mt-5 max-w-3xl font-display text-4xl leading-[1.12] tracking-normal text-foreground sm:text-5xl lg:text-5xl">
                 Não procuramos uma fórmula.{" "}
-                <span className="italic text-muted-foreground">Queremos conhecer você.</span>
+                <span className="italic text-primary">Queremos conhecer você.</span>
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-[1.9] text-muted-foreground sm:text-base lg:pb-2">
@@ -379,7 +365,7 @@ export function AffiliateLandingIntro({
                   <p className="text-[10px] font-extrabold tracking-normal text-muted-foreground">
                     {item.tag}
                   </p>
-                  <h3 className="mt-3 font-display text-2xl leading-tight text-muted-foreground">
+                  <h3 className="mt-3 font-display text-2xl leading-tight text-foreground">
                     {item.title}
                   </h3>
                   <p className="mt-3 flex-1 text-sm leading-[1.75] text-muted-foreground">
@@ -404,12 +390,12 @@ export function AffiliateLandingIntro({
           <div className="grid gap-7 lg:grid-cols-[.9fr_1.1fr] lg:items-end">
             <div>
               <Eyebrow light>Como funciona</Eyebrow>
-              <h2 className="mt-5 max-w-xl font-display text-4xl leading-tight sm:text-5xl lg:text-6xl">
+              <h2 className="mt-5 max-w-xl font-display text-4xl leading-tight sm:text-5xl lg:text-5xl">
                 Três momentos.{" "}
-                <span className="italic text-muted-foreground">Seu primeiro passo é aqui.</span>
+                <span className="italic text-primary-foreground">Seu primeiro passo é aqui.</span>
               </h2>
             </div>
-            <p className="max-w-lg text-base leading-[1.85] text-muted-foreground">
+            <p className="max-w-lg text-base leading-[1.85] text-primary-foreground">
               A seleção começa pelo cadastro, passa por uma análise da equipe e pode evoluir para
               uma conversa sobre possibilidades. Não existe aprovação instantânea nem condição
               comercial automática.
@@ -436,28 +422,25 @@ export function AffiliateLandingIntro({
                 Icon: MessageCircleHeart,
               },
             ].map(({ number, title, text, Icon }) => (
-              <article
-                key={number}
-                className="relative rounded-lg border border-border bg-card p-7 sm:p-9"
-              >
+              <article key={number} className="relative border-t border-border py-7 sm:py-9">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-display text-5xl text-muted-foreground">{number}</span>
-                  <Icon aria-hidden="true" className="h-7 w-7 text-muted-foreground" />
+                  <span className="font-display text-5xl text-primary-foreground">{number}</span>
+                  <Icon aria-hidden="true" className="h-7 w-7 text-primary-foreground" />
                 </div>
                 <h3 className="mt-9 font-display text-2xl">{title}</h3>
-                <p className="mt-4 text-sm leading-[1.8] text-muted-foreground">{text}</p>
+                <p className="mt-4 text-sm leading-[1.8] text-primary-foreground">{text}</p>
               </article>
             ))}
           </div>
-          <div className="mt-10 flex flex-wrap items-center justify-between gap-5 rounded-lg border border-border bg-card px-6 py-6 sm:px-9">
-            <p className="max-w-2xl text-sm leading-[1.75] text-muted-foreground">
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-5 border-t border-border py-6">
+            <p className="max-w-2xl text-sm leading-[1.75] text-primary-foreground">
               <strong>Inscrições em preparação?</strong> Você pode visualizar o formulário simples
               em uma prévia segura, sem enviar ou armazenar seus dados.
             </p>
             <Button asChild variant="link" className="h-auto min-h-11 max-w-full whitespace-normal">
               <a
                 href="#inscricao"
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-card px-5 py-2.5 text-sm font-bold text-muted-foreground transition hover:bg-card"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-card px-5 py-2.5 text-sm font-bold text-primary transition hover:bg-accent"
               >
                 Ver disponibilidade <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </a>
@@ -470,9 +453,9 @@ export function AffiliateLandingIntro({
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <Eyebrow>Seu perfil, sua identidade</Eyebrow>
-            <h2 className="mt-5 font-display text-4xl leading-tight tracking-normal text-muted-foreground sm:text-5xl lg:text-6xl">
+            <h2 className="mt-5 font-display text-4xl leading-tight tracking-normal text-foreground sm:text-5xl lg:text-5xl">
               Dois jeitos de criar.{" "}
-              <span className="italic text-muted-foreground">Infinitas ideias para contar.</span>
+              <span className="italic text-primary">Infinitas ideias para contar.</span>
             </h2>
             <p className="mt-6 text-base leading-[1.8] text-muted-foreground">
               Não é preciso se encaixar em um único formato. Abaixo estão perfis possíveis de
@@ -486,7 +469,7 @@ export function AffiliateLandingIntro({
                 <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[10px] font-bold uppercase tracking-normal text-muted-foreground">
                   <Heart aria-hidden="true" className="h-3.5 w-3.5" /> Possibilidade 01
                 </span>
-                <h3 className="mt-10 max-w-sm font-display text-3xl leading-tight text-muted-foreground sm:text-4xl">
+                <h3 className="mt-10 max-w-sm font-display text-3xl leading-tight text-foreground sm:text-4xl">
                   Quero compartilhar minha rotina.
                 </h3>
                 <p className="mt-5 max-w-md text-sm leading-[1.8] text-muted-foreground">
@@ -512,7 +495,7 @@ export function AffiliateLandingIntro({
                 <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[10px] font-bold uppercase tracking-normal text-muted-foreground">
                   <Camera aria-hidden="true" className="h-3.5 w-3.5" /> Possibilidade 02
                 </span>
-                <h3 className="mt-10 max-w-sm font-display text-3xl leading-tight text-muted-foreground sm:text-4xl">
+                <h3 className="mt-10 max-w-sm font-display text-3xl leading-tight text-foreground sm:text-4xl">
                   Quero explorar conteúdos UGC.
                 </h3>
                 <p className="mt-5 max-w-md text-sm leading-[1.8] text-muted-foreground">
@@ -542,8 +525,8 @@ export function AffiliateLandingIntro({
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div className="max-w-3xl">
               <Eyebrow>Inspiração capilar</Eyebrow>
-              <h2 className="mt-5 font-display text-4xl leading-tight text-muted-foreground sm:text-5xl lg:text-6xl">
-                Crie do <span className="italic text-muted-foreground">seu jeito.</span>
+              <h2 className="mt-5 font-display text-4xl leading-tight text-foreground sm:text-5xl lg:text-5xl">
+                Crie do <span className="italic text-primary">seu jeito.</span>
               </h2>
               <p className="mt-5 max-w-2xl text-base leading-[1.8] text-muted-foreground">
                 O universo dos cabelos rende muitas ideias. Estes são exemplos de formatos que você
@@ -574,12 +557,12 @@ export function AffiliateLandingIntro({
                     alt={idea.alt}
                     className="p-5 motion-safe:transition motion-safe:duration-500 motion-safe:group-hover:scale-[1.03]"
                   />
-                  <span className="absolute left-4 top-4 rounded-full bg-card px-3 py-1 text-xs font-bold text-primary-foreground">
+                  <span className="absolute left-4 top-4 rounded-lg bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">
                     {idea.number}
                   </span>
                 </div>
                 <div className="p-6">
-                  <h3 className="font-display text-2xl text-muted-foreground">{idea.name}</h3>
+                  <h3 className="font-display text-2xl text-foreground">{idea.name}</h3>
                   <p className="mt-2 text-sm leading-[1.75] text-muted-foreground">{idea.text}</p>
                 </div>
               </article>
@@ -590,7 +573,7 @@ export function AffiliateLandingIntro({
             <div className="flex items-start gap-4">
               <PenLine aria-hidden="true" className="mt-1 h-6 w-6 shrink-0 text-muted-foreground" />
               <div>
-                <h3 className="font-display text-2xl text-muted-foreground">
+                <h3 className="font-display text-2xl text-foreground">
                   Não existe um roteiro único para ter sua identidade.
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm leading-[1.8] text-muted-foreground">
@@ -602,39 +585,12 @@ export function AffiliateLandingIntro({
             <Button asChild variant="link" className="h-auto min-h-11 max-w-full whitespace-normal">
               <a
                 href="#inscricao"
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-card px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-card"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-accent"
               >
                 Conhecer a candidatura <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </a>
             </Button>
           </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden bg-primary px-5 py-16 text-center text-primary-foreground sm:py-20">
-        <div className="relative mx-auto max-w-4xl">
-          <Sparkles aria-hidden="true" className="mx-auto h-7 w-7 text-muted-foreground" />
-          <p className="mt-5 text-xs font-bold uppercase tracking-normal text-muted-foreground">
-            Seu próximo passo
-          </p>
-          <h2 className="mt-4 font-display text-4xl leading-tight sm:text-5xl">
-            A Vonix Hair quer conhecer{" "}
-            <span className="italic text-muted-foreground">sua história.</span>
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-sm leading-[1.9] text-muted-foreground sm:text-base">
-            Veja o status das inscrições, conheça o formulário e apresente sua candidatura quando o
-            período de recebimento estiver aberto. Sem cobrança para se inscrever e sem promessas de
-            aprovação.
-          </p>
-          <Button asChild variant="link" className="h-auto min-h-11 max-w-full whitespace-normal">
-            <a
-              href="#inscricao"
-              className="mt-8 inline-flex min-h-12 items-center gap-3 rounded-full bg-card px-7 py-3 text-sm font-bold text-muted-foreground hover:bg-card"
-            >
-              {isOpen ? "Preencher candidatura" : "Visualizar formulário"}
-              <ArrowRight aria-hidden="true" className="h-4 w-4" />
-            </a>
-          </Button>
         </div>
       </section>
     </div>
@@ -647,8 +603,8 @@ export function AffiliateLandingFAQ() {
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.75fr_1.25fr] lg:gap-16">
         <div>
           <Eyebrow>Perguntas frequentes</Eyebrow>
-          <h2 className="mt-5 font-display text-4xl leading-tight text-muted-foreground sm:text-5xl">
-            Tudo mais claro <span className="italic text-muted-foreground">desde o começo.</span>
+          <h2 className="mt-5 font-display text-4xl leading-tight text-foreground sm:text-5xl">
+            Tudo mais claro <span className="italic text-primary">desde o começo.</span>
           </h2>
           <p className="mt-6 max-w-md text-sm leading-[1.85] text-muted-foreground">
             A página explica o processo de candidatura. Benefícios comerciais, contratação e
@@ -691,19 +647,19 @@ export function AffiliateLandingFAQ() {
       </div>
 
       <div className="mx-auto mt-16 max-w-7xl rounded-lg bg-primary px-6 py-12 text-center text-primary-foreground sm:px-10 sm:py-16">
-        <p className="text-[11px] font-bold uppercase tracking-normal text-muted-foreground">
+        <p className="text-[11px] font-bold uppercase tracking-normal text-primary-foreground">
           Vonix Hair · Afiliadas
         </p>
         <h2 className="mx-auto mt-5 max-w-2xl font-display text-3xl leading-tight sm:text-5xl">
           Sua criatividade merece ser conhecida.
         </h2>
-        <p className="mx-auto mt-5 max-w-xl text-sm leading-[1.85] text-muted-foreground">
+        <p className="mx-auto mt-5 max-w-xl text-sm leading-[1.85] text-primary-foreground">
           Preencha o formulário simples e acompanhe a disponibilidade oficial da seleção.
         </p>
         <Button asChild variant="link" className="h-auto min-h-11 max-w-full whitespace-normal">
           <a
             href="#inscricao"
-            className="mt-7 inline-flex min-h-12 items-center gap-3 rounded-full bg-card px-7 py-3 text-sm font-bold text-muted-foreground transition hover:bg-card"
+            className="mt-7 inline-flex min-h-12 items-center gap-3 rounded-full bg-card px-7 py-3 text-sm font-bold text-primary transition hover:bg-accent"
           >
             Ir para a inscrição <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
           </a>

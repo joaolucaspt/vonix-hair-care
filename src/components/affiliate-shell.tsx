@@ -74,7 +74,7 @@ export function AffiliateShell({
           {mode === "landing" && (
             <nav
               aria-label="Navegação da seleção de afiliadas"
-              className="hidden items-center gap-7 lg:flex"
+              className="hidden items-center gap-5 xl:flex"
             >
               <a
                 href="#ganhos"
@@ -90,25 +90,25 @@ export function AffiliateShell({
               </Link>
               <a
                 href="#criterios"
-                className="text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
               >
                 Para quem é
               </a>
               <a
                 href="#como-funciona"
-                className="text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
               >
                 Como funciona
               </a>
               <a
                 href="#formatos"
-                className="text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
               >
                 Inspirações
               </a>
               <a
                 href="#duvidas"
-                className="text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground transition hover:text-muted-foreground focus-visible:underline"
               >
                 Dúvidas
               </a>
@@ -133,6 +133,25 @@ export function AffiliateShell({
             </Link>
           )}
         </div>
+        {mode === "landing" && (
+          <nav
+            aria-label="Acesso rápido ao programa"
+            className="flex min-h-11 items-center justify-center gap-7 border-t border-border px-4 text-xs xl:hidden"
+          >
+            <a href="#ganhos" className="inline-flex min-h-11 items-center text-primary">
+              Ganhos
+            </a>
+            <Link
+              to="/consultar-candidatura"
+              className="inline-flex min-h-11 items-center text-primary"
+            >
+              Status da candidatura
+            </Link>
+            <a href="#duvidas" className="inline-flex min-h-11 items-center text-primary">
+              Dúvidas
+            </a>
+          </nav>
+        )}
       </header>
 
       <main id="conteudo-afiliadas" tabIndex={-1}>

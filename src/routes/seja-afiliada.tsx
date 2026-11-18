@@ -124,7 +124,7 @@ export function AffiliateApplicationPage() {
 
   return (
     <AffiliateShell>
-      <div className="bg-background text-muted-foreground">
+      <div className="bg-background text-foreground">
         <AffiliateLandingIntro recruitmentStatus={recruitment} />
 
         <section
@@ -184,7 +184,7 @@ export function AffiliateApplicationPage() {
                     setConfirmPreviewExit(false);
                     setPreview(true);
                   }}
-                  className="h-auto whitespace-normal mt-7 inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-7 py-3 text-sm font-bold text-primary-foreground hover:bg-background"
+                  className="h-auto whitespace-normal mt-7 inline-flex min-h-12 items-center gap-2 rounded-lg bg-primary px-7 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
                 >
                   Visualizar formulário (prévia) <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -192,7 +192,6 @@ export function AffiliateApplicationPage() {
               <div className="mt-5">
                 <Link
                   to="/"
-                  variant="link"
                   className="h-auto min-h-11 whitespace-normal text-sm font-semibold underline"
                 >
                   Voltar à loja
@@ -247,7 +246,8 @@ export function AffiliateApplicationPage() {
                         </Button>
                         <Button
                           type="button"
-                          className="h-auto whitespace-normal min-h-11 rounded-full border border-border px-5 text-sm font-semibold text-muted-foreground"
+                          variant="outline"
+                          className="h-auto whitespace-normal min-h-11 rounded-lg border border-border px-5 text-sm font-semibold text-muted-foreground"
                           onClick={() => setConfirmPreviewExit(false)}
                         >
                           Continuar preenchendo
@@ -257,7 +257,6 @@ export function AffiliateApplicationPage() {
                   ) : (
                     <Button
                       type="button"
-                      variant="link"
                       className="h-auto min-h-11 whitespace-normal text-sm font-semibold underline"
                       onClick={requestPreviewExit}
                     >
