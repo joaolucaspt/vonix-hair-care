@@ -147,6 +147,11 @@ const questions = [
       "Você informa nome, telefone, endereço completo e Instagram com número de seguidores em um único formulário. TikTok e seus seguidores são opcionais. A equipe poderá entrar em contato pelo telefone informado. Não há prazo de resposta garantido.",
   },
   {
+    question: "E-mail é obrigatório para se candidatar?",
+    answer:
+      "Não. Nome, telefone, endereço e Instagram continuam sendo as informações essenciais do formulário simplificado. O e-mail é opcional, serve como contato adicional e pode ficar em branco. O código privado de acompanhamento não é enviado por e-mail: guarde-o após confirmar a inscrição.",
+  },
+  {
     question: "Já posso enviar meu cadastro?",
     answer:
       "A disponibilidade real aparece na seção de inscrição. Quando o cadastro estiver em preparação, você poderá conhecer apenas a prévia interativa. A prévia não envia nem armazena candidaturas.",

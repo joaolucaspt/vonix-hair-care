@@ -11,7 +11,7 @@ import {
 const preparation = [
   {
     title: "Seus dados de contato",
-    detail: "Nome completo e telefone em que a equipe poderá falar com você.",
+    detail: "Nome completo e telefone em que a equipe poderá falar com você. E-mail opcional.",
     Icon: Phone,
   },
   {

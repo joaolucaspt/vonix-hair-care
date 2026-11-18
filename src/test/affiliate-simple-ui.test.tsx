@@ -62,6 +62,8 @@ describe("Vonix short single-page application form", () => {
     expect(screen.getByText("Endereço completo")).toBeInTheDocument();
     expect(screen.getByLabelText(/Telefone com DDD/)).toHaveAttribute("type", "tel");
     expect(screen.getByLabelText(/Telefone com DDD/)).toBeRequired();
+    expect(screen.getByLabelText(/E-mail \(opcional\)/i)).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText(/E-mail \(opcional\)/i)).not.toBeRequired();
     expect(screen.getByLabelText(/CEP/)).toBeRequired();
     expect(screen.getByLabelText(/Número/)).toBeRequired();
     expect(screen.getByLabelText(/^Instagram/)).toBeRequired();
@@ -74,7 +76,7 @@ describe("Vonix short single-page application form", () => {
       "Nascimento",
       "Qual é seu nicho",
       "Motivação",
-      "E-mail",
+
       "Tipo de cabelo",
       "Cupom",
       "Dependentes",

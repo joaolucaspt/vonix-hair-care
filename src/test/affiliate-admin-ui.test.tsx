@@ -1203,3 +1203,90 @@ it("does not offer an outbound WhatsApp link for invalid decrypted phone values"
   expect(await screen.findByText("https://attacker.invalid")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Contatar pelo WhatsApp/ })).not.toBeInTheDocument();
 });
+
+describe("C56 approved affiliate contact visibility without expanding access permissions", () => {
+  const approvedWithoutEmail = {
+    ...candidate,
+    id: "00000000-0000-4000-8000-000000000056",
+    full_name: "Candidata C56 de teste",
+    email: null,
+    status: "aprovada" as const,
+    questionnaireSummary: {
+      kind: "simple" as const,
+      niche: "",
+      otherNiche: null,
+      instagramFollowers: "2.400",
+      tiktokFollowers: "",
+      municipalRegistration: "",
+      dependents: "",
+      preferredLine: "",
+      couponSuggestion: "",
+    },
+  };
+
+  it("clarifies missing historical e-mail and fetches encrypted phone/address ONLY after an authorized click", async () => {
+    server.getAffiliateApplications.mockResolvedValue({
+      ...list([approvedWithoutEmail]),
+      stats: { pendente: 0, aprovada: 1, recusada: 0 },
+    });
+    server.getAffiliateApplicationPrivateDetail.mockResolvedValue({
+      ok: true,
+      detail: {
+        kind: "simple",
+        acceptedAt: "2026-11-12T12:00:00Z",
+        answers: {
+          firstName: "Candidata C56 de teste",
+          email: "",
+          phone: "(31) 98888-1234",
+          postalCode: "30110-012",
+          street: "Rua de teste",
+          number: "123",
+          district: "Centro",
+          city: "Belo Horizonte",
+          state: "MG",
+          complement: "",
+          instagramUsername: "perfil.de.teste",
+          instagramFollowers: "2.400",
+          tiktokUsername: "",
+          tiktokFollowers: "",
+        },
+      },
+    });
+    render(<Page />);
+    expect(await screen.findByText("Candidata C56 de teste")).toBeInTheDocument();
+    expect(screen.getByText("Não informado no cadastro simplificado")).toBeInTheDocument();
+    expect(screen.getByText("Dados e contatos da afiliada aprovada")).toBeInTheDocument();
+    expect(server.getAffiliateApplicationPrivateDetail).not.toHaveBeenCalled();
+    expect(screen.queryByText("(31) 98888-1234")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ver contatos e respostas" }));
+    await waitFor(() =>
+      expect(server.getAffiliateApplicationPrivateDetail).toHaveBeenCalledWith({
+        data: { id: approvedWithoutEmail.id },
+      }),
+    );
+    expect(await screen.findByText("(31) 98888-1234")).toBeInTheDocument();
+    expect(screen.getByText("Rua de teste")).toBeInTheDocument();
+    expect(screen.getByText("Telefone de contato")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ocultar respostas" }));
+    expect(screen.queryByText("(31) 98888-1234")).not.toBeInTheDocument();
+  });
+
+  it("shows an existing stored e-mail to authenticated administrators without requesting confidential details", async () => {
+    server.getAffiliateApplications.mockResolvedValue({
+      ...list([{ ...approvedWithoutEmail, email: "synthetic.approved@example.invalid" }]),
+      stats: { pendente: 0, aprovada: 1, recusada: 0 },
+    });
+    render(<Page />);
+    expect(await screen.findByText("synthetic.approved@example.invalid")).toBeInTheDocument();
+    expect(server.getAffiliateApplicationPrivateDetail).not.toHaveBeenCalled();
+  });
+
+  it("never loads or displays approved affiliate records for unauthenticated visitors", async () => {
+    server.getAffiliateAdminSession.mockResolvedValue({ authenticated: false });
+    render(<Page />);
+    expect(await screen.findByText("Acesso da equipe")).toBeInTheDocument();
+    expect(screen.queryByText("Candidata C56 de teste")).not.toBeInTheDocument();
+    expect(server.getAffiliateApplications).not.toHaveBeenCalled();
+    expect(server.getAffiliateApplicationPrivateDetail).not.toHaveBeenCalled();
+  });
+});

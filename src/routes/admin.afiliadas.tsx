@@ -85,6 +85,7 @@ const SIMPLE_PRIVATE_ANSWER_FIELDS: ReadonlyArray<{
   label: string;
 }> = [
   { key: "firstName", label: "Nome completo" },
+  { key: "email", label: "E-mail (se informado)" },
   { key: "phone", label: "Telefone de contato" },
   { key: "postalCode", label: "CEP" },
   { key: "street", label: "Rua / Avenida" },
@@ -1322,12 +1323,21 @@ export function AffiliateAdminPage() {
                             {app.city} / {app.state}
                           </dd>
                         </div>
-                        {app.email && (
-                          <div className="col-span-2">
-                            <dt className="text-xs text-[#927b7d]">E-mail</dt>
-                            <dd className="mt-1 break-all font-semibold">{app.email}</dd>
-                          </div>
-                        )}
+                        <div className="col-span-2">
+                          <dt className="text-xs text-[#927b7d]">E-mail</dt>
+                          <dd className="mt-1 break-all font-semibold">
+                            {app.email ||
+                              (app.questionnaireSummary?.kind === "simple"
+                                ? "Não informado no cadastro simplificado"
+                                : "Não informado nesta candidatura")}
+                          </dd>
+                          {app.status === "aprovada" && (
+                            <p className="mt-1 text-xs leading-relaxed text-[#806a6c]">
+                              Telefone e endereço ficam em “Ver contatos e respostas” abaixo,
+                              acessíveis somente à equipe administrativa autenticada.
+                            </p>
+                          )}
+                        </div>
                         <div className="col-span-2 flex flex-wrap gap-2">
                           {instagram && (
                             <a
@@ -1425,7 +1435,9 @@ export function AffiliateAdminPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <h4 className="text-sm font-bold text-[#623b45]">
-                            Questionário completo
+                            {app.status === "aprovada"
+                              ? "Dados e contatos da afiliada aprovada"
+                              : "Questionário completo"}
                           </h4>
                           <p className="mt-1 max-w-xl text-xs leading-relaxed text-[#806a6c]">
                             CPF, contato e endereço são carregados apenas sob demanda, com sessão
@@ -1443,7 +1455,9 @@ export function AffiliateAdminPage() {
                             ? "Carregando respostas..."
                             : privateDetail?.id === app.id
                               ? "Ocultar respostas"
-                              : "Ver todas as respostas"}
+                              : app.status === "aprovada"
+                                ? "Ver contatos e respostas"
+                                : "Ver todas as respostas"}
                         </button>
                       </div>
                       {privateDetailError?.id === app.id && (
