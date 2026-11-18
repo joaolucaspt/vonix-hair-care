@@ -553,13 +553,17 @@ export function AffiliateTeamAccess() {
     setError("");
     let changed = false;
     try {
-      const granted = await vonixAffiliateAuth.auth.signInWithPassword({ email: normalized, password });
+      const granted = await vonixAffiliateAuth.auth.signInWithPassword({
+        email: normalized,
+        password,
+      });
       if (!current()) return;
       if (
         granted.error ||
         !granted.data.user?.email_confirmed_at ||
         granted.data.user.email?.toLowerCase() !== normalized
-      ) throw new Error("invalid temporary credentials");
+      )
+        throw new Error("invalid temporary credentials");
       const roster = await vonixAffiliateAuth
         .from("vonix_affiliate_admin_invites")
         .select("must_rotate_password,password_set_at,ever_activated_at")
@@ -567,9 +571,12 @@ export function AffiliateTeamAccess() {
         .maybeSingle();
       if (!current()) return;
       if (
-        roster.error || !roster.data?.must_rotate_password ||
-        !roster.data.password_set_at || !roster.data.ever_activated_at
-      ) throw new Error("temporary credential no longer eligible");
+        roster.error ||
+        !roster.data?.must_rotate_password ||
+        !roster.data.password_set_at ||
+        !roster.data.ever_activated_at
+      )
+        throw new Error("temporary credential no longer eligible");
       const updated = await vonixAffiliateAuth.auth.updateUser({ password: nextPassword });
       if (!current()) return;
       if (updated.error) throw new Error("password update rejected");
@@ -577,7 +584,9 @@ export function AffiliateTeamAccess() {
       const finished = await vonixAffiliateAuth.rpc("vonix_affiliate_finish_temporary_password");
       if (!current()) return;
       if (finished.error || finished.data !== true) throw new Error("rotation not confirmed");
-      const login = await loginAffiliateAdminMember({ data: { email: normalized, password: nextPassword } });
+      const login = await loginAffiliateAdminMember({
+        data: { email: normalized, password: nextPassword },
+      });
       if (!current()) return;
       setPassword("");
       setNextPassword("");
@@ -593,11 +602,15 @@ export function AffiliateTeamAccess() {
         if (changed) {
           setStage("existing-password");
           setPassword("");
-          setNotice("Senha alterada. Se o acesso continuar pendente, entre com a nova senha e repita a troca.");
+          setNotice(
+            "Senha alterada. Se o acesso continuar pendente, entre com a nova senha e repita a troca.",
+          );
         }
-        setError(changed
-          ? "A troca da senha foi processada, mas a liberação administrativa não foi confirmada."
-          : "Não foi possível validar ou substituir a senha provisória. Confira seus dados.");
+        setError(
+          changed
+            ? "A troca da senha foi processada, mas a liberação administrativa não foi confirmada."
+            : "Não foi possível validar ou substituir a senha provisória. Confira seus dados.",
+        );
       }
     } finally {
       if (epoch === visibilityEpoch.current) setBusy(false);
@@ -905,12 +918,17 @@ export function AffiliateTeamAccess() {
                     onChange={(e) => setRepeatPassword(e.target.value)}
                     className="min-h-12 w-full rounded-xl border border-[#decace] px-4"
                   />
-                  <button type="submit" disabled={busy}
-                    className="min-h-12 w-full rounded-full bg-[#633847] px-4 font-semibold text-white disabled:opacity-60">
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="min-h-12 w-full rounded-full bg-[#633847] px-4 font-semibold text-white disabled:opacity-60"
+                  >
                     {busy ? "Protegendo sua conta..." : "Trocar senha e liberar acesso"}
                   </button>
                 </form>
-                <button type="button" disabled={busy}
+                <button
+                  type="button"
+                  disabled={busy}
                   className="mt-4 text-sm font-semibold underline"
                   onClick={() => {
                     setStage("existing-password");
@@ -918,7 +936,8 @@ export function AffiliateTeamAccess() {
                     setNextPassword("");
                     setRepeatPassword("");
                     setError("");
-                  }}>
+                  }}
+                >
                   Voltar ao login
                 </button>
               </>

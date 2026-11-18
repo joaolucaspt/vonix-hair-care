@@ -102,7 +102,13 @@ describe("Affiliate admin current roster session revocation", () => {
   it("keeps current active owners and reviewers permitted with server-verified identical roles", async () => {
     const f = vi.fn(async () =>
       reply([
-        { email, role: "owner", password_set_at: activatedAt, ever_activated_at: activatedAt, must_rotate_password: false },
+        {
+          email,
+          role: "owner",
+          password_set_at: activatedAt,
+          ever_activated_at: activatedAt,
+          must_rotate_password: false,
+        },
       ]),
     );
     vi.stubGlobal("fetch", f);
@@ -110,7 +116,13 @@ describe("Affiliate admin current roster session revocation", () => {
     member.affiliateMemberSession.mockReturnValue({ email, role: "reviewer" });
     f.mockResolvedValueOnce(
       reply([
-        { email, role: "reviewer", password_set_at: activatedAt, ever_activated_at: activatedAt, must_rotate_password: false },
+        {
+          email,
+          role: "reviewer",
+          password_set_at: activatedAt,
+          ever_activated_at: activatedAt,
+          must_rotate_password: false,
+        },
       ]),
     );
     expect(await affiliateAdminSessionAuthorized()).toBe(true);
@@ -121,10 +133,20 @@ describe("Affiliate admin current roster session revocation", () => {
   });
 
   it("revokes a previously issued member cookie during required temporary password rotation", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => reply([{
-      email, role: "owner", password_set_at: activatedAt,
-      ever_activated_at: activatedAt, must_rotate_password: true,
-    }])));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        reply([
+          {
+            email,
+            role: "owner",
+            password_set_at: activatedAt,
+            ever_activated_at: activatedAt,
+            must_rotate_password: true,
+          },
+        ]),
+      ),
+    );
     expect(await affiliateAdminSessionAuthorized()).toBe(false);
   });
 

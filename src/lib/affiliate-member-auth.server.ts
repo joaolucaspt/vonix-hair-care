@@ -88,7 +88,12 @@ export async function loginAffiliateTeamWithPassword(email: string, password: st
       !member.ever_activated_at
     )
       throw new Error("Invitation not activated.");
-    if (member.must_rotate_password) return { ok: false as const, requiresPasswordChange: true as const, reason: "Troque sua senha provisória para continuar." };
+    if (member.must_rotate_password)
+      return {
+        ok: false as const,
+        requiresPasswordChange: true as const,
+        reason: "Troque sua senha provisória para continuar.",
+      };
     if (!createAffiliateMemberSession({ email: verifiedEmail, role: member.role }))
       throw new Error("Secure session configuration unavailable.");
     return { ok: true as const };
