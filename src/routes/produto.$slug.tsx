@@ -24,6 +24,7 @@ import {
   forAudience,
   getSavedCep,
   hasFreeShipping,
+  installments,
   kitItems,
   lineTotals,
   maskCep,
@@ -586,6 +587,9 @@ function ProductPage() {
         <div className="min-w-0 leading-tight">
           <div className="truncate text-small text-muted-foreground">{p.name}</div>
           <div className="font-semibold">{brl(total)}</div>
+          <div className="truncate text-small text-muted-foreground">
+            ou 6x de {brl(installments(total).value)} sem juros
+          </div>
         </div>
         <button
           className="ml-auto shrink-0 rounded-md bg-emerald-600 font-bold text-white shadow-[0_10px_22px_-12px_rgba(5,150,105,0.9)] transition hover:bg-emerald-700 active:scale-[0.99] px-6 py-3 text-body"
