@@ -997,6 +997,9 @@ describe("Vonix affiliate private panel", () => {
       expect(screen.getByText("Protegendo dados das candidatas")).toBeInTheDocument();
       state = "hidden";
       act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        await Promise.resolve();
+      });
       state = "visible";
       act(() => document.dispatchEvent(new Event("visibilitychange")));
       await waitFor(() => expect(server.getAffiliateAdminSession).toHaveBeenCalledTimes(3));
@@ -1038,6 +1041,9 @@ describe("Vonix affiliate private panel", () => {
       act(() => window.dispatchEvent(new Event("focus")));
       state = "hidden";
       act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await act(async () => {
+        await Promise.resolve();
+      });
       state = "visible";
       act(() => document.dispatchEvent(new Event("visibilitychange")));
       await waitFor(() => expect(server.getAffiliateAdminSession).toHaveBeenCalledTimes(3));
